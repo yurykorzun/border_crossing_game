@@ -81,16 +81,21 @@ So there are two levels of winning. Getting through at all is the first level, a
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**
-A script (`npm run walk`) plays every possible choice from every possible state: both characters, every packing, all 3 bulletins, 4 random seeds. It does not sample, it plays them all. The last run visited 1,089,623 states and checked:
-- No dead ends: every state has a legal move.
-- All 4 endings can be reached.
-- Every card is dealt at least once, and every answer is offered at least once.
+A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-08) visited 2,546,689 states across 105 setups in about 15 s and checked, at every state and move:
+- No dead ends and no loops: every run ends.
+- Time stays 0-8 and scrutiny 0-3; a spent document, an exposed contact or the used Advantage never comes back.
+- A double tap or a second resolution of the same check is refused; nothing is accepted after the ending.
+- The ending matches the final state, and no follow-up is left queued.
+- Every reaction line has English text.
+- All 4 endings can be reached, every card is dealt and every answer offered somewhere.
 - The longest run is 11 decisions (the limit is 14), which keeps a run at 5-8 minutes.
 
-Ending shares across all branches: home in time 27.8%, at a cost 36.5%, too late 22.9%, turned back 12.8%.
+Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
+
+Ending shares across all branches (share of branches, not of players): home in time 21.8%, at a cost 31.7%, too late 24.7%, turned back 21.8%.
 
 **What is not balanced yet**
-These shares count every branch equally, but players don't play randomly. In playtesting, a run that lied about tourism still got home in time with 6 of 8 time left, so lying is too cheap right now. The next step is autoplay bots that play like real styles (honest, liar, cautious, random), so we can measure each style's ending share and tune the prices until lying usually ends too late or at a cost. That is beads 67a.2 (autoplay) and plj (balance).
+The walk also works out the best ending a player can force in each setup whatever the dealer deals. Today it is "home in time" in all 105 setups, so for an informed player no packing is ever a real loss, and lying is too cheap (a tourism lie still got home with 6 of 8 hours left in playtesting). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost". Autoplay bots (67a.2) measure styles, and plj tunes the prices.
 
 ## Where it lives in code
 

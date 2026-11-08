@@ -1,6 +1,6 @@
 # Purpose of Visit - the plan
 
-Updated 2026-11-08. Live state is in bd (`bd ready`, `bd show <id>`). This file is the readable order, so if the two disagree, bd wins.
+Updated 2026-11-08 (after the engine walk). Live state is in bd (`bd ready`, `bd show <id>`). This file is the readable order, so if the two disagree, bd wins.
 
 TL;DR: first make the game testable and measurable, then make the opening read as a journey, then make the rules believable, then tune balance, then real art. Every bead is proven by a command: `./scripts/verify` runs lint, tests, build and (from bead 1) a phone-size browser run.
 
@@ -9,6 +9,25 @@ TL;DR: first make the game testable and measurable, then make the opening read a
 - Playable at https://yurykorzun.github.io/border_crossing_game/ (redeploys on every push to `worktree-prototype`).
 - One mission, 2 characters, 6 documents, 3 checkpoints, 4 endings. Rules: `docs/how-the-game-works.md`.
 - Feedback behind this plan: `docs/research/2026-11-08-design-reviews.md`.
+- Engine is testable without React (done, `fsx.4`, c6799ca): `step()` is pure and seeded, `tryStep()` returns events or a structured rejection, `replay()` rebuilds a run from setup + moves + dealer picks, `CONTENT_VERSION` flags old replays. `npm run walk` plays every setup x every choice x every card the dealer could deal: 105 setups, 2.55M states, 0 rule breaks, about 15 s.
+
+## How the engine is verified
+
+| Level | Where |
+|---|---|
+| Rule tests (a spent document is exhausted and records its facts) | `src/game/engine.test.ts` |
+| Boundary tests (scrutiny 2 to 3 starts exactly one inspection, overflow is capped) | `src/game/engine.test.ts` |
+| Scenario tests (tourism claim + family address deals the contradiction) | `src/game/engine.test.ts` |
+| Property tests on every reachable state and move (bounds, nothing spent comes back, no double taps, the end is final, follow-ups resolved, endings match the state) | `checkState` / `checkMove` in `src/game/walk.ts` |
+| Branch exploration (no dead ends, no loops, every card and answer reachable) | `src/game/walk.test.ts` |
+| Content validation (every text key exists) | `src/i18n/keys.test.ts` plus reaction lines in the walk |
+| Replay and save tests | `src/game/engine.test.ts` |
+| Strategy simulations | `67a.2` bots |
+| Feel: tense, understandable, convincing | people, `docs/playtest.md` in `fsx.8` |
+
+A failure in the walk carries its repro (content version, setup, seed, moves, dealer picks), and `npm run walk` saves the first one to `walk-failure.json`.
+
+Walk findings (2026-11-08): scrutiny could reach 4/3 (fixed, capped). Perfect play reaches homeInTime in all 105 setups even with the worst deal, so packing never decides the outcome for an informed player. That goes to `plj`.
 
 ## Order
 
@@ -35,7 +54,7 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 12. `fsx.2` Contacts have specific abilities by topic
 13. `kuk` Let the player pick which card to show
 14. `fsx.3` Every exposure has a specific consequence, listed under any ending
-15. `fsx.4` Walk every dealer pick and report the best ending per setup
+15. ~~`fsx.4` Walk every dealer pick and report the best ending per setup~~ done
 16. `fsx.5` Inspections change the problem, and doomed runs end quickly
 17. `fsx.6` Relief and pacing: no-cost answers and quiet cards
 18. `fsx.7` Bulletin warnings that make packing strategic
@@ -45,7 +64,9 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 
 **Phase 4 - balance**
 
-22. `plj` Tune balance for situational play. Target: the situational bot beats honest, liar and cautious; every setup can reach at least homeAtCost; no answer wins over 60% of the time where alternatives exist.
+22. `plj` Tune balance for situational play. Target: the situational bot beats honest, liar and cautious; every setup can reach at least homeAtCost; no answer wins over 60% of the time where alternatives exist; and some setups guarantee only homeAtCost under the worst deal (today all 105 guarantee homeInTime), so packing matters.
+
+Every new rule in phase 3 adds its invariant to `checkState`/`checkMove` before the content that uses it, so the walk proves it on every state.
 
 **Phase 5 - later**
 
