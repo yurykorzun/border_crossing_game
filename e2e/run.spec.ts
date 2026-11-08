@@ -26,15 +26,16 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   await noHorizontalScroll(page, 'title');
   await page.locator('.title-screen button.primary').click();
 
+  // Character: a tap selects, Continue moves on.
+  await expect(page.getByRole('radio').first()).toBeVisible();
+  await noHorizontalScroll(page, 'character pick');
+  await page.getByRole('radio').first().click();
+  await page.locator('.traveler-step .controls button.primary').click();
+
   // Mission card sets up the one clock: the last bus in 8 hours.
-  const mission = page.locator('.setup .paper');
+  const mission = page.locator('.setup .paper').first();
   await expect(mission).toContainText('The last bus to the hospital leaves in 8 hours');
   await expect(mission).not.toContainText('days of leave');
-
-  // Character
-  await expect(page.locator('.setup .choice').first()).toBeVisible();
-  await noHorizontalScroll(page, 'character pick');
-  await page.locator('.setup .choice').first().click();
 
   // Documents: pack until Continue enables
   const cont = page.locator('.setup .controls button.primary');
