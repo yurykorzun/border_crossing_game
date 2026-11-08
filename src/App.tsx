@@ -10,7 +10,7 @@ import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
@@ -138,7 +138,7 @@ function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: Chara
         <section className="paper">
           <p className="mono">{t('ui.mission')}</p>
           <h2>{t('mission.title')}</h2>
-          <p>{t('mission.body')}</p>
+          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
           <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
         </section>
         <h2 className="on-dark">{t('ui.pickCharacter')}</h2>

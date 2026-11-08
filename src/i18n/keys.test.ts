@@ -56,6 +56,13 @@ describe('English text', () => {
     expect(Object.entries(en).filter(([, v]) => unit.test(v))).toEqual([]);
   });
 
+  // One clock only: the mission card sets up the last bus, not days of leave.
+  it('sets up the last bus on the mission card', () => {
+    expect(en['mission.body']).toMatch(/last bus/);
+    expect(en['mission.body']).toContain('{hours} hours');
+    expect(en['mission.body']).not.toMatch(/days of leave/);
+  });
+
   it('has both plural forms for every plural key', () => {
     const keys = Object.keys(en);
     const missing = keys

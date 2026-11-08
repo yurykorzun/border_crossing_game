@@ -65,7 +65,7 @@ export const en: Record<string, string> = {
 
   // ── Mission
   'mission.title': 'Your father has had a stroke',
-  'mission.body': 'Your mother needs help arranging his care. You have five days of leave, a return ticket and a spouse waiting at home. You carry his medicine, some cash and your everyday phone.',
+  'mission.body': 'Your mother needs help arranging his care. The last bus to the hospital leaves in {hours} hours, and the station is {travel} hours past the border. You carry his medicine, some cash and your everyday phone.',
 
   // ── Characters
   'char.lena.name': 'Lena',

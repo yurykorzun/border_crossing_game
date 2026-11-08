@@ -20,7 +20,7 @@ Names used so far: the country is never named on screen in v0.1 (officers say "t
 
 ## First mission: your father's stroke
 
-Your mother needs help arranging his care. You have five days of leave, a return ticket and a spouse waiting at home. You carry his medicine, some cash and your everyday phone.
+Your mother needs help arranging his care. The last bus to the hospital leaves in 8 hours, and the station is 2 hours past the border. You carry his medicine, some cash and your everyday phone.
 
 Requirement: be admitted and reach the last bus with at least 2 hours left. The bus to the hospital leaves in 8 hours, and you need 2 hours to reach the station, so the crossing can spend up to 6.
 
