@@ -27,7 +27,7 @@ export const en: Record<string, string> = {
   'ui.evidence': 'Evidence',
   'ui.close': 'Close',
   // Setup 1: the premise is two sentences at most; the rest of the mission waits for later.
-  'ui.premise': "You're going home. Your father has had a stroke. Your mother needs help.",
+  'ui.premise': "You're going home. Your father has had a stroke and your mother needs help.",
   'ui.pickCharacter': 'Choose your traveler',
   'ui.continueAs': 'Continue as {name}',
   'ui.advantage': 'Advantage',

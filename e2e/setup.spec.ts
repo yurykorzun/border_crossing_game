@@ -30,9 +30,13 @@ test('choose your traveler: radio cards, history, and Continue as the pick', asy
   await expect(screen.getByText('Purpose of Visit')).toBeVisible();
   await expect(screen.getByRole('heading', { name: 'Choose your traveler' })).toBeVisible();
 
-  // A two-sentence premise at most: "You're going home. Your father has had a stroke. Your mother needs help."
+  // A two-sentence premise at most: count every sentence that ends in . ! or ?
   const premise = (await screen.locator('.premise').innerText()).trim();
-  expect(premise.split('. ').length - 1, premise).toBeLessThanOrEqual(2);
+  const sentences = premise.match(/[^.!?]+[.!?]+/g) ?? [];
+  // Every character belongs to a counted sentence, so an unpunctuated tail cannot hide.
+  expect(sentences.join(''), premise).toBe(premise);
+  expect(sentences.length, premise).toBeGreaterThan(0);
+  expect(sentences.length, premise).toBeLessThanOrEqual(2);
 
   const group = screen.getByRole('radiogroup', { name: 'Choose your traveler' });
   const cards = group.getByRole('radio');
