@@ -76,6 +76,7 @@ function chromeLines(s: RunState, p: Page): void {
   p.plural('ui.hoursRemaining', s.time, CHROME);
   p.add('ui.scrutiny', {}, CHROME);
   p.add(`ui.scrutiny.${level}`, {}, CHROME);
+  p.add('ui.checkpoints', {}, CHROME);
   for (const cp of CHECKPOINTS) p.add(`checkpoint.${cp}`, {}, CHROME);
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   else if (s.screen.kind !== 'between')
@@ -123,6 +124,7 @@ function render(fn: () => string, key: string): { key: string; text: string; pro
 }
 
 function setupLines(setup: RunSetup, p: Page): void {
+  p.add('ui.stamp');
   p.add('ui.title');
   p.add('ui.tagline');
   p.add('ui.start');

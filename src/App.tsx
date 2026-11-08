@@ -115,7 +115,7 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
   return (
     <main className="title-screen">
       <div className="paper title-card">
-        <p className="mono stamp-line">HALDEN CENTRAL · ARRIVALS</p>
+        <p className="mono stamp-line">{t('ui.stamp')}</p>
         <h1>{t('ui.title')}</h1>
         <p>{t('ui.tagline')}</p>
       </div>

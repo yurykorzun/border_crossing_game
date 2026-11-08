@@ -26,7 +26,7 @@ export function TopStrip({ s }: { s: RunState }) {
         </span>
         <span className="stat-word">{t(`ui.scrutiny.${level}`)}</span>
       </div>
-      <ol className="progress" aria-label="Checkpoints">
+      <ol className="progress" aria-label={t('ui.checkpoints')}>
         {CHECKPOINTS.map((cp, i) => (
           <li key={cp} className={i < s.checkpoint ? 'done' : i === s.checkpoint ? 'now' : ''} title={t(`checkpoint.${cp}`)} />
         ))}

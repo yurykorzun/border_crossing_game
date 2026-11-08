@@ -5,6 +5,8 @@
 
 export const en: Record<string, string> = {
   // ── UI
+  'ui.stamp': 'HALDEN CENTRAL · ARRIVALS',
+  'ui.checkpoints': 'Checkpoints',
   'ui.title': 'Purpose of Visit',
   'ui.tagline': "You're going home. You no longer know if home is safe for you.",
   'ui.start': 'Begin',

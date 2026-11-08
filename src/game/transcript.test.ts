@@ -1,6 +1,8 @@
 // The story rules on one transcript at a time, each broken on purpose.
 // tools/eval.test.ts runs the real command.
 import { describe, expect, it } from 'vitest';
+import appSource from '../App.tsx?raw';
+import partsSource from '../ui/parts.tsx?raw';
 import { playRun, setupFor } from './bots';
 import { RULES, evaluate, formatFailure, transcriptOf } from './transcript';
 import type { KnownFailure, Transcript } from './transcript';
@@ -109,6 +111,15 @@ describe('scenario evals', () => {
     const tr = run(LENA);
     for (const key of ['ui.hoursRemaining', 'ui.scrutiny', 'ui.myStory'])
       expect(tr.lines.some((l) => l.key === key && l.chrome), key).toBe(true);
+  });
+
+  it('rule 5: the UI renders no words outside t(), so the transcript can see them all', () => {
+    // JSX text between tags, or a text attribute, with a word in it.
+    const literal = />[^<>{}]*[A-Za-z]{2,}[^<>{}]*<\/|\b(title|alt|aria-label|placeholder)="[^"]*[A-Za-z]/;
+    for (const [file, source] of [['src/App.tsx', appSource], ['src/ui/parts.tsx', partsSource]]) {
+      const found = source.split('\n').filter((l) => literal.test(l));
+      expect(found, file).toEqual([]);
+    }
   });
 
   it('rule 5: a missing key or an unfilled {var} exits 1 with seed and step', () => {
