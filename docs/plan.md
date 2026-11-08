@@ -129,7 +129,7 @@ The world bible comes before the Russian text, so Russian is written once with f
 1. Art style, before `grd`: pixel art (PixelLab, needs its API token) or painted illustration (OpenAI or FLUX, needs that key; the mockup points this way). Decide after seeing the SVG pass on the phone. The UI style itself is decided (see UI rules).
 2. Mark's brother is in a fictional country at war, not Ukraine as in the original note. `0ts.1` proposes where it sits in the fictional world; change it if you want the real one.
 3. bd sync: create the `yurykorzun/beads` repo, then run `bd-attach migrate --db border_crossing_game`.
-4. Merge PR #1 (Playwright e2e), then run `pr-sync`. Every other bead waits on it.
+4. `67a.3` (scenario evals) is parked on branch `feat/border_crossing_game-67a.3`, no PR. Its reviewer flagged the "runs too short" known failure three rounds running, and it can't be fixed in code because runs really are 3-5.5 minutes (that's `67a.12`). Either amend 67a.3's description to allow a `tooShort` known failure pointing at 67a.12 and re-run `agent-review border_crossing_game-67a.3 --round 3`, or ship it with `agent-finish --ship-unresolved`. 35 beads wait on it, including all of fsx.
 
 ## Not in this plan
 
