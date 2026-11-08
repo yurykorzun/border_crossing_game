@@ -146,33 +146,43 @@ p { margin: 0 0 var(--gap); }
 
 /* ── Run: strip / scene / panel / controls / tools */
 .run { gap: 10px !important; }
-.strip { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
-/* Label above the value so the strip fits one row at 360px, even with the scrutiny word. */
-.stat { display: grid; grid-auto-flow: column; align-items: center; justify-content: start; column-gap: 6px; row-gap: 2px; }
-.stat-label { grid-row: 1; grid-column: 1 / span 3; }
-.stat > :not(.stat-label) { grid-row: 2; }
-.stat-label { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; color: #c5cec9; }
-.stat-value { font-family: var(--mono); font-size: 1.3rem; font-weight: 600; }
-/* "8 hours remaining" is a sentence, so it keeps its case and reads a little larger. */
-.stat-label.hours { font-size: 0.85rem; text-transform: none; color: var(--paper); white-space: nowrap; }
+/* Two rows: time and the scrutiny button, then the checkpoint dots with their name. */
+.strip { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
+.stat { display: grid; align-items: center; justify-content: start; row-gap: 2px; }
+/* "8 hours remaining" is a sentence, so it keeps its case. */
+.stat-label.hours { font-size: 0.85rem; color: var(--paper); white-space: nowrap; }
 .pips, .boxes { display: flex; gap: 3px; }
 .pips i { width: 6px; height: 12px; background: var(--bg-2); border-radius: 1px; }
 .pips i.on { background: var(--paper); }
+.scrutiny {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--bg-line);
+  border-radius: var(--radius);
+  color: var(--paper);
+  cursor: pointer;
+}
+.scrutiny-text { font-size: 0.85rem; white-space: nowrap; }
 .boxes i { width: 14px; height: 14px; border: 2px solid var(--bg-line); border-radius: 2px; }
 .boxes i.on { background: var(--amber-dark); border-color: var(--amber-dark); }
 .scrutiny.lvl-3 .boxes i.on { background: var(--danger-dark); border-color: var(--danger-dark); }
-.stat-word { font-size: 0.8rem; color: #c5cec9; white-space: nowrap; }
-.progress { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.progress-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.progress { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; flex: none; }
 .progress li { width: 18px; height: 6px; background: var(--bg-2); border-radius: 3px; }
 .progress li.done { background: var(--paper); }
 .progress li.now { background: var(--amber-dark); }
+.progress-label { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: #c5cec9; }
 
-/* Scene: placeholder rectangles until generated art (docs/design.md). Shrinks first. */
+/* Scene: placeholder rectangles until generated art (docs/design.md).
+   It takes the spare height, and it is the first thing to shrink. */
 .scene {
   position: relative;
-  flex: 1 1 140px;
+  flex: 1 1 0;
   min-height: 90px;
-  max-height: 260px;
   background: linear-gradient(#56645d, #46534c 60%, #3a4640 60%);
   border-radius: var(--radius);
   overflow: hidden;
@@ -215,9 +225,8 @@ p { margin: 0 0 var(--gap); }
   63% { opacity: 0.03; }
 }
 
+/* The dialogue sits right under the scene. With larger text the panel scrolls; answers never shrink. */
 .panel { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
-/* Question and choices sit together low in the thumb zone; spare height goes above the question. */
-.run > .panel { margin-top: auto; }
 .question { font-size: 1.15rem; font-weight: 600; margin: 0; }
 .reaction p { font-style: italic; }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
@@ -240,17 +249,23 @@ p { margin: 0 0 var(--gap); }
   max-width: 92%;
 }
 
-.tools { display: flex; gap: var(--gap); align-items: center; flex-wrap: wrap; }
+/* Bottom tray: three equal buttons, on every run screen. */
+.tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); flex: none; }
 .tools button {
   min-height: 44px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   background: transparent;
   border: 1px solid var(--bg-line);
   border-radius: var(--radius);
   color: var(--paper);
+  cursor: pointer;
 }
-.toggle { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #c5cec9; min-height: 44px; margin-inline-start: auto; }
-.toggle input { width: 20px; height: 20px; }
+.scrutiny:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
+
+.sheet-lead { font-family: var(--mono); font-weight: 600; margin-top: 8px; }
+.settings { display: flex; flex-direction: column; margin-top: 8px; }
+.setting { display: flex; align-items: center; gap: 12px; min-height: var(--tap); border-bottom: 1px solid var(--paper-2); cursor: pointer; }
+.setting input { width: 22px; height: 22px; accent-color: var(--navy); }
 
 /* ── Bottom sheet on <dialog> */
 .sheet {
@@ -263,6 +278,8 @@ p { margin: 0 0 var(--gap); }
   padding: 0;
   background: var(--paper);
   color: var(--ink);
+  /* Paper is light, so form controls inside get light defaults. */
+  color-scheme: light;
 }
 .sheet::backdrop { background: rgb(0 0 0 / 0.5); }
 .sheet-body { padding: 16px 16px max(env(safe-area-inset-bottom), 16px); overflow-y: auto; }

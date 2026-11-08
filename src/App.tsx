@@ -15,7 +15,7 @@ import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { CostChips, EvidenceContent, Sheet, StoryContent, TopStrip } from './ui/parts';
+import { CostChips, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip } from './ui/parts';
 import * as sound from './ui/sound';
 
 const store = browserStore();
@@ -195,14 +195,15 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   setData: React.Dispatch<React.SetStateAction<SaveData>>;
   onRestart: () => void;
 }) {
-  const [sheet, setSheet] = useState<'story' | 'evidence' | null>(null);
+  const [sheet, setSheet] = useState<'story' | 'evidence' | 'scrutiny' | 'settings' | null>(null);
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
 
   const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)];
+  const close = () => setSheet(null);
   return (
     <main className="run">
-      <TopStrip s={s} />
+      <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
       <div className={`scene scene-${CHECKPOINTS[Math.min(s.checkpoint, 2)]} ${data.settings.reduceMotion ? 'still' : ''}`} aria-hidden>
         <div className="flicker" />
         {s.screen.kind === 'wait' ? (
@@ -212,22 +213,20 @@ function Run({ s, dispatch, data, setData, onRestart }: {
         ) : null}
       </div>
       <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
+      {/* The tray stays on every run screen, so story, evidence and settings are always one tap away. */}
       <nav className="tools">
-        <button onClick={() => setSheet('story')}>{t('ui.myStory')}</button>
-        <button onClick={() => setSheet('evidence')}>
+        <button aria-haspopup="dialog" onClick={() => setSheet('story')}>{t('ui.myStory')}</button>
+        <button aria-haspopup="dialog" onClick={() => setSheet('evidence')}>
           {t('ui.evidence')} · {s.loadout.length - s.used.length}
         </button>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={data.settings.reduceWait}
-            onChange={(e) => setData((d) => ({ ...d, settings: { ...d.settings, reduceWait: e.target.checked } }))}
-          />
-          {t('ui.reduceWait')}
-        </label>
+        <button aria-haspopup="dialog" onClick={() => setSheet('settings')}>{t('ui.settings')}</button>
       </nav>
-      <Sheet open={sheet === 'story'} onClose={() => setSheet(null)} title={t('ui.myStory')}><StoryContent s={s} /></Sheet>
-      <Sheet open={sheet === 'evidence'} onClose={() => setSheet(null)} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
+      <Sheet open={sheet === 'story'} onClose={close} title={t('ui.myStory')}><StoryContent s={s} /></Sheet>
+      <Sheet open={sheet === 'evidence'} onClose={close} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
+      <Sheet open={sheet === 'scrutiny'} onClose={close} title={t('ui.scrutiny')}><ScrutinyContent s={s} /></Sheet>
+      <Sheet open={sheet === 'settings'} onClose={close} title={t('ui.settings')}>
+        <SettingsContent settings={data.settings} onChange={(settings) => setData((d) => ({ ...d, settings }))} />
+      </Sheet>
     </main>
   );
 }
