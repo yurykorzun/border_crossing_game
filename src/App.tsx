@@ -229,9 +229,10 @@ function BeginStep({ picked, onBack, onBegin }: { picked: EvidenceId[]; onBack: 
         </header>
         <section className="paper mission">
           <p className="mono">{t('ui.mission')}</p>
-          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
+          {/* The title says whose care it is, so "his care" in the body reads right. */}
+          <h3>{t('mission.title')}</h3>
           <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
-          <p className="leave">{t('mission.leave')}</p>
+          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
         </section>
         <section className="packed-list">
           <h3 className="mono">{t('ui.yourDocuments')}</h3>

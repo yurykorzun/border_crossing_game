@@ -85,8 +85,6 @@ export const en: Record<string, string> = {
   // ── Mission
   'mission.title': 'Your father has had a stroke',
   'mission.body': 'Your mother needs help arranging his care. The last bus to the hospital leaves in {hours} hours, and the station is {travel} hours past the border. You carry his medicine, some cash and your everyday phone.',
-  // Background for the trip, not a second clock: the run only counts hours to the bus.
-  'mission.leave': 'Work gave you five days off.',
 
   // ── Characters
   'char.lena.name': 'Lena',

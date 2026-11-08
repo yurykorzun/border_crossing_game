@@ -155,7 +155,9 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await expect(begin.locator('.mission')).toContainText('medicine');
   await expect(begin.locator('.mission')).toContainText('cash');
   await expect(begin.locator('.mission')).toContainText('phone');
-  await expect(begin.locator('.mission')).toContainText('five days');
+  // One clock only (67a.11): the title says whose care it is, and no days of leave.
+  await expect(begin.locator('.mission')).toContainText('Your father has had a stroke');
+  await expect(begin.locator('.mission')).not.toContainText('days');
   await expect(begin.locator('.packed-list li')).toHaveText(chosen.map((id) => en[`ev.${id}.name`]));
   await stepFits(page, 'begin');
 
