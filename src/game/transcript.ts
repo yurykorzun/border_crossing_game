@@ -2,14 +2,17 @@
 // the player would see, screen by screen; the RULES below check that record for
 // story bugs. `npm run eval` (tools/eval.ts) runs them over many seeds.
 //
-// render() mirrors what src/App.tsx and src/ui/parts.tsx put in the panel (not
-// the top strip or the bottom sheets). When a screen there changes, change it
-// here too, or the transcript stops being what the player reads.
+// render() mirrors what src/App.tsx and src/ui/parts.tsx put on screen. The panel
+// is the story; the top strip, scene label, tool bar and the two bottom sheets
+// are `chrome` lines: rules 1 and 5 check them, but they are not counted as words
+// read or written to the plain-text transcript, because they repeat on every
+// screen. When a screen there changes, change it here too, or the transcript
+// stops being what the player reads.
 
 import { has, t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
-import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './content/world';
+import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './content/world';
 import { newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween } from './play';
@@ -27,6 +30,8 @@ export interface Line {
   problem?: string;
   /** The button the bot pressed on this screen. */
   picked?: boolean;
+  /** Around the panel (top strip, tool bar, sheets): checked, but not read as story. */
+  chrome?: boolean;
 }
 
 export type Happening =
@@ -57,9 +62,54 @@ class Page {
   add(key: string, vars: Record<string, string | number> = {}, extra: Partial<Line> = {}): void {
     this.lines.push({ step: this.step, ...render(() => t(key, vars), key), ...extra });
   }
-  plural(key: string, n: number): void {
-    this.lines.push({ step: this.step, ...render(() => tn(key, n), key) });
+  plural(key: string, n: number, extra: Partial<Line> = {}): void {
+    this.lines.push({ step: this.step, ...render(() => tn(key, n), key), ...extra });
   }
+}
+
+const CHROME = { chrome: true } as const;
+
+/** What src/App.tsx Run shows around the panel: TopStrip, scene label, tool bar, both sheets. */
+function chromeLines(s: RunState, p: Page): void {
+  const level = Math.min(s.scrutiny, MAX_SCRUTINY);
+  p.add('ui.yourCrossing', {}, CHROME);
+  p.plural('ui.hoursRemaining', s.time, CHROME);
+  p.add('ui.scrutiny', {}, CHROME);
+  p.add(`ui.scrutiny.${level}`, {}, CHROME);
+  for (const cp of CHECKPOINTS) p.add(`checkpoint.${cp}`, {}, CHROME);
+  if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
+  else if (s.screen.kind !== 'between')
+    p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
+  p.add('ui.myStory', {}, CHROME);
+  p.add('ui.evidence', {}, CHROME);
+  p.add('ui.reduceWait', {}, CHROME);
+  p.add('ui.close', {}, CHROME);
+  // StoryContent
+  const ch = CHARACTERS[s.character];
+  p.add(`char.${ch.id}.name`, {}, CHROME);
+  p.add(`char.${ch.id}.blurb`, {}, CHROME);
+  p.add('ui.background', {}, CHROME);
+  for (const b of ch.background) p.add(`bg.${b}`, {}, CHROME);
+  p.add('ui.contacts', {}, CHROME);
+  for (const c of ch.contacts) {
+    p.add(`contact.${c}`, {}, CHROME);
+    if (c === ch.protectedContact) p.add('ui.protected', {}, CHROME);
+    if (s.exposed.includes(c)) p.add('ui.exposed', {}, CHROME);
+    p.add(`contact.${c}.note`, {}, CHROME);
+  }
+  p.add('ui.claims', {}, CHROME);
+  for (const c of s.claims) p.add(`claim.${c}`, {}, CHROME);
+  if (!s.claims.length) p.add('ui.nothingYet', {}, CHROME);
+  p.add('ui.onFile', {}, CHROME);
+  for (const f of s.facts) p.add(`fact.${f}`, {}, CHROME);
+  if (!s.facts.length) p.add('ui.nothingYet', {}, CHROME);
+  // EvidenceContent
+  for (const id of s.loadout) {
+    p.add(`ev.${id}.name`, {}, CHROME);
+    if (s.used.includes(id)) p.add('ui.used', {}, CHROME);
+    p.add(`ev.${id}.desc`, {}, CHROME);
+  }
+  p.add(s.medicine ? 'ui.medicine' : 'ui.medicineLost', {}, CHROME);
 }
 
 function render(fn: () => string, key: string): { key: string; text: string; problem?: string } {
@@ -124,6 +174,7 @@ function chips(o: Option, p: Page): void {
 /** What the panel shows for this state. */
 function screenLines(s: RunState, p: Page): void {
   if (s.ending && !s.reaction) return endingLines(s, p);
+  chromeLines(s, p);
   if (s.reaction) {
     for (const r of s.reaction) p.add(r.key, r.vars);
     return p.add('ui.continue');
@@ -178,6 +229,8 @@ function endingLines(s: RunState, p: Page): void {
     p.add('ui.onFileNow');
     for (const f of s.facts) p.add(`fact.${f}`);
   }
+  // The count includes this ending; a first run shows 1.
+  p.add('ui.endingsSeen', { n: 1 }, CHROME);
   p.add('ui.newRun');
 }
 
@@ -216,6 +269,12 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
   const last = new Page(run.actions.length);
   screenLines(s, last);
   lines.push(...last.lines);
+  // The run can end on an officer's last line; the player taps Continue, then reads the ending.
+  if (s.ending && s.reaction) {
+    const after = new Page(run.actions.length + 1);
+    endingLines(s, after);
+    lines.push(...after.lines);
+  }
   return { style: run.style, setup, lines, happenings, decisions, beatSeconds: beatMs / 1000, ending: s.ending };
 }
 
@@ -225,7 +284,8 @@ export const WORDS_PER_MINUTE = 200;
 export const SECONDS_PER_DECISION = 3;
 export const PLAY_MINUTES = { min: 5, max: 8 } as const;
 
-export const words = (tr: Transcript) => tr.lines.reduce((n, l) => n + l.text.split(/\s+/).filter(Boolean).length, 0);
+export const words = (tr: Transcript) =>
+  tr.lines.reduce((n, l) => (l.chrome ? n : n + l.text.split(/\s+/).filter(Boolean).length), 0);
 
 /** Words shown / 200 wpm + waiting-room beats at normal speed + 3 s per decision. */
 export function playMinutes(tr: Transcript): number {
@@ -255,6 +315,8 @@ export interface Failure {
   /** The i18n key or card id the failure is about. */
   key: string;
   detail: string;
+  /** Rule 4 only: the run's estimate in minutes. */
+  minutes?: number;
 }
 
 export type Rule = { id: number; name: string; check: (tr: Transcript) => Omit<Failure, 'rule' | 'style' | 'seed' | 'character'>[] };
@@ -318,7 +380,7 @@ export const RULES: Rule[] = [
       if (m >= PLAY_MINUTES.min && m <= PLAY_MINUTES.max) return [];
       const last = tr.lines.length ? tr.lines[tr.lines.length - 1].step : 0;
       return [{
-        step: last, key: m < PLAY_MINUTES.min ? 'tooShort' : 'tooLong',
+        step: last, key: m < PLAY_MINUTES.min ? 'tooShort' : 'tooLong', minutes: m,
         detail: `${m.toFixed(1)} min (${words(tr)} words, ${tr.beatSeconds.toFixed(0)} s of beats, ${tr.decisions} decisions)`,
       }];
     },
@@ -335,6 +397,8 @@ export interface KnownFailure {
   rule: number;
   key: string;
   character?: CharacterId;
+  /** Rule 4 only: covers runs estimated at this many minutes or more, so a run that gets shorter still fails. */
+  atLeastMinutes?: number;
   /** The bead that fixes it and removes this entry. */
   bead: string;
 }
@@ -342,12 +406,14 @@ export interface KnownFailure {
 export const KNOWN_FAILURES: KnownFailure[] = [
   // msg.0.1 is shared by both travelers, so Mark's mother asks him not to mention Lena's cousin.
   { rule: 1, key: 'msg.0.1', character: 'mark', bead: 'border_crossing_game-67a.6' },
-  // Most runs estimate 3-5.5 minutes (first measured 2026-11-08); none run over 8.
-  { rule: 4, key: 'tooShort', bead: 'border_crossing_game-67a.12' },
+  // Most runs estimate 3-5.5 minutes, the shortest 2.8 (measured 2026-11-08); none run over 8.
+  // Only today's band is covered: a run under 2.5 minutes is a new failure.
+  { rule: 4, key: 'tooShort', atLeastMinutes: 2.5, bead: 'border_crossing_game-67a.12' },
 ];
 
 const matches = (k: KnownFailure, f: Failure) =>
-  k.rule === f.rule && k.key === f.key && (!k.character || k.character === f.character);
+  k.rule === f.rule && k.key === f.key && (!k.character || k.character === f.character) &&
+  (k.atLeastMinutes === undefined || (f.minutes !== undefined && f.minutes >= k.atLeastMinutes));
 
 export interface EvalResult {
   runs: number;
@@ -398,6 +464,7 @@ export function transcriptText(tr: Transcript): string {
   const body: string[] = [];
   let at = -1;
   for (const l of tr.lines) {
+    if (l.chrome) continue;
     if (l.step !== at) { body.push('', `── step ${l.step}`); at = l.step; }
     body.push(`${l.picked ? '> ' : '  '}${l.text}`);
   }

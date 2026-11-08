@@ -83,6 +83,34 @@ describe('scenario evals', () => {
     expect(before.fresh).toEqual([]);
   });
 
+  it('rule 4: the known tooShort entry covers only runs at or above its floor', () => {
+    const tr = run(LENA);
+    const short: KnownFailure[] = [{ rule: 4, key: 'tooShort', atLeastMinutes: 2.5, bead: 'test' }];
+    // Strip the words so the estimate drops far below the floor.
+    tr.lines = tr.lines.map((l) => ({ ...l, text: '' }));
+    tr.beatSeconds = 0;
+    const r = only(4, [tr], short);
+    expect(r.exitCode).toBe(1);
+    expect(r.fresh[0]).toMatchObject({ rule: 4, key: 'tooShort' });
+    expect(r.fresh[0].minutes!).toBeLessThan(2.5);
+  });
+
+  it('rule 5 sees the top strip and sheets, and the ending after a last officer line', () => {
+    let ended: Transcript | undefined;
+    for (let i = 0; i < 200 && !ended; i++) {
+      const setup = setupFor(i);
+      const r = playRun('random', setup);
+      const tr = transcriptOf(r, setup);
+      const lastStep = r.actions.length;
+      if (tr.lines.some((l) => l.step === lastStep + 1)) ended = tr;
+    }
+    expect(ended, 'some run ends on an officer line').toBeDefined();
+    expect(ended!.lines.some((l) => l.key === `ending.${ended!.ending}.title`)).toBe(true);
+    const tr = run(LENA);
+    for (const key of ['ui.hoursRemaining', 'ui.scrutiny', 'ui.myStory'])
+      expect(tr.lines.some((l) => l.key === key && l.chrome), key).toBe(true);
+  });
+
   it('rule 5: a missing key or an unfilled {var} exits 1 with seed and step', () => {
     const tr = run(LENA);
     const r0 = only(5, [tr]);
