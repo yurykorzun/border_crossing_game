@@ -63,7 +63,6 @@ p { margin: 0 0 var(--gap); }
 
 /* ── Controls: the bottom band, always on a paper-backed button */
 .controls { display: flex; flex-direction: column; gap: var(--gap); }
-.controls.sticky { position: sticky; bottom: 0; background: var(--bg); padding-top: var(--gap); }
 .primary, .choice {
   min-height: var(--tap);
   border: 1px solid var(--bg-line);
@@ -144,9 +143,25 @@ p { margin: 0 0 var(--gap); }
 .doc.used { opacity: 0.55; }
 .doc.used strong { text-decoration: line-through; }
 
-/* ── Setup 1: Choose your traveler. The body scrolls with larger text; the button stays put. */
-.traveler-step { overflow: hidden; }
+/* ── Setup screens: the body scrolls when it must (larger text, the packing list); the button stays put. */
+.traveler-step, .setup-step { overflow: hidden; }
 .setup-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.step-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.step-head h2 { margin: 0; }
+.back {
+  min-height: 44px;
+  padding: 6px 4px;
+  background: transparent;
+  border: 0;
+  color: #c5cec9;
+  cursor: pointer;
+}
+.back:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
+.rules-explained { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; font-size: 0.95rem; }
+.mission .rule { margin-top: 2px; }
+.mission p:last-child { margin-bottom: 0; }
+.packed-list h3 { color: #c5cec9; margin-bottom: 6px; }
+.packed-list ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
 .setup-head { margin-top: 20px; }
 .setup-title { color: #c5cec9; margin-bottom: 6px; }
 .premise { font-size: 1.05rem; margin: 0; }

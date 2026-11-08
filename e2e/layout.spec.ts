@@ -45,10 +45,11 @@ test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', asy
   // Mark starts with 1 scrutiny.
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('mark')).click();
   await page.locator('.traveler-step .controls button.primary').click();
-  const cont = page.locator('.setup .controls button.primary');
-  const docs = page.locator('.setup .doc');
+  const cont = page.locator('.documents-step .controls button.primary');
+  const docs = page.locator('.documents-step .doc');
   for (let i = 0; !(await cont.isEnabled()); i++) await docs.nth(i).click();
   await cont.click();
+  await page.locator('.begin-step .controls button.primary').click();
 
   const strip = page.locator('main.run .strip');
   await expect(strip).toContainText('1/3 · Passport control');

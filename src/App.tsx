@@ -10,7 +10,7 @@ import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, START_TIME } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
@@ -127,42 +127,89 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
   );
 }
 
+// Setup screens, in order. They are presentation state here, not engine phases.
+// Back and Continue walk this list, so a new screen (the destination briefing, 70r.3,
+// goes between traveler and documents) is one more entry and one more case below.
+const SETUP_STEPS = ['traveler', 'documents', 'begin'] as const;
+type SetupStep = (typeof SETUP_STEPS)[number];
+
 function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
+  const [at, setAt] = useState<SetupStep>('traveler');
   const [character, setCharacter] = useState<CharacterId | null>(null);
   const [picked, setPicked] = useState<EvidenceId[]>([]);
-  const slots = character ? CHARACTERS[character].evidenceSlots : 0;
+  const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
 
-  if (!character) return <TravelerStep onContinue={setCharacter} />;
+  if (at === 'traveler' || !character) {
+    return (
+      <TravelerStep
+        initial={character}
+        onContinue={(c) => {
+          // A traveler with fewer slots keeps only the first picks that still fit.
+          setPicked((p) => p.slice(0, CHARACTERS[c].evidenceSlots));
+          setCharacter(c);
+          move(1);
+        }}
+      />
+    );
+  }
+  if (at === 'documents') {
+    return <DocumentsStep character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
+  }
+  return <BeginStep picked={picked} onBack={() => move(-1)} onBegin={() => onStart(character, picked)} />;
+}
 
+/** Back on setup screens: a quiet control, so only the forward action reads as primary. */
+function BackButton({ onBack }: { onBack: () => void }) {
+  return (
+    <button type="button" className="back" onClick={onBack}>
+      <span aria-hidden>‹ </span>{t('ui.back')}
+    </button>
+  );
+}
+
+/** Setup 2. Packing is where hours and scrutiny first matter, so both are explained here. */
+function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onContinue }: {
+  character: CharacterId;
+  bulletin: BulletinId;
+  picked: EvidenceId[];
+  setPicked: React.Dispatch<React.SetStateAction<EvidenceId[]>>;
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const slots = CHARACTERS[character].evidenceSlots;
   const toggle = (id: EvidenceId) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < slots ? [...p, id] : p));
 
   return (
-    <main className="setup">
-      {/* The rest of the mission until the begin screen (67a.8) takes it. */}
-      <section className="paper">
-        <p className="mono">{t('ui.mission')}</p>
-        <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
-        <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
-      </section>
-      <section className="bulletin mono" role="note">
-        <strong>{t('ui.bulletin')}:</strong> {t(`bulletin.${bulletin}`)}
-      </section>
-      <h2 className="on-dark">{t('ui.pickEvidence', { count: slots })}</h2>
-      <ul className="cards pick">
-        {EVIDENCE_IDS.map((id) => (
-          <li key={id}>
-            <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
-              <strong>{t(`ev.${id}.name`)}</strong>
-              {picked.includes(id) && <span className="tag packed">{t('ui.packed')}</span>}
-              <p>{t(`ev.${id}.desc`)}</p>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="controls sticky">
-        <p className="muted-dark">{t('ui.picked', { picked: picked.length, count: slots })}</p>
-        <button className="primary" disabled={picked.length !== slots} onClick={() => onStart(character, picked)}>
+    <main className="setup setup-step documents-step">
+      <div className="setup-body">
+        <header className="step-head">
+          <BackButton onBack={onBack} />
+          <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
+        </header>
+        <section className="bulletin mono" role="note">
+          <strong>{t('ui.bulletin')}:</strong> {t(`bulletin.${bulletin}`)}
+        </section>
+        <ul className="rules-explained">
+          <li className="explain-hours">{t('ui.explainHours', { hours: START_TIME, travel: MISSION_MIN_TIME })}</li>
+          <li className="explain-scrutiny">{t('ui.explainScrutiny', { max: MAX_SCRUTINY })}</li>
+        </ul>
+        <h3 id="pack-heading" className="on-dark">{t('ui.pickEvidence', { count: slots })}</h3>
+        <ul className="cards pick" aria-labelledby="pack-heading">
+          {EVIDENCE_IDS.map((id) => (
+            <li key={id}>
+              <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
+                <strong>{t(`ev.${id}.name`)}</strong>
+                {picked.includes(id) && <span className="tag packed">{t('ui.packed')}</span>}
+                <p>{t(`ev.${id}.desc`)}</p>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="controls">
+        <p className="muted-dark" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
+        <button className="primary" disabled={picked.length !== slots} onClick={onContinue}>
           {t('ui.continue')}
         </button>
       </div>
@@ -170,9 +217,37 @@ function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: Chara
   );
 }
 
+/** Setup 3. The mission, the rest of the premise and what you packed, then the one strong button. */
+function BeginStep({ picked, onBack, onBegin }: { picked: EvidenceId[]; onBack: () => void; onBegin: () => void }) {
+  const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
+  return (
+    <main className="setup setup-step begin-step">
+      <div className="setup-body">
+        <header className="step-head">
+          <BackButton onBack={onBack} />
+          <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
+        </header>
+        <section className="paper mission">
+          <p className="mono">{t('ui.mission')}</p>
+          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
+          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
+          <p className="leave">{t('mission.leave')}</p>
+        </section>
+        <section className="packed-list">
+          <h3 className="mono">{t('ui.yourDocuments')}</h3>
+          <ul>{packed.map((id) => <li key={id}>{t(`ev.${id}.name`)}</li>)}</ul>
+        </section>
+      </div>
+      <div className="controls">
+        <button className="primary" onClick={onBegin}>{t('ui.beginCrossing')}</button>
+      </div>
+    </main>
+  );
+}
+
 /** Setup 1. The cards are a radio group: a tap selects, and only the button moves on. */
-function TravelerStep({ onContinue }: { onContinue: (c: CharacterId) => void }) {
-  const [chosen, setChosen] = useState<CharacterId | null>(null);
+function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; onContinue: (c: CharacterId) => void }) {
+  const [chosen, setChosen] = useState<CharacterId | null>(initial);
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Arrow keys move the selection, as in a native radio group.
