@@ -1,0 +1,99 @@
+# Purpose of Visit - how the game works, as a card game
+
+TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints. Every question has 2-3 answers, and every answer has a price in time, suspicion, a card from your hand, or a person you expose. Nothing is free, so the game is about which price you can afford to pay right now.
+
+## The pieces
+
+**Your resources (the "mana")**
+- Time: 8 points. Most answers that verify something cost 1-2. You win cleanly only if you finish with 2 or more.
+- Scrutiny: a 0-3 track. Lies and evasions add 1. At 3 you are pulled into a secondary inspection, and it drops back to 1 afterwards.
+- Your hand: 3 document cards (Mark packs 4), chosen from 6 before you leave. Each card can be played once.
+- Your people: 2 contacts (your mother, plus a cousin or a brother). Naming one solves a problem but exposes them for the rest of the run.
+- Medicine: your father's medicine. You can give it up to get out of trouble, and it costs you the clean ending.
+
+**Your character (the "class")**
+- Each character has one Advantage and one Complication, and three hidden background traits.
+- Lena: once per run she can answer a work question without a document. Checks on her employer cost 1 extra time. Her background has a foreign employer, an old donation and an apartment.
+- Mark: packs 4 documents instead of 3, and starts at Scrutiny 1. His background has a second passport, a brother across the border and a protest photo.
+- Each has one protected person. Exposing them costs you the clean ending.
+
+**The bulletin (the "modifier")**
+- One of 3 is dealt per run: customs is strict, accommodation calls are checked, or old records are being cross-checked.
+- It changes the price of some answers and the results of some checks. The same hand plays differently on a different day.
+
+## The decks and the dealer
+
+Each checkpoint (passport, customs, interview) has its own deck. At each one the dealer deals 2 cards:
+
+1. A routine card, which is a question everybody gets. The first checkpoint always opens with "Purpose of your visit?".
+2. A related card, which is the highest-priority card whose condition matches what you have done so far. If none match, you get another routine card.
+
+This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, customs deals "We'll call your host" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
+
+Some answers also queue a follow-up card that is dealt next. For example, a phone search that finds the protest photo queues "Were you at this rally?".
+
+## What a card looks like
+
+Every question card offers 2-3 answers, and they are always built from the same 5 kinds:
+
+| Kind | What you pay | Example |
+|---|---|---|
+| Show a document | A card from your hand, and its facts go on file | Show the employer letter, so "your employer" is now on file |
+| Let them check | Time (1-3), sometimes a waiting-room check | "Let them count it" -1 time |
+| Say something | Free now, but it adds a claim or +1 scrutiny | "Say you're a tourist" adds a claim |
+| Name someone | Exposes a contact | "Ask your mother to vouch" |
+| Advantage | Your once-per-run ability | Lena explains her job plainly |
+
+The rule that keeps it fair: every card has at least one answer that needs no document and no person, so you are never stuck. Missing options still show as greyed out ("Show a document - none packed"), so you can see what your packing cost you.
+
+## Claims and facts (the memory)
+
+- Claims are what you said: visiting family, tourism, a hotel stay, no other family.
+- Facts are what the state now knows (shown as "On file"): the family address, your employer, your phone was searched, your brother abroad.
+- A contradiction card is dealt only when a claim and a fact disagree. Say "tourist", then let them find your family address, and the interview asks about it with priority 3. Lies are free when you tell them and cost you later.
+- Some cards block each other. Once you have claimed a family visit, the hotel booking can no longer be shown.
+
+## Waiting rooms (checks)
+
+Some answers start a check, like a records scan, a call to your host, a lab test of the medicine or a phone search. The result is fixed the moment the check starts, from your background, the bulletin and the facts on file. The waiting room then plays 2-3 short beats, and the player cannot change the result, only how they meet it.
+
+On important checks (the host call and the phone search) you get 3 options:
+- Wait quietly: free.
+- Ask for an update: you learn what is happening, and "you're in a hurry" goes on file.
+- Ask a contact to vouch: clears the check, and exposes them.
+
+## Endings (the scoring)
+
+Checked in this order:
+1. Turned back: you withdrew during an inspection.
+2. Admitted, too late: you finished with under 2 time.
+3. Admitted, at a cost: you lost the medicine or exposed your protected person.
+4. Admitted, home in time: none of the above.
+
+So there are two levels of winning. Getting through at all is the first level, and getting through without paying with people or the medicine is the second.
+
+## How balance works
+
+**Design rules every card follows**
+- Each answer costs something different, so no answer is the best one on every card. Documents are limited (3-4 for 6 questions), time is limited (8, and you need 2 left), and suspicion has a hard ceiling (3).
+- Honesty costs time now, and lying costs suspicion or a contradiction later. That trade is the core tension.
+- An inspection is a big tax (2-3 time, or the medicine, or a person), but it resets scrutiny to 1, so one inspection hurts and does not end the run.
+- The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
+
+**The branch walk (the proof)**
+A script (`npm run walk`) plays every possible choice from every possible state: both characters, every packing, all 3 bulletins, 4 random seeds. It does not sample, it plays them all. The last run visited 1,089,623 states and checked:
+- No dead ends: every state has a legal move.
+- All 4 endings can be reached.
+- Every card is dealt at least once, and every answer is offered at least once.
+- The longest run is 11 decisions (the limit is 14), which keeps a run at 5-8 minutes.
+
+Ending shares across all branches: home in time 27.8%, at a cost 36.5%, too late 22.9%, turned back 12.8%.
+
+**What is not balanced yet**
+These shares count every branch equally, but players don't play randomly. In playtesting, a run that lied about tourism still got home in time with 6 of 8 time left, so lying is too cheap right now. The next step is autoplay bots that play like real styles (honest, liar, cautious, random), so we can measure each style's ending share and tune the prices until lying usually ends too late or at a cost. That is beads 67a.2 (autoplay) and plj (balance).
+
+## Where it lives in code
+
+- Cards and rules are data: `src/game/content/encounters.ts` (decks, checks, inspections) and `src/game/content/world.ts` (characters, documents, constants).
+- The dealer and the rules engine: `src/game/engine.ts`, a pure function `step(state, action)` with a seeded random generator, so any run can be replayed exactly.
+- All text: `src/i18n/en.ts`, so cards can be translated without touching the rules.
