@@ -62,9 +62,21 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 20. `fsx.9` What each official knows (absorbs l9v, logged claims)
 21. `fsx.10` Officers with one stated priority each (visible mood deferred, because it implies a mechanic that doesn't exist)
 
+**Phase 3b - content to about 30 connected encounters** (epic bzo, after fsx.1 and fsx.9; content note 2026-11-08)
+
+Today: 18 encounters and 4 inspections. Replay should come from cards reacting to documents, history and earlier statements, not from more storylines.
+
+22. `bzo.1` Dealer composition: 2 routine, 2 background, 2 consequence questions per run; queued follow-ups first; causal relevance outranks novelty
+23. `bzo.2` Passport encounters, outlines first (prerequisite, 2-3 approaches, distinct costs, delayed consequence, how officials know)
+24. `bzo.3` Customs encounters, outlines first
+25. `bzo.4` Interview encounters and inspections, outlines first; deck reaches 30
+26. `bzo.5` Variety check: five consecutive runs per character differ in at least 3 of 6 decisions (the first content milestone)
+
+Each batch is written as setup → discovery → resolution groups, and the walk plus bots gate every card before it lands.
+
 **Phase 4 - balance**
 
-22. `plj` Tune balance for situational play. Target: the situational bot beats honest, liar and cautious; every setup can reach at least homeAtCost; no answer wins over 60% of the time where alternatives exist; and some setups guarantee only homeAtCost under the worst deal (today all 105 guarantee homeInTime), so packing matters.
+27. `plj` Tune balance for situational play. Target: the situational bot beats honest, liar and cautious; every setup can reach at least homeAtCost; no answer wins over 60% of the time where alternatives exist; and some setups guarantee only homeAtCost under the worst deal (today all 105 guarantee homeInTime), so packing matters.
 
 Every new rule in phase 3 adds its invariant to `checkState`/`checkMove` before the content that uses it, so the walk proves it on every state.
 
@@ -88,7 +100,7 @@ Every new rule in phase 3 adds its invariant to `checkState`/`checkMove` before 
 
 ## How it runs
 
-Both epics are autopilot on, groups of 3: `/harness-auto` builds, reviews and opens a PR per group of up to 3 beads, and never merges. `.agent/plan` points at 67a, so run `/harness-auto` for 67a, then point it at fsx (`echo border_crossing_game-fsx > .agent/plan`) and run it again.
+Both epics are autopilot on, groups of 3: `/harness-auto` builds, reviews and opens a PR per group of up to 3 beads, and never merges. `.agent/plan` points at 67a, so run `/harness-auto` for 67a, then point it at fsx (`echo border_crossing_game-fsx > .agent/plan`), then bzo. Every bead branches from and opens its PR against `worktree-prototype` (set as `VERIFY_BASE` in the local `.envrc.local`), because `main` only holds the first scaffold. Merging a PR redeploys Pages.
 
 ## Decisions for Yury
 
@@ -98,6 +110,6 @@ Both epics are autopilot on, groups of 3: `/harness-auto` builds, reviews and op
 
 ## Not in this plan
 
-- A second mission or more encounters. The reviews say to fix the rules before adding content.
+- A second mission. One mission keeps balance manageable. More encounters come only in phase 3b, after the rules.
 - Translations. English only, all text already in `src/i18n/en.ts`.
 - Merging `worktree-prototype` into `main`. That is Yury's call.
