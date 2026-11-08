@@ -49,6 +49,22 @@ describe('English text', () => {
     expect(long).toEqual([]);
   });
 
+  // Time is hours until the last bus, never an abstract unit: "2 time", "{n} time",
+  // "1 extra time" and "time left" all fail. "Home in time" is not a unit and passes.
+  it('counts time in hours, never as a unit', () => {
+    const unit = /(\d|\})\s+(extra\s+|more\s+)?time\b|\btime\s+(left|remaining)\b|\btokens?\b/i;
+    expect(Object.entries(en).filter(([, v]) => unit.test(v))).toEqual([]);
+  });
+
+  it('has both plural forms for every plural key', () => {
+    const keys = Object.keys(en);
+    const missing = keys
+      .filter((k) => k.endsWith('.one') || k.endsWith('.other'))
+      .map((k) => k.replace(/\.(one|other)$/, ''))
+      .filter((base) => !(`${base}.one` in en && `${base}.other` in en));
+    expect(missing).toEqual([]);
+  });
+
   it('uses no em dashes', () => {
     expect(Object.entries(en).filter(([, v]) => v.includes('—'))).toEqual([]);
   });

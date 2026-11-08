@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { t } from '../i18n';
+import { t, tn } from '../i18n';
 import type { Option } from '../game/engine';
 import type { RunState } from '../game/types';
 import { CHECKPOINTS } from '../game/types';
@@ -13,9 +13,8 @@ export function TopStrip({ s }: { s: RunState }) {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
   return (
     <header className="strip" aria-label={t('ui.yourCrossing')}>
-      <div className="stat" aria-label={`${t('ui.time')}: ${s.time}`}>
-        <span className="stat-label">{t('ui.time')}</span>
-        <span className="stat-value">{s.time}</span>
+      <div className="stat time">
+        <span className="stat-label hours">{tn('ui.hoursRemaining', s.time)}</span>
         <span className="pips" aria-hidden>
           {Array.from({ length: START_TIME }, (_, i) => <i key={i} className={i < s.time ? 'on' : ''} />)}
         </span>
@@ -42,14 +41,14 @@ export function CostChips({ o }: { o: Option }) {
   if (a.kind === 'perk') chips.push({ text: t('ui.cost.perk'), tone: 'info' });
   if (o.card) chips.push({ text: t('ui.cost.uses', { card: o.card }), tone: 'info' });
   if (o.contact) chips.push({ text: t('ui.cost.exposes', { contact: o.contact }), tone: 'person' });
-  // Time and scrutiny are summed, so a weakness reads "-2 time", not "-1 time -1 time".
+  // Time and scrutiny are summed, so a weakness reads "-2 hours", not "-1 hour -1 hour".
   let time = 0;
   let scrutiny = 0;
   for (const e of o.effects) {
     if ('time' in e) time += e.time;
     else if ('scrutiny' in e) scrutiny += e.scrutiny;
   }
-  if (time) chips.push({ text: t('ui.cost.time', { n: time }), tone: 'time' });
+  if (time) chips.push({ text: tn('ui.cost.time', time), tone: 'time' });
   if (scrutiny) chips.push({ text: t('ui.cost.scrutiny', { n: scrutiny }), tone: 'risk' });
   for (const e of o.effects) {
     if ('loseMedicine' in e) chips.push({ text: t('ui.cost.medicine'), tone: 'risk' });

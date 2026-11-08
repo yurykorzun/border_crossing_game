@@ -22,6 +22,11 @@ export function has(key: string): boolean {
   return key in en;
 }
 
+/** Plural-aware t(): picks `<key>.one` for 1 or -1 and `<key>.other` otherwise, with {n} set. */
+export function tn(key: string, n: number, vars: Record<string, string | number> = {}): string {
+  return t(`${key}.${Math.abs(n) === 1 ? 'one' : 'other'}`, { ...vars, n });
+}
+
 export function t(key: string, vars: Record<string, string | number> = {}): string {
   const s = LOCALES[locale][key] ?? en[key];
   if (s === undefined) throw new Error(`missing text: ${key}`);
