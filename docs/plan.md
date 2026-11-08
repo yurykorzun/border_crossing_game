@@ -62,7 +62,16 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 20. `fsx.9` What each official knows (absorbs l9v, logged claims)
 21. `fsx.10` Officers with one stated priority each (visible mood deferred, because it implies a mechanic that doesn't exist)
 
-**Phase 3b - content to about 30 connected encounters** (epic bzo, after fsx.1 and fsx.9; content note 2026-11-08)
+**Phase 3a - destinations** (epic 70r, after fsx.7; destinations note 2026-11-08)
+
+Veyra is the home country, and its three regions are where you can be going: Capital District, Northern Industrial Region (the restricted town Orvek) and Southern Border Province. Each has travel time and two standing rules, shown on a briefing before packing next to today's bulletin.
+
+- `70r.1` Destinations as data: travel time, two standing rules, fairness invariants (every destination can reach homeAtCost, none is solved by one card)
+- `70r.2` Regional rules change what existing documents do
+- `70r.3` Destination choice and a briefing before packing (after `67a.8`, which leaves room for it)
+- `70r.4` Per-destination walk report proving the briefing changes the best packing
+
+**Phase 3b - content to about 30 connected encounters** (epic bzo, after fsx.1, fsx.9 and 70r.4; content note 2026-11-08)
 
 Today: 18 encounters and 4 inspections. Replay should come from cards reacting to documents, history and earlier statements, not from more storylines.
 
@@ -79,6 +88,19 @@ Each batch is written as setup → discovery → resolution groups, and the walk
 27. `plj` Tune balance for situational play. Target: the situational bot beats honest, liar and cautious; every setup can reach at least homeAtCost; no answer wins over 60% of the time where alternatives exist; and some setups guarantee only homeAtCost under the worst deal (today all 105 guarantee homeInTime), so packing matters.
 
 Every new rule in phase 3 adds its invariant to `checkState`/`checkMove` before the content that uses it, so the walk proves it on every state.
+
+**World and language** (world epic 0ts, autopilot off; language epic cmb; notes 2026-11-08)
+
+The world bible comes before the Russian text, so Russian is written once with final names.
+
+- `0ts.1` World bible in docs/world.md and the country names in the game (after `67a.9`). Western Union (where you live), an Eastern transit republic and Veyra are built; the other regions are background. Each country is described by its domestic system, its relationship with the others, the current event and your status there.
+- `cmb.1` Plural forms in t() before any Russian text
+- `cmb.2` Complete Russian text with a locked glossary (after `0ts.1`)
+- `cmb.3` Language picker on the title screen, saved choice, long-text layout check at 390x844
+- `cmb.4` Russian proofread by another model family, plus a review sheet for Yury
+- `0ts.2` Legal status per country drives what a document means (after `70r.2`)
+- `0ts.3` Current events and the transit leg, for example flights suspended so you travel through the transit republic (after `bzo.5`, decisions stay at most 14)
+- `0ts.4` Reverse campaign design: leaving Veyra for the Union (design doc only)
 
 **Phase 5 - later**
 
@@ -100,16 +122,18 @@ Every new rule in phase 3 adds its invariant to `checkState`/`checkMove` before 
 
 ## How it runs
 
-Both epics are autopilot on, groups of 3: `/harness-auto` builds, reviews and opens a PR per group of up to 3 beads, and never merges. `.agent/plan` points at 67a, so run `/harness-auto` for 67a, then point it at fsx (`echo border_crossing_game-fsx > .agent/plan`), then bzo. Every bead branches from and opens its PR against `worktree-prototype` (set as `VERIFY_BASE` in the local `.envrc.local`), because `main` only holds the first scaffold. Merging a PR redeploys Pages.
+67a, fsx, 70r, bzo and cmb are autopilot on, groups of 3: `/harness-auto` builds, reviews and opens a PR per group of up to 3 beads, and never merges. The world epic 0ts is autopilot off, because its beads hold design calls Yury should see one at a time. `.agent/plan` points at 67a, so run `/harness-auto` for 67a, then point it at fsx (`echo border_crossing_game-fsx > .agent/plan`), then 70r, bzo and cmb. A bead stays open until its PR is merged and `pr-sync` closes it, so the next bead that depends on it waits for the merge. Every bead branches from and opens its PR against `worktree-prototype` (set as `VERIFY_BASE` in the local `.envrc.local`), because `main` only holds the first scaffold. Merging a PR redeploys Pages.
 
 ## Decisions for Yury
 
 1. Art style, before `grd`: pixel art (PixelLab, needs its API token) or painted illustration (OpenAI or FLUX, needs that key; the mockup points this way). Decide after seeing the SVG pass on the phone. The UI style itself is decided (see UI rules).
-2. Mark's brother is in a fictional country at war, not Ukraine as in the original note. Change it if you want the real one.
+2. Mark's brother is in a fictional country at war, not Ukraine as in the original note. `0ts.1` proposes where it sits in the fictional world; change it if you want the real one.
 3. bd sync: create the `yurykorzun/beads` repo, then run `bd-attach migrate --db border_crossing_game`.
+4. Merge PR #1 (Playwright e2e), then run `pr-sync`. Every other bead waits on it.
 
 ## Not in this plan
 
 - A second mission. One mission keeps balance manageable. More encounters come only in phase 3b, after the rules.
-- Translations. English only, all text already in `src/i18n/en.ts`.
+- Languages beyond English and Russian.
+- Building the other three world regions, beyond background in docs/world.md.
 - Merging `worktree-prototype` into `main`. That is Yury's call.
