@@ -10,7 +10,8 @@ import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME,
 } from './content/world';
 import { CHECKS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
-import { nextRandom, pick } from './rng';
+import { nextRandom, randomDealer } from './rng';
+import type { Dealer } from './rng';
 
 export interface RunSetup {
   character: CharacterId;
@@ -152,7 +153,8 @@ function apply(s: RunState, effects: Effect[]): RunState {
   for (const e of effects) {
     if (!check(e.when, n)) continue;
     if ('time' in e) n = { ...n, time: Math.max(0, n.time + e.time) };
-    else if ('scrutiny' in e) n = { ...n, scrutiny: Math.max(0, n.scrutiny + e.scrutiny) };
+    // Capped at the max, because anything at the max already means an inspection.
+    else if ('scrutiny' in e) n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)) };
     else if ('fact' in e) n = n.facts.includes(e.fact) ? n : { ...n, facts: [...n.facts, e.fact] };
     else if ('claim' in e) n = n.claims.includes(e.claim) ? n : { ...n, claims: [...n.claims, e.claim] };
     else if ('loseMedicine' in e) n = { ...n, medicine: false };
@@ -186,9 +188,9 @@ function show(s: RunState, id: string): RunState {
 }
 
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
-function advance(s: RunState): RunState {
+function advance(s: RunState, dealer: Dealer): RunState {
   if (s.withdrew) return finish(s);
-  if (s.scrutiny >= MAX_SCRUTINY) return inspect(s);
+  if (s.scrutiny >= MAX_SCRUTINY) return inspect(s, dealer);
   while (s.pending.length) {
     const [id, ...rest] = s.pending;
     s = { ...s, pending: rest };
@@ -199,10 +201,10 @@ function advance(s: RunState): RunState {
     if (next >= CHECKPOINTS.length) return finish(s);
     return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
   }
-  return deal(s);
+  return deal(s, dealer);
 }
 
-function deal(s: RunState): RunState {
+function deal(s: RunState, dealer: Dealer): RunState {
   const cp = CHECKPOINTS[s.checkpoint];
   const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && eligible(s, e));
   let chosen: Encounter | undefined;
@@ -215,23 +217,26 @@ function deal(s: RunState): RunState {
   }
   if (!chosen) {
     if (!routine.length) throw new Error(`no card left for ${cp} slot ${s.slot}`);
-    const r = pick(rng, routine);
-    chosen = r.value;
+    const r = dealer(rng, routine.length);
+    chosen = routine[r.index];
     rng = r.rng;
   }
   return show({ ...s, rng, slot: s.slot + 1 }, chosen.id);
 }
 
-function inspect(s: RunState): RunState {
+function inspect(s: RunState, dealer: Dealer): RunState {
   const fits = INSPECTIONS.filter((i) => check(i.when, s) && (i.id !== 's_medicine' || s.medicine));
   const fresh = fits.filter((i) => !s.seen.includes(i.id));
-  const r = pick(s.rng, fresh.length ? fresh : fits);
+  const pool = fresh.length ? fresh : fits;
+  if (!pool.length) throw new Error('no inspection fits');
+  const r = dealer(s.rng, pool.length);
+  const id = pool[r.index].id;
   return {
     ...s,
     rng: r.rng,
-    seen: s.seen.includes(r.value.id) ? s.seen : [...s.seen, r.value.id],
+    seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     inspections: s.inspections + 1,
-    screen: { kind: 'inspection', id: r.value.id },
+    screen: { kind: 'inspection', id },
   };
 }
 
@@ -264,7 +269,7 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   ];
 }
 
-function resolveWait(s: RunState, how: WaitAction): RunState {
+function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
   if (s.screen.kind !== 'wait') return s;
   const w = s.screen;
   let result = w.resolved;
@@ -283,12 +288,12 @@ function resolveWait(s: RunState, how: WaitAction): RunState {
   n = apply(n, result.effects ?? []);
   n = say(n, [{ key: `check.${w.check}.${result.result}` }]);
   if (result.followUp && !n.seen.includes(result.followUp)) n = { ...n, pending: [result.followUp, ...n.pending] };
-  return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) });
+  return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer);
 }
 
 // ── Choosing
 
-function choose(s: RunState, approachId: string): RunState {
+function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const card = currentCard(s);
   const opt = options(s).find((o) => o.approach.id === approachId);
   if (!card || !opt || opt.blocked) return s;
@@ -305,24 +310,28 @@ function choose(s: RunState, approachId: string): RunState {
   if (opt.approach.kind === 'withdraw') return finish({ ...n, withdrew: true });
   if (s.screen.kind === 'inspection') n = { ...n, scrutiny: SCRUTINY_AFTER_INSPECTION };
   if (opt.approach.check) return startWait(n, opt.approach.check);
-  return advance(n);
+  return advance(n, dealer);
 }
 
-export function step(s: RunState, action: Action): RunState {
+/**
+ * The only way a run moves. `dealer` picks routine cards and inspections; the
+ * game uses the seeded one, tests pass a scripted one to try every pick.
+ */
+export function step(s: RunState, action: Action, dealer: Dealer = randomDealer): RunState {
   switch (action.type) {
     case 'choose':
-      return choose(s, action.approach);
+      return choose(s, action.approach, dealer);
     case 'beat':
       if (s.screen.kind !== 'wait' || s.screen.shown >= s.screen.beats.length) return s;
       return { ...s, reaction: null, screen: { ...s.screen, shown: s.screen.shown + 1 } };
     case 'waitAction': {
       const a = waitActions(s).find((w) => w.action === action.action);
       if (!a || a.blocked) return s;
-      return resolveWait({ ...s, reaction: null }, action.action);
+      return resolveWait({ ...s, reaction: null }, action.action, dealer);
     }
     case 'ack':
       if (s.reaction) return { ...s, reaction: null };
-      if (s.screen.kind === 'between') return deal(s);
+      if (s.screen.kind === 'between') return deal(s, dealer);
       return s;
   }
 }

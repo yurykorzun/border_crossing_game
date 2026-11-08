@@ -9,6 +9,18 @@ export function nextRandom(state: number): { value: number; rng: number } {
   return { value: ((t ^ (t >>> 14)) >>> 0) / 4294967296, rng };
 }
 
+/**
+ * Picks one of `size` options. The engine routes every random card choice
+ * through one, so tests can swap in a scripted dealer and try every pick.
+ */
+export type Dealer = (rng: number, size: number) => { index: number; rng: number };
+
+/** The game's dealer: the seeded random above, same picks as `pick`. */
+export const randomDealer: Dealer = (rng, size) => {
+  const r = nextRandom(rng);
+  return { index: Math.floor(r.value * size), rng: r.rng };
+};
+
 export function pick<T>(state: number, list: readonly T[]): { value: T; rng: number } {
   if (!list.length) throw new Error('pick from an empty list');
   const r = nextRandom(state);
