@@ -41,7 +41,7 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 **Phase 2 - the opening reads as a journey** (epic 67a)
 
 4. `67a.4` Time becomes hours until the last bus
-5. `67a.5` Run screen: scene, dialogue and action fit together without scrolling
+5. `67a.5` Run screen, built from the most crowded state first (long question, chips, three answers with two-line costs, tray), checked at 390x844 with larger text. Question, Reaction and Continue are separate phases. Setup screens wait for it.
 6. `67a.6` The queue as a tap-by-tap scene ending in Approach the booth (fixes Mark's mother naming Ilya)
 7. `67a.7` Setup 1: Choose your traveler, with visible history
 8. `67a.8` Setup 2 and 3: Prepare your documents, Begin the crossing
@@ -60,7 +60,7 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 18. `fsx.7` Bulletin warnings that make packing strategic
 19. `fsx.8` Encounter checklist, content lint and playtest script
 20. `fsx.9` What each official knows (absorbs l9v, logged claims)
-21. `fsx.10` Officers with one priority each and a visible mood
+21. `fsx.10` Officers with one stated priority each (visible mood deferred, because it implies a mechanic that doesn't exist)
 
 **Phase 4 - balance**
 
@@ -76,13 +76,23 @@ Every new rule in phase 3 adds its invariant to `checkState`/`checkMove` before 
 - `eam` Pseudo-locale test for layout, before the first translation
 - `26j` Installable PWA (independent, can go any time)
 
+## UI rules (UI review, 2026-11-08)
+
+- One timeline: "The bus leaves in 8 hours. You need 2 hours to reach the station." Success needs at least 2 hours left.
+- No page scroll at 390x844 by default. With larger text or translations the content panel scrolls. Never shrink text or clip answers.
+- Engine phases are gameplay only. Setup subpages, settings and evidence sheets are presentation state in React.
+- At most 3 answers per card. Several fitting documents open from one "Show evidence" answer (`kuk`).
+- A check's finding is stored apart from its resolution. A contact can explain a finding, not erase it (`fsx.2`).
+- Style: cream dialogue and document surfaces, IBM Plex, dark green frame. Answers have equal weight; only actions like "Begin the crossing" get a strong button.
+- Endings say only what the engine checks: "Home in time" becomes "Admitted, time to spare" or gets an epilogue, and missing the bus differs from arriving too late (`fsx.3`).
+
 ## How it runs
 
 Both epics are autopilot on, groups of 3: `/harness-auto` builds, reviews and opens a PR per group of up to 3 beads, and never merges. `.agent/plan` points at 67a, so run `/harness-auto` for 67a, then point it at fsx (`echo border_crossing_game-fsx > .agent/plan`) and run it again.
 
 ## Decisions for Yury
 
-1. Art style, before `grd`: pixel art (PixelLab, needs its API token) or flat illustration (OpenAI or FLUX, needs that key). Decide after seeing the SVG pass on the phone.
+1. Art style, before `grd`: pixel art (PixelLab, needs its API token) or painted illustration (OpenAI or FLUX, needs that key; the mockup points this way). Decide after seeing the SVG pass on the phone. The UI style itself is decided (see UI rules).
 2. Mark's brother is in a fictional country at war, not Ukraine as in the original note. Change it if you want the real one.
 3. bd sync: create the `yurykorzun/beads` repo, then run `bd-attach migrate --db border_crossing_game`.
 
