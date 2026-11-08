@@ -21,8 +21,8 @@ function contentKeys(): string[] {
     keys.push(`check.${c.id}.clear`);
   }
   for (const ch of Object.values(CHARACTERS)) {
-    keys.push(`char.${ch.id}.name`, `char.${ch.id}.blurb`, `char.${ch.id}.strength`, `char.${ch.id}.weakness`);
-    for (const b of ch.background) keys.push(`bg.${b}`);
+    keys.push(`char.${ch.id}.name`, `char.${ch.id}.blurb`, `char.${ch.id}.role`, `char.${ch.id}.advantage`, `char.${ch.id}.complication`);
+    for (const b of ch.background) keys.push(`bg.${b}`, `bg.${b}.short`);
     for (const c of ch.contacts) keys.push(`contact.${c}`, `contact.${c}.note`);
   }
   for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`);

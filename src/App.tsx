@@ -3,7 +3,7 @@
 // ?autoplay=<style> (honest, liar, cautious, random, situational) instead plays
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t } from './i18n';
 import { endingFor, newRun, options, step, waitActions } from './game/engine';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -132,37 +132,19 @@ function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: Chara
   const [picked, setPicked] = useState<EvidenceId[]>([]);
   const slots = character ? CHARACTERS[character].evidenceSlots : 0;
 
-  if (!character) {
-    return (
-      <main className="setup">
-        <section className="paper">
-          <p className="mono">{t('ui.mission')}</p>
-          <h2>{t('mission.title')}</h2>
-          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
-          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
-        </section>
-        <h2 className="on-dark">{t('ui.pickCharacter')}</h2>
-        <div className="controls stack">
-          {CHARACTER_IDS.map((id) => (
-            <button key={id} className="choice" onClick={() => setCharacter(id)}>
-              <span className="choice-label">{t(`char.${id}.name`)}</span>
-              <span className="choice-sub">{t(`char.${id}.blurb`)}</span>
-              <span className="chips">
-                <span className="chip info">+ {t(`char.${id}.strength`)}</span>
-                <span className="chip risk">- {t(`char.${id}.weakness`)}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </main>
-    );
-  }
+  if (!character) return <TravelerStep onContinue={setCharacter} />;
 
   const toggle = (id: EvidenceId) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < slots ? [...p, id] : p));
 
   return (
     <main className="setup">
+      {/* The rest of the mission until the begin screen (67a.8) takes it. */}
+      <section className="paper">
+        <p className="mono">{t('ui.mission')}</p>
+        <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
+        <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
+      </section>
       <section className="bulletin mono" role="note">
         <strong>{t('ui.bulletin')}:</strong> {t(`bulletin.${bulletin}`)}
       </section>
@@ -182,6 +164,78 @@ function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: Chara
         <p className="muted-dark">{t('ui.picked', { picked: picked.length, count: slots })}</p>
         <button className="primary" disabled={picked.length !== slots} onClick={() => onStart(character, picked)}>
           {t('ui.continue')}
+        </button>
+      </div>
+    </main>
+  );
+}
+
+/** Setup 1. The cards are a radio group: a tap selects, and only the button moves on. */
+function TravelerStep({ onContinue }: { onContinue: (c: CharacterId) => void }) {
+  const [chosen, setChosen] = useState<CharacterId | null>(null);
+  const cards = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Arrow keys move the selection, as in a native radio group.
+  const onKey = (e: React.KeyboardEvent, i: number) => {
+    const delta = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    const next = (i + delta + CHARACTER_IDS.length) % CHARACTER_IDS.length;
+    setChosen(CHARACTER_IDS[next]);
+    cards.current[next]?.focus();
+  };
+  const focusable = chosen ?? CHARACTER_IDS[0];
+
+  return (
+    <main className="setup traveler-step">
+      <div className="setup-body">
+        <header className="setup-head">
+          <p className="mono setup-title">{t('ui.title')}</p>
+          <p className="premise">{t('ui.premise')}</p>
+        </header>
+        <h2 id="traveler-heading" className="on-dark">{t('ui.pickCharacter')}</h2>
+        <div className="travelers" role="radiogroup" aria-labelledby="traveler-heading">
+          {CHARACTER_IDS.map((id, i) => (
+            <button
+              key={id}
+              ref={(el) => { cards.current[i] = el; }}
+              type="button"
+              role="radio"
+              aria-checked={chosen === id}
+              tabIndex={id === focusable ? 0 : -1}
+              className="traveler"
+              onClick={() => setChosen(id)}
+              onKeyDown={(e) => onKey(e, i)}
+            >
+              <span className="radio" aria-hidden />
+              {/* Portrait slot: the art bead (67a.10) fills it. */}
+              <span className="portrait" aria-hidden data-portrait={id}>{t(`char.${id}.name`).charAt(0)}</span>
+              <span className="traveler-text">
+                <span className="traveler-name"><strong>{t(`char.${id}.name`)}</strong> · {t(`char.${id}.role`)}</span>
+                <span className="traveler-history">
+                  {CHARACTERS[id].background.map((b) => <span key={b} className="trait">{t(`bg.${b}.short`)}</span>)}
+                </span>
+                <span className="traveler-row"><span className="row-label">{t('ui.advantage')}</span> {t(`char.${id}.advantage`)}</span>
+                <span className="traveler-row"><span className="row-label">{t('ui.complication')}</span> {t(`char.${id}.complication`)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        {/* One shared detail area: only the selected traveler's history is spelled out. */}
+        <section className="history-detail" aria-live="polite">
+          {chosen ? (
+            <>
+              <h3 className="mono">{t('ui.historyOf', { name: t(`char.${chosen}.name`) })}</h3>
+              <ul>{CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
+            </>
+          ) : (
+            <p className="muted-dark">{t('ui.historyHint')}</p>
+          )}
+        </section>
+      </div>
+      <div className="controls">
+        <button className="primary" disabled={!chosen} onClick={() => chosen && onContinue(chosen)}>
+          {chosen ? t('ui.continueAs', { name: t(`char.${chosen}.name`) }) : t('ui.continue')}
         </button>
       </div>
     </main>

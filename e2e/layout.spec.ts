@@ -43,7 +43,8 @@ test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', asy
   await page.locator('.title-screen button.primary').click();
 
   // Mark starts with 1 scrutiny.
-  await page.locator('.setup .choice').nth(CHARACTER_IDS.indexOf('mark')).click();
+  await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('mark')).click();
+  await page.locator('.traveler-step .controls button.primary').click();
   const cont = page.locator('.setup .controls button.primary');
   const docs = page.locator('.setup .doc');
   for (let i = 0; !(await cont.isEnabled()); i++) await docs.nth(i).click();

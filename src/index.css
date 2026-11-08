@@ -144,6 +144,60 @@ p { margin: 0 0 var(--gap); }
 .doc.used { opacity: 0.55; }
 .doc.used strong { text-decoration: line-through; }
 
+/* ── Setup 1: Choose your traveler. The body scrolls with larger text; the button stays put. */
+.traveler-step { overflow: hidden; }
+.setup-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.setup-head { margin-top: 20px; }
+.setup-title { color: #c5cec9; margin-bottom: 6px; }
+.premise { font-size: 1.05rem; margin: 0; }
+.travelers { display: grid; gap: var(--gap); }
+.traveler {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--paper-2);
+  border-radius: var(--radius);
+  text-align: start;
+  cursor: pointer;
+}
+.traveler[aria-checked='true'] { border-color: var(--navy); background: #fffaf0; }
+.traveler:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
+.radio {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.traveler[aria-checked='true'] .radio { border-color: var(--navy); }
+.traveler[aria-checked='true'] .radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--navy); }
+.portrait {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+.traveler-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.traveler-name { color: var(--navy); }
+.traveler-history { font-size: 0.85rem; color: var(--muted); }
+.trait + .trait::before { content: ' · '; }
+.traveler-row { font-size: 0.9rem; }
+.row-label { font-weight: 600; color: var(--navy); }
+.history-detail h3 { color: #c5cec9; margin-bottom: 6px; }
+.history-detail ul { margin: 0; padding-inline-start: 18px; font-size: 0.9rem; display: grid; gap: 4px; }
+
 /* ── Run: strip / scene / panel / controls / tools */
 .run { gap: 10px !important; }
 /* Two rows: time and the scrutiny button, then the checkpoint dots with their name. */
