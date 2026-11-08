@@ -10,7 +10,7 @@ import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
@@ -305,7 +305,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
   const sc = s.screen as Extract<RunState['screen'], { kind: 'wait' }>;
   const done = sc.shown >= sc.beats.length;
   const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
-  const delay = useMemo(() => (reduceWait ? 600 : 2000 + ((sc.beats[sc.shown] ?? 0) * 613) % 3000), [reduceWait, sc.shown, sc.beats]);
+  const delay = useMemo(() => beatDelayMs(sc.beats[sc.shown] ?? 0, reduceWait), [reduceWait, sc.shown, sc.beats]);
 
   useEffect(() => {
     if (done) return;
