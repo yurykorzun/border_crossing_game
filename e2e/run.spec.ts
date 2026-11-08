@@ -26,6 +26,11 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   await noHorizontalScroll(page, 'title');
   await page.locator('.title-screen button.primary').click();
 
+  // Mission card sets up the one clock: the last bus in 8 hours.
+  const mission = page.locator('.setup .paper');
+  await expect(mission).toContainText('The last bus to the hospital leaves in 8 hours');
+  await expect(mission).not.toContainText('days of leave');
+
   // Character
   await expect(page.locator('.setup .choice').first()).toBeVisible();
   await noHorizontalScroll(page, 'character pick');
@@ -50,6 +55,12 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   let steps = 0;
 
   await expect(page.locator('main.run')).toBeVisible();
+
+  // Time reads as hours until the last bus. Both routine passport cards have a -1 hour
+  // option, so the first options screen shows a time chip.
+  await expect(page.locator('.strip .stat.time')).toContainText('8 hours remaining');
+  const timeChips: string[] = [];
+
   for (; steps < MAX_STEPS; steps++) {
     if (await ending.isVisible()) break;
     await noHorizontalScroll(page, `step ${steps}`);
@@ -65,12 +76,15 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
       const option = page.locator('main.run .controls button:enabled').first();
       // The waiting screen swaps its skip hint for buttons; give the screen a moment.
       await expect(option).toBeVisible();
+      timeChips.push(...(await page.locator('main.run .chip.time').allInnerTexts()));
       previous = 'option';
       await option.click();
     }
   }
 
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
+  expect(timeChips.length, 'time cost chips seen').toBeGreaterThan(0);
+  for (const chip of timeChips) expect(chip).toMatch(/^-\d+ hours?$/);
   await expect(ending).toBeVisible();
   await expect(ending.locator('h1')).not.toBeEmpty();
   await expect(page.locator('.ending .controls button.primary')).toBeVisible();

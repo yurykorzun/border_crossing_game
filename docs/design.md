@@ -20,15 +20,15 @@ Names used so far: the country is never named on screen in v0.1 (officers say "t
 
 ## First mission: your father's stroke
 
-Your mother needs help arranging his care. You have five days of leave, a return ticket and a spouse waiting at home. You carry his medicine, some cash and your everyday phone.
+Your mother needs help arranging his care. The last bus to the hospital leaves in 8 hours, and the station is 2 hours past the border. You carry his medicine, some cash and your everyday phone.
 
-Requirement: be admitted with at least 2 time left.
+Requirement: be admitted and reach the last bus with at least 2 hours left. The bus to the hospital leaves in 8 hours, and you need 2 hours to reach the station, so the crossing can spend up to 6.
 
 Endings (crossing result x mission result):
 
-1. Home in time - admitted, 2+ time, medicine kept, protected person safe.
-2. Home, at a cost - admitted, 2+ time, but the medicine is gone or the protected person was exposed.
-3. Too late - admitted with under 2 time.
+1. Home in time - admitted, 2+ hours left, medicine kept, protected person safe.
+2. Home, at a cost - admitted, 2+ hours left, but the medicine is gone or the protected person was exposed.
+3. Too late - admitted with under 2 hours left, so you miss the bus.
 4. Turned back - you withdrew.
 
 Every ending also lists who was exposed and what is on file about you.
@@ -43,7 +43,7 @@ Each checkpoint deals two encounter cards: one routine, one related to your back
 
 | Resource | Start | Shown as |
 |---|---|---|
-| Time | 8 tokens | Number + pips, always visible |
+| Time | 8 hours until the last bus | "8 hours remaining" + pips, always visible |
 | Evidence | 3 cards picked from 6 | Card row, used cards stay visible but greyed |
 | Contacts | 2 named people | Chips, exposed ones are marked |
 | Scrutiny | 0 of 3 | Three empty spaces |
@@ -55,7 +55,7 @@ At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny dr
 
 Background facts come from ordinary life and are the "My story" panel. Encounters key off them.
 
-- Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work or money question without spending evidence. Weakness: questions about her employer cost 1 extra time. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
+- Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work or money question without spending evidence. Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
 - Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
 
 ## Evidence cards (pick 3)
@@ -101,7 +101,7 @@ For each checkpoint: draw one routine card from that checkpoint's deck (seeded r
 
 ## Waiting room
 
-Two kinds of time: mission time (tokens) and screen time (a few seconds of beats). A two-hour check costs 2 tokens but plays in 15-30 seconds.
+Two kinds of time: mission time (hours until the last bus) and screen time (a few seconds of beats). A two-hour check costs 2 hours but plays in 15-30 seconds.
 
 1. You pick an approach that triggers a check (for example "Wait for the call").
 2. The engine fixes the result now, from facts already established. Waiting only reveals it, it never re-rolls.

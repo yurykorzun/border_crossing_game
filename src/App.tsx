@@ -1,12 +1,16 @@
 // Screens. The game state lives in one useState; every change goes through
 // step() from src/game/engine.ts and is autosaved.
+// ?autoplay=<style> (honest, liar, cautious, random, situational) instead plays
+// one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useState } from 'react';
 import { has, t } from './i18n';
 import { endingFor, newRun, options, step, waitActions } from './game/engine';
+import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
+import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
@@ -17,6 +21,11 @@ import * as sound from './ui/sound';
 const store = browserStore();
 
 export default function App() {
+  const style = new URLSearchParams(window.location.search).get('autoplay');
+  return isBotStyle(style) ? <Autoplay style={style} /> : <Game />;
+}
+
+function Game() {
   const [data, setData] = useState<SaveData>(() => load(store));
   const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number } | null>(null);
 
@@ -60,6 +69,48 @@ export default function App() {
   );
 }
 
+const AUTOPLAY_STEP_MS = 1000;
+
+interface AutoRun { s: RunState; botRng: number }
+
+function autoRun(index: number): AutoRun {
+  const setup = setupFor(index);
+  return { s: newRun(setup), botRng: botSeed(setup.seed) };
+}
+
+const randomIndex = () => Math.floor(Math.random() * 1e6);
+
+/** One bot run on screen. Taps still work; the bot just carries on from wherever the run is. */
+function Autoplay({ style }: { style: BotStyle }) {
+  const [auto, setAuto] = useState<AutoRun>(() => {
+    const seed = Number(new URLSearchParams(window.location.search).get('seed'));
+    return autoRun(Number.isInteger(seed) && seed > 0 ? seed - 1 : randomIndex());
+  });
+  // Settings come from the save so shorter waits and sound carry over, but nothing is written back.
+  const [data, setData] = useState<SaveData>(() => ({ ...load(store), run: null }));
+  const s = auto.s;
+
+  useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
+  useEffect(() => {
+    if (s.ending && !s.reaction) return;
+    const timer = setTimeout(() => setAuto((a) => {
+      // The officer's last line is dismissed like a player would, then the ending card shows.
+      if (a.s.ending) return a.s.reaction ? { ...a, s: step(a.s, { type: 'ack' }) } : a;
+      const pick = botAction(style, a.s, a.botRng);
+      return pick ? { s: step(a.s, pick.action), botRng: pick.botRng } : a;
+    }), AUTOPLAY_STEP_MS);
+    return () => clearTimeout(timer);
+  }, [s, style]);
+
+  const dispatch = (a: Action) => setAuto((x) => ({ ...x, s: step(x.s, a) }));
+  const shown = { ...data, endingsSeen: s.ending && !data.endingsSeen.includes(s.ending) ? [...data.endingsSeen, s.ending] : data.endingsSeen };
+  return (
+    <div className="shell" data-autoplay={style}>
+      <Run s={s} dispatch={dispatch} data={shown} setData={setData} onRestart={() => setAuto(autoRun(randomIndex()))} />
+    </div>
+  );
+}
+
 function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
   return (
     <main className="title-screen">
@@ -87,7 +138,7 @@ function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: Chara
         <section className="paper">
           <p className="mono">{t('ui.mission')}</p>
           <h2>{t('mission.title')}</h2>
-          <p>{t('mission.body')}</p>
+          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
           <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
         </section>
         <h2 className="on-dark">{t('ui.pickCharacter')}</h2>
