@@ -34,6 +34,14 @@ export const en: Record<string, string> = {
   'ui.complication': 'Complication',
   'ui.historyOf': "{name}'s history",
   'ui.historyHint': 'Pick a traveler to see their history.',
+  'ui.back': 'Back',
+  // Setup 2: hours and scrutiny are explained where they first matter, one short line each.
+  'ui.prepareDocuments': 'Prepare your documents',
+  'ui.explainHours': 'Every check costs hours. The bus leaves in {hours} hours. You need {travel} hours to reach the station.',
+  'ui.explainScrutiny': 'Officers grow suspicious. At {max}/{max} you are taken aside.',
+  // Setup 3: the heading and the one strong button.
+  'ui.beginCrossing': 'Begin the crossing',
+  'ui.yourDocuments': 'Your documents',
   'ui.pickEvidence': 'Pack {count} documents',
   'ui.picked': '{picked} of {count} packed',
   'ui.packed': 'Packed',
