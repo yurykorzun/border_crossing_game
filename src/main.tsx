@@ -12,3 +12,10 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// The build emits sw.js (vite.config.ts), so the game opens offline from the home screen.
+// Dev has no sw.js, so it registers only in the build.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  const base = import.meta.env.BASE_URL;
+  navigator.serviceWorker.register(`${base}sw.js`, { scope: base }).catch((err) => console.warn('service worker not registered', err));
+}
