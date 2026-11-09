@@ -30,6 +30,18 @@ export function has(key: string): boolean {
   return key in en;
 }
 
+/**
+ * A traveler's own wording of a key, when there is one, else the key itself. The
+ * traveler goes after the second segment, so `enc.i_family.q` reads `enc.i_family.mark.q`
+ * for Mark and `claim.noOtherFamily` reads `claim.noOtherFamily.mark`, because his brother
+ * lives across the border and Lena's cousin lives here.
+ */
+export function own(key: string, traveler: string): string {
+  const parts = key.split('.');
+  const variant = [...parts.slice(0, 2), traveler, ...parts.slice(2)].join('.');
+  return variant in en ? variant : key;
+}
+
 /** Plural-aware t(): picks `<key>.one` for 1 or -1 and `<key>.other` otherwise, with {n} set. */
 export function tn(key: string, n: number, vars: Record<string, string | number> = {}): string {
   return t(`${key}.${Math.abs(n) === 1 ? 'one' : 'other'}`, { ...vars, n });

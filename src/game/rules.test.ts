@@ -2,7 +2,7 @@
 // question we fixed, so a failure names the answer that started lying for you.
 
 import { describe, expect, it } from 'vitest';
-import { t, tn } from '../i18n';
+import { own, t, tn } from '../i18n';
 import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
 import { CHARACTERS, CONTACTS, EVIDENCE, MISSION_MIN_TIME, OFFICERS } from './content/world';
 import { consequence, consequences, SEPARATOR } from './consequence';
@@ -22,9 +22,9 @@ const at = (s: RunState, id: string): RunState => ({
   ...s, reaction: null, checkpoint: 2, slot: 1, screen: { kind: 'encounter', id }, seen: [...s.seen, id],
 });
 
-/** The label as the answer button shows it (optionLabel() in src/App.tsx). */
-const label = (o: Option) =>
-  t(`enc.i_family.${o.approach.id}.label`, o.contact ? { contact: o.contact, contactMine: o.contact } : {});
+/** The label as the answer button shows it (optionLabel() in src/App.tsx), in the traveler's own words. */
+const label = (o: Option, traveler: RunState['character'] = 'lena') =>
+  t(own(`enc.i_family.${o.approach.id}.label`, traveler), o.contact ? { contact: o.contact, contactMine: o.contact } : {});
 /** The line under the answer, as the player reads it. */
 const line = (s: RunState, o: Option) =>
   consequence(o, `enc.i_family.${o.approach.id}`, CHARACTERS[s.character].protectedContact)
@@ -42,7 +42,7 @@ describe('relatives question (i_family)', () => {
   it("reads word for word for Lena, each with its own line", () => {
     const s = at(newRun(lena), 'i_family');
     const opts = options(s);
-    expect(opts.map(label)).toEqual([
+    expect(opts.map((o) => label(o))).toEqual([
       '"My cousin Ilya lives here."',
       '"I have no other relatives here."',
       '"Why do you need to know?"',
@@ -52,7 +52,33 @@ describe('relatives question (i_family)', () => {
 
   it('names the relation from the character, not a fixed word', () => {
     const s = at(newRun(mark), 'i_family');
-    expect(label(options(s)[0])).toBe('"My brother Tom lives here."');
+    expect(label(options(s)[0], 'mark')).toBe('"My brother Tom lives across the border."');
+  });
+
+  // Lena's cousin Ilya lives here, Mark's brother Tom lives across the border,
+  // so each traveler is asked about the side their relative is on.
+  it.each([
+    ['lena', lena, /\bhere\b/, /across the border/],
+    ['mark', mark, /across the border/, /\bhere\b/],
+  ] as const)('asks %s about the side their relative lives on', (_, setup, says, never) => {
+    const s = at(newRun(setup), 'i_family');
+    const [name, deny] = options(s);
+    const shown = [t(own('enc.i_family.q', s.character)), label(name, s.character), label(deny, s.character)];
+    for (const line of shown) {
+      expect(line).toMatch(says);
+      expect(line).not.toMatch(never);
+    }
+  });
+
+  it("records Mark's denial in the words he said", () => {
+    const s = at(newRun(mark), 'i_family');
+    expect(label(options(s)[1], 'mark')).toBe('"No family across the border."');
+    const r = tryStep(s, { type: 'choose', approach: 'deny' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.claims).toContain('noOtherFamily');
+    expect(t(own('claim.noOtherFamily', 'mark'))).toBe('No family across the border');
+    expect(t(own('claim.noOtherFamily', 'lena'))).toBe('No other relatives');
   });
 
   it('only "I have no other relatives here." records noOtherFamily', () => {

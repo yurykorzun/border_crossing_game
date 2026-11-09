@@ -229,6 +229,7 @@ export const en: Record<string, string> = {
   'claim.tourism': 'Here as a tourist',
   'claim.hotelStay': 'Staying at a hotel',
   'claim.noOtherFamily': 'No other relatives',
+  'claim.noOtherFamily.mark': 'No family across the border',
   'claim.neverDonated': 'Never donated',
   'claim.stayingWithFamily': 'Staying with family',
   'claim.cashUnderLimit': 'Cash under the limit',
@@ -419,6 +420,10 @@ export const en: Record<string, string> = {
   'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
   'enc.i_family.why.label': '"Why do you need to know?"',
   'enc.i_family.why.reaction': '"Routine." The officer lets you sit until you answer.',
+  // Mark's brother lives across the border, not here, so the officer asks about that side.
+  'enc.i_family.mark.q': '"Any family across the border?"',
+  'enc.i_family.mark.name.label': '"{contactMine} lives across the border."',
+  'enc.i_family.mark.deny.label': '"No family across the border."',
 
   'enc.i_water.q': 'The officer pushes a glass of water across the desk. "Take a minute."',
   'enc.i_water.drink.label': 'Drink it',

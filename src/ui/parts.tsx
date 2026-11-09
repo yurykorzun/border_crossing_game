@@ -3,7 +3,7 @@
 
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { t, tn } from '../i18n';
+import { own, t, tn } from '../i18n';
 import { deskOf, factIds, loggedAt, shownCheckpoint } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
@@ -175,7 +175,7 @@ export function StoryContent({ s }: { s: RunState }) {
                 const desks = loggedAt(s, c);
                 return (
                   <li key={c} data-claim={c} className={desks.length ? 'logged' : 'said'}>
-                    <span>{t(`claim.${c}`)}</span>
+                    <span>{t(own(`claim.${c}`, s.character))}</span>
                     <span className="desks">
                       {desks.length ? (
                         <>
