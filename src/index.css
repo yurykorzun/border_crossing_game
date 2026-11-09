@@ -383,6 +383,9 @@ p { margin: 0 0 var(--gap); }
 .ask-short { padding: 2px 2px 0; }
 .ask-short .question { font-size: 1.4rem; line-height: 1.25; }
 .ask-card { padding: 12px 14px; }
+/* What the officer at this desk cares about, once, above the first question there. */
+.priority { margin: 0 0 6px; font-size: 0.9rem; color: #c5cec9; }
+.ask-card .priority { color: var(--muted); }
 .ask-short.inspection { padding-inline-start: 10px; }
 .reaction .said { font-style: italic; }
 /* What changed: plain lines under the officer's words, amber for escalation, red only for a confirmed loss. */

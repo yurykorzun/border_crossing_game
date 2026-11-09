@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t, tn } from './i18n';
-import { endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { deskIntro, endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -522,9 +522,12 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
   const short = question.length <= SHORT_QUESTION;
+  // On reaching a desk, one line says what this officer cares about.
+  const desk = deskIntro(s);
   return (
     <>
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
+        {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         <h2 className="question">{question}</h2>
       </section>
       <div className="controls stack">

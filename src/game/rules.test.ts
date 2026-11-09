@@ -4,9 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { t, tn } from '../i18n';
 import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
-import { CHARACTERS, CONTACTS, EVIDENCE } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE, OFFICERS } from './content/world';
 import { consequence, consequences, SEPARATOR } from './consequence';
-import { cardFor, endingFor, factIds, knows, newRun, options, step, waitActions } from './engine';
+import { cardFor, deskIntro, endingFor, factIds, knows, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { tryStep } from './play';
 import { FACT_IDS } from './types';
@@ -508,5 +508,61 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(consequences({ ...base, facts: known('employer') })).toEqual([{ kind: 'facts', key: 'ending.line.facts', n: 1, severity: 1 }]);
     // Mark's brother is his protected contact.
     expect(consequences({ ...newRun(mark), exposed: ['brother'] })[0]).toMatchObject({ key: 'exposure.brother.protected', severity: 3 });
+  });
+});
+
+describe('officers with one stated priority each (fsx.10)', () => {
+  /** Mark on the relatives question at `checkpoint` (an index into CHECKPOINTS). Naming his brother brings him out. */
+  const relatives = (checkpoint: number, facts: FactMap = {}): RunState => ({ ...at(newRun(mark), 'i_family'), checkpoint, facts });
+
+  it('the same answer costs 0 at the passport desk and +1 scrutiny with a stated reason at the security desk', () => {
+    const passport = relatives(0);
+    const interview = relatives(2);
+    expect(cost(passport, 'name').scrutiny).toBe(0);
+    expect(cost(interview, 'name').scrutiny).toBe(1);
+    expect(options(interview).find((o) => o.approach.id === 'name')?.effects).toContainEqual({ scrutiny: 1, reason: 'brotherAbroad' });
+
+    const atPassport = tryStep(passport, { type: 'choose', approach: 'name' });
+    const atInterview = tryStep(interview, { type: 'choose', approach: 'name' });
+    expect(atPassport.ok && atInterview.ok).toBe(true);
+    if (!atPassport.ok || !atInterview.ok) return;
+    // Both answers put the brother on file; only the security officer cares.
+    expect(knows(atPassport.state, 'brotherAbroad', 'passport')).toBe(true);
+    expect(knows(atInterview.state, 'brotherAbroad', 'interview')).toBe(true);
+    expect(atPassport.state.scrutiny).toBe(passport.scrutiny);
+    expect(atInterview.state.scrutiny).toBe(interview.scrutiny + 1);
+    expect(atPassport.state.reaction?.map((l) => l.key)).not.toContain('officer.passport.flags');
+    // The reason is stated in the reaction.
+    expect(atInterview.state.reaction).toContainEqual({ key: 'officer.interview.flags', vars: { fact: 'brotherAbroad' } });
+    expect(t('officer.interview.flags', { fact: 'brotherAbroad' })).toBe('Your brother across the border: the officer marks it as a security matter.');
+  });
+
+  it('a political fact already on file at the interview costs nothing more', () => {
+    expect(cost(relatives(2, known('brotherAbroad')), 'name').scrutiny).toBe(0);
+  });
+
+  it('an answer that already adds scrutiny for the fact is not counted twice', () => {
+    const s = at(newRun(mark), 'p_secondPassport');
+    expect(cost(s, 'both').scrutiny).toBe(1);
+    expect(options(s).find((o) => o.approach.id === 'both')?.flagged).toBeUndefined();
+  });
+
+  it('a non-political answer at the interview costs nothing extra', () => {
+    expect(cost(at(newRun(lena), 'i_family'), 'name').scrutiny).toBe(0);
+  });
+
+  it('the officer reacts only on their own cards, not in an inspection', () => {
+    const s: RunState = { ...relatives(2), screen: { kind: 'inspection', id: 's_biometric' } };
+    expect(officerFlags(s, [{ fact: 'brotherAbroad' }])).toEqual([]);
+  });
+
+  it('each officer has one priority, stated when you reach the desk', () => {
+    expect(Object.values(OFFICERS).map((o) => o.priority)).toEqual(['paperwork', 'goods', 'politics']);
+    const first = { ...at(newRun(lena), 'p_purpose'), checkpoint: 0 };
+    expect(deskIntro(first)).toBe('passport');
+    expect(deskIntro({ ...first, slot: 2 })).toBeUndefined();
+    expect(deskIntro({ ...first, reaction: [{ key: 'ui.continue' }] })).toBeUndefined();
+    expect(deskIntro(at(newRun(lena), 'i_stay'))).toBe('interview');
+    expect(t('officer.passport.priority')).toBe('The clerk checks every stamp and every date.');
   });
 });

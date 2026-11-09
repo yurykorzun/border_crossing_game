@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm,
 } from './content/world';
 import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
@@ -156,8 +156,10 @@ export interface Option {
   contact?: ContactId;
   /** contact: what they are asked to confirm (the card's topic). Unset when the answer only names them. */
   vouches?: Topic;
-  /** Effects as they would apply now (conditions resolved, character weakness added). */
+  /** Effects as they would apply now (conditions resolved, character weakness and the officer's reaction added). */
   effects: Effect[];
+  /** Facts this answer brings out that the officer here reacts to (officerFlags()). */
+  flagged?: FactId[];
 }
 
 /**
@@ -197,8 +199,11 @@ export function options(s: RunState): Option[] {
       contact = freeContact(s, a.contacts, vouches);
       if (!contact) blocked = 'noContact';
     }
-    const o: Option = { approach: a, blocked, card: ev, contact, effects: resolvedEffects(s, a, topic, ev) };
+    const effects = resolvedEffects(s, a, topic, ev);
+    const flagged = officerFlags(s, effects);
+    const o: Option = { approach: a, blocked, card: ev, contact, effects: [...effects, ...flagged.map(officerScrutiny(s))] };
     if (vouches) o.vouches = vouches;
+    if (flagged.length) o.flagged = flagged;
     out.push(o);
   }
   return out;
@@ -214,6 +219,44 @@ function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev:
   for (let i = callInsDue(s, a, topic).length; i > 0; i--) list.push({ time: -1 });
   const card = s.screen.kind === 'encounter' ? s.screen.id : undefined;
   return activeEffects(s, list.filter((e) => check(e.when, s)), { card });
+}
+
+// ── The officer at the desk
+
+/**
+ * The facts in `effects` that the officer at this desk reacts to: ones their
+ * priority covers that come out here for the first time, and that the answer
+ * does not already add scrutiny for. Only on a desk's own cards, not in an
+ * inspection, which a supervisor runs.
+ */
+export function officerFlags(s: RunState, effects: Effect[]): FactId[] {
+  if (s.screen.kind !== 'encounter') return [];
+  const out: FactId[] = [];
+  for (const r of OFFICERS[deskOf(s)].reactions) {
+    if (!check(r.when, s)) continue;
+    for (const e of effects) {
+      if (!('fact' in e) || !r.reveals.includes(e.fact) || knows(s, e.fact) || out.includes(e.fact)) continue;
+      if (effects.some((x) => 'scrutiny' in x && x.reason === e.fact)) continue;
+      out.push(e.fact);
+    }
+  }
+  return out;
+}
+
+/** The scrutiny the officer here adds for a flagged fact, with the fact as the reason. */
+const officerScrutiny = (s: RunState) => (f: FactId): Effect => {
+  const r = OFFICERS[deskOf(s)].reactions.find((x) => x.reveals.includes(f) && check(x.when, s));
+  return { scrutiny: r?.scrutiny ?? 0, reason: f };
+};
+
+/**
+ * The desk the player has just reached: the first card dealt there is on screen,
+ * so the officer's priority line shows above it. Undefined anywhere else.
+ */
+export function deskIntro(s: RunState): Checkpoint | undefined {
+  if (s.reaction || s.screen.kind !== 'encounter' || s.slot !== 1) return undefined;
+  const card = ENCOUNTER_BY_ID.get(s.screen.id);
+  return card && card.checkpoint === CHECKPOINTS[s.checkpoint] ? card.checkpoint : undefined;
 }
 
 /**
@@ -495,6 +538,8 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
   n = say(n, [{ key: `${prefix}.${card.id}.${approachId}.reaction`, vars }]);
+  // The officer's priority is the reason for the scrutiny, so the reaction says it.
+  for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f } }]);
   // The call-in hour is a real cost too, so the reaction names whose statement it checks.
   for (const c of due) n = say(n, [{ key: 'calledIn.reaction', vars: { contact: c } }]);
   // The weakness hour is a real cost, so the reaction says what it is spent on.

@@ -271,6 +271,12 @@ export const en: Record<string, string> = {
   'officer.interview': 'Officer',
   'officer.followup': 'Officer',
   'officer.inspection': 'Supervisor',
+  // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
+  'officer.passport.priority': 'The clerk checks every stamp and every date.',
+  'officer.customs.priority': 'The inspector cares what you carry, and whether you declare it.',
+  'officer.interview.priority': 'This officer cares who you know and where you have been, not your paperwork.',
+  // The security officer's reaction to a political fact coming out at the interview.
+  'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
   // Scene names for screen readers (src/ui/art): never shown, so not counted as read.
   'scene.passport': 'The passport booth: the clerk behind the glass',
   'scene.customs': 'The customs inspection table',

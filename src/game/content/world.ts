@@ -1,7 +1,9 @@
 // Characters, evidence and bulletins for the first mission. No prose here:
 // names and descriptions are in src/i18n/en.ts under the same ids.
 
-import type { BulletinId, Character, CharacterId, Contact, ContactId, EvidenceCard, EvidenceId, Topic } from '../types';
+import type {
+  BulletinId, Character, CharacterId, Checkpoint, Contact, ContactId, EvidenceCard, EvidenceId, FactId, Officer, Topic,
+} from '../types';
 
 export const START_TIME = 8;
 export const MISSION_MIN_TIME = 2;
@@ -44,6 +46,23 @@ export const CONTACTS: Record<ContactId, Contact> = {
   cousin: { id: 'cousin', abilities: ['accommodation'] },
   // A job offer abroad.
   brother: { id: 'brother', abilities: ['work'] },
+};
+
+/** Facts that are a political risk: a second citizenship, a brother across the border, an old donation. */
+export const POLITICAL_FACTS: readonly FactId[] = ['secondPassport', 'brotherAbroad', 'donationRecord'];
+
+/**
+ * One officer per desk, each with one priority, stated when you reach the desk
+ * (officer.<desk>.priority). The clerk's and the inspector's priorities are
+ * already in their cards: checking paperwork costs time, and goods are fine
+ * once declared. The security officer reacts to politics: an answer that brings
+ * a political fact out at the interview costs 1 scrutiny, with that fact as the
+ * reason, where the same answer at the passport desk costs nothing extra.
+ */
+export const OFFICERS: Record<Checkpoint, Officer> = {
+  passport: { desk: 'passport', priority: 'paperwork', reactions: [] },
+  customs: { desk: 'customs', priority: 'goods', reactions: [] },
+  interview: { desk: 'interview', priority: 'politics', reactions: [{ reveals: [...POLITICAL_FACTS], scrutiny: 1 }] },
 };
 
 export const canConfirm = (c: ContactId, topic: Topic | undefined): boolean => !!topic && CONTACTS[c].abilities.includes(topic);

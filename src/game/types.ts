@@ -155,6 +155,31 @@ export interface Character {
   weakTopics: Topic[];
 }
 
+/**
+ * What an officer cares about. passport: complete, accurate paperwork. customs:
+ * goods declared by the rules. interview: political risk (history, contacts, the phone).
+ */
+export type OfficerPriority = 'paperwork' | 'goods' | 'politics';
+
+/**
+ * How an officer reacts to an answer at their desk: each listed fact the answer
+ * puts on file here for the first time adds `scrutiny`, with that fact as the
+ * reason, unless the answer already adds scrutiny for it. Only while `when` holds.
+ */
+export interface OfficerReaction {
+  reveals: FactId[];
+  scrutiny: number;
+  when?: Cond;
+}
+
+/** The official at a desk. Their priority is stated on screen (officer.<desk>.priority). */
+export interface Officer {
+  desk: Checkpoint;
+  priority: OfficerPriority;
+  /** The answers this officer reacts to. Empty: their priority is already in what their cards cost. */
+  reactions: OfficerReaction[];
+}
+
 /** A person the traveler can name, and what they can confirm. */
 export interface Contact {
   id: ContactId;

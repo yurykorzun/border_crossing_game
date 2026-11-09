@@ -14,7 +14,7 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, checkEffects, checkFindings, currentCard, deskOf, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
+  callInsDue, check, checkEffects, checkFindings, currentCard, deskOf, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
 } from './engine';
 import { consequences } from './consequence';
 import type { RunSetup } from './engine';
@@ -22,7 +22,7 @@ import type { Dealer } from './rng';
 import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, START_TIME, canConfirm,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, OFFICERS, START_TIME, canConfirm,
 } from './content/world';
 import { CHECKS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
 import { t, tn } from '../i18n';
@@ -258,6 +258,22 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
       if (d === nextDesk(here) && knows(n, f, here) && sent.some((e) => !e.facts || e.facts.includes(f))) continue;
       bad.push(`${f} reached ${d} from ${here} through no channel`);
     }
+  }
+  // The officer reacts to what their priority covers: a fact it lists that comes
+  // out at this desk for the first time, on one of the desk's own cards, costs
+  // that officer's scrutiny with the fact as the reason, and the reaction says so.
+  if (action.type === 'choose' && s.screen.kind === 'encounter') {
+    for (const r of OFFICERS[here].reactions) {
+      if (!check(r.when, s)) continue;
+      for (const f of r.reveals) {
+        if (knows(s, f) || !knows(n, f, here)) continue;
+        if (!effects.some((e) => 'scrutiny' in e && e.reason === f && e.scrutiny >= r.scrutiny))
+          bad.push(`${f} came out at ${here} on ${s.screen.id} with no scrutiny from the officer`);
+      }
+    }
+    for (const f of options(s).find((o) => o.approach.id === action.approach)?.flagged ?? [])
+      if (!(n.reaction ?? []).some((l) => l.key === `officer.${here}.flags` && l.vars?.fact === f))
+        bad.push(`the officer flagged ${f} on ${s.screen.id} without saying why`);
   }
   // A contact is only named for what they can confirm: the card's topic, or the
   // check's in the waiting room. Naming a relative (namesOnly) confirms nothing.

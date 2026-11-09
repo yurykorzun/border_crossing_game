@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { en } from './en';
 import { ENCOUNTERS, INSPECTIONS, CHECKS } from '../game/content/encounters';
-import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, EVIDENCE_IDS } from '../game/content/world';
+import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, EVIDENCE_IDS, OFFICERS } from '../game/content/world';
 import { QUEUES } from '../game/content/queues';
 import { CHECKPOINTS } from '../game/types';
 
@@ -33,7 +33,8 @@ function contentKeys(): string[] {
   for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`, `ev.${id}.label`, `ev.${id}.helps`);
   for (const b of BULLETINS) keys.push(`bulletin.${b}`);
   for (const cp of CHECKPOINTS) {
-    keys.push(`checkpoint.${cp}`, `officer.${cp}`);
+    keys.push(`checkpoint.${cp}`, `officer.${cp}`, `officer.${cp}.priority`);
+    if (OFFICERS[cp].reactions.length) keys.push(`officer.${cp}.flags`);
     for (let n = 0; n < BEAT_COUNT; n++) keys.push(`beat.${cp}.${n}`);
   }
   QUEUES.forEach((beats, n) => {
@@ -85,6 +86,20 @@ describe('English text', () => {
       .map((k) => k.replace(/\.(one|other)$/, ''))
       .filter((base) => !(`${base}.one` in en && `${base}.other` in en));
     expect(missing).toEqual([]);
+  });
+
+  it("states every officer's priority in one sentence", () => {
+    for (const cp of CHECKPOINTS) {
+      expect(en[`officer.${cp}.priority`], cp).toBeTruthy();
+      expect(en[`officer.${cp}.priority`].split(/(?<=[.!?])\s+/), cp).toHaveLength(1);
+    }
+  });
+
+  // Visible officer mood is deferred (docs/plan.md, fsx.10): no text names one.
+  it('shows no officer mood word', () => {
+    const mood = /\b(calm|wary|cold)\b/i;
+    expect(Object.entries(en).filter(([k, v]) => k.startsWith('officer.') && mood.test(v))).toEqual([]);
+    expect(Object.keys(en).filter((k) => /mood/i.test(k))).toEqual([]);
   });
 
   it('uses no em dashes', () => {

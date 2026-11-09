@@ -15,7 +15,7 @@ import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/e
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
-import { factIds, knownAt, newRun, options, shownCheckpoint, waitActions } from './engine';
+import { deskIntro, factIds, knownAt, newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -269,6 +269,9 @@ function screenLines(s: RunState, p: Page): void {
   }
   if (sc.kind === 'encounter' || sc.kind === 'inspection') {
     const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
+    // Panel in src/App.tsx: the officer's priority line above the first question at a desk.
+    const desk = deskIntro(s);
+    if (desk) p.add(`officer.${desk}.priority`);
     p.add(`${prefix}.${sc.id}.q`);
     for (const o of options(s)) {
       if (o.blocked === 'noCard') p.add('ui.showDocument');
