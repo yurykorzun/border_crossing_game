@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 
-// The three setup screens at 390x844: Choose your traveler, Prepare your documents, Begin the crossing.
+// The three setup screens at 390x844: Choose your traveler, Pack your documents, Begin the crossing.
 
 async function fits(page: Page, where: string) {
   const m = await page.evaluate(() => {
@@ -59,7 +59,7 @@ test('choose your traveler: radio cards, history, and Continue as the pick', asy
   expect(en['char.mark.advantage']).toBe('Pack 4 documents instead of 3.');
   expect(en['char.mark.complication']).toBe('Start with Scrutiny 1/3.');
 
-  await expect(screen.locator('.chip')).toHaveCount(0);
+  await expect(screen.locator('.consequence')).toHaveCount(0);
 
   const cont = screen.locator('.controls button.primary');
   await expect(cont).toBeDisabled();
@@ -130,21 +130,53 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
 
-  // Screen 2: bulletin, hours and 3/3 explained, the packing list.
+  // Screen 2: stage, title and count, the bulletin bar, six one-line rows.
   const docsScreen = page.locator('main.documents-step');
-  await expect(docsScreen.getByRole('heading', { name: 'Prepare your documents' })).toBeVisible();
-  await expect(docsScreen.getByRole('note')).toContainText("Today's bulletin");
-  await expect(docsScreen.locator('.explain-hours')).toHaveText('Every check costs hours. The bus leaves in 8 hours. You need 2 hours to reach the station.');
-  await expect(docsScreen.locator('.explain-scrutiny')).toHaveText('Officers grow suspicious. At Scrutiny 3/3 you go to secondary inspection.');
-  await expect(docsScreen.locator('.doc')).toHaveCount(EVIDENCE_IDS.length);
+  await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
+  await expect(docsScreen.locator('.stage-label')).toHaveText('2 / 3 · Preparation');
+  await expect(docsScreen.locator('.stage-label .amber')).toHaveText('2 / 3');
+  await expect(docsScreen.locator('.pack-count')).toHaveText('0 of 3 packed');
+
+  // The bulletin is one sentence: exactly one terminal . ! or ?, at the end.
+  const bulletin = docsScreen.getByRole('note', { name: "Today's bulletin" });
+  await expect(bulletin.locator('svg.icon')).toHaveCount(1);
+  const sentence = (await bulletin.innerText()).trim();
+  expect(sentence.match(/[.!?]/g), sentence).toHaveLength(1);
+  expect(sentence, sentence).toMatch(/[.!?]$/);
+
+  // Every row: a short name and one detail line.
+  const rows = docsScreen.locator('.doc');
+  await expect(rows).toHaveCount(EVIDENCE_IDS.length);
+  for (const [i, id] of EVIDENCE_IDS.entries()) {
+    await expect(rows.nth(i).locator('strong')).toHaveText(en[`ev.${id}.label`]);
+    const detail = rows.nth(i).locator('.doc-detail');
+    await expect(detail).toHaveCount(1);
+    const box = await detail.boundingBox();
+    const lineHeight = await detail.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+    expect(box!.height, `${id} detail is one line`).toBeLessThan(lineHeight * 1.5);
+  }
+  await expect(docsScreen.locator('.doc', { hasText: "Mother's letter" }).locator('.doc-detail')).toHaveText('Visit purpose · Reveals her address');
+
+  // All six rows and Continue are on screen with no scroll, and no "more below" cue.
+  const inView = await page.evaluate(() => {
+    const body = document.querySelector('.documents-step .setup-body')!;
+    const bottoms = [...document.querySelectorAll('.documents-step .doc, .documents-step .controls button.primary')].map((el) => el.getBoundingClientRect().bottom);
+    return { scrolls: body.scrollHeight - body.clientHeight, page: document.documentElement.scrollHeight - document.documentElement.clientHeight, worst: Math.max(...bottoms), viewport: window.innerHeight };
+  });
+  expect(inView.scrolls, 'packing list scrolls at 390x844').toBeLessThanOrEqual(0);
+  expect(inView.page, 'page scrolls at 390x844').toBeLessThanOrEqual(0);
+  expect(inView.worst, 'a row or Continue below the screen').toBeLessThanOrEqual(inView.viewport);
+  await expect(docsScreen.locator('.more-below')).toHaveCount(0);
   await stepFits(page, 'documents, nothing packed');
 
   // Pack Lena's 3: the second, fourth and fifth documents.
   const chosen = [EVIDENCE_IDS[1], EVIDENCE_IDS[3], EVIDENCE_IDS[4]];
   const cont = docsScreen.locator('.controls button.primary');
-  for (const id of chosen) await docsScreen.locator('.doc', { hasText: en[`ev.${id}.name`] }).click();
+  for (const id of chosen) await docsScreen.locator('.doc', { hasText: en[`ev.${id}.label`] }).click();
   await expect(cont).toBeEnabled();
-  await expect(docsScreen.locator('.doc[aria-pressed="true"] strong')).toHaveText(chosen.map((id) => en[`ev.${id}.name`]));
+  await expect(docsScreen.locator('.pack-count')).toHaveText('3 of 3 packed');
+  await expect(docsScreen.locator('.doc[aria-pressed="true"] strong')).toHaveText(chosen.map((id) => en[`ev.${id}.label`]));
+  await expect(docsScreen.locator('.doc.picked .checkbox svg')).toHaveCount(chosen.length);
   await stepFits(page, 'documents, 3 packed');
   await cont.click();
 
@@ -163,9 +195,9 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
 
   // Back to screen 2: the same documents are still marked Packed.
   await begin.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(docsScreen.getByRole('heading', { name: 'Prepare your documents' })).toBeVisible();
-  await expect(docsScreen.locator('.doc[aria-pressed="true"] strong')).toHaveText(chosen.map((id) => en[`ev.${id}.name`]));
-  await expect(docsScreen.locator('.doc.picked .tag.packed')).toHaveCount(chosen.length);
+  await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
+  await expect(docsScreen.locator('.doc[aria-pressed="true"] strong')).toHaveText(chosen.map((id) => en[`ev.${id}.label`]));
+  await expect(docsScreen.locator('.doc.picked .checkbox svg')).toHaveCount(chosen.length);
 
   // Back to screen 1: Lena is still the pick.
   await docsScreen.getByRole('button', { name: 'Back', exact: true }).click();
@@ -181,4 +213,24 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await go.click();
   await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
   expect(errors).toEqual([]);
+});
+
+test('packing at large text: a "more below" cue until the list is scrolled to the end', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('.title-screen button.primary').click();
+  await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  const docsScreen = page.locator('main.documents-step');
+  await expect(docsScreen.locator('.doc')).toHaveCount(EVIDENCE_IDS.length);
+  await expect(docsScreen.locator('.more-below')).toHaveCount(0);
+
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const cue = docsScreen.locator('.more-below');
+  await expect(cue).toBeVisible();
+  await expect(cue).toContainText(en['ui.moreBelow']);
+  await stepFits(page, 'documents at 200% text');
+
+  await docsScreen.locator('.setup-body').evaluate((b) => { b.scrollTop = b.scrollHeight; });
+  await expect(cue).toHaveCount(0);
+  await expect(docsScreen.locator('.doc').last()).toBeInViewport();
 });

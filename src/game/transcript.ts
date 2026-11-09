@@ -14,6 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
+import { SEPARATOR, consequence, packDetail } from './consequence';
 import { newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween } from './play';
@@ -162,21 +163,28 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.historyOf', { name });
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character });
   p.add('ui.continueAs', { name });
-  // Setup 2: Prepare your documents
+  // Setup 2: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
+  const count = t('ui.progressCount', { n: 2, total: 3 });
+  p.add('ui.preparation');
+  p.add('ui.progress', { count, name: t('ui.preparation') });
   p.add('ui.prepareDocuments');
+  p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
-  p.add('ui.explainHours', { hours: START_TIME, travel: MISSION_MIN_TIME });
-  p.add('ui.explainScrutiny', { max: MAX_SCRUTINY });
-  p.add('ui.pickEvidence', { count: slots });
   for (const id of EVIDENCE_IDS) {
-    p.add(`ev.${id}.name`);
-    if (setup.loadout.includes(id)) p.add('ui.packed');
-    p.add(`ev.${id}.desc`);
+    p.add(`ev.${id}.label`);
+    const parts = packDetail(id).map((k) => render(() => t(k), k));
+    const problem = parts.find((x) => x.problem)?.problem;
+    p.lines.push({
+      step: p.step,
+      key: parts.map((x) => x.key).join(SEPARATOR),
+      text: parts.map((x) => x.text).join(SEPARATOR),
+      ...(problem ? { problem } : {}),
+    });
   }
-  p.add('ui.picked', { picked: slots, count: slots });
+  p.add('ui.moreBelow');
   p.add('ui.continue');
   // Setup 3: Begin the crossing
   p.add('ui.beginCrossing');
@@ -188,29 +196,18 @@ function setupLines(setup: RunSetup, p: Page): void {
   for (const id of setup.loadout) p.add(`ev.${id}.name`);
 }
 
-function chips(o: Option, p: Page): void {
-  const a = o.approach;
-  if (o.blocked) return p.add(`ui.blocked.${o.blocked}`);
-  const before = p.lines.length;
-  if (a.kind === 'perk') p.add('ui.cost.perk');
-  if (o.card) p.add('ui.cost.uses', { card: o.card });
-  if (o.contact) p.add('ui.cost.exposes', { contact: o.contact });
-  let time = 0;
-  let scrutiny = 0;
-  for (const e of o.effects) {
-    if ('time' in e) time += e.time;
-    else if ('scrutiny' in e) scrutiny += e.scrutiny;
-  }
-  if (time) p.plural('ui.cost.time', time);
-  if (scrutiny) p.add('ui.cost.scrutiny', { n: scrutiny });
-  for (const e of o.effects) {
-    if ('loseMedicine' in e) p.add('ui.cost.medicine');
-    else if ('fact' in e) p.add('ui.cost.fact', { fact: e.fact });
-    else if ('claim' in e) p.add('ui.cost.claim', { claim: e.claim });
-  }
-  if (a.check) p.add('ui.cost.check');
-  if (a.kind === 'withdraw') p.add('ui.cost.withdraw');
-  if (p.lines.length === before) p.add('ui.cost.free');
+/** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */
+function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void {
+  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact).parts.map((x) =>
+    render(() => (x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)), x.key),
+  );
+  const problem = parts.find((x) => x.problem)?.problem;
+  p.lines.push({
+    step: p.step,
+    key: parts.map((x) => x.key).join(SEPARATOR),
+    text: parts.map((x) => x.text).join(SEPARATOR),
+    ...(problem ? { problem } : {}),
+  });
 }
 
 /** What the panel shows for this state. */
@@ -254,11 +251,11 @@ function screenLines(s: RunState, p: Page): void {
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
       else {
         const vars: Record<string, string> = {};
-        if (o.card) vars.card = o.card;
+        if (o.card) vars.card = vars.cardThe = o.card;
         if (o.contact) vars.contact = o.contact;
         p.add(`${prefix}.${sc.id}.${o.approach.id}.label`, vars);
       }
-      chips(o, p);
+      consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
     }
   }
 }
@@ -331,7 +328,13 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
 
 export const WORDS_PER_MINUTE = 200;
 export const SECONDS_PER_DECISION = 3;
-export const PLAY_MINUTES = { min: 5, max: 8 } as const;
+/**
+ * Rule 4. Every full run is floor-max minutes, and across the eval the median
+ * full run reaches target. A run you withdraw from (turnedBack) only has the
+ * ceiling. Yury's call on 2026-11-09, after the short packing screen (67a.16)
+ * put some runs just under 5 minutes.
+ */
+export const PLAY_MINUTES = { floor: 4.5, target: 5, max: 8 } as const;
 
 export const words = (tr: Transcript) =>
   tr.lines.reduce((n, l) => (l.chrome ? n : n + l.text.split(/\s+/).filter(Boolean).length), 0);
@@ -368,25 +371,53 @@ export interface Failure {
   minutes?: number;
 }
 
-export type Rule = { id: number; name: string; check: (tr: Transcript) => Omit<Failure, 'rule' | 'style' | 'seed' | 'character'>[] };
+/** A check over all transcripts together. `ok: false` fails the command like a fresh failure. */
+export interface Summary { rule: number; ok: boolean; text: string }
+
+export type Rule = {
+  id: number;
+  name: string;
+  check: (tr: Transcript) => Omit<Failure, 'rule' | 'style' | 'seed' | 'character'>[];
+  /** Optional check over the whole eval, after every run is checked. */
+  summary?: (trs: Transcript[]) => Omit<Summary, 'rule'> | undefined;
+};
+
+export type PlayTimeRange = { floor: number; target: number; max: number };
+
+/** Median estimate of the full runs (not turnedBack), or undefined when there are none. */
+export function medianFullMinutes(trs: Transcript[]): { runs: number; median: number | undefined } {
+  const ms = trs.filter((tr) => tr.ending !== 'turnedBack').map(playMinutes).sort((a, b) => a - b);
+  if (!ms.length) return { runs: 0, median: undefined };
+  const mid = ms.length >> 1;
+  return { runs: ms.length, median: ms.length % 2 ? ms[mid] : (ms[mid - 1] + ms[mid]) / 2 };
+}
 
 /**
- * Rule 4 for a target range. The floor is for a run that goes the whole way. A run
- * you withdraw from (turnedBack) only has the ceiling, because you chose to stop early
- * and the game should not make you read more for it.
+ * Rule 4 for a range. The floor is for a run that goes the whole way. A run you
+ * withdraw from (turnedBack) only has the ceiling, because you chose to stop early
+ * and the game should not make you read more for it. The summary asks that the
+ * median full run reaches the target, so the floor is a margin and not the aim.
  */
-export function playTimeRule(range: { min: number; max: number }): Rule {
+export function playTimeRule(range: PlayTimeRange): Rule {
   return {
     id: 4,
-    name: `estimated play time is ${range.min}-${range.max} minutes (a run you withdraw from can be shorter)`,
+    name: `estimated play time is ${range.floor}-${range.max} minutes and the median full run reaches ${range.target} (a run you withdraw from can be shorter)`,
     check: (tr) => {
       const m = playMinutes(tr);
-      if (m <= range.max && (m >= range.min || tr.ending === 'turnedBack')) return [];
+      if (m <= range.max && (m >= range.floor || tr.ending === 'turnedBack')) return [];
       const last = tr.lines.length ? tr.lines[tr.lines.length - 1].step : 0;
       return [{
-        step: last, key: m < range.min ? 'tooShort' : 'tooLong', minutes: m,
+        step: last, key: m < range.floor ? 'tooShort' : 'tooLong', minutes: m,
         detail: `${m.toFixed(1)} min (${words(tr)} words, ${tr.beatSeconds.toFixed(0)} s of beats, ${tr.decisions} decisions)`,
       }];
+    },
+    summary: (trs) => {
+      const { runs, median } = medianFullMinutes(trs);
+      if (median === undefined) return undefined;
+      return {
+        ok: median >= range.target,
+        text: `median full run ${median.toFixed(1)} min, target ${range.target} (${runs} runs)`,
+      };
     },
   };
 }
@@ -475,6 +506,8 @@ export interface EvalResult {
   fresh: Failure[];
   /** Known entries with how many failures each covered. One that covered none is stale and fails too. */
   known: { entry: KnownFailure; count: number }[];
+  /** Whole-eval checks (rule 4's median full run). One that is not ok fails the command. */
+  summaries: Summary[];
   exitCode: 0 | 1;
 }
 
@@ -492,14 +525,22 @@ export function evaluate(transcripts: Transcript[], known: KnownFailure[] = KNOW
         else counts[k]++;
       }
   const stale = counts.some((n) => n === 0);
+  const summaries: Summary[] = [];
+  for (const r of rules) {
+    const sum = r.summary?.(transcripts);
+    if (sum) summaries.push({ rule: r.id, ...sum });
+  }
   return {
     runs: transcripts.length,
     byRule,
     fresh,
     known: known.map((entry, i) => ({ entry, count: counts[i] })),
-    exitCode: fresh.length || stale ? 1 : 0,
+    summaries,
+    exitCode: fresh.length || stale || summaries.some((x) => !x.ok) ? 1 : 0,
   };
 }
+
+export const formatSummary = (x: Summary) => `rule ${x.rule}: ${x.text}`;
 
 export const formatFailure = (f: Failure) =>
   `rule ${f.rule}: ${f.style} seed ${f.seed} step ${f.step} (${f.character}, ${f.key}): ${f.detail}`;

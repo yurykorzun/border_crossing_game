@@ -71,7 +71,49 @@ const GEAR = [
   '....##....',
 ];
 
-const ICONS = { clock: CLOCK, flag: FLAG, document: DOCUMENT, folder: FOLDER, gear: GEAR } as const;
+/** A recorded claim. */
+const CHECK = [
+  '..........',
+  '.........#',
+  '........##',
+  '.......##.',
+  '#.....##..',
+  '##...##...',
+  '.##.##....',
+  '..###.....',
+  '...#......',
+  '..........',
+];
+
+/** Scrutiny or a check: someone looks closer. */
+const SHIELD = [
+  '.########.',
+  '#........#',
+  '#...aa...#',
+  '#...aa...#',
+  '#...aa...#',
+  '#........#',
+  '.#..aa..#.',
+  '.#......#.',
+  '..#....#..',
+  '...####...',
+];
+
+/** Today's bulletin: something to watch for. */
+const ALERT = [
+  '....##....',
+  '....##....',
+  '....##....',
+  '....##....',
+  '....##....',
+  '....##....',
+  '..........',
+  '..........',
+  '....##....',
+  '....##....',
+];
+
+const ICONS = { alert: ALERT, clock: CLOCK, flag: FLAG, document: DOCUMENT, folder: FOLDER, gear: GEAR, check: CHECK, shield: SHIELD } as const;
 export type IconName = keyof typeof ICONS;
 
 export function Icon({ name }: { name: IconName }) {

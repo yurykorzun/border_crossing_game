@@ -1,6 +1,6 @@
 # Purpose of Visit - design (v0.1, 2026-11-07)
 
-TL;DR: A short portrait-mode card game. You live abroad and go home to a fictional country that has become more repressive since you left. You clear three checkpoints while keeping enough time and resources to finish your mission. Dialogue gives the story, visible rules decide the consequences. One run is 5-8 minutes, tap only. English first, other languages later.
+TL;DR: A short portrait-mode card game. You live abroad and go home to a fictional country that has become more repressive since you left. You clear three checkpoints while keeping enough time and resources to finish your mission. Dialogue gives the story, visible rules decide the consequences. One run is about 5 minutes (4.5-8 for a run that goes the whole way, median 5 or more), tap only. English first, other languages later.
 
 The emotional hook: you're going home, but you no longer know whether home is safe for you.
 

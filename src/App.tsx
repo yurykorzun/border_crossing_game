@@ -11,12 +11,13 @@ import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
 import { queueBeats } from './game/content/queues';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { CostChips, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip } from './ui/parts';
+import { ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip, PickOut } from './ui/parts';
+import { SEPARATOR, packDetail } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { Booth } from './ui/art/Booth';
@@ -184,42 +185,68 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
   const slots = CHARACTERS[character].evidenceSlots;
   const toggle = (id: EvidenceId) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < slots ? [...p, id] : p));
+  const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('documents') + 1, total: SETUP_STEPS.length });
+  const { ref: bodyRef, more, onScroll } = useMoreBelow();
 
   return (
     <main className="setup setup-step documents-step">
-      <div className="setup-body">
+      <div className="setup-body" ref={bodyRef} onScroll={onScroll}>
+        {/* The scene slot: a desk by a snowy window, drawn later (67a.19). */}
+        <div className="pack-scene" aria-hidden />
         <header className="step-head">
-          <BackButton onBack={onBack} />
+          <div className="step-nav">
+            <BackButton onBack={onBack} />
+            <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.preparation') })} part={count} /></p>
+          </div>
           <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
+          <p className="pack-count" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
         </header>
-        <section className="bulletin mono" role="note">
-          <strong>{t('ui.bulletin')}:</strong> {t(`bulletin.${bulletin}`)}
-        </section>
-        <ul className="rules-explained">
-          <li className="explain-hours">{t('ui.explainHours', { hours: START_TIME, travel: MISSION_MIN_TIME })}</li>
-          <li className="explain-scrutiny">{t('ui.explainScrutiny', { max: MAX_SCRUTINY })}</li>
-        </ul>
-        <h3 id="pack-heading" className="on-dark">{t('ui.pickEvidence', { count: slots })}</h3>
-        <ul className="cards pick" aria-labelledby="pack-heading">
+        <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
+          <Icon name="alert" />
+          <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
+        </p>
+        <ul className="cards pick" aria-label={t('ui.prepareDocuments')}>
           {EVIDENCE_IDS.map((id) => (
             <li key={id}>
               <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
-                <strong>{t(`ev.${id}.name`)}</strong>
-                {picked.includes(id) && <span className="tag packed">{t('ui.packed')}</span>}
-                <p>{t(`ev.${id}.desc`)}</p>
+                <span className="checkbox" aria-hidden>{picked.includes(id) && <Icon name="check" />}</span>
+                <span className="doc-text">
+                  <strong>{t(`ev.${id}.label`)}</strong>
+                  <span className="doc-detail">{packDetail(id).map((k) => t(k)).join(SEPARATOR)}</span>
+                </span>
               </button>
             </li>
           ))}
         </ul>
       </div>
       <div className="controls">
-        <p className="muted-dark" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
+        {more && <p className="more-below" aria-hidden>{t('ui.moreBelow')} <span>↓</span></p>}
         <button className="primary" disabled={picked.length !== slots} onClick={onContinue}>
           {t('ui.continue')}
         </button>
       </div>
     </main>
   );
+}
+
+/** True while a scroll box has content below its fold: on at large text, off once scrolled to the end. */
+function useMoreBelow() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [more, setMore] = useState(false);
+  const check = () => {
+    const el = ref.current;
+    if (el) setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 2);
+  };
+  useEffect(() => {
+    check();
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, more, onScroll: check };
 }
 
 /** Setup 3. The mission, the rest of the premise and what you packed, then the one strong button. */
@@ -467,7 +494,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
             onClick={() => dispatch({ type: 'choose', approach: o.approach.id })}
           >
             <span className="choice-label">{optionLabel(prefix, id, o)}</span>
-            <CostChips o={o} />
+            <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
       </div>
@@ -480,7 +507,7 @@ function optionLabel(prefix: string, id: string, o: Option): string {
   if (o.blocked === 'noCard') return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
-  if (o.card) vars.card = o.card;
+  if (o.card) vars.card = vars.cardThe = o.card;
   if (o.contact) vars.contact = o.contact;
   return t(`${prefix}.${id}.${o.approach.id}.label`, vars);
 }

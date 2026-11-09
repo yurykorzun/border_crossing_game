@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import appSource from '../App.tsx?raw';
 import partsSource from '../ui/parts.tsx?raw';
 import { playRun, setupFor } from './bots';
-import { KNOWN_FAILURES, RULES, evaluate, formatFailure, transcriptOf } from './transcript';
+import { KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, playMinutes, playTimeRule, transcriptOf } from './transcript';
 import type { KnownFailure, Transcript } from './transcript';
 
 // setupFor() cycles Lena's setups first, then Mark's; 60 is Mark's first.
@@ -97,6 +97,42 @@ describe('scenario evals', () => {
     const trs = [run(LENA), run(LENA, 'liar'), run(MARK), run(MARK, 'liar')];
     expect(only(4, trs).fresh).toEqual([]);
     expect(KNOWN_FAILURES.filter((k) => k.rule === 4)).toEqual([]);
+  });
+
+  it('rule 4: a run just under the 4.5-minute floor fails, one at the floor passes', () => {
+    const tr = run(LENA);
+    // Pad or trim with beats so the estimate lands exactly where we want it.
+    const at = (minutes: number) => ({ ...tr, beatSeconds: tr.beatSeconds + (minutes - playMinutes(tr)) * 60 });
+    expect(playMinutes(at(4.4))).toBeCloseTo(4.4);
+    expect(only(4, [at(4.4)]).fresh[0]).toMatchObject({ rule: 4, key: 'tooShort' });
+    expect(only(4, [at(4.5)]).fresh).toEqual([]);
+  });
+
+  it('rule 4: the median full run must reach 5 minutes', () => {
+    const tr = run(LENA);
+    const at = (minutes: number, ending = tr.ending) =>
+      ({ ...tr, ending, beatSeconds: tr.beatSeconds + (minutes - playMinutes(tr)) * 60 });
+    // Every run is within 4.5-8, so only the median decides.
+    const below = only(4, [at(4.6), at(4.8), at(5.5)]);
+    expect(below.fresh).toEqual([]);
+    expect(below.exitCode).toBe(1);
+    expect(below.summaries.map(formatSummary)).toEqual(['rule 4: median full run 4.8 min, target 5 (3 runs)']);
+    const atTarget = only(4, [at(4.6), at(5), at(5.5)]);
+    expect(atTarget.summaries[0].ok).toBe(true);
+    expect(atTarget.exitCode).toBe(0);
+    // Even count: the median is the mean of the middle two (4.8 and 5.2 = 5).
+    expect(only(4, [at(4.6), at(4.8), at(5.2), at(6)]).exitCode).toBe(0);
+    // A run you withdraw from does not count toward the median.
+    const withdrawn = only(4, [at(4.6), at(5.5), at(1, 'turnedBack'), at(1, 'turnedBack')]);
+    expect(withdrawn.exitCode).toBe(0);
+    expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min, target 5 (2 runs)']);
+    // With only withdrawn runs there is no median to check.
+    expect(only(4, [at(1, 'turnedBack')]).summaries).toEqual([]);
+  });
+
+  it('rule 4: the default range is a 4.5 floor, 5-minute median and 8 ceiling', () => {
+    expect(PLAY_MINUTES).toEqual({ floor: 4.5, target: 5, max: 8 });
+    expect(RULES.find((r) => r.id === 4)!.name).toBe(playTimeRule(PLAY_MINUTES).name);
   });
 
   it('rule 4: a short run fails, unless you withdrew from it', () => {
