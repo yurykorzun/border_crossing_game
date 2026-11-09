@@ -141,7 +141,7 @@ export const en: Record<string, string> = {
 
   // ── Mission
   'mission.title': 'Your father has had a stroke',
-  'mission.body': 'Your mother needs help arranging his care. The last bus to the hospital leaves in {hours} hours, and the station is {travel} hours past the border. You carry his medicine, some cash and your everyday phone.',
+  'mission.body': 'Your mother needs help with his care. The last bus to the hospital leaves in {hours} hours, and the station is {travel} hours past the border. You carry his medicine, some cash and your everyday phone.',
 
   // ── Characters
   'char.lena.name': 'Lena',
@@ -306,7 +306,7 @@ export const en: Record<string, string> = {
   // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
   'officer.passport.priority': 'The clerk checks every stamp and every date.',
   'officer.customs.priority': 'The inspector cares what you carry, and whether you declare it.',
-  'officer.interview.priority': 'This officer cares who you know and where you have been, not your paperwork.',
+  'officer.interview.priority': "This officer cares who you know and where you've been, not your paperwork.",
   // The security officer's reaction to a political fact coming out at the interview.
   'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
   // Scene names for screen readers (src/ui/art): never shown, so not counted as read.
@@ -328,28 +328,28 @@ export const en: Record<string, string> = {
   'msg.0.0': 'The doctor says he can hear us. Come straight to the hospital.',
   'msg.0.1.lena': "Don't mention Ilya to anyone. Please.",
   'msg.0.1.mark': "Don't mention Tom to anyone. Please.",
-  'msg.0.2': 'You lower the phone. The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
+  'msg.0.2': 'The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
   'msg.1.0': "Hope your dad's OK. Any chance you can make Monday's call?",
-  'msg.1.1': 'A woman ahead of you writes a phone number on her wrist.',
+  'msg.1.1': 'The woman ahead writes a phone number on her wrist.',
   'msg.1.2': '"My lawyer," she says, and pulls her sleeve down.',
-  'msg.1.3': 'At the next table, an inspector lifts a jar of honey out of a suitcase and holds it up to the light.',
-  'msg.1.4': '"Answer only what they ask," a man behind you says quietly. "Then stop talking."',
+  'msg.1.3': 'An inspector at the next table holds a jar of honey to the light.',
+  'msg.1.4': '"Answer only what they ask," a man behind you says. "Then stop talking."',
   'msg.1.5': 'The inspector taps the steel table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
   'msg.2.0': 'Text me when you are through. Anything at all.',
-  'msg.2.1': 'The Wi-Fi drops. Your reply to your mother is still sending.',
-  'msg.2.2': 'You wait on a bench fixed to the wall. The man next to you says he has been here since the morning.',
-  'msg.2.3': '"They ask the same thing three different ways," he says. "Give the same answer every time."',
-  'msg.2.4': 'Down the corridor, a phone rings and rings. Nobody answers it.',
+  'msg.2.1': 'The Wi-Fi drops. Your reply is still sending.',
+  'msg.2.2': 'The man beside you on the bench has been here since morning.',
+  'msg.2.3': '"They ask the same thing three ways," he says. "Give the same answer."',
+  'msg.2.4': 'A phone rings and rings. Nobody answers it.',
   'msg.2.5': 'A door opens at the end of the corridor. "This way, please."',
   'queue.2.go': 'Follow the officer',
 
   // ── Passport control
   'enc.p_purpose.q': '"Purpose of your visit?"',
   'enc.p_purpose.evidence.label': 'Show {cardThe}',
-  'enc.p_purpose.evidence.reaction': 'She reads it twice and types for a long time.',
+  'enc.p_purpose.evidence.reaction': 'She reads it twice and types for a while.',
   'enc.p_purpose.family.label': '"I\'m visiting family."',
   'enc.p_purpose.family.check': 'Register check',
   'enc.p_purpose.family.reaction': 'She runs your family through the register.',
@@ -383,7 +383,7 @@ export const en: Record<string, string> = {
   'enc.c_medicine.evidence.label': 'Show {cardThe}',
   'enc.c_medicine.evidence.reaction': 'He matches each box against the list.',
   'enc.c_medicine.declare.label': 'Declare it and wait',
-  'enc.c_medicine.declare.reaction': 'He takes the medicine away to test it.',
+  'enc.c_medicine.declare.reaction': 'He takes the medicine away for testing.',
   'enc.c_medicine.leave.label': 'Leave it behind',
   'enc.c_medicine.leave.reaction': 'The bag goes into a bin marked SURRENDERED.',
 
@@ -511,7 +511,7 @@ export const en: Record<string, string> = {
 
   'enc.f_photo.q': '"This photo. Were you at this rally?"',
   'enc.f_photo.honest.label': '"Yes, once. Years ago."',
-  'enc.f_photo.honest.reaction': 'The officer turns the photo from your phone so a colleague can see.',
+  'enc.f_photo.honest.reaction': 'The officer turns the photo so a colleague can see.',
   'enc.f_photo.deny.label': '"That isn\'t me."',
   'enc.f_photo.deny.reaction': 'The officer zooms in on your face in the photo from your phone.',
   'enc.f_photo.law.label': 'Ask what law it breaks',
@@ -566,7 +566,7 @@ export const en: Record<string, string> = {
   'check.medicineLab.hint.clear': '"Routine."',
   'check.medicineLab.hint.lab': '"The lab has questions."',
   'check.phoneSearch.name': 'Phone search',
-  'check.phoneSearch.title': 'Your phone is behind the glass.',
+  'check.phoneSearch.title': 'Your phone is behind glass.',
   'check.phoneSearch.clear': 'Your phone comes back, warm.',
   'check.phoneSearch.photo': 'A second officer looks at the screen, then at you.',
   'check.phoneSearch.donation': 'The officer prints something out.',
@@ -574,8 +574,8 @@ export const en: Record<string, string> = {
   'check.phoneSearch.hint.photo': '"They are looking at your photos."',
   'check.phoneSearch.hint.donation': '"They are looking at your payments."',
   'check.recordsCheck.name': 'Records check',
-  'check.recordsCheck.title': 'Your passport has been taken for verification.',
-  'check.recordsCheck.clear': 'Your passport comes back on the counter.',
+  'check.recordsCheck.title': 'Your passport is being checked.',
+  'check.recordsCheck.clear': 'Your passport comes back.',
   'check.recordsCheck.flagged': 'Your passport goes into a different tray.',
   'check.recordsCheck.noted': 'The clerk reads something on her screen for a long time.',
   'check.recordsCheck.hint.clear': '"The system is slow today."',

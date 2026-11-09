@@ -494,9 +494,11 @@ export function playTimeRule(range: PlayTimeRange): Rule {
     summary: (trs) => {
       const { runs, median } = medianFullMinutes(trs);
       if (median === undefined) return undefined;
+      // The longest full run, so the room left under the ceiling shows (pfi.11).
+      const longest = Math.max(...trs.filter((tr) => tr.ending !== 'turnedBack').map(playMinutes));
       return {
         ok: median >= range.target,
-        text: `median full run ${median.toFixed(1)} min, target ${range.target} (${runs} runs)`,
+        text: `median full run ${median.toFixed(1)} min, target ${range.target}, longest ${longest.toFixed(2)} of ${range.max} (${runs} runs)`,
       };
     },
   };
