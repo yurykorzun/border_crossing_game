@@ -16,10 +16,13 @@
   /* Pixel art (src/ui/art): muted, so the cream panels stay the brightest thing on screen. */
   --skin: #d9b391;
   --skin-shade: #b98f6c;
-  --hair: #3a2a22;
+  --hair-lena: #6b4a33;
+  --hair-mark: #1c1b1a;
+  --stubble: #a38a74;
   --photo-bg: #dfe6e8;
-  --coat-lena: #3f6b6a;
-  --coat-mark: #5f625f;
+  --coat-lena: #2e3b3d;
+  --coat-mark: #2b302d;
+  --passport: #8e2a26;
   --wall: #56645d;
   --floor: #3a4640;
   --booth: #26302c;
@@ -415,7 +418,11 @@ p { margin: 0 0 var(--gap); }
 .art-photo-bg { fill: var(--photo-bg); }
 .art-skin { fill: var(--skin); }
 .art-skin-shade { fill: var(--skin-shade); }
-.art-hair { fill: var(--hair); }
+.art-hair-lena { fill: var(--hair-lena); }
+.art-hair-mark { fill: var(--hair-mark); }
+.art-stubble { fill: var(--stubble); }
+.art-amber { fill: var(--amber-dark); }
+.art-crowd { fill: var(--bg-2); }
 .art-coat-lena { fill: var(--coat-lena); }
 .art-coat-mark { fill: var(--coat-mark); }
 .art-collar { fill: var(--paper); }
@@ -430,14 +437,15 @@ p { margin: 0 0 var(--gap); }
 .art-counter { fill: var(--bg-2); }
 .art-officer { fill: var(--officer); }
 .art-glass { fill: var(--glass); fill-opacity: 0.22; }
-.art-glare { fill: var(--paper); opacity: 0.12; }
+/* Warm amber light on the glass. */
+.art-glare { fill: var(--amber-dark); opacity: 0.18; }
 .booth-light { fill: var(--light-red); }
 .booth-light.go { fill: var(--light-green); }
 .art-passenger { fill: var(--officer); opacity: 0.9; }
 .art-bag { fill: var(--amber-paper); }
 .art-rope { fill: var(--danger-paper); }
 .art-post { fill: var(--muted); }
-.art-passport { fill: var(--navy); }
+.art-passport { fill: var(--passport); }
 .art-passport-edge { fill: var(--paper-2); }
 .art-emblem { fill: var(--amber-dark); }
 

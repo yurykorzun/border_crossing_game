@@ -7,7 +7,7 @@ import { t } from '../../i18n';
 import type { CharacterId } from '../../game/types';
 import { Pixels } from './pixels';
 
-// . frame  b background  h hair  s skin  d skin shade  k eyes and mouth  w collar  c jacket
+// . frame  b background  h hair  t stubble  s skin  d skin shade  k eyes and mouth  w collar  c jacket
 const SHOULDERS = [
   'bbbbcccwddwcccbbbb',
   'bbccccccwwccccccbb',
@@ -21,7 +21,7 @@ const SHOULDERS = [
 
 /** The 18 inner columns of each traveler's photo, top to bottom; the frame is added around them. */
 const FACES: Record<CharacterId, string[]> = {
-  // Lena: a dark bob down to the jaw with a side fringe.
+  // Lena: shoulder-length brown hair with a side fringe.
   lena: [
     'bbbbbbbbbbbbbbbbbb',
     'bbbbbbhhhhhhbbbbbb',
@@ -35,11 +35,11 @@ const FACES: Record<CharacterId, string[]> = {
     'bbbhhssskkssshhbbb',
     'bbbhhhsssssshhhbbb',
     'bbbhhhhddddhhhhbbb',
-    'bbbbhhhddddhhhbbbb',
-    'bbbbbbbddddbbbbbbb',
-    ...SHOULDERS,
+    'bbbhhhhddddhhhhbbb',
+    'bbbhcccwddwccchbbb',
+    ...SHOULDERS.slice(1),
   ],
-  // Mark: short hair and a close beard.
+  // Mark: short black hair and stubble.
   mark: [
     'bbbbbbbbbbbbbbbbbb',
     'bbbbbbbbbbbbbbbbbb',
@@ -50,9 +50,9 @@ const FACES: Record<CharacterId, string[]> = {
     'bbbbssksssskssbbbb',
     'bbbbssssssssssbbbb',
     'bbbbssssddssssbbbb',
-    'bbbbshhhkkhhhsbbbb',
-    'bbbbshhhhhhhhsbbbb',
-    'bbbbbhhhhhhhhbbbbb',
+    'bbbbsttskksttsbbbb',
+    'bbbbsttttttttsbbbb',
+    'bbbbbttttttttbbbbb',
     'bbbbbbbddddbbbbbbb',
     'bbbbbbbddddbbbbbbb',
     ...SHOULDERS,
@@ -77,7 +77,8 @@ export function Portrait({ id, className = '' }: { id: CharacterId; className?: 
   const palette = {
     '.': 'art-frame',
     b: 'art-photo-bg',
-    h: 'art-hair',
+    h: `art-hair-${id}`,
+    t: 'art-stubble',
     s: 'art-skin',
     d: 'art-skin-shade',
     k: 'art-ink',
