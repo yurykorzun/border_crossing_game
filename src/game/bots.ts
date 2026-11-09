@@ -124,9 +124,11 @@ export interface BotPick {
 
 /** The bot's next action, or null when the run is over. */
 export function botAction(style: BotStyle, s: RunState, botRng: number): BotPick | null {
-  // Bots play every card out, so finishing quickly never shortens what autoplay and the evals measure.
-  const legal = legalActions(s).filter((a) => a.type !== 'finish');
+  const legal = legalActions(s);
   if (!legal.length) return null;
+  // Told the bus is out of reach, every style finishes the crossing quickly, as a player would.
+  const finish = legal.find((a) => a.type === 'finish');
+  if (finish) return { action: finish, botRng };
   if (legal.length === 1) return { action: legal[0], botRng };
   if (style === 'random') {
     const r = nextRandom(botRng);

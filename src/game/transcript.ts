@@ -353,6 +353,7 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
         ? `${sc.kind === 'inspection' ? 'insp' : 'enc'}.${sc.id}.${action.approach}.label`
         : action.type === 'waitAction' ? `wait.${action.action}.label`
+        : action.type === 'finish' ? 'ui.finishQuickly'
         : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`
         : s.reaction ? nextActionKey(s) : 'ui.continue';
     const picked = page.lines.find((l) => l.key === pickedKey) ?? page.lines.find((l) => l.key === 'ui.continue');
