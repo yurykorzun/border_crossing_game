@@ -342,10 +342,7 @@ export const SECONDS_PER_DECISION = 3;
  * Rule 4. Every full run is floor-max minutes, and across the eval the median
  * full run reaches target. A run you withdraw from (turnedBack) only has the
  * ceiling. Yury's call on 2026-11-09, after the short packing screen (67a.16)
- * put some runs just under 5 minutes. The floor went from 4.5 to 4 on
- * 2026-11-09, also Yury's call, because the traveler screen from his mockup
- * (67a.17) cut reading and the shortest run fell to 4.26 min. The median
- * still has to reach 5, and 67a.22 lengthens the crossing with play.
+ * put some runs just under 5 minutes.
  */
 export const PLAY_MINUTES = { floor: 4, target: 5, max: 8 } as const;
 
