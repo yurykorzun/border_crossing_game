@@ -46,7 +46,18 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 7. `67a.7` Setup 1: Choose your traveler, with visible history
 8. `67a.8` Setup 2 and 3: Prepare your documents, Begin the crossing
 9. `67a.9` Proofread every English string and lock the terms
-10. `67a.10` SVG portraits and a static queue scene
+10. ~~`67a.10` Pixel-art portraits and a static queue scene~~ done (#10)
+
+**Phase 2b - the border counter** (epic 67a; Yury's design notes and pixel-art mockups, 2026-11-09)
+
+- ~~`67a.13` Run screen as a border counter: mission, hours and scrutiny header, question above equal answers, icon tray~~ done (#10)
+- `67a.14` One plain consequence line per answer ("Uses letter · Reveals her address"), amber/red colour rule
+- `67a.15` After an answer: the reaction and what changed, an explicit next action, a check that says what it verifies ("Medicine check", "Wait for the result")
+- `67a.16` Packing screen: "3 of 3 packed", bulletin bar, one-line rows, all six fit
+- `67a.17` Traveler screen: premise heading, role lines ("Mark · Dual citizen"), history link, "Continue as Lena"
+- `67a.18` Queue: "In the queue" once, messages against the scene
+- `67a.20` Ending as a short result card with summary rows and "See what's on file"
+- `67a.19` One pixel-art scene per screen that changes after you act
 
 **Phase 3 - believable rules** (epic fsx, starts once 67a.3 is done)
 
@@ -61,6 +72,7 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 19. `fsx.8` Encounter checklist, content lint and playtest script
 20. `fsx.9` What each official knows (absorbs l9v, logged claims)
 21. `fsx.10` Officers with one stated priority each (visible mood deferred, because it implies a mechanic that doesn't exist)
+- `fsx.11` Relatives question: name, deny or ask why. Drops "Mention only your parents", because leaving a relative out was recorded as denying them.
 
 **Phase 3a - destinations** (epic 70r, after fsx.7; destinations note 2026-11-08)
 
@@ -104,7 +116,7 @@ The world bible comes before the Russian text, so Russian is written once with f
 
 **Phase 5 - later**
 
-- `grd` Real art. Waits on a style decision (see below).
+- `grd` Real art: pixel art (decided 2026-11-09), through PixelLab. Waits on its API token. Until then `67a.19` draws the scenes as SVG on a pixel grid.
 - `7kw` Recurring passengers and officers across runs
 - `cb9` Hint at endings not found yet
 - `eam` Pseudo-locale test for layout, before the first translation
@@ -118,6 +130,9 @@ The world bible comes before the Russian text, so Russian is written once with f
 - At most 3 answers per card. Several fitting documents open from one "Show evidence" answer (`kuk`).
 - A check's finding is stored apart from its resolution. A contact can explain a finding, not erase it (`fsx.2`).
 - Style: cream dialogue and document surfaces, IBM Plex, dark green frame. Answers have equal weight; only actions like "Begin the crossing" get a strong button.
+- Art: pixel art (Yury, 2026-11-09). A view from your side of the counter, papers as physical objects, muted greens and greys with warm amber light. Genre cues only, nothing copied from an existing game. Drawn as SVG `<rect>` grids with `shape-rendering="crispEdges"` until `grd` delivers images.
+- Colour: amber marks attention or escalation (scrutiny, a check); red only a confirmed serious consequence (a protected contact exposed, medicine lost).
+- The run header follows the mockups: mission, hours left, scrutiny, then "N / 3 · checkpoint". The 2-hour travel reserve is stated in the mission sheet, not on every screen.
 - Endings say only what the engine checks: "Home in time" becomes "Admitted, time to spare" or gets an epilogue, and missing the bus differs from arriving too late (`fsx.3`).
 
 ## How it runs
@@ -126,7 +141,7 @@ The world bible comes before the Russian text, so Russian is written once with f
 
 ## Decisions for Yury
 
-1. Art style, before `grd`: pixel art (PixelLab, needs its API token) or painted illustration (OpenAI or FLUX, needs that key; the mockup points this way). Decide after seeing the SVG pass on the phone. The UI style itself is decided (see UI rules).
+1. PixelLab API token for `grd` (art style is decided: pixel art).
 2. Mark's brother is in a fictional country at war, not Ukraine as in the original note. `0ts.1` proposes where it sits in the fictional world; change it if you want the real one.
 3. bd sync: create the `yurykorzun/beads` repo, then run `bd-attach migrate --db border_crossing_game`.
 ## Not in this plan
