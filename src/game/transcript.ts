@@ -96,6 +96,7 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.scrutinyHelp.max', { max: MAX_SCRUTINY, after: SCRUTINY_AFTER_INSPECTION }, CHROME);
   // StoryContent
   const ch = CHARACTERS[s.character];
+  p.add('ui.portraitOf', { name: t(`char.${ch.id}.name`) }, CHROME);
   p.add(`char.${ch.id}.name`, {}, CHROME);
   p.add(`char.${ch.id}.blurb`, {}, CHROME);
   p.add('ui.background', {}, CHROME);
@@ -141,6 +142,7 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.premise');
   p.add('ui.pickCharacter');
   for (const id of CHARACTER_IDS) {
+    p.add('ui.portraitOf', { name: t(`char.${id}.name`) }, { who: id });
     p.add(`char.${id}.name`, {}, { who: id });
     p.add(`char.${id}.role`, {}, { who: id });
     for (const b of CHARACTERS[id].background) p.add(`bg.${b}.short`, {}, { who: id });

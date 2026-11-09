@@ -79,6 +79,7 @@ export const en: Record<string, string> = {
   'ui.waiting': 'Waiting',
   'ui.tapToSkip': 'Tap to skip',
   'ui.inQueue': 'In the queue',
+  'ui.portraitOf': 'Passport photo of {name}',
   'ui.endingsSeen': 'Endings seen: {n} of 4',
   'ui.yourCrossing': 'Your crossing',
   'ui.timeLeft': 'Hours left: {n}',

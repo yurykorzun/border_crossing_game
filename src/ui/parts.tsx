@@ -9,6 +9,7 @@ import type { RunState } from '../game/types';
 import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
 import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, START_TIME } from '../game/content/world';
+import { Portrait } from './art/Portrait';
 
 export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => void }) {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
@@ -133,7 +134,10 @@ export function StoryContent({ s }: { s: RunState }) {
   const ch = CHARACTERS[s.character];
   return (
     <>
-      <p className="who"><strong>{t(`char.${ch.id}.name`)}</strong> · {t(`char.${ch.id}.blurb`)}</p>
+      <div className="who">
+        <Portrait id={ch.id} className="portrait-small" />
+        <p><strong>{t(`char.${ch.id}.name`)}</strong> · {t(`char.${ch.id}.blurb`)}</p>
+      </div>
       <h3>{t('ui.background')}</h3>
       <ul className="facts">{ch.background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
       <h3>{t('ui.contacts')}</h3>

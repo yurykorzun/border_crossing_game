@@ -13,6 +13,20 @@
   --amber-paper: #8a5a00;
   --danger-dark: #ff8a7a;
   --danger-paper: #a3262a;
+  /* Pixel art (src/ui/art): muted, so the cream panels stay the brightest thing on screen. */
+  --skin: #d9b391;
+  --skin-shade: #b98f6c;
+  --hair: #3a2a22;
+  --photo-bg: #dfe6e8;
+  --coat-lena: #3f6b6a;
+  --coat-mark: #5f625f;
+  --wall: #56645d;
+  --floor: #3a4640;
+  --booth: #26302c;
+  --officer: #1b221f;
+  --glass: #9fb8bf;
+  --light-red: #e0533f;
+  --light-green: #5fd07a;
   --sans: 'IBM Plex Sans Variable', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --gap: 8px;
@@ -193,17 +207,7 @@ p { margin: 0 0 var(--gap); }
 }
 .traveler[aria-checked='true'] .radio { border-color: var(--navy); }
 .traveler[aria-checked='true'] .radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--navy); }
-.portrait {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius);
-  background: var(--paper-2);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  font-weight: 600;
-  font-size: 1.2rem;
-}
+.portrait { width: 48px; height: auto; flex: none; }
 .traveler-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .traveler-name { color: var(--navy); }
 .traveler-history { font-size: 0.85rem; color: var(--muted); }
@@ -261,16 +265,18 @@ p { margin: 0 0 var(--gap); }
 }
 .scene-customs { background: linear-gradient(#5a6357, #4a5249 62%, #6b5f4b 62%); }
 .scene-interview { background: linear-gradient(#4f5a62, #434d55 65%, #3a3f44 65%); }
+/* The booth fills the lower scene; the officer's role sits on the counter panel. */
 .officer {
-  width: 38%;
-  height: 72%;
-  background: #2a332f;
-  border-radius: 40% 40% 4px 4px;
+  position: relative;
+  width: 78%;
+  height: 92%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   color: #c5cec9;
 }
+.booth { width: 100%; height: 100%; display: block; }
+.officer-label { position: absolute; bottom: 12%; left: 0; right: 0; text-align: center; }
 .tray {
   width: 60%;
   height: 22%;
@@ -310,7 +316,11 @@ p { margin: 0 0 var(--gap); }
 /* Queue: the title sits on the scene, said and seen beats are a caption along its bottom,
    phone messages stack in the phone panel under it. Any tap moves one beat on. */
 .queue-scene { cursor: pointer; align-items: stretch; flex-direction: column; justify-content: space-between; }
-.queue-title { position: relative; margin: 10px 12px 0; color: var(--paper); font-size: 0.85rem; }
+.queue-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* The drawn queue sits at the bottom; above it the wall just continues. */
+.queue-scene.scene-passport { background: var(--wall); }
+/* The title reads over the wall, so it gets a quiet backing. */
+.queue-title { position: relative; align-self: flex-start; padding: 2px 6px; border-radius: 3px; background: rgba(20, 25, 23, 0.6); margin: 10px 12px 0; color: var(--paper); font-size: 0.85rem; }
 .caption-area { position: relative; }
 .caption {
   margin: 0;
@@ -394,7 +404,42 @@ p { margin: 0 0 var(--gap); }
 .tag.risk { color: var(--danger-paper); border-color: var(--danger-paper); }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .record { font-family: var(--mono); font-size: 0.8rem; }
-.who { margin-bottom: 4px; }
+.who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.who p { margin: 0; }
+.portrait-small { width: 36px; height: auto; flex: none; }
+
+/* ── Pixel art (src/ui/art): coarse grids of cells in the tokens above, scaled up crisp */
+.art { display: block; }
+.pixel { image-rendering: pixelated; shape-rendering: crispEdges; }
+.art-frame { fill: #fbf8f1; }
+.art-photo-bg { fill: var(--photo-bg); }
+.art-skin { fill: var(--skin); }
+.art-skin-shade { fill: var(--skin-shade); }
+.art-hair { fill: var(--hair); }
+.art-coat-lena { fill: var(--coat-lena); }
+.art-coat-mark { fill: var(--coat-mark); }
+.art-collar { fill: var(--paper); }
+.art-ink { fill: var(--ink); }
+.art-stamp { opacity: 0.75; }
+.art-stamp-ink { fill: var(--danger-paper); }
+.art-wall { fill: var(--wall); }
+.art-floor { fill: var(--floor); }
+.art-skirting { fill: var(--bg-2); }
+.art-booth { fill: var(--booth); }
+.art-booth-panel { fill: var(--bg-2); }
+.art-counter { fill: var(--bg-2); }
+.art-officer { fill: var(--officer); }
+.art-glass { fill: var(--glass); fill-opacity: 0.22; }
+.art-glare { fill: var(--paper); opacity: 0.12; }
+.booth-light { fill: var(--light-red); }
+.booth-light.go { fill: var(--light-green); }
+.art-passenger { fill: var(--officer); opacity: 0.9; }
+.art-bag { fill: var(--amber-paper); }
+.art-rope { fill: var(--danger-paper); }
+.art-post { fill: var(--muted); }
+.art-passport { fill: var(--navy); }
+.art-passport-edge { fill: var(--paper-2); }
+.art-emblem { fill: var(--amber-dark); }
 
 /* ── Ending */
 .ending { justify-content: space-between; }
