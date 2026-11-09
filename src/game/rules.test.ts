@@ -262,7 +262,7 @@ describe('detection needs something on file', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.reaction?.map((e) => e.key)).toContain('weak.work.reaction');
-    expect(t('weak.work.reaction')).toMatch(/another hour/);
+    expect(t('weak.work.reaction')).toMatch(/check it again/);
     const m = tryStep(at(newRun(mark), 'p_employer'), { type: 'choose', approach: 'check' });
     expect(m.ok).toBe(true);
     if (m.ok) expect(m.state.reaction?.map((e) => e.key)).not.toContain('weak.work.reaction');
@@ -459,7 +459,7 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(r.state.time).toBe(after.time - 1);
     expect(r.state.calledIn).toEqual([]);
     expect(r.state.reaction?.map((l) => l.key)).toContain('calledIn.reaction');
-    expect(t('calledIn.reaction', { contact: 'mother' })).toBe('Earlier you named your mother. The officer checks that statement first, which takes an hour.');
+    expect(t('calledIn.reaction', { contact: 'mother' })).toBe('Earlier you named your mother. The officer checks that statement first.');
     // Once checked, the next card about her costs nothing extra, and she cannot help again.
     const later = at(r.state, 'c_host');
     expect(cost(later, 'evidence').time).toBe(0);
@@ -655,22 +655,24 @@ describe('every time loss names its cause in the reaction (fsx.12)', () => {
     expect(costly.length).toBeGreaterThanOrEqual(20);
   });
 
-  it.each(costly)('$key says what its hours are spent on', ({ key, always, most }) => {
-    expect(unexplained(t(key, vars), always, most)).toBeNull();
+  it.each(costly)('$key says what its hours are spent on, and leaves the count to the engine', ({ key }) => {
+    expect(unexplained(t(key, vars))).toBeNull();
   });
 
   it('the extra hours added on top say what they are spent on', () => {
     const weak = [...new Set(Object.values(CHARACTERS).flatMap((c) => c.weakTopics))];
     expect(weak.length).toBeGreaterThan(0);
-    for (const topic of weak) expect(t(`weak.${topic}.reaction`)).toMatch(/\w+ \w+ takes another hour/);
-    expect(unexplained(t('calledIn.reaction', vars), 1)).toBeNull();
+    for (const topic of weak) expect(unexplained(t(`weak.${topic}.reaction`))).toBeNull();
+    expect(unexplained(t('calledIn.reaction', vars))).toBeNull();
   });
 
-  it('a reaction that only describes the process fails the check', () => {
-    expect(unexplained('Hours later, the bag comes back.', 3)).not.toBeNull();
-    expect(unexplained('They search everything. Three hours.', 3)).not.toBeNull();
-    expect(unexplained('He takes the bag away. That takes an hour.', 1)).not.toBeNull();
-    expect(unexplained('Checking the medicine takes an hour.', 1, 2)).not.toBeNull();
-    expect(unexplained('Counting the cash takes an hour.', 1)).toBeNull();
+  it('a reaction that counts the hours or only says it takes a while fails the check', () => {
+    expect(unexplained('Hours later, the bag comes back.')).not.toBeNull();
+    expect(unexplained('They search everything. Three hours.')).not.toBeNull();
+    expect(unexplained('Counting the cash takes an hour.')).not.toBeNull();
+    expect(unexplained('Matching the scan takes an hour, two on records days.')).not.toBeNull();
+    expect(unexplained('He takes the bag away. That takes a while.')).not.toBeNull();
+    expect(unexplained('Waiting.')).not.toBeNull();
+    expect(unexplained('He counts your cash twice.')).toBeNull();
   });
 });

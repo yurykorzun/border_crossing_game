@@ -34,7 +34,7 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   await expect(screen.locator('.traveler-scene')).toBeVisible();
   await expect(screen.locator('.stage-label')).toHaveText('1 / 3 · Traveler');
   await expect(screen.locator('.stage-label .amber')).toHaveText('1 / 3');
-  await expect(screen.getByRole('heading', { name: "You're going home. Your father is in hospital." })).toBeVisible();
+  await expect(screen.getByRole('heading', { name: "You're going home. Your father is in the hospital." })).toBeVisible();
 
   // A two-sentence premise at most: count every sentence that ends in . ! or ?
   const premise = (await screen.locator('.premise').innerText()).trim();

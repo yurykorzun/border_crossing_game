@@ -30,7 +30,7 @@ describe('content lint', () => {
         { id: 'wait', kind: 'verify', effects: [{ time: -1 }] },
       ],
     };
-    expect(withCard(ok, { 'enc.x_ok.wait.reaction': 'Checking your employer takes an hour.' })).toEqual([]);
+    expect(withCard(ok, { 'enc.x_ok.wait.reaction': 'They check your employer in the register.' })).toEqual([]);
   });
 
   it('fails a related card with no reason to appear', () => {
@@ -76,7 +76,7 @@ describe('content lint', () => {
   ];
   it.each(pairs)('sibling answers, %s: twins = %s', (_, a, b, twins) => {
     const card: Encounter = { id: 'x_pair', checkpoint: 'customs', kind: 'routine', when: { facts: ['employer'] }, approaches: [a, b] };
-    const lines = { 'enc.x_pair.a.reaction': 'Checking your employer takes an hour.', 'enc.x_pair.b.reaction': 'Checking your employer takes an hour.' };
+    const lines = { 'enc.x_pair.a.reaction': 'They check your employer in the register.', 'enc.x_pair.b.reaction': 'They check your employer in the register.' };
     const twin = 'x_pair: answers a and b do the same thing';
     if (twins) expect(withCard(card, lines)).toContain(twin);
     else expect(withCard(card, lines)).not.toContain(twin);
@@ -113,7 +113,9 @@ describe('content lint', () => {
       ],
     };
     expect(withCard(card, { 'enc.x_time.wait.reaction': 'Hours later, he waves you on.' }))
-      .toEqual([expect.stringMatching(/^x_time\.wait: costs time but enc\.x_time\.wait\.reaction does not say "two hours"/)]);
+      .toEqual([expect.stringMatching(/^x_time\.wait: costs time but enc\.x_time\.wait\.reaction "Hours later, he waves you on\." states the hours/)]);
+    expect(withCard(card, { 'enc.x_time.wait.reaction': 'It takes ages.' }))
+      .toEqual([expect.stringMatching(/^x_time\.wait: costs time but .* does not say what the time is spent on/)]);
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_time\.wait: costs time but .* has no reaction text/)]);
   });
 
@@ -121,9 +123,10 @@ describe('content lint', () => {
     const records = CHECKS.recordsCheck;
     const slow = { ...records, cases: records.cases.map((c) => (c.result === 'clear' ? { ...c, effects: [{ time: -1 }] } : c)) };
     const content: Content = { ...real, checks: { ...CHECKS, recordsCheck: slow } };
-    expect(lintContent(content, text))
-      .toEqual([expect.stringMatching(/^check recordsCheck\.clear: costs time but check\.recordsCheck\.clear does not say "an hour"/)]);
-    const explained: Text = (key) => (key === 'check.recordsCheck.clear' ? 'The records scan of your passport takes an hour.' : text(key));
+    const counted: Text = (key) => (key === 'check.recordsCheck.clear' ? 'The records scan of your passport takes an hour.' : text(key));
+    expect(lintContent(content, counted))
+      .toEqual([expect.stringMatching(/^check recordsCheck\.clear: costs time but check\.recordsCheck\.clear .* states the hours/)]);
+    const explained: Text = (key) => (key === 'check.recordsCheck.clear' ? 'They scan your passport against the records.' : text(key));
     expect(lintContent(content, explained)).toEqual([]);
   });
 
