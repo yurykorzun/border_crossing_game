@@ -437,7 +437,8 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
 
 /**
  * The queue before a checkpoint, one beat per tap (on the scene, the phone or the button).
- * Phone messages stack in the phone panel; said and seen beats are a caption over the scene.
+ * Phone messages stack in the phone panel joined to the scene's lower edge; said and seen
+ * beats are a caption over the scene. The strip already says "In the queue", so the scene does not.
  * The last beat swaps Continue for the walk up to the officer, which is the engine's ack.
  */
 function Queue({ next, character, still, onDone }: { next: number; character: CharacterId; still: boolean; onDone: () => void }) {
@@ -456,7 +457,6 @@ function Queue({ next, character, still, onDone }: { next: number; character: Ch
       <div className={`scene scene-${CHECKPOINTS[next]} queue-scene ${still ? 'still' : ''}`} onClick={advance}>
         {art}
         <div className="flicker" aria-hidden />
-        <h2 className="queue-title mono">{t('ui.inQueue')}</h2>
         <div className="caption-area" aria-live="polite">
           {caption && <p key={caption.key} className={`caption ${caption.kind}`}>{t(caption.key)}</p>}
         </div>

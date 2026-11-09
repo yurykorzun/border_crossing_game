@@ -403,14 +403,12 @@ p { margin: 0 0 var(--gap); }
 }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* Queue: the title sits on the scene, said and seen beats are a caption along its bottom,
-   phone messages stack in the phone panel under it. Any tap moves one beat on. */
-.queue-scene { cursor: pointer; align-items: stretch; flex-direction: column; justify-content: space-between; }
+/* Queue: the strip names it, said and seen beats are a caption along the scene's bottom,
+   phone messages stack in the phone panel joined to its lower edge. Any tap moves one beat on. */
+.queue-scene { cursor: pointer; align-items: stretch; flex-direction: column; justify-content: flex-end; border-radius: var(--radius) var(--radius) 0 0; }
 .queue-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* The drawn queue sits at the bottom; above it the wall just continues. */
 .queue-scene.scene-passport { background: var(--wall); }
-/* The title reads over the wall, so it gets a quiet backing. */
-.queue-title { position: relative; align-self: flex-start; padding: 2px 6px; border-radius: 3px; background: rgba(20, 25, 23, 0.6); margin: 10px 12px 0; color: var(--paper); font-size: 0.85rem; }
 .caption-area { position: relative; }
 .caption {
   margin: 0;
@@ -422,6 +420,8 @@ p { margin: 0 0 var(--gap); }
 .caption.narration { font-style: italic; color: #dfe5e1; }
 .phone { background: var(--bg-2); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: opacity 300ms; }
 .phone.lowered { opacity: 0.6; }
+/* No band between the scene and the phone: cancel the run gap and square the joined corners. */
+.queue-scene + .phone { margin-top: -10px; padding-top: 8px; border-radius: 0 0 var(--radius) var(--radius); }
 .msg-from { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
 .msg {
   background: var(--paper);

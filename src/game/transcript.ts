@@ -227,7 +227,6 @@ function screenLines(s: RunState, p: Page): void {
   if (sc.kind === 'between') {
     // Queue in src/App.tsx: every beat, tap by tap, then the walk up to the officer.
     const beats = queueBeats(sc.next, s.character);
-    p.add('ui.inQueue');
     for (const b of beats) {
       if (b.from) p.add(`msg.from.${b.from}`);
       p.add(b.key);
