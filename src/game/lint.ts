@@ -109,9 +109,13 @@ function reasonHolds(content: Content, card: Encounter | Inspection, a: Approach
     files(check.cases[index].effects) || openers.some((o) => o.check === check.id && files(o.effects)));
 }
 
-/** Whether an effect does anything: an amount of 0 hours, scrutiny or travel changes nothing. */
+/**
+ * Whether an effect can do anything, by the rules apply() in engine.ts uses:
+ * hours and scrutiny move either way, so only 0 is nothing, and travel only
+ * ever adds hours (a negative amount is clamped to 0), so only more than 0 counts.
+ */
 const acts = (e: Effect) =>
-  !('time' in e && e.time === 0) && !('scrutiny' in e && e.scrutiny === 0) && !('travel' in e && e.travel === 0);
+  !('time' in e && e.time === 0) && !('scrutiny' in e && e.scrutiny === 0) && !('travel' in e && e.travel <= 0);
 
 /** Whether an answer changes something: spends a resource, has an effect that acts, or opens a check. */
 const changes = (a: Approach) => (a.kind !== 'say' && a.kind !== 'verify') || a.effects.some(acts) || !!a.check;

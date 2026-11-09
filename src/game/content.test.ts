@@ -134,7 +134,7 @@ describe('content lint', () => {
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_nothing: no answer changes anything/)]);
     // Effects that move nothing are no change either.
-    for (const e of [{ time: 0 }, { scrutiny: 0, reason: 'employer' as const }, { travel: 0 }])
+    for (const e of [{ time: 0 }, { scrutiny: 0, reason: 'employer' as const }, { travel: 0 }, { travel: -1 }])
       expect(withCard({ ...card, when: { facts: ['employer'] }, approaches: [{ id: 'ok', kind: 'say', effects: [e] }] }))
         .toEqual([expect.stringMatching(/^x_nothing: no answer changes anything/)]);
     expect(withCard({ ...card, calm: true })).toEqual([]);
