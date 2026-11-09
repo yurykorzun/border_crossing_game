@@ -409,11 +409,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
           <div className={`scene scene-${CHECKPOINTS[sceneAt]} ${data.settings.reduceMotion ? 'still' : ''}`}>
             <div className="officer">
               <CheckpointScene checkpoint={CHECKPOINTS[sceneAt]} character={s.character} state={sceneState} />
-              {s.screen.kind === 'wait' ? (
-                <span className="mono officer-label" aria-hidden>{t('ui.waiting')}</span>
-              ) : (
-                <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
-              )}
+              <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
             </div>
             <div className="flicker" aria-hidden />
           </div>
@@ -578,12 +574,9 @@ function optionLabel(prefix: string, id: string, o: Option, traveler: CharacterI
   return t(own(`${prefix}.${id}.${o.approach.id}.label`, traveler), vars);
 }
 
-/** How many dots "Verification in progress" shows; the current one is amber. */
-const VERIFY_DOTS = 3;
-
 /**
- * A check, as in the customs mockup: its name, what is happening, "Verification in
- * progress" with three dots, then the actions. Beats play on their own (2-5 s, or
+ * A check: one plain line saying what they are doing ("They're checking your passport."),
+ * the latest observation under it, then the actions. Beats play on their own (2-5 s, or
  * 0.6 s with shorter waits) and a tap skips ahead; the buttons show once they are done.
  */
 function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean }) {
@@ -591,7 +584,6 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
   const done = sc.shown >= sc.beats.length;
   const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
   const delay = useMemo(() => beatDelayMs(sc.beats[sc.shown] ?? 0, reduceWait), [reduceWait, sc.shown, sc.beats]);
-  const at = Math.min(VERIFY_DOTS - 1, Math.floor((sc.shown / sc.beats.length) * VERIFY_DOTS));
   const beat = sc.shown > 0 ? sc.beats[sc.shown - 1] : null;
   const protectedContact = CHARACTERS[s.character].protectedContact;
 
@@ -608,14 +600,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
         aria-live="polite"
         onClick={() => { if (!done) dispatch({ type: 'beat' }); }}
       >
-        <h2 className="question">{t(`check.${sc.check}.name`)}</h2>
-        <p className="happening">{t(`check.${sc.check}.title`)}</p>
-        <p className="verifying">
-          <span className="dots" aria-hidden>
-            {Array.from({ length: VERIFY_DOTS }, (_, i) => <i key={i} className={i < at ? 'past' : i === at ? 'now' : ''} />)}
-          </span>
-          {t('ui.verifying')}
-        </p>
+        <h2 className="question">{t(`check.${sc.check}.title`)}</h2>
         {beat !== null && <p key={beat} className="beat">{t(`beat.${cp}.${beat}`)}</p>}
         {!done && <p className="muted skip">{t('ui.tapToSkip')}</p>}
       </section>

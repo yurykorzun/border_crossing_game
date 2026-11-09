@@ -95,9 +95,8 @@ function chromeLines(s: RunState, p: Page): void {
   if (!(s.screen.kind === 'between' && !s.reaction)) {
     p.add(`scene.${CHECKPOINTS[now]}`, {}, CHROME);
   }
-  if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   // The officer's label stays up with the last reaction, before the queue.
-  else if (!(s.screen.kind === 'between' && !s.reaction))
+  if (!(s.screen.kind === 'between' && !s.reaction))
     p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[now]}`, {}, CHROME);
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.evidence', {}, CHROME);
@@ -275,11 +274,9 @@ function screenLines(s: RunState, p: Page): void {
     return p.add(`queue.${sc.next}.go`);
   }
   if (sc.kind === 'wait') {
-    // Waiting in src/App.tsx: name, what is happening, "Verification in progress", the latest beat.
+    // Waiting in src/App.tsx: what they are doing, then the latest beat.
     const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
-    p.add(`check.${sc.check}.name`);
     p.add(`check.${sc.check}.title`);
-    p.add('ui.verifying');
     if (sc.shown > 0) p.add(`beat.${cp}.${sc.beats[sc.shown - 1]}`);
     if (sc.shown < sc.beats.length) return p.add('ui.tapToSkip');
     for (const w of waitActions(s)) {
