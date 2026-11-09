@@ -14,6 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
+import { SEPARATOR, consequence } from './consequence';
 import { newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween } from './play';
@@ -188,29 +189,18 @@ function setupLines(setup: RunSetup, p: Page): void {
   for (const id of setup.loadout) p.add(`ev.${id}.name`);
 }
 
-function chips(o: Option, p: Page): void {
-  const a = o.approach;
-  if (o.blocked) return p.add(`ui.blocked.${o.blocked}`);
-  const before = p.lines.length;
-  if (a.kind === 'perk') p.add('ui.cost.perk');
-  if (o.card) p.add('ui.cost.uses', { card: o.card });
-  if (o.contact) p.add('ui.cost.exposes', { contact: o.contact });
-  let time = 0;
-  let scrutiny = 0;
-  for (const e of o.effects) {
-    if ('time' in e) time += e.time;
-    else if ('scrutiny' in e) scrutiny += e.scrutiny;
-  }
-  if (time) p.plural('ui.cost.time', time);
-  if (scrutiny) p.add('ui.cost.scrutiny', { n: scrutiny });
-  for (const e of o.effects) {
-    if ('loseMedicine' in e) p.add('ui.cost.medicine');
-    else if ('fact' in e) p.add('ui.cost.fact', { fact: e.fact });
-    else if ('claim' in e) p.add('ui.cost.claim', { claim: e.claim });
-  }
-  if (a.check) p.add('ui.cost.check');
-  if (a.kind === 'withdraw') p.add('ui.cost.withdraw');
-  if (p.lines.length === before) p.add('ui.cost.free');
+/** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */
+function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void {
+  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact).parts.map((x) =>
+    render(() => (x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)), x.key),
+  );
+  const problem = parts.find((x) => x.problem)?.problem;
+  p.lines.push({
+    step: p.step,
+    key: parts.map((x) => x.key).join(SEPARATOR),
+    text: parts.map((x) => x.text).join(SEPARATOR),
+    ...(problem ? { problem } : {}),
+  });
 }
 
 /** What the panel shows for this state. */
@@ -254,11 +244,11 @@ function screenLines(s: RunState, p: Page): void {
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
       else {
         const vars: Record<string, string> = {};
-        if (o.card) vars.card = o.card;
+        if (o.card) vars.card = vars.cardThe = o.card;
         if (o.contact) vars.contact = o.contact;
         p.add(`${prefix}.${sc.id}.${o.approach.id}.label`, vars);
       }
-      chips(o, p);
+      consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
     }
   }
 }

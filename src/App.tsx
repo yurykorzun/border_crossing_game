@@ -16,7 +16,7 @@ import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { CostChips, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip } from './ui/parts';
+import { ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip } from './ui/parts';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { Booth } from './ui/art/Booth';
@@ -467,7 +467,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
             onClick={() => dispatch({ type: 'choose', approach: o.approach.id })}
           >
             <span className="choice-label">{optionLabel(prefix, id, o)}</span>
-            <CostChips o={o} />
+            <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
       </div>
@@ -480,7 +480,7 @@ function optionLabel(prefix: string, id: string, o: Option): string {
   if (o.blocked === 'noCard') return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
-  if (o.card) vars.card = o.card;
+  if (o.card) vars.card = vars.cardThe = o.card;
   if (o.contact) vars.contact = o.contact;
   return t(`${prefix}.${id}.${o.approach.id}.label`, vars);
 }

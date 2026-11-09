@@ -110,19 +110,13 @@ p { margin: 0 0 var(--gap); }
 .choice-sub { font-size: 0.9rem; color: var(--muted); }
 .primary:focus-visible, .choice:focus-visible, .tools button:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid currentColor;
-}
-.chip.time { color: var(--navy); }
-.chip.risk { color: var(--danger-paper); }
-.chip.person { color: var(--amber-paper); }
-.chip.info { color: var(--muted); }
-.chip.blocked { color: var(--muted); border-style: dashed; }
+/* One icon and one plain line per answer. Colour (docs/plan.md "UI rules"): amber marks
+   attention or escalation, red only a confirmed serious consequence. */
+.consequence { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+.consequence .icon { margin-top: 2px; }
+.consequence-text { min-width: 0; overflow-wrap: anywhere; }
+.part.amber { color: var(--amber-paper); font-weight: 600; }
+.part.red { color: var(--danger-paper); font-weight: 600; }
 
 /* ── Title */
 .title-screen { justify-content: space-between; }

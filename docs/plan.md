@@ -131,7 +131,9 @@ The world bible comes before the Russian text, so Russian is written once with f
 - A check's finding is stored apart from its resolution. A contact can explain a finding, not erase it (`fsx.2`).
 - Style: cream dialogue and document surfaces, IBM Plex, dark green frame. Answers have equal weight; only actions like "Begin the crossing" get a strong button.
 - Art: pixel art (Yury, 2026-11-09). A view from your side of the counter, papers as physical objects, muted greens and greys with warm amber light. Genre cues only, nothing copied from an existing game. Drawn as SVG `<rect>` grids with `shape-rendering="crispEdges"` until `grd` delivers images.
-- Colour: amber marks attention or escalation (scrutiny, a check); red only a confirmed serious consequence (a protected contact exposed, medicine lost).
+- Colour: amber marks attention or escalation (scrutiny, a check); red only a confirmed serious consequence (a protected contact exposed, medicine lost). `src/game/consequence.test.ts` checks the red half.
+- Each answer has one pixel icon and one plain consequence line, at most 3 parts joined by " · ": what you give up now or put at risk ("Uses letter · Reveals her address"). Time, scrutiny, exposure and medicine are never dropped. A claim alone reads "Recorded as ...". The full record stays in My story (`67a.14`).
+- Spoken answers are quoted speech ("I'm visiting family."); handing something over is an action ("Show your mother's letter").
 - The run header follows the mockups: mission, hours left, scrutiny, then "N / 3 · checkpoint". The 2-hour travel reserve is stated in the mission sheet, not on every screen.
 - Endings say only what the engine checks: "Home in time" becomes "Admitted, time to spare" or gets an epilogue, and missing the bus differs from arriving too late (`fsx.3`).
 

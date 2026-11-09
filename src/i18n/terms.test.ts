@@ -4,8 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { en } from './en';
 
-/** Short words like "mark" or "mother", inserted mid-sentence, so they may start lowercase. */
-const isFragment = (key: string) => /^contact\.[^.]+$/.test(key) || ['ui.exposed', 'ui.protected', 'ui.used'].includes(key);
+/** Short words like "mark" or "mother" (or "letter", "your mother's letter"), inserted mid-sentence, so they may start lowercase. */
+const isFragment = (key: string) =>
+  /^contact\.[^.]+$/.test(key) || /^ev\.[^.]+\.(short|the)$/.test(key) || ['ui.exposed', 'ui.protected', 'ui.used'].includes(key);
 
 /** The names, from the contacts table (contact.* values) plus the one place name. */
 const NAMES: string[] = [

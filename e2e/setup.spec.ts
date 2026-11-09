@@ -59,7 +59,7 @@ test('choose your traveler: radio cards, history, and Continue as the pick', asy
   expect(en['char.mark.advantage']).toBe('Pack 4 documents instead of 3.');
   expect(en['char.mark.complication']).toBe('Start with Scrutiny 1/3.');
 
-  await expect(screen.locator('.chip')).toHaveCount(0);
+  await expect(screen.locator('.consequence')).toHaveCount(0);
 
   const cont = screen.locator('.controls button.primary');
   await expect(cont).toBeDisabled();

@@ -146,7 +146,7 @@ test('the run header, the tray and its pixel icons, at the first checkpoint', as
   for (const icon of await icons.all()) await expect(icon).toHaveAttribute('shape-rendering', 'crispEdges');
 
   // A 1-hour answer takes the header to 7 hours and shortens the time bar.
-  const oneHour = run.locator('.controls button.choice', { has: page.locator('.chip.time', { hasText: /^-1 hour$/ }) }).first();
+  const oneHour = run.locator('.controls button.choice', { has: page.locator('.consequence .part', { hasText: /^Costs 1 hour$/ }) }).first();
   await oneHour.click();
   await expect(strip).toContainText('7 hours left');
   await expect(strip.locator('.time-bar i')).toHaveAttribute('style', /width: 87\.5%/);
@@ -173,6 +173,81 @@ function crowdedStates(): { name: string; run: RunState; card: boolean }[] {
   return out;
 }
 
+/** Opens the run on a saved state, as a returning player would. */
+async function openAt(page: Page, run: RunState) {
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
+  await page.reload();
+  await expect(page.locator('main.run .controls button').first()).toBeVisible();
+}
+
+/** Every answer's consequence line is on screen, inside its button and not cut off. */
+async function expectLinesVisible(page: Page, where: string) {
+  const lines = page.locator('main.run .controls button .consequence');
+  const viewport = page.viewportSize()!;
+  for (const line of await lines.all()) {
+    await expect(line, where).toBeVisible();
+    const box = (await line.boundingBox())!;
+    expect(box.y + box.height, `a line below the screen on ${where}`).toBeLessThanOrEqual(viewport.height);
+    expect(box.x + box.width, `a line off the side on ${where}`).toBeLessThanOrEqual(viewport.width);
+    const clipped = await line.evaluate((el) => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
+    expect(clipped, `a clipped line on ${where}`).toBe(false);
+  }
+}
+
+test('the passport question: answers as speech or an action, one icon and one line each', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+  await openAt(page, { ...base, reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
+
+  const answers = page.locator('main.run .controls button.choice');
+  await expect(answers).toHaveCount(3);
+  await expect(answers.locator('.choice-label')).toHaveText([
+    "Show your mother's letter",
+    '"I\'m visiting family."',
+    '"I\'m here as a tourist."',
+  ]);
+  await expect(answers.locator('.consequence-text')).toHaveText([
+    'Uses letter · Reveals her address',
+    'Register check · Costs 1 hour',
+    'Recorded as your reason for visiting',
+  ]);
+  for (const answer of await answers.all()) {
+    await expect(answer.locator('svg')).toHaveCount(1);
+    await expect(answer.locator('svg')).toHaveAttribute('shape-rendering', 'crispEdges');
+  }
+  // Amber marks the check; nothing on this card is red.
+  await expect(answers.nth(1).locator('.part.amber')).toHaveText('Register check');
+  await expect(page.locator('main.run .part.red')).toHaveCount(0);
+  await expectFits(page, 'passport question', true);
+  await expectLinesVisible(page, 'passport question');
+  expect(errors).toEqual([]);
+});
+
+test('the security interview with three answers fits at 390x844 with every line visible', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  let seen = 0;
+  for (const id of CHARACTER_IDS) {
+    const base = newRun({ character: id, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[id].evidenceSlots), bulletin: 'records', seed: 7 });
+    for (const e of ENCOUNTERS.filter((x) => x.checkpoint === 'interview' || x.checkpoint === 'followup')) {
+      await openAt(page, { ...base, reaction: null, screen: { kind: 'encounter', id: e.id }, checkpoint: 2, slot: 1 });
+      const answers = page.locator('main.run .controls button.choice');
+      if ((await answers.count()) !== 3) continue;
+      seen++;
+      const where = `${id} ${e.id}`;
+      await expect(answers.locator('.consequence'), where).toHaveCount(3);
+      for (const answer of await answers.all()) await expect(answer.locator('svg'), where).toHaveCount(1);
+      await expectFits(page, where, true);
+      await expectLinesVisible(page, where);
+    }
+  }
+  expect(seen, 'interview cards with three answers').toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
+
 test('every card and waiting room fits at 390x844 with no page scroll', async ({ page }) => {
   test.setTimeout(120_000);
   const errors: string[] = [];
@@ -183,6 +258,7 @@ test('every card and waiting room fits at 390x844 with no page scroll', async ({
     await page.reload();
     await expect(page.locator('main.run .controls button').first(), name).toBeVisible();
     await expectFits(page, name, card);
+    await expectLinesVisible(page, name);
   }
   expect(errors).toEqual([]);
 });

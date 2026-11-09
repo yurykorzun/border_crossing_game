@@ -1,10 +1,12 @@
-// Shared pieces: top strip, cost chips, the bottom sheets (story, evidence, scrutiny, settings).
+// Shared pieces: top strip, consequence line, the bottom sheets (story, evidence, scrutiny, settings).
 // Everything reads RunState; nothing here changes it.
 
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { t, tn } from '../i18n';
 import type { Option } from '../game/engine';
+import { SEPARATOR, consequence } from '../game/consequence';
+import type { Part } from '../game/consequence';
 import type { RunState } from '../game/types';
 import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
@@ -81,36 +83,25 @@ export function SettingsContent({ settings, onChange }: { settings: Settings; on
   );
 }
 
-export function CostChips({ o }: { o: Option }) {
-  const chips: { text: string; tone: 'time' | 'risk' | 'info' | 'person' }[] = [];
-  const a = o.approach;
-  if (a.kind === 'perk') chips.push({ text: t('ui.cost.perk'), tone: 'info' });
-  if (o.card) chips.push({ text: t('ui.cost.uses', { card: o.card }), tone: 'info' });
-  if (o.contact) chips.push({ text: t('ui.cost.exposes', { contact: o.contact }), tone: 'person' });
-  // Time and scrutiny are summed, so a weakness reads "-2 hours", not "-1 hour -1 hour".
-  let time = 0;
-  let scrutiny = 0;
-  for (const e of o.effects) {
-    if ('time' in e) time += e.time;
-    else if ('scrutiny' in e) scrutiny += e.scrutiny;
-  }
-  if (time) chips.push({ text: tn('ui.cost.time', time), tone: 'time' });
-  if (scrutiny) chips.push({ text: t('ui.cost.scrutiny', { n: scrutiny }), tone: 'risk' });
-  for (const e of o.effects) {
-    if ('loseMedicine' in e) chips.push({ text: t('ui.cost.medicine'), tone: 'risk' });
-    else if ('fact' in e) chips.push({ text: t('ui.cost.fact', { fact: e.fact }), tone: 'info' });
-    else if ('claim' in e) chips.push({ text: t('ui.cost.claim', { claim: e.claim }), tone: 'info' });
-  }
-  if (a.check) chips.push({ text: t('ui.cost.check'), tone: 'info' });
-  if (a.kind === 'withdraw') chips.push({ text: t('ui.cost.withdraw'), tone: 'risk' });
-  if (o.blocked) return <span className="chips"><span className="chip blocked">{t(`ui.blocked.${o.blocked}`)}</span></span>;
-  if (!chips.length) chips.push({ text: t('ui.cost.free'), tone: 'info' });
+/** One icon and one plain line under an answer: what it costs now or puts at risk. */
+export function ConsequenceLine({ o, cardKey, s }: { o: Option; cardKey: string; s: RunState }) {
+  const c = consequence(o, cardKey, CHARACTERS[s.character].protectedContact);
   return (
-    <span className="chips">
-      {chips.map((c, i) => <span key={i} className={`chip ${c.tone}`}>{c.text}</span>)}
+    <span className={`consequence ${o.blocked ? 'blocked' : ''}`}>
+      <Icon name={c.icon} />
+      <span className="consequence-text">
+        {c.parts.map((p, i) => (
+          <Fragment key={p.kind + i}>
+            {i > 0 && SEPARATOR}
+            <span className={`part ${p.tone}`}>{partText(p)}</span>
+          </Fragment>
+        ))}
+      </span>
     </span>
   );
 }
+
+const partText = (p: Part) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars));
 
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
