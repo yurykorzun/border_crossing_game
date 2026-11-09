@@ -69,9 +69,9 @@ After every answer the officer's reaction shows with one line per change ("Your 
 
 Checked in this order:
 1. Turned back: you withdrew during an inspection.
-2. Admitted, too late: you finished with under 2 time.
-3. Admitted, at a cost: you lost the medicine or exposed your protected person.
-4. Admitted, home in time: none of the above.
+2. Too late: you finished with under 2 time.
+3. Home at a cost: you lost the medicine or exposed your protected person.
+4. Home in time: none of the above.
 
 So there are two levels of winning. Getting through at all is the first level, and getting through without paying with people or the medicine is the second.
 
