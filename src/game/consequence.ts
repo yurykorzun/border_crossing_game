@@ -6,12 +6,12 @@
 import { has } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
-import { factIds } from './engine';
+import { factIds, travelOf } from './engine';
 import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
 
-export type PartKind = 'medicine' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
+export type PartKind = 'medicine' | 'miss' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
 export type Tone = 'plain' | 'amber' | 'red';
 export type IconKind = 'document' | 'clock' | 'check' | 'shield' | 'flag';
@@ -34,14 +34,15 @@ export const MAX_PARTS = 3;
 export const SEPARATOR = ' · ';
 
 /** Most serious first. Picks the icon and decides what goes when there are more than 3 parts. */
-const SEVERITY: PartKind[] = ['medicine', 'travel', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
+const SEVERITY: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
 /** Never dropped from the line. */
-const KEEP: PartKind[] = ['medicine', 'travel', 'contact', 'scrutiny', 'time'];
+const KEEP: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'scrutiny', 'time'];
 /** Reading order on the line: what you hand over, then what happens, then what it costs. */
-const ORDER: PartKind[] = ['card', 'contact', 'vouch', 'fact', 'claim', 'check', 'time', 'travel', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
+const ORDER: PartKind[] = ['card', 'contact', 'vouch', 'fact', 'claim', 'check', 'time', 'miss', 'travel', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
 
 const ICON: Record<PartKind, IconKind> = {
   medicine: 'shield',
+  miss: 'clock',
   travel: 'clock',
   contact: 'document',
   vouch: 'check',
@@ -57,12 +58,18 @@ const ICON: Record<PartKind, IconKind> = {
   blocked: 'document',
 };
 
+/** The run's clock as consequence() needs it: hours left and the trip they must cover. */
+export type Clock = Pick<RunState, 'time' | 'travel'>;
+
 /**
  * The parts for one answer. `cardKey` is the answer's key without `.label`
  * (`enc.p_purpose.family`): a `<cardKey>.check` text, when there is one, names the
  * check ("Register check"), and a `<cardKey>.contact` text replaces "Puts {contact} on file".
+ * With the run's `clock`, the line says what the answer does to the last bus: a later
+ * connection reads as the hours it will then need, and an answer that leaves fewer
+ * hours than the trip takes reads "You will miss the last bus" in place of its cost.
  */
-export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint): Consequence {
+export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint, clock?: Clock): Consequence {
   const a = o.approach;
   if (o.blocked) return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, tone: 'plain' }] };
 
@@ -82,16 +89,26 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   for (const e of o.effects) {
     if ('time' in e) time += e.time;
     else if ('scrutiny' in e) scrutiny += e.scrutiny;
-    else if ('travel' in e) travel += e.travel;
+    else if ('travel' in e) travel += Math.max(0, e.travel);
     else if ('loseMedicine' in e) all.push({ kind: 'medicine', key: 'ui.line.medicine', tone: 'red' });
     else if ('fact' in e) all.push({ kind: 'fact', key: `fact.${e.fact}.reveal`, tone: 'plain' });
     else if ('claim' in e) claims.push(e.claim);
   }
   const checkKey = `${cardKey}.check`;
   if (a.check || has(checkKey)) all.push({ kind: 'check', key: has(checkKey) ? checkKey : 'ui.line.check', tone: 'amber' });
-  if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });
-  // A later connection: the trip to the bus grows, so the run needs more hours left.
-  if (travel) all.push({ kind: 'travel', key: 'ui.line.travel', n: travel, tone: 'amber' });
+  // Against the last bus, the way the engine applies it (apply() and doomed() in
+  // src/game/engine.ts): time floors at 0 and the trip only grows. A run already
+  // past the bus keeps the plain cost, because no answer changes that.
+  const need = clock ? travelOf(clock) + travel : 0;
+  const misses = !!clock && a.kind !== 'withdraw' && clock.time >= travelOf(clock) && Math.max(0, clock.time + time) < need;
+  if (misses) all.push({ kind: 'miss', key: 'ui.line.miss', tone: 'red' });
+  else {
+    if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });
+    // A later connection: the trip to the bus grows, so the run needs more hours left.
+    if (travel) all.push(clock
+      ? { kind: 'travel', key: 'ui.line.need', n: need, tone: 'amber' }
+      : { kind: 'travel', key: 'ui.line.travel', n: travel, tone: 'amber' });
+  }
   if (scrutiny) all.push({ kind: 'scrutiny', key: 'ui.line.scrutiny', vars: { n: scrutiny }, tone: 'amber' });
   if (a.kind === 'withdraw') all.push({ kind: 'withdraw', key: 'ui.line.withdraw', tone: 'plain' });
   // A claim only shows when nothing else does: "Recorded as your reason for visiting",

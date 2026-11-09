@@ -91,7 +91,7 @@ export function SettingsContent({ settings, onChange }: { settings: Settings; on
 
 /** One icon and one plain line under an answer: what it costs now or puts at risk. */
 export function ConsequenceLine({ o, cardKey, s }: { o: Option; cardKey: string; s: RunState }) {
-  const c = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s));
+  const c = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s), s);
   return (
     <span className={`consequence ${o.blocked ? 'blocked' : ''}`}>
       <Icon name={c.icon} />

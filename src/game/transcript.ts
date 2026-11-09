@@ -225,7 +225,7 @@ function storyLines(s: RunState, p: Page): void {
 
 /** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */
 function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void {
-  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s)).parts.map((x) =>
+  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s), s).parts.map((x) =>
     render(() => (x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)), x.key),
   );
   const problem = parts.find((x) => x.problem)?.problem;

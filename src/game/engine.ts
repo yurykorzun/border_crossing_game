@@ -386,7 +386,7 @@ function apply(s: RunState, effects: Effect[]): RunState {
 }
 
 /** Hours the trip from the border to the bus takes: the run needs at least this many left. */
-export const travelOf = (s: RunState): number => s.travel ?? MISSION_MIN_TIME;
+export const travelOf = (s: Pick<RunState, 'travel'>): number => s.travel ?? MISSION_MIN_TIME;
 
 /**
  * The bus is out of reach: fewer hours left than the trip takes. Time never
