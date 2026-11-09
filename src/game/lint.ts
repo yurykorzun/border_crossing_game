@@ -8,7 +8,8 @@
 // 3. Every scrutiny or time effect is explained: scrutiny names a reason the
 //    card can point at, and the reaction text says what the hours are spent on.
 // 4. Every card changes something: a resource, a fact, a claim or an option.
-//    A calm card is the one exception, because its job is the pause itself.
+//    A calm card with its one answer is the only exception, because its job
+//    is the pause itself (fsx.6: the free answer the honest run counts on).
 
 import type { Approach, Check, CheckId, Cond, Effect, Encounter, FactId, Inspection, ScrutinyReason } from './types';
 
@@ -53,9 +54,18 @@ export function hoursOf(effects: readonly Effect[]): { always: number; most: num
 /** Facts a condition guarantees are on file (top level only: an `any` guarantees none of its branches). */
 const factsIn = (c: Cond | undefined): FactId[] => c?.facts ?? [];
 
-/** What makes an answer different from its siblings. `requires` is left out: two answers that only differ in when they show are the same answer. */
+/**
+ * What makes an answer different from its siblings: its effects, its check and
+ * what it spends. `requires` is left out: two answers that only differ in when
+ * they show are the same answer. Say and verify spend nothing of their own, so
+ * they count as one kind and a say and a verify with the same effects are twins
+ * (a verify on a weak topic costs an extra hour, but that comes from the
+ * character, not the card). Evidence spends a document, a contact exposes
+ * someone, a perk uses the perk and withdraw ends the run, so those stay apart.
+ */
+const spends = (a: Approach) => (a.kind === 'say' || a.kind === 'verify' ? 'nothing' : a.kind);
 const signature = (a: Approach) =>
-  JSON.stringify({ kind: a.kind, topic: a.topic, contacts: a.contacts, namesOnly: a.namesOnly, check: a.check, effects: a.effects });
+  JSON.stringify({ spends: spends(a), topic: a.topic, contacts: a.contacts, namesOnly: a.namesOnly, check: a.check, effects: a.effects });
 
 /** The check results that queue this card. */
 const sources = (content: Content, id: string): { check: Check; index: number }[] =>
@@ -126,8 +136,9 @@ export function lintContent(content: Content, text: Text): string[] {
       }
     }
 
-    // 4. Changes something.
-    const calm = 'calm' in card && card.calm;
+    // 4. Changes something. The calm exception is narrow: exactly one answer,
+    // so a calm flag cannot hide a choice where nothing happens.
+    const calm = 'calm' in card && card.calm && card.approaches.length === 1;
     if (!calm && !card.approaches.some(changes))
       problems.push(`${card.id}: no answer changes anything (a resource, a fact, a claim or an option)`);
   }

@@ -110,9 +110,9 @@ Every new encounter must answer these six questions before it goes in (from the 
 The structural parts are machine-checked by the content lint (`lintContent()` in `src/game/lint.ts`, run by `src/game/content.test.ts`):
 
 - Why now: every related or follow-up card has a `when` or a check result that queues it.
-- Why each option: no two answers on a card have the same effect list (kind, effects and check).
+- Why each option: no two answers on a card do the same thing (same effects, same check and same spend). Say and verify spend nothing of their own, so a say and a verify with the same effects count as twins.
 - How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction that says what the hours are spent on.
-- What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card is the one exception, because its job is the pause.
+- What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card with exactly one answer is the one exception, because its job is the pause (the free answer from rule 5).
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
 

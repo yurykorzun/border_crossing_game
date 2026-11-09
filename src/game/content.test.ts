@@ -60,6 +60,17 @@ describe('content lint', () => {
     expect(withCard(card)).toEqual(['x_twins: answers a and b do the same thing']);
   });
 
+  it('fails a say and a verify with the same effects, since neither spends anything of its own', () => {
+    const card: Encounter = {
+      id: 'x_kinds', checkpoint: 'customs', kind: 'routine',
+      approaches: [
+        { id: 'a', kind: 'say', effects: [{ claim: 'tourism' }] },
+        { id: 'b', kind: 'verify', effects: [{ claim: 'tourism' }] },
+      ],
+    };
+    expect(withCard(card)).toEqual(['x_kinds: answers a and b do the same thing']);
+  });
+
   it('fails scrutiny for a fact the card never puts on file', () => {
     const card: Encounter = {
       id: 'x_scrutiny', checkpoint: 'customs', kind: 'routine',
@@ -102,5 +113,8 @@ describe('content lint', () => {
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_nothing: no answer changes anything/)]);
     expect(withCard({ ...card, calm: true })).toEqual([]);
+    // Calm with two answers that both do nothing is a dead choice, not a pause.
+    const two: Encounter = { ...card, calm: true, approaches: [...card.approaches, { id: 'no', kind: 'say', effects: [] }] };
+    expect(withCard(two)).toContainEqual(expect.stringMatching(/^x_nothing: no answer changes anything/));
   });
 });
