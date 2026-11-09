@@ -128,7 +128,6 @@ export const en: Record<string, string> = {
   'ui.kept': 'Kept',
   'ui.lost': 'Lost',
   'ui.notNamed': 'Not named',
-  'ui.calledIn': 'Called in',
   'ui.seeOnFile': "See what's on file",
   'ui.whatsOnFile': "What's on file",
   'ui.playAgain': 'Play again',
@@ -281,6 +280,8 @@ export const en: Record<string, string> = {
   'fact.cashCount.reveal': 'Cash total recorded',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
+  // A quiet tag on a packing document whose topic the bulletin points at (relevantToday).
+  'ui.relevantToday': 'Relevant today',
   'bulletin.customs': 'Medicines are lab-tested today.',
   'bulletin.accommodation': 'Hosts are being phoned today.',
   'bulletin.records': 'IDs are checked against old records.',
@@ -311,6 +312,8 @@ export const en: Record<string, string> = {
   'scene.preparation': 'Your papers on a desk by a snowy window',
   'scene.bus': 'The medicine box in your hand on a night bus, the hospital through the rain',
   'scene.busEmpty': 'Your empty hand on a night bus, the hospital through the rain',
+  'scene.emptyStop': 'An empty bus stop under a streetlight at night, the medicine box in your hands',
+  'scene.emptyStopEmpty': 'An empty bus stop under a streetlight at night, your hands empty',
   'scene.turnedBack': 'The border post at night, after you turned back',
 
   // ── The queue before each checkpoint (src/game/content/queues.ts says which beat
@@ -616,7 +619,7 @@ export const en: Record<string, string> = {
   'ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send your mother the time and sit on a bench under the light. She writes that your father is stable. You read it until the screen goes dark.',
   'ending.turnedBack.title': 'You turned back',
   'ending.turnedBack.summary': 'You withdrew your request. The officer hands back your passport.',
-  'ending.turnedBack.body': 'You sit in the departures hall with a red stamp in your passport. Your mother calls. You let it ring. The next bus back leaves in the morning. You write her a message three times and delete it three times.',
+  'ending.turnedBack.body': 'You sit in the departures hall with your passport back in your coat. Your mother calls. You let it ring. The next bus back leaves in the morning. You write her a message three times and delete it three times.',
   'ending.line.medicineLost': 'The medicine stays at the border.',
   'ending.line.facts.one': '{n} thing about you is on file now.',
   'ending.line.facts.other': '{n} things about you are on file now.',
@@ -624,7 +627,10 @@ export const en: Record<string, string> = {
   'exposure.mother.call': "Your mother gets a call from the border and has to leave your father's bedside to answer questions.",
   'exposure.mother.home': "Officers come to your mother's address to take a statement. She has to leave the hospital to meet them.",
   'exposure.cousin.protected': 'Ilya is called in for an interview, and his name stays on file. Your mother asked you to keep him out of it.',
-  'exposure.brother.protected': 'Tom goes on a border watch list, so he cannot come home to visit. Your mother asked you to keep him out of it.',
+  'exposure.brother.protected': 'Tom is added to a border watch list, so he cannot come home to visit. Your mother asked you to keep him out of it.',
+  // The protected contact's row on the ending card (protectedRow): the same result in a few words.
+  'exposure.cousin.protected.row': 'Called in',
+  'exposure.brother.protected.row': 'Added to watch list',
   'ui.whatItCost': 'What it cost',
   'ending.severity.1': 'Minor',
   'ending.severity.2': 'Serious',

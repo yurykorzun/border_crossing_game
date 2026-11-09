@@ -7,9 +7,9 @@ import { has } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
 import { factIds, travelOf } from './engine';
-import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
+import type { BulletinId, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
-import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
+import { BULLETIN_TOPICS, CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
 
 export type PartKind = 'medicine' | 'miss' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -208,6 +208,26 @@ export function consequences(s: RunState): EndingLine[] {
   if (facts.length) out.push({ kind: 'facts', key: 'ending.line.facts', n: facts.length, severity: facts.length >= SERIOUS_FACTS ? 2 : 1 });
   return out;
 }
+
+/**
+ * The protected contact's row on the ending card: "Not named", or the exact result of
+ * naming them, read from the What it cost line consequences() scores for them
+ * (exposure.brother.protected gives exposure.brother.protected.row, "Added to watch
+ * list"). One source, so the row and the line cannot disagree.
+ */
+export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red' } {
+  const c = CHARACTERS[s.character].protectedContact;
+  const line = consequences(s).find((l) => l.kind === 'contact' && l.vars?.contact === c);
+  return line ? { key: `${line.key}.row`, tone: 'red' } : { key: 'ui.notNamed', tone: 'plain' };
+}
+
+/**
+ * Whether a document on the packing screen answers the topic today's bulletin points at
+ * (BULLETIN_TOPICS): the hospital note under "Medicines are lab-tested today". A quiet
+ * tag, not a promise. DocumentsStep in src/App.tsx and setupLines() in
+ * src/game/transcript.ts both ask here.
+ */
+export const relevantToday = (id: EvidenceId, bulletin: BulletinId): boolean => EVIDENCE[id].topics.includes(BULLETIN_TOPICS[bulletin]);
 
 /** Severe is red (a confirmed serious consequence), serious amber, minor plain (docs/plan.md "UI rules"). */
 export const severityTone = (l: EndingLine): ChangeLine['tone'] => (l.severity === 3 ? 'red' : l.severity === 2 ? 'amber' : 'plain');

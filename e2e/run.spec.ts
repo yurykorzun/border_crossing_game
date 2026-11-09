@@ -323,6 +323,14 @@ for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
     await expect(card).toBeInViewport();
     await noHorizontalScroll(page, `${text} ending`);
     await expect(card.locator('.epilogue')).toHaveText(en[`ending.${text}.body`]);
+    // The bus left without you: an empty stop under a streetlight, not the inside of the bus.
+    const scene = page.locator('.ending-scene svg[role="img"]');
+    await expect(scene).toHaveCount(1);
+    await expect(scene).toBeVisible();
+    if (text === 'missedBus') {
+      await expect(scene).toHaveAttribute('data-scene', 'emptyStop');
+      await expect(scene).toHaveAttribute('aria-label', en['scene.emptyStop']);
+    } else await expect(scene).toHaveAttribute('data-scene', 'bus');
     expect(errors).toEqual([]);
   });
 }

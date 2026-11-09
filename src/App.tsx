@@ -18,12 +18,12 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, consequences, nextActionKey, packDetail, severityTone } from './game/consequence';
+import { SEPARATOR, consequences, nextActionKey, packDetail, protectedRow, relevantToday, severityTone } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
 import type { SceneState } from './ui/art/CheckpointScene';
-import { BorderPost, Desk, NightBus } from './ui/art/JourneyScenes';
+import { BorderPost, Desk, EmptyStop, NightBus } from './ui/art/JourneyScenes';
 import { CustomsQueueScene, InterviewQueueScene, QueueScene } from './ui/art/QueueScene';
 import { Icon } from './ui/art/icons';
 
@@ -213,7 +213,10 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
               <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
                 <span className="checkbox" aria-hidden>{picked.includes(id) && <Icon name="check" />}</span>
                 <span className="doc-text">
-                  <strong>{t(`ev.${id}.label`)}</strong>
+                  <span className="doc-name">
+                    <strong>{t(`ev.${id}.label`)}</strong>
+                    {relevantToday(id, bulletin) && <span className="tag relevant">{t('ui.relevantToday')}</span>}
+                  </span>
                   {packDetail(id).map((line, n) => (
                     <span key={n} className={n ? 'doc-detail doc-reveals' : 'doc-detail doc-topics'}>{line.map((k) => t(k)).join(SEPARATOR)}</span>
                   ))}
@@ -656,7 +659,9 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
       <div className="ending-scene">
-        {ending === 'turnedBack' ? <BorderPost closed /> : <NightBus medicine={s.medicine} character={s.character} />}
+        {ending === 'turnedBack' ? <BorderPost closed />
+          : text === 'missedBus' ? <EmptyStop medicine={s.medicine} character={s.character} />
+          : <NightBus medicine={s.medicine} character={s.character} />}
       </div>
       <section className="paper ending-card">
         <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
@@ -703,7 +708,8 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
 /** The three summary rows: hours left, the medicine, the contact the traveler was asked to protect. */
 function resultRows(s: RunState): { label: string; value: string; tone: 'plain' | 'red' }[] {
   const ch = CHARACTERS[s.character];
-  const calledIn = s.exposed.includes(ch.protectedContact);
+  // The exact result ("Added to watch list"), from the same line as What it cost.
+  const contact = protectedRow(s);
   return [
     // "Hours left", not the mockup's "Time remaining": time is counted in hours (src/i18n/terms.test.ts).
     { label: t('ui.hoursLeftRow'), value: String(s.time), tone: 'plain' },
@@ -711,8 +717,8 @@ function resultRows(s: RunState): { label: string; value: string; tone: 'plain' 
     { label: t('ui.medicineRow'), value: t(s.medicine ? 'ui.kept' : 'ui.lost'), tone: s.medicine ? 'plain' : 'red' },
     {
       label: capitalize(t(`contact.${ch.protectedContact}`)),
-      value: t(calledIn ? 'ui.calledIn' : 'ui.notNamed'),
-      tone: calledIn ? 'red' : 'plain',
+      value: t(contact.key),
+      tone: contact.tone,
     },
   ];
 }

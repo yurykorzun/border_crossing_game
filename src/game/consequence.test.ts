@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
-import { CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
-import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, nextActionKey, packDetail } from './consequence';
+import { BULLETINS, BULLETIN_TOPICS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -214,6 +214,42 @@ describe('packing rows', () => {
     expect(rows('motherLetter')).toEqual(['Visit purpose · Accommodation', 'Reveals her address']);
     expect(rows('hotel')).toEqual(['Accommodation · Length of stay']);
     for (const id of EVIDENCE_IDS) expect(packDetail(id)[0], id).toHaveLength(EVIDENCE[id].topics.length);
+  });
+});
+
+describe('Relevant today, on the packing screen', () => {
+  it('tags the hospital note under the medicines bulletin, and nothing outside its topic', () => {
+    expect(t('bulletin.customs')).toBe('Medicines are lab-tested today.');
+    expect(EVIDENCE_IDS.filter((id) => relevantToday(id, 'customs'))).toEqual(['hospitalNote']);
+    for (const b of BULLETINS)
+      for (const id of EVIDENCE_IDS) expect(relevantToday(id, b), `${id} under ${b}`).toBe(EVIDENCE[id].topics.includes(BULLETIN_TOPICS[b]));
+    expect(t('ui.relevantToday')).toBe('Relevant today');
+  });
+});
+
+describe('the protected contact on the ending card', () => {
+  it('names the same result as its What it cost line', () => {
+    const rows: Record<string, string> = {};
+    for (const id of CHARACTER_IDS) {
+      const c = CHARACTERS[id].protectedContact;
+      const s: RunState = { ...newRun(setupFor(0)), character: id, exposed: [c], screen: { kind: 'ending' }, ending: 'homeAtCost' };
+      const line = consequences(s).find((l) => l.kind === 'contact' && l.vars?.contact === c)!;
+      const row = protectedRow(s);
+      expect(row.key, id).toBe(`${line.key}.row`);
+      expect(row.tone, id).toBe('red');
+      // Every word of the row is in the line: "Added to watch list" / "Tom is added to a border watch list".
+      const sentence = t(line.key, line.vars).toLowerCase();
+      for (const word of t(row.key).toLowerCase().split(/\s+/)) expect(sentence, `${id}: ${t(row.key)}`).toContain(word);
+      rows[c] = t(row.key);
+      // Not named: the row says so, and What it cost has no line for them.
+      const clean = { ...s, exposed: [] };
+      expect(protectedRow(clean)).toEqual({ key: 'ui.notNamed', tone: 'plain' });
+    }
+    expect(rows).toEqual({ cousin: 'Called in', brother: 'Added to watch list' });
+  });
+
+  it('the turned-back epilogue reads as a withdrawal, not a refusal stamp', () => {
+    expect(t('ending.turnedBack.body')).not.toMatch(/stamp/i);
   });
 });
 

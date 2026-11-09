@@ -200,6 +200,9 @@ p { margin: 0 0 var(--gap); }
 .pick .doc.picked { box-shadow: none; border-color: var(--amber-dark); }
 .doc-text { display: flex; flex-direction: column; min-width: 0; }
 .doc-text strong { color: var(--navy); line-height: 1.25; }
+/* Relevant today: the muted tag on a document the bulletin points at. Quiet on purpose, it promises nothing. */
+.doc-name { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 2px; }
+.doc-name .tag.relevant { font-size: 0.62rem; white-space: nowrap; }
 .doc-detail { font-size: 0.85rem; color: var(--muted); line-height: 1.3; }
 .checkbox {
   flex: none;
