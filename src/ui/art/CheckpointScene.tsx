@@ -127,10 +127,11 @@ function Supervisor({ x, y }: { x: number; y: number }) {
   );
 }
 
-/** The bag search: your suitcase open on the steel table, lid up, clothes spilling out. */
-function OpenSuitcase() {
+/** The bag search: your suitcase open, lid up, clothes spilling out. Drawn resting on y=30;
+ * `dy` moves it onto a counter or table that sits higher. */
+function OpenSuitcase({ dy = 0 }: { dy?: number }) {
   return (
-    <g data-name="open suitcase">
+    <g data-name="open suitcase" transform={dy ? `translate(0 ${dy})` : undefined}>
       <rect className="art-bag-open" x="1" y="19" width="10" height="6" />
       <rect className="art-bag-lining" x="2" y="20" width="8" height="4" />
       <rect className="art-bag-open" x="0" y="25" width="12" height="5" />
@@ -195,6 +196,7 @@ function Passport({ s, character }: { s: SceneState; character: CharacterId }) {
       <rect className="art-booth" x="8" y="28" width="10" height="1" />
       <rect className="art-desk" x="0" y="30" width="40" height="14" />
       <rect className="art-lamp-wash" x="6" y="30" width="28" height="2" />
+      {s.inspection === 'search' && <OpenSuitcase dy={-2} />}
       <Shoulder character={character} />
     </>
   );
@@ -262,6 +264,7 @@ function Interview({ s, character }: { s: SceneState; character: CharacterId }) 
       <rect className="art-table-edge" x="4" y="32" width="2" height="12" />
       <rect className="art-table-edge" x="34" y="32" width="2" height="12" />
       <rect className="art-paper" x="16" y="26" width="8" height="2" />
+      {s.inspection === 'search' && <OpenSuitcase dy={-3} />}
       {s.writing && <Writing x={26} y={25} />}
       {s.handedOver && <HandedOver x={5} y={26} />}
       <Shoulder character={character} />

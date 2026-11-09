@@ -378,6 +378,11 @@ test('the bag search scene has an open suitcase, and the supervisor comes in for
   const scene = page.locator('main.run .scene svg[data-scene="customs"]');
   await expect(scene.locator('[data-name="open suitcase"]')).toHaveCount(1);
   await expect(scene.locator('[data-name="supervisor"]')).toHaveCount(1);
+  // The bag search can be dealt at any checkpoint, so every scene opens the suitcase.
+  for (const [checkpoint, name] of [[0, 'passport'], [2, 'interview']] as const) {
+    await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'inspection', id: 's_bag' }, checkpoint, slot: 1 });
+    await expect(page.locator(`main.run .scene svg[data-scene="${name}"] [data-name="open suitcase"]`), name).toHaveCount(1);
+  }
   // An ordinary customs card has neither.
   await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'encounter', id: 'c_medicine' }, checkpoint: 1, slot: 1 });
   await expect(scene.locator('[data-name="open suitcase"]')).toHaveCount(0);
