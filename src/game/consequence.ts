@@ -228,7 +228,7 @@ export function keptLines(s: RunState): { key: string; vars?: Record<string, str
 
 /**
  * The protected contact's row on the ending card: "Not named", or the exact result of
- * naming them, read from the What it cost line consequences() scores for them
+ * naming them, read from the consequence consequences() lists for them
  * (exposure.brother.protected gives exposure.brother.protected.row, "Added to watch
  * list"). One source, so the row and the line cannot disagree.
  */

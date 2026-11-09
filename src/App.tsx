@@ -718,7 +718,7 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
 /** The run summary under the story: hours left, the medicine, the contact the traveler was asked to protect. */
 function resultRows(s: RunState): { label: string; value: string; tone: 'plain' | 'red' }[] {
   const ch = CHARACTERS[s.character];
-  // The exact result ("Added to watch list"), from the same line as What it cost.
+  // The exact result ("Added to watch list"), from the same consequence heading.
   const contact = protectedRow(s);
   return [
     // "Hours left", not the mockup's "Time remaining": time is counted in hours (src/i18n/terms.test.ts).
