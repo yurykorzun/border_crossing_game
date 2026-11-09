@@ -217,15 +217,14 @@ test('My story shows which desk knows each fact', async ({ page }) => {
 
   await page.getByRole('button', { name: 'My story' }).click();
   const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet).toContainText('Each desk sees what it learns or receives from another desk.');
   const row = sheet.locator('.record li[data-fact="familyAddress"]');
   await expect(row).toContainText('Family address');
   // Passport control and customs know it; the interview does not.
-  await expect(row.locator('.tag.desk')).toHaveText(['Passport', 'Customs']);
+  await expect(row.locator('.desks')).toHaveText('Passport control and Customs have this on file');
   await noHorizontalScroll(page, 'My story with desks');
 
   // Records first, then the messages so far, the biography below, every section one full-width column (2026-11-09 review).
-  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'Messages', 'People', 'Background']);
+  await expect(sheet.locator('h3')).toHaveText(['Your answers', 'Information recorded', 'Messages', 'People', 'Background']);
   const widths = await sheet.locator('.story-section').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
   expect(widths).toHaveLength(5);
   for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
@@ -269,7 +268,11 @@ test('a Home in time ending is a short result card that fits the screen', async 
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
-  const run: RunState = { ...lenaRun(), time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime' };
+  // One answer recorded at a desk, one only said aloud, and a fact two desks have, for the Border records sheet.
+  const run: RunState = {
+    ...lenaRun(), time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime',
+    claims: ['familyVisit', 'cashUnderLimit'], logged: { cashUnderLimit: ['customs'] }, facts: { familyAddress: ['customs', 'interview'] },
+  };
   await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['homeInTime'] })] as const);
   await page.reload();
 
@@ -278,14 +281,16 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(page.locator('.ending .setup-title')).toHaveText('Purpose of Visit');
   await expect(card.locator('.outcome')).toHaveText('Crossing complete');
   await expect(card.locator('h1')).toHaveText('Home in time');
-  await expect(card.locator('.summary')).toHaveText("You make the last bus with your father's medicine.");
-  const rows = card.locator('.result-row');
+  await expect(card.locator('.kept')).toHaveText("Your father's medicine is still in the cool bag. You keep your cousin Ilya out of the file.");
+  // Nothing went wrong, so there is no consequence.
+  await expect(card.locator('.cost')).toHaveCount(0);
+  await expect(card.locator('.epilogue')).toContainText('visiting hours end');
+  // Hours left and the other stats sit in the run summary under the story.
+  const rows = card.locator('.run-summary .result-row');
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toHaveText(/Hours left\s*5$/);
   await expect(rows.nth(1)).toHaveText(/Medicine\s*Kept/);
   await expect(rows.nth(2)).toHaveText(/Your cousin Ilya\s*Not named/);
-  // The epilogue stays on the ending screen, under the rows.
-  await expect(card.locator('.epilogue')).toContainText('visiting hours end');
 
   // The whole ending fits the phone: no page scroll, nothing cut off.
   await noHorizontalScroll(page, 'ending');
@@ -296,11 +301,19 @@ test('a Home in time ending is a short result card that fits the screen', async 
   expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
   await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport();
 
-  // See what's on file opens the records alone: no epilogue, no costs, no biography.
+  // See what's on file opens Border records alone: no epilogue, no costs, no biography.
   await page.getByRole('button', { name: "See what's on file" }).click();
   const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet.locator('h2')).toHaveText("What's on file");
-  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file']);
+  await expect(sheet.locator('h2')).toHaveText('Border records');
+  await expect(sheet.locator('h3')).toHaveText(['Your answers', 'Information recorded']);
+  // Each item written out with the desks that have it, and no ON FILE badge or help paragraph.
+  await expect(sheet.locator('li[data-claim="cashUnderLimit"] .desks')).toHaveText('Recorded at Customs');
+  await expect(sheet.locator('li[data-claim="familyVisit"] .desks')).toHaveText('Said aloud, not recorded');
+  await expect(sheet.locator('li[data-fact="familyAddress"]')).toHaveText(/Family address\s*Customs and Security interview have this on file/);
+  await expect(sheet.locator('.tag')).toHaveCount(0);
+  await expect(sheet).not.toContainText('Each desk sees');
+  const sizes = await sheet.locator('.record li > *').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)));
+  for (const px of sizes) expect(px, 'records text size').toBeGreaterThanOrEqual(15);
   await expect(sheet).not.toContainText('visiting hours end');
   await expect(sheet).not.toContainText('Background');
   await expect(sheet.locator('.what-it-cost')).toHaveCount(0);
@@ -340,7 +353,7 @@ for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
 
     const card = page.locator('.ending-card');
     await expect(card.locator('h1')).toHaveText(en[`ending.${text}.title`]);
-    await expect(card.locator('.summary')).toHaveText(en[`ending.${text}.summary`]);
+    await expect(card.locator('.kept')).toHaveText(`${en['ending.kept.medicine']} You keep your cousin Ilya out of the file.`);
     await expect(card).toBeInViewport();
     await noHorizontalScroll(page, `${text} ending`);
     await expect(card.locator('.epilogue')).toHaveText(en[`ending.${text}.body`]);
@@ -356,7 +369,7 @@ for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
   });
 }
 
-test('a Too late ending still lists the exposed mother, scored', async ({ page }) => {
+test('a Too late ending still lists the exposed mother, with no severity tag', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
@@ -369,14 +382,71 @@ test('a Too late ending still lists the exposed mother, scored', async ({ page }
 
   const card = page.locator('.ending-card');
   await expect(card.locator('h1')).toHaveText('Too late');
-  // The headline stays the same; the cost of each exposure is on the ending screen too.
-  await expect(card.locator('.what-it-cost')).toHaveText('What it cost');
+  // The headline stays the same; the cost of the exposure is on the ending screen too,
+  // as a heading and a line. What is on file has no line, because the records sheet lists it.
   const lines = card.locator('.costs li');
-  await expect(lines).toHaveCount(2);
-  await expect(lines.nth(0)).toHaveText(/^Minor Your mother gets a call from the border/);
-  await expect(lines.nth(1)).toHaveText('Minor 1 thing about you is on file now.');
+  await expect(lines).toHaveCount(1);
+  await expect(lines.nth(0).locator('.cost-title')).toHaveText('The border calls your mother');
+  await expect(lines.nth(0).locator('.cost-line')).toHaveText("She has to leave your father's bedside to answer questions.");
+  await expect(card).not.toContainText(/on file now|Minor|Serious|Severe/);
   expect(errors).toEqual([]);
 });
+
+// Every ending, each with something to lose, down to the worst case: the medicine lost,
+// the protected contact named and the mother's address on file (pfi.13, pfi.9).
+const endingCases: { name: string; run: () => RunState; worst: string }[] = [
+  { name: 'homeInTime', worst: 'exposure.mother.call', run: () => ({ ...lenaRun(), time: 5, exposed: ['mother'], ending: 'homeInTime' }) },
+  { name: 'tooLate', worst: 'exposure.mother.home', run: () => ({ ...lenaRun(), time: 1, exposed: ['mother'], facts: { familyAddress: ['interview'] }, ending: 'tooLate' }) },
+  { name: 'missedBus', worst: 'ending.line.medicineLost', run: () => ({ ...lenaRun(), time: 0, medicine: false, ending: 'tooLate' }) },
+  { name: 'turnedBack', worst: 'exposure.cousin.protected', run: () => ({ ...lenaRun(), time: 4, exposed: ['cousin'], withdrew: true, ending: 'turnedBack' }) },
+  {
+    name: 'homeAtCost, the worst case', worst: 'exposure.cousin.protected',
+    run: () => ({ ...lenaRun(), time: 5, medicine: false, exposed: ['mother', 'cousin'], facts: { familyAddress: ['interview'], employer: ['passport'], urgency: ['customs'], cashCount: ['customs'] }, ending: 'homeAtCost' }),
+  },
+];
+for (const c of endingCases) {
+  test(`the ${c.name} ending reads title, what you kept, the worst consequence, then the epilogue, with Play again in view`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.goto('./');
+    const run: RunState = { ...c.run(), checkpoint: 3, screen: { kind: 'ending' }, reaction: null };
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
+    await page.reload();
+
+    const card = page.locator('.ending-card');
+    await expect(card.locator('h1')).toBeVisible();
+    const worst = card.locator('.cost').first();
+    await expect(worst).toHaveClass(/worst/);
+    await expect(worst.locator('.cost-title')).toHaveText(en[`${c.worst}.title`]);
+    await expect(worst.locator('.cost-line')).toHaveText(en[c.worst]);
+    // In reading order: title, kept line, worst heading and line, epilogue, then the run summary with hours left.
+    const order = ['h1', '.kept', '.worst .cost-title', '.worst .cost-line', '.epilogue', '.run-summary'];
+    const tops: number[] = [];
+    for (const sel of order) tops.push((await card.locator(sel).boundingBox())!.y);
+    expect(tops, order.join(' > ')).toEqual([...tops].sort((a, b) => a - b));
+    await expect(card.locator('.run-summary .result-row').first()).toHaveText(new RegExp(`^Hours left\\s*${run.time}$`));
+    // Story text at 17-18 px in the sans face, not monospace, at regular weight.
+    for (const sel of ['.kept', '.cost-line', '.epilogue']) {
+      const style = await card.locator(sel).first().evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { size: parseFloat(cs.fontSize), family: cs.fontFamily, weight: cs.fontWeight };
+      });
+      expect(style.size, sel).toBeGreaterThanOrEqual(17);
+      expect(style.size, sel).toBeLessThanOrEqual(18);
+      expect(style.family, sel).not.toMatch(/mono/i);
+      expect(style.weight, sel).toBe('400');
+    }
+    // No on-file count and no severity tag on any consequence.
+    await expect(card).not.toContainText(/on file now|Minor|Serious|Severe/);
+    await expect(card.locator('.tag')).toHaveCount(0);
+    // Play again is on screen without scrolling.
+    const scrolled = await page.evaluate(() => ({ doc: window.scrollY, main: document.querySelector('main.ending')!.scrollTop }));
+    expect(scrolled).toEqual({ doc: 0, main: 0 });
+    await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport({ ratio: 1 });
+    await noHorizontalScroll(page, `${c.name} ending`);
+    expect(errors).toEqual([]);
+  });
+}
 
 // The counter scene keeps one box on the run screen: answering does not let the officer
 // grow into the space the buttons freed (2026-11-09 screenshot review). The box gives

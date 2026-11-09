@@ -210,16 +210,14 @@ export interface Contact {
   home?: FactId;
 }
 
-/** How badly something on the ending's list hurts: 1 minor, 2 serious, 3 severe. */
+/** How badly something on the ending's list hurts: 1 minor, 2 serious, 3 severe. It orders the list, and no tag shows it. */
 export type Severity = 1 | 2 | 3;
 
-/** One line of the ending's scored list (consequences() in src/game/consequence.ts). */
+/** One line of the ending's list, worst first (consequences() in src/game/consequence.ts). Its heading is `<key>.title`. */
 export interface EndingLine {
-  kind: 'medicine' | 'contact' | 'facts';
+  kind: 'medicine' | 'contact';
   key: string;
   vars?: Record<string, string | number>;
-  /** Plural count: render with tn(key, n). */
-  n?: number;
   severity: Severity;
 }
 

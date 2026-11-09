@@ -47,6 +47,11 @@ export function tn(key: string, n: number, vars: Record<string, string | number>
   return t(`${key}.${Math.abs(n) === 1 ? 'one' : 'other'}`, { ...vars, n });
 }
 
+/** "A", "A and B", "A, B and C". */
+export function andList(items: readonly string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ${t('ui.and')} ${items[items.length - 1]}`;
+}
+
 export function t(key: string, vars: Record<string, string | number> = {}): string {
   const s = LOCALES[locale][key] ?? en[key];
   if (s === undefined) throw new Error(`missing text: ${key}`);

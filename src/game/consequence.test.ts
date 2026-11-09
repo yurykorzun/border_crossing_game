@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { BULLETINS, BULLETIN_TOPICS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
-import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -228,7 +228,7 @@ describe('Relevant today, on the packing screen', () => {
 });
 
 describe('the protected contact on the ending card', () => {
-  it('names the same result as its What it cost line', () => {
+  it('names the same result as its consequence heading', () => {
     const rows: Record<string, string> = {};
     for (const id of CHARACTER_IDS) {
       const c = CHARACTERS[id].protectedContact;
@@ -237,15 +237,24 @@ describe('the protected contact on the ending card', () => {
       const row = protectedRow(s);
       expect(row.key, id).toBe(`${line.key}.row`);
       expect(row.tone, id).toBe('red');
-      // Every word of the row is in the line: "Added to watch list" / "Tom is added to a border watch list".
-      const sentence = t(line.key, line.vars).toLowerCase();
+      // Every word of the row is in the heading: "Added to watch list" / "Tom is added to a border watch list".
+      const sentence = t(`${line.key}.title`, line.vars).toLowerCase();
       for (const word of t(row.key).toLowerCase().split(/\s+/)) expect(sentence, `${id}: ${t(row.key)}`).toContain(word);
       rows[c] = t(row.key);
-      // Not named: the row says so, and What it cost has no line for them.
+      // Not named: the row says so, and the ending has no consequence for them.
       const clean = { ...s, exposed: [] };
       expect(protectedRow(clean)).toEqual({ key: 'ui.notNamed', tone: 'plain' });
     }
     expect(rows).toEqual({ cousin: 'Called in', brother: 'Added to watch list' });
+  });
+
+  it('says what you kept under the title: the medicine, the protected contact, or the passport', () => {
+    const kept = (extra: Partial<RunState>) => keptLines({ ...newRun(setupFor(0)), character: 'lena', ...extra }).map((k) => t(k.key, k.vars)).join(' ');
+    expect(kept({})).toBe("Your father's medicine is still in the cool bag. You keep your cousin Ilya out of the file.");
+    expect(kept({ medicine: false })).toBe('You keep your cousin Ilya out of the file.');
+    expect(kept({ exposed: ['mother', 'cousin'] })).toBe("Your father's medicine is still in the cool bag.");
+    expect(kept({ medicine: false, exposed: ['cousin'] })).toBe('You still have your passport.');
+    expect(keptLines({ ...newRun(setupFor(0)), character: 'mark' }).map((k) => t(k.key, k.vars))[1]).toBe('You keep your brother Tom out of the file.');
   });
 
   it('the turned-back epilogue reads as a withdrawal, not a refusal stamp', () => {

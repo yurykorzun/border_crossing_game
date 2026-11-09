@@ -513,26 +513,26 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(end({ exposed: ['cousin'], withdrew: true })).toBe('turnedBack');
   });
 
-  it('consequences() scores each exposure, the medicine and the record, under any ending', () => {
+  it('consequences() lists each exposure and the medicine, worst first, under any ending', () => {
     const base = newRun(lena);
     expect(consequences(base)).toEqual([]);
     // A phone call: minor. Her address on file turns it into a visit: serious.
     expect(consequences({ ...base, exposed: ['mother'] })).toEqual([
       { kind: 'contact', key: 'exposure.mother.call', vars: { contact: 'mother' }, severity: 1 },
     ]);
+    // Worst first, the protected contact ahead of the medicine; what is on file has no line (the records sheet lists it).
     const tooLate: RunState = { ...base, time: 1, exposed: ['mother', 'cousin'], medicine: false, facts: known('familyAddress', 'employer', 'urgency', 'cashCount') };
     expect(endingFor(tooLate)).toBe('tooLate');
     expect(consequences(tooLate)).toEqual([
+      { kind: 'contact', key: 'exposure.cousin.protected', vars: { contact: 'cousin' }, severity: 3 },
       { kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 },
       { kind: 'contact', key: 'exposure.mother.home', vars: { contact: 'mother' }, severity: 2 },
-      { kind: 'contact', key: 'exposure.cousin.protected', vars: { contact: 'cousin' }, severity: 3 },
-      { kind: 'facts', key: 'ending.line.facts', n: 4, severity: 2 },
     ]);
-    // Each line is something the player can picture, and the grades differ.
-    expect(t('exposure.mother.call', { contact: 'mother' })).toMatch(/^Your mother gets a call/);
-    expect(t('exposure.mother.home', { contact: 'mother' })).toMatch(/^Officers come to your mother's address/);
-    expect(tn('ending.line.facts', 1)).toBe('1 thing about you is on file now.');
-    expect(consequences({ ...base, facts: known('employer') })).toEqual([{ kind: 'facts', key: 'ending.line.facts', n: 1, severity: 1 }]);
+    // Each line is something the player can picture: a heading, then one line.
+    expect(t('exposure.mother.call.title', { contact: 'mother' })).toBe('The border calls your mother');
+    expect(t('exposure.mother.home.title', { contact: 'mother' })).toBe("Officers go to your mother's address");
+    expect(t('exposure.mother.home', { contact: 'mother' })).toBe('She has to leave the hospital to give a statement.');
+    expect(consequences({ ...base, facts: known('employer') })).toEqual([]);
     // Mark's brother is his protected contact.
     expect(consequences({ ...newRun(mark), exposed: ['brother'] })[0]).toMatchObject({ key: 'exposure.brother.protected', severity: 3 });
   });

@@ -188,20 +188,19 @@ export function nextActionKey(s: RunState): string {
   return 'ui.continue';
 }
 
-/** From this many facts on file, the record itself counts as serious. */
-export const SERIOUS_FACTS = 4;
-
 /**
- * What the run cost, scored, for any ending: the medicine left behind, each person
- * exposed and how badly, and how much is on file. Each is reported on its own, so
- * "Too late" still says you exposed your mother. Severity comes from the state:
- * the protected contact is severe (it also rules out homeInTime), anyone else is
- * serious once their home is on file and minor otherwise. Ending in src/App.tsx
- * lists them and endingLines() in src/game/transcript.ts writes them down.
+ * What the run cost, for any ending, worst first: each person exposed and how badly,
+ * and the medicine left behind. Each is reported on its own, so "Too late" still says
+ * you exposed your mother. Severity comes from the state and only orders the list (no
+ * tag on screen, because research warns against scoring family harm): the protected
+ * contact and the medicine are severe (the contact also rules out homeInTime), anyone
+ * else is serious once their home is on file and minor otherwise. Ties keep the person
+ * first. What is on file is not here, because the records sheet lists it. Each line has
+ * a short heading at `<key>.title`. Ending in src/App.tsx lists them and endingLines()
+ * in src/game/transcript.ts writes them down.
  */
 export function consequences(s: RunState): EndingLine[] {
   const out: EndingLine[] = [];
-  if (!s.medicine) out.push({ kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 });
   const facts = factIds(s);
   const protectedContact = CHARACTERS[s.character].protectedContact;
   for (const c of s.exposed) {
@@ -210,13 +209,26 @@ export function consequences(s: RunState): EndingLine[] {
     else if (home && facts.includes(home)) out.push({ kind: 'contact', key: `exposure.${c}.home`, vars: { contact: c }, severity: 2 });
     else out.push({ kind: 'contact', key: `exposure.${c}.call`, vars: { contact: c }, severity: 1 });
   }
-  if (facts.length) out.push({ kind: 'facts', key: 'ending.line.facts', n: facts.length, severity: facts.length >= SERIOUS_FACTS ? 2 : 1 });
-  return out;
+  if (!s.medicine) out.push({ kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 });
+  // Array.prototype.sort is stable, so equal severities keep the order above.
+  return out.sort((a, b) => b.severity - a.severity);
+}
+
+/**
+ * The line under the ending's title: what you kept. The medicine, the protected contact
+ * kept out of the file, or, with neither, the passport. One or two keys, read in order.
+ */
+export function keptLines(s: RunState): { key: string; vars?: Record<string, string> }[] {
+  const c = CHARACTERS[s.character].protectedContact;
+  const out: { key: string; vars?: Record<string, string> }[] = [];
+  if (s.medicine) out.push({ key: 'ending.kept.medicine' });
+  if (!s.exposed.includes(c)) out.push({ key: 'ending.kept.contact', vars: { contact: c } });
+  return out.length ? out : [{ key: 'ending.kept.none' }];
 }
 
 /**
  * The protected contact's row on the ending card: "Not named", or the exact result of
- * naming them, read from the What it cost line consequences() scores for them
+ * naming them, read from the consequence consequences() lists for them
  * (exposure.brother.protected gives exposure.brother.protected.row, "Added to watch
  * list"). One source, so the row and the line cannot disagree.
  */
@@ -233,6 +245,3 @@ export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red' 
  * src/game/transcript.ts both ask here.
  */
 export const relevantToday = (id: EvidenceId, bulletin: BulletinId): boolean => EVIDENCE[id].topics.includes(BULLETIN_TOPICS[bulletin]);
-
-/** Severe is red (a confirmed serious consequence), serious amber, minor plain (docs/plan.md "UI rules"). */
-export const severityTone = (l: EndingLine): ChangeLine['tone'] => (l.severity === 3 ? 'red' : l.severity === 2 ? 'amber' : 'plain');

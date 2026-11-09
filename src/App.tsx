@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { own, t, tn } from './i18n';
+import { own, t } from './i18n';
 import { canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -18,7 +18,7 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, consequences, nextActionKey, packDetail, protectedRow, relevantToday, severityTone } from './game/consequence';
+import { SEPARATOR, consequences, keptLines, nextActionKey, packDetail, protectedRow, relevantToday } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -654,10 +654,11 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 }
 
 /**
- * The ending as a short result card (Yury's mockup, 2026-11-09): the title, the scene,
- * the outcome and the ending's name in amber, one sentence, three summary rows, then
- * "See what's on file" and "Play again". The epilogue and What it cost sit on the card under
- * the rows; "See what's on file" opens the records alone (2026-11-09 screenshot review).
+ * The ending as a result card (Yury's design review, 2026-11-09): the scene, the outcome
+ * and the ending's name in amber, one line on what you kept, the worst consequence as a
+ * heading and a line (then any others), the epilogue, and a run summary with hours left
+ * and the other stats. Then "See what's on file", which opens the records alone, and
+ * "Play again".
  */
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
   const [story, setStory] = useState(false);
@@ -675,49 +676,49 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
       <section className="paper ending-card">
         <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
         <h1>{t(`ending.${text}.title`)}</h1>
-        <p className="summary">{t(`ending.${text}.summary`)}</p>
-        <dl className="result-rows">
-          {resultRows(s).map((r) => (
-            <div key={r.label} className="result-row">
-              <dt>{r.label}</dt>
-              <dd className={r.tone}>{r.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="ending-record">
-          <p className="epilogue">{t(`ending.${text}.body`)}</p>
-          {cost.length > 0 && (
-            <>
-              <h3 className="mono what-it-cost">{t('ui.whatItCost')}</h3>
-              <ul className="record costs">
-                {cost.map((l, i) => (
-                  <li key={i} className={`cost ${l.kind}`}>
-                    <span className={`tag severity ${severityTone(l)}`}>{t(`ending.severity.${l.severity}`)}</span>{' '}
-                    {l.n === undefined ? t(l.key, l.vars) : tn(l.key, l.n, l.vars)}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+        <p className="kept">{keptLines(s).map((k) => t(k.key, k.vars)).join(' ')}</p>
+        {/* Worst first, a heading and one line each, no severity tag (pfi.13 notes). */}
+        {cost.length > 0 && (
+          <ul className="costs">
+            {cost.map((l, i) => (
+              <li key={i} className={`cost ${l.kind}${i === 0 ? ' worst' : ''}`}>
+                <h2 className="cost-title">{t(`${l.key}.title`, l.vars)}</h2>
+                <p className="cost-line">{t(l.key, l.vars)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="epilogue">{t(`ending.${text}.body`)}</p>
+        <div className="run-summary">
+          <h3 className="mono">{t('ui.runSummary')}</h3>
+          <dl className="result-rows">
+            {resultRows(s).map((r) => (
+              <div key={r.label} className="result-row">
+                <dt>{r.label}</dt>
+                <dd className={r.tone}>{r.value}</dd>
+              </div>
+            ))}
+          </dl>
           <p className="mono muted seen">{t('ui.endingsSeen', { n: seen })}</p>
         </div>
       </section>
+      {/* Sticky, so Play again stays in view however long the story above runs (pfi.9). */}
       <div className="controls">
         <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
         <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
       </div>
-      {/* The records alone: the epilogue and What it cost stay on the ending screen above. */}
-      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.whatsOnFile')}>
+      {/* The records alone: the epilogue and the consequences stay on the ending screen above. */}
+      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.borderRecords')}>
         <StoryRecords s={s} />
       </Sheet>
     </main>
   );
 }
 
-/** The three summary rows: hours left, the medicine, the contact the traveler was asked to protect. */
+/** The run summary under the story: hours left, the medicine, the contact the traveler was asked to protect. */
 function resultRows(s: RunState): { label: string; value: string; tone: 'plain' | 'red' }[] {
   const ch = CHARACTERS[s.character];
-  // The exact result ("Added to watch list"), from the same line as What it cost.
+  // The exact result ("Added to watch list"), from the same consequence heading.
   const contact = protectedRow(s);
   return [
     // "Hours left", not the mockup's "Time remaining": time is counted in hours (src/i18n/terms.test.ts).
