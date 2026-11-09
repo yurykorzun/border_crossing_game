@@ -322,7 +322,8 @@ p { margin: 0 0 var(--gap); }
 .caption.narration { font-style: italic; color: #dfe5e1; }
 .phone { background: var(--bg-2); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: opacity 300ms; }
 .phone.lowered { opacity: 0.6; }
-.msg-from { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); }.msg {
+.msg-from { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.msg {
   background: var(--paper);
   color: var(--ink);
   border-radius: 12px 12px 12px 2px;
