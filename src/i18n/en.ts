@@ -130,6 +130,7 @@ export const en: Record<string, string> = {
   'ui.notNamed': 'Not named',
   'ui.calledIn': 'Called in',
   'ui.seeOnFile': "See what's on file",
+  'ui.whatsOnFile': "What's on file",
   'ui.playAgain': 'Play again',
   'ui.yourCrossing': 'Your crossing',
   'ui.missionRule': 'Get through with at least {n} hours left to reach the bus.',

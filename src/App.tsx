@@ -17,7 +17,7 @@ import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip, PickOut } from './ui/parts';
+import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
 import { SEPARATOR, consequences, nextActionKey, packDetail, severityTone } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
@@ -644,8 +644,8 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 /**
  * The ending as a short result card (Yury's mockup, 2026-11-09): the title, the scene,
  * the outcome and the ending's name in amber, one sentence, three summary rows, then
- * "See what's on file" and "Play again". The longer text and who was called in sit
- * behind "See what's on file", above My story, so nothing is lost.
+ * "See what's on file" and "Play again". The epilogue and What it cost sit on the card under
+ * the rows; "See what's on file" opens the records alone (2026-11-09 screenshot review).
  */
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
   const [story, setStory] = useState(false);
@@ -670,14 +670,8 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
             </div>
           ))}
         </dl>
-      </section>
-      <div className="controls">
-        <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
-        <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
-      </div>
-      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.myStory')}>
         <div className="ending-record">
-          <p>{t(`ending.${text}.body`)}</p>
+          <p className="epilogue">{t(`ending.${text}.body`)}</p>
           {cost.length > 0 && (
             <>
               <h3 className="mono what-it-cost">{t('ui.whatItCost')}</h3>
@@ -691,9 +685,16 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
               </ul>
             </>
           )}
-          <p className="mono muted">{t('ui.endingsSeen', { n: seen })}</p>
+          <p className="mono muted seen">{t('ui.endingsSeen', { n: seen })}</p>
         </div>
-        <StoryContent s={s} />
+      </section>
+      <div className="controls">
+        <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
+        <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
+      </div>
+      {/* The records alone: the epilogue and What it cost stay on the ending screen above. */}
+      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.whatsOnFile')}>
+        <StoryRecords s={s} />
       </Sheet>
     </main>
   );

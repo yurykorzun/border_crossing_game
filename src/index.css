@@ -500,7 +500,7 @@ p { margin: 0 0 var(--gap); }
   border: 0;
   border-radius: var(--radius);
 }
-.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0.92rem; }
+ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0.92rem; }
 .people { list-style: none; padding: 0; }
 .people li { padding: 6px 0; border-bottom: 1px solid var(--paper-2); }
 .people small { display: block; color: var(--muted); }
@@ -516,7 +516,8 @@ p { margin: 0 0 var(--gap); }
   color: var(--muted);
 }
 .tag.risk { color: var(--danger-paper); border-color: var(--danger-paper); }
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* My story: each section takes the sheet's full width, one under the other (2026-11-09 review). */
+.story-section { display: block; width: 100%; }
 .record { font-family: var(--mono); font-size: 0.8rem; }
 .record li { margin-bottom: 4px; }
 /* Which desks know a fact: one small tag each, on their own line under it. */
@@ -642,7 +643,10 @@ p { margin: 0 0 var(--gap); }
 .result-row dd.red { color: var(--danger-paper); }
 .ending .controls .see-file { background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
 .ending .controls .play-again { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
-.ending-record { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--paper-2); }
+/* The epilogue and What it cost, on the card under the summary rows. */
+.ending-record { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--paper-2); }
+.ending-record .epilogue { margin: 0; font-size: 0.88rem; line-height: 1.4; }
+.ending-record .seen { margin: 8px 0 0; font-size: 0.72rem; }
 /* What it cost: one scored line per consequence. Red only for severe (protected contact, medicine), amber for serious. */
 .what-it-cost { margin: 10px 0 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .costs .tag.severity { margin-inline-start: 0; font-size: 0.66rem; }
