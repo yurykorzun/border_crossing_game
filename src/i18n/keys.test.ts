@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { en } from './en';
 import { ENCOUNTERS, INSPECTIONS, CHECKS } from '../game/content/encounters';
 import { BEAT_COUNT, BULLETINS, CHARACTERS, EVIDENCE_IDS } from '../game/content/world';
+import { QUEUES } from '../game/content/queues';
 import { CHECKPOINTS } from '../game/types';
 
 /** Every key the content can ask for. */
@@ -31,12 +32,22 @@ function contentKeys(): string[] {
     keys.push(`checkpoint.${cp}`, `officer.${cp}`);
     for (let n = 0; n < BEAT_COUNT; n++) keys.push(`beat.${cp}.${n}`);
   }
+  QUEUES.forEach((beats, n) => {
+    keys.push(`queue.${n}.go`);
+    for (const b of beats) keys.push(b.key, ...(b.from ? [`msg.from.${b.from}`] : []));
+  });
   return keys;
 }
 
 describe('English text', () => {
   it('has every key the content uses', () => {
     expect(contentKeys().filter((k) => !(k in en))).toEqual([]);
+  });
+
+  // The queue screen always has a phone panel under the scene, so every queue opens on the phone.
+  it('has one queue per checkpoint, each opening on the phone', () => {
+    expect(QUEUES).toHaveLength(CHECKPOINTS.length);
+    for (const beats of QUEUES) expect(beats[0].kind).toBe('phone');
   });
 
   it('keeps button labels short', () => {

@@ -52,6 +52,12 @@ test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', asy
   await page.locator('.begin-step .controls button.primary').click();
 
   const strip = page.locator('main.run .strip');
+  await expect(strip).toContainText('1/3 · In the queue');
+  // The first queue: phone, phone, two lines in the queue, then the booth.
+  await expectFits(page, 'first queue');
+  for (let i = 0; i < 3; i++) await page.locator('main.run .controls button.primary').click();
+  await expectFits(page, 'end of the first queue');
+  await page.getByRole('button', { name: 'Approach the booth' }).click();
   await expect(strip).toContainText('1/3 · Passport control');
   const scrutiny = strip.getByRole('button', { name: 'Scrutiny 1/3' });
   await expect(scrutiny).toBeVisible();

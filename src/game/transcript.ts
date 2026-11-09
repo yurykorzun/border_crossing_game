@@ -9,9 +9,10 @@
 // screen. When a screen there changes, change it here too, or the transcript
 // stops being what the player reads.
 
-import { has, t, tn } from '../i18n';
+import { t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
+import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
@@ -76,7 +77,9 @@ function chromeLines(s: RunState, p: Page): void {
   p.plural('ui.hoursRemaining', s.time, CHROME);
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
   const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
-  p.add('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name: t(`checkpoint.${CHECKPOINTS[now]}`) }, CHROME);
+  // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
+  const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
+  p.add('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name }, CHROME);
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   else if (s.screen.kind !== 'between')
     p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
@@ -214,9 +217,15 @@ function screenLines(s: RunState, p: Page): void {
   }
   const sc = s.screen;
   if (sc.kind === 'between') {
-    p.add(`checkpoint.${CHECKPOINTS[sc.next]}`);
-    for (let n = 0; n < 4; n++) if (has(`msg.${sc.next}.${n}`)) p.add(`msg.${sc.next}.${n}`);
-    return p.add('ui.continue');
+    // Queue in src/App.tsx: every beat, tap by tap, then the walk up to the officer.
+    const beats = queueBeats(sc.next, s.character);
+    p.add('ui.inQueue');
+    for (const b of beats) {
+      if (b.from) p.add(`msg.from.${b.from}`);
+      p.add(b.key);
+    }
+    if (beats.length > 1) p.add('ui.continue');
+    return p.add(`queue.${sc.next}.go`);
   }
   if (sc.kind === 'wait') {
     const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
@@ -283,7 +292,8 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
         ? `${sc.kind === 'inspection' ? 'insp' : 'enc'}.${sc.id}.${action.approach}.label`
-        : action.type === 'waitAction' ? `wait.${action.action}.label` : 'ui.continue';
+        : action.type === 'waitAction' ? `wait.${action.action}.label`
+        : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go` : 'ui.continue';
     const picked = page.lines.find((l) => l.key === pickedKey) ?? page.lines.find((l) => l.key === 'ui.continue');
     if (picked && action.type !== 'beat') picked.picked = true;
     lines.push(...page.lines);
@@ -437,8 +447,6 @@ export interface KnownFailure {
 }
 
 export const KNOWN_FAILURES: KnownFailure[] = [
-  // msg.0.1 is shared by both travelers, so Mark's mother asks him not to mention Lena's cousin.
-  { rule: 1, key: 'msg.0.1', character: 'mark', bead: 'border_crossing_game-67a.6' },
   // Most runs estimate 3-5.5 minutes, the shortest 2.8 (measured 2026-11-08); none run over 8.
   // Only today's band is covered: a run under 2.5 minutes is a new failure.
   { rule: 4, key: 'tooShort', atLeastMinutes: 2.5, bead: 'border_crossing_game-67a.12' },

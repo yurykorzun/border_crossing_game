@@ -20,10 +20,11 @@ function evalCli(args: string[]) {
 }
 
 describe('npm run eval', () => {
-  it('exits 1 with seed and step when a rule breaks (the Ilya line, not marked known)', () => {
-    const r = evalCli(['--seed', String(MARK), '--seeds', '3', '--no-known']);
+  it('exits 1 with seed and step when a rule breaks (a short run, not marked known)', () => {
+    // Lena's liar run on seed 5 estimates about 4.5 minutes (measured 2026-11-08).
+    const r = evalCli(['--seed', '4', '--seeds', '3', '--no-known']);
     expect(r.status, r.stderr).toBe(1);
-    expect(r.stdout).toMatch(/rule 1: honest seed 61 step 0 \(mark, msg\.0\.1\): names cousin: "Mother: Don't mention Ilya/);
+    expect(r.stdout).toMatch(/rule 4: liar seed 5 step \d+ \(lena, tooShort\)/);
     expect(r.stdout).toContain('eval: FAIL');
     expect(r.files).toHaveLength(12);
   }, 30_000);
@@ -31,7 +32,8 @@ describe('npm run eval', () => {
   it('exits 0 when the only failures are the known ones', () => {
     const r = evalCli(['--seed', String(MARK), '--seeds', '3']);
     expect(r.status, r.stdout).toBe(0);
-    expect(r.stdout).toMatch(/known rule 1/);
+    // Mark's first queue names Tom, not Lena's cousin Ilya (fixed in border_crossing_game-67a.6).
+    expect(r.stdout).toMatch(/ok {4}rule 1/);
     expect(r.stdout).toContain('eval: PASS');
   }, 30_000);
 

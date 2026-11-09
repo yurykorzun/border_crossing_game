@@ -179,6 +179,6 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   const go = begin.locator('.controls button.primary');
   await expect(go).toHaveText('Begin the crossing');
   await go.click();
-  await expect(page.locator('main.run .strip')).toContainText('1/3 · Passport control');
+  await expect(page.locator('main.run .strip')).toContainText('1/3 · In the queue');
   expect(errors).toEqual([]);
 });
