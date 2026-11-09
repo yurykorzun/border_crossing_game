@@ -135,7 +135,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await expect(docsScreen.getByRole('heading', { name: 'Prepare your documents' })).toBeVisible();
   await expect(docsScreen.getByRole('note')).toContainText("Today's bulletin");
   await expect(docsScreen.locator('.explain-hours')).toHaveText('Every check costs hours. The bus leaves in 8 hours. You need 2 hours to reach the station.');
-  await expect(docsScreen.locator('.explain-scrutiny')).toHaveText('Officers grow suspicious. At 3/3 you are taken aside.');
+  await expect(docsScreen.locator('.explain-scrutiny')).toHaveText('Officers grow suspicious. At Scrutiny 3/3 you go to secondary inspection.');
   await expect(docsScreen.locator('.doc')).toHaveCount(EVIDENCE_IDS.length);
   await stepFits(page, 'documents, nothing packed');
 
@@ -151,7 +151,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   // Screen 3: the mission, the rest of the premise, exactly the packed documents.
   const begin = page.locator('main.begin-step');
   await expect(begin.getByRole('heading', { name: 'Begin the crossing' })).toBeVisible();
-  await expect(begin.locator('.mission')).toContainText('Reach the last bus with at least 2 hours left.');
+  await expect(begin.locator('.mission')).toContainText('Get through with at least 2 hours left to reach the bus.');
   await expect(begin.locator('.mission')).toContainText('medicine');
   await expect(begin.locator('.mission')).toContainText('cash');
   await expect(begin.locator('.mission')).toContainText('phone');

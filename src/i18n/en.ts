@@ -19,7 +19,7 @@ export const en: Record<string, string> = {
   'ui.scrutinyCount': 'Scrutiny {n}/{max}',
   'ui.scrutinyHelp.what': 'Scrutiny is how closely the officers are watching you.',
   'ui.scrutinyHelp.rise': 'Some answers add scrutiny. Their cards show it, for example "+1 scrutiny".',
-  'ui.scrutinyHelp.max': 'At {max}/{max} the next officer sends you to secondary inspection. After it, scrutiny drops back to {after}.',
+  'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, the next officer sends you to secondary inspection. After that, scrutiny drops back to {after}.',
   'ui.progress': '{n}/{total} · {name}',
   'ui.settings': 'Settings',
   'ui.sound': 'Sound',
@@ -39,7 +39,7 @@ export const en: Record<string, string> = {
   // Setup 2: hours and scrutiny are explained where they first matter, one short line each.
   'ui.prepareDocuments': 'Prepare your documents',
   'ui.explainHours': 'Every check costs hours. The bus leaves in {hours} hours. You need {travel} hours to reach the station.',
-  'ui.explainScrutiny': 'Officers grow suspicious. At {max}/{max} you are taken aside.',
+  'ui.explainScrutiny': 'Officers grow suspicious. At Scrutiny {max}/{max} you go to secondary inspection.',
   // Setup 3: the heading and the one strong button.
   'ui.beginCrossing': 'Begin the crossing',
   'ui.yourDocuments': 'Your documents',
@@ -82,7 +82,7 @@ export const en: Record<string, string> = {
   'ui.endingsSeen': 'Endings seen: {n} of 4',
   'ui.yourCrossing': 'Your crossing',
   'ui.timeLeft': 'Hours left: {n}',
-  'ui.missionRule': 'Reach the last bus with at least {n} hours left.',
+  'ui.missionRule': 'Get through with at least {n} hours left to reach the bus.',
 
   // ── Mission
   'mission.title': 'Your father has had a stroke',
@@ -108,10 +108,10 @@ export const en: Record<string, string> = {
   'bg.brotherAtWar.short': 'Brother across the border',
   'bg.protestPhoto.short': 'Protest photo',
 
-  'bg.foreignEmployer': 'Works for a foreign company. It explains your income and invites questions about your employer.',
-  'bg.donation': 'Donated to a fundraiser years ago. You remember helping a sick child. The fund has since been listed differently.',
-  'bg.apartment': "Inherited your grandmother's apartment. A reason to come back, and property you can't easily leave.",
-  'bg.secondPassport': 'Second citizenship. Another home, but limited protection inside the country you were born in.',
+  'bg.foreignEmployer': 'You work for a foreign company. It explains your income and invites questions about your employer.',
+  'bg.donation': 'You donated to a fundraiser years ago. You remember helping a sick child. The fund is now on a government list.',
+  'bg.apartment': "You inherited your grandmother's apartment. A reason to come back, and property you can't easily leave.",
+  'bg.secondPassport': 'You have a second citizenship. Another home, but little protection in the country where you were born.',
   'bg.brotherAtWar': 'Your brother Tom lives across the border, in a country now at war with this one.',
   'bg.protestPhoto': 'You went to one protest, years ago. A photo of you there is still on your phone.',
 
@@ -124,7 +124,7 @@ export const en: Record<string, string> = {
 
   // ── Evidence
   'ev.hotel.name': 'Hotel booking',
-  'ev.hotel.desc': 'Three nights near the hospital. Answers accommodation and length of stay. Cannot back a family stay.',
+  'ev.hotel.desc': 'Three nights near the hospital. Answers accommodation and length of stay. Does not prove a family stay.',
   'ev.motherLetter.name': 'Letter from your mother',
   'ev.motherLetter.desc': 'Signed, with her address. Answers purpose and accommodation. Puts the family address on file.',
   'ev.employerLetter.name': 'Employer letter',
@@ -132,7 +132,7 @@ export const en: Record<string, string> = {
   'ev.hospitalNote.name': 'Hospital note',
   'ev.hospitalNote.desc': "Your father's admission, with his prescriptions. Answers medicine and purpose. Puts his condition on file.",
   'ev.returnTicket.name': 'Return ticket',
-  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Fixes your departure date.',
+  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Puts your departure date on file.',
   'ev.deed.name': 'Apartment deed',
   'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Puts your property on file.',
 
@@ -177,7 +177,7 @@ export const en: Record<string, string> = {
   'msg.0.2': 'You lower the phone. The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
-  'msg.1.0': "Hope your dad's OK. Any chance you make Monday's call?",
+  'msg.1.0': "Hope your dad's OK. Any chance you can make Monday's call?",
   'msg.1.1': 'A woman ahead of you writes a phone number on her wrist.',
   'msg.1.2': '"My lawyer," she says, and pulls her sleeve down.',
   'msg.1.3': 'The inspector taps the steel table. "Bags here."',
@@ -250,7 +250,7 @@ export const en: Record<string, string> = {
   'enc.c_host.call.reaction': 'He dials and listens.',
   'enc.c_host.evidence.label': 'Show {card}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
-  'enc.c_host.mother.label': "Give {contact}'s mobile",
+  'enc.c_host.mother.label': "Give {contact}'s number",
   'enc.c_host.mother.reaction': 'He writes down a second number.',
 
   'enc.c_phone.q': '"Unlock your phone, please."',
@@ -370,9 +370,9 @@ export const en: Record<string, string> = {
   'check.hostCall.noAnswer': 'The officer puts the phone down without speaking.',
   'check.hostCall.hint.clear': '"They are calling the number on the letter."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',
-  'check.medicineLab.title': 'The medicine has gone for checking.',
+  'check.medicineLab.title': 'The medicine has gone for testing.',
   'check.medicineLab.clear': 'The cool bag comes back. Nothing is missing.',
-  'check.medicineLab.lab': 'A note comes back with the bag, and it is not a stamp.',
+  'check.medicineLab.lab': 'The bag comes back with a note instead of a stamp.',
   'check.medicineLab.hint.clear': '"Routine."',
   'check.medicineLab.hint.lab': '"The lab has questions."',
   'check.phoneSearch.title': 'Your phone is behind the glass.',
@@ -393,10 +393,10 @@ export const en: Record<string, string> = {
   'wait.wait.label': 'Wait quietly',
   'wait.wait.detail': 'Costs nothing more',
   'wait.ask.label': 'Ask for an update',
-  'wait.ask.detail': 'Learn what is holding it. Puts your urgency on file',
+  'wait.ask.detail': 'Learn what is holding it up. Puts your urgency on file',
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.detail': 'Clears the check. Exposes them',
-  'wait.assist.reaction': 'You give them the number of {contact}.',
+  'wait.assist.reaction': "You give them {contact}'s number.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',
   'beat.passport.1': 'A printer starts behind the partition.',
@@ -421,12 +421,12 @@ export const en: Record<string, string> = {
   'ending.homeInTime.title': 'Admitted. Home in time',
   'ending.homeInTime.body': 'You reach the hospital before visiting hours end. Your father squeezes your hand.',
   'ending.homeAtCost.title': 'Admitted, at a cost',
-  'ending.homeAtCost.body': 'You make it in time. Not everything you carried made it with you.',
+  'ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you.',
   'ending.tooLate.title': 'Admitted. Too late',
   'ending.tooLate.body': 'By the time you reach the hospital, visiting hours are over. Your mother is asleep in the corridor.',
   'ending.turnedBack.title': 'Turned back',
   'ending.turnedBack.body': 'You sit in the departures hall with a red stamp in your passport. Your mother calls. You let it ring.',
-  'ending.line.medicineLost': 'The medicine stayed at the border.',
-  'ending.line.exposed': '{contact} has been told to come in for a conversation.',
+  'ending.line.medicineLost': 'The medicine stays at the border.',
+  'ending.line.exposed': 'The officers call {contact} in for a conversation.',
   'ending.line.protectedExposed': 'Your mother asked you to keep {contact} out of it.',
 };
