@@ -18,6 +18,10 @@ import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './ga
 import { CHECKPOINTS } from './game/types';
 import { CostChips, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip } from './ui/parts';
 import * as sound from './ui/sound';
+import { Portrait } from './ui/art/Portrait';
+import { Booth } from './ui/art/Booth';
+import { QueueScene } from './ui/art/QueueScene';
+import { Icon } from './ui/art/icons';
 
 const store = browserStore();
 
@@ -285,8 +289,7 @@ function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; on
               onKeyDown={(e) => onKey(e, i)}
             >
               <span className="radio" aria-hidden />
-              {/* Portrait slot: the art bead (67a.10) fills it. */}
-              <span className="portrait" aria-hidden data-portrait={id}>{t(`char.${id}.name`).charAt(0)}</span>
+              <Portrait id={id} className="portrait" />
               <span className="traveler-text">
                 <span className="traveler-name"><strong>{t(`char.${id}.name`)}</strong> · {t(`char.${id}.role`)}</span>
                 <span className="traveler-history">
@@ -346,7 +349,10 @@ function Run({ s, dispatch, data, setData, onRestart }: {
             {s.screen.kind === 'wait' ? (
               <div className="tray"><span className="mono">{t('ui.waiting')}</span></div>
             ) : s.screen.kind !== 'between' ? (
-              <div className="officer"><span className="mono">{t(`officer.${officerKey}`)}</span></div>
+              <div className="officer">
+                <Booth />
+                <span className="mono officer-label">{t(`officer.${officerKey}`)}</span>
+              </div>
             ) : null}
           </div>
           <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
@@ -354,11 +360,14 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       )}
       {/* The tray stays on every run screen, so story, evidence and settings are always one tap away. */}
       <nav className="tools">
-        <button aria-haspopup="dialog" onClick={() => setSheet('story')}>{t('ui.myStory')}</button>
+        <button aria-haspopup="dialog" onClick={() => setSheet('story')}><Icon name="document" />{t('ui.myStory')}</button>
         <button aria-haspopup="dialog" onClick={() => setSheet('evidence')}>
-          {t('ui.evidence')} · {s.loadout.length - s.used.length}
+          <Icon name="folder" />{t('ui.evidence')} · {s.loadout.length - s.used.length}
         </button>
-        <button aria-haspopup="dialog" onClick={() => setSheet('settings')}>{t('ui.settings')}</button>
+        {/* Gear only: the name is for screen readers, and the sheet's title says it again. */}
+        <button className="tool-settings" aria-haspopup="dialog" aria-label={t('ui.settings')} onClick={() => setSheet('settings')}>
+          <Icon name="gear" />
+        </button>
       </nav>
       <Sheet open={sheet === 'story'} onClose={close} title={t('ui.myStory')}><StoryContent s={s} /></Sheet>
       <Sheet open={sheet === 'evidence'} onClose={close} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
@@ -396,10 +405,13 @@ function Queue({ next, character, still, onDone }: { next: number; character: Ch
   const current = seen[seen.length - 1];
   const caption = seen.findLast((b) => b.kind !== 'phone');
   const advance = () => { if (!done) setShown((n) => n + 1); };
+  // Only the passport queue has its drawn scene so far; the light turns on the clerk's "Next.".
+  const art = next === 0 ? <QueueScene light={seen.some((b) => b.light === 'green') ? 'green' : 'red'} character={character} /> : null;
 
   return (
     <>
       <div className={`scene scene-${CHECKPOINTS[next]} queue-scene ${still ? 'still' : ''}`} onClick={advance}>
+        {art}
         <div className="flicker" aria-hidden />
         <h2 className="queue-title mono">{t('ui.inQueue')}</h2>
         <div className="caption-area" aria-live="polite">
@@ -423,6 +435,9 @@ function Queue({ next, character, still, onDone }: { next: number; character: Ch
   );
 }
 
+/** Questions up to this many characters ("Purpose of your visit?") show as a heading with no card. */
+const SHORT_QUESTION = 40;
+
 function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean }) {
   if (s.reaction) return <Reaction s={s} dispatch={dispatch} />;
   const sc = s.screen;
@@ -434,10 +449,14 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
   const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
   const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
+  const question = t(`${prefix}.${id}.q`);
+  // The question sits right on top of the answers: a short one is a big heading on its
+  // own, a longer one goes in a light card so it still reads as the officer speaking.
+  const short = question.length <= SHORT_QUESTION;
   return (
     <>
-      <section className={`panel paper ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
-        <p className="question">{t(`${prefix}.${id}.q`)}</p>
+      <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
+        <h2 className="question">{question}</h2>
       </section>
       <div className="controls stack">
         {options(s).map((o) => (

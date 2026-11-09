@@ -74,12 +74,16 @@ const CHROME = { chrome: true } as const;
 function chromeLines(s: RunState, p: Page): void {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
   p.add('ui.yourCrossing', {}, CHROME);
-  p.plural('ui.hoursRemaining', s.time, CHROME);
+  p.add('ui.goal', {}, CHROME);
+  p.plural('ui.hours', s.time, CHROME);
+  p.add('ui.hoursLeft', { hours: tn('ui.hours', s.time) }, CHROME);
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
   const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
   const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
-  p.add('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name }, CHROME);
+  const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
+  p.add('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length }, CHROME);
+  p.add('ui.progress', { count, name }, CHROME);
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   else if (s.screen.kind !== 'between')
     p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
@@ -96,6 +100,7 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.scrutinyHelp.max', { max: MAX_SCRUTINY, after: SCRUTINY_AFTER_INSPECTION }, CHROME);
   // StoryContent
   const ch = CHARACTERS[s.character];
+  p.add('ui.portraitOf', { name: t(`char.${ch.id}.name`) }, CHROME);
   p.add(`char.${ch.id}.name`, {}, CHROME);
   p.add(`char.${ch.id}.blurb`, {}, CHROME);
   p.add('ui.background', {}, CHROME);
@@ -141,6 +146,7 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.premise');
   p.add('ui.pickCharacter');
   for (const id of CHARACTER_IDS) {
+    p.add('ui.portraitOf', { name: t(`char.${id}.name`) }, { who: id });
     p.add(`char.${id}.name`, {}, { who: id });
     p.add(`char.${id}.role`, {}, { who: id });
     for (const b of CHARACTERS[id].background) p.add(`bg.${b}.short`, {}, { who: id });

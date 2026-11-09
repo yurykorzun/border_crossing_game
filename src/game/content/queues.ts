@@ -17,6 +17,8 @@ export interface QueueBeat {
   from?: Sender;
   /** Only this traveler sees the beat. */
   character?: CharacterId;
+  /** The booth light turns green on this beat (the clerk's "Next."). */
+  light?: 'green';
 }
 
 const beat = (key: string, kind: QueueKind, extra: Omit<QueueBeat, 'key' | 'kind'> = {}): QueueBeat => ({ key, kind, ...extra });
@@ -28,7 +30,7 @@ export const QUEUES: readonly (readonly QueueBeat[])[] = [
     beat('msg.0.1.lena', 'phone', { from: 'mother', character: 'lena' }),
     beat('msg.0.1.mark', 'phone', { from: 'mother', character: 'mark' }),
     beat('msg.0.2', 'speech'),
-    beat('msg.0.3', 'speech'),
+    beat('msg.0.3', 'speech', { light: 'green' }),
   ],
   [
     beat('msg.1.0', 'phone', { from: 'work' }),

@@ -9,41 +9,45 @@ import type { RunState } from '../game/types';
 import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
 import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, START_TIME } from '../game/content/world';
+import { Portrait } from './art/Portrait';
+import { Icon } from './art/icons';
 
 export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => void }) {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
   const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
+  const hours = tn('ui.hours', s.time);
+  const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
+  const left = Math.max(0, Math.min(s.time, START_TIME)) / START_TIME;
   return (
     <header className="strip" aria-label={t('ui.yourCrossing')}>
-      <div className="stat time">
-        <span className="stat-label hours">{tn('ui.hoursRemaining', s.time)}</span>
-        <span className="pips" aria-hidden>
-          {Array.from({ length: START_TIME }, (_, i) => <i key={i} className={i < s.time ? 'on' : ''} />)}
+      <p className="goal">{t('ui.goal')}</p>
+      <div className="strip-stats">
+        <span className="stat time">
+          <Icon name="clock" />
+          <span className="stat-label hours">{pickOut(t('ui.hoursLeft', { hours }), hours)}</span>
         </span>
+        <span className="strip-divider" aria-hidden />
+        {/* A button, not a readout: the word "Noticed" never said what scrutiny does, the sheet does. */}
+        <button className={`scrutiny lvl-${level}`} aria-haspopup="dialog" onClick={onScrutiny}>
+          <Icon name="flag" />
+          <span className="scrutiny-text">{t('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY })}</span>
+        </button>
       </div>
-      {/* A button, not a readout: the word "Noticed" never said what scrutiny does, the sheet does. */}
-      <button className={`scrutiny lvl-${level}`} aria-haspopup="dialog" onClick={onScrutiny}>
-        <span className="scrutiny-text">{t('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY })}</span>
-        <span className="boxes" aria-hidden>
-          {Array.from({ length: MAX_SCRUTINY }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
-        </span>
-      </button>
-      <div className="progress-row">
-        <ol className="progress" aria-hidden>
-          {CHECKPOINTS.map((cp, i) => (
-            <li key={cp} className={i < s.checkpoint ? 'done' : i === s.checkpoint ? 'now' : ''} />
-          ))}
-        </ol>
-        <span className="progress-label">
-          {/* In the queue the checkpoint is not named yet: it shows once you reach the officer. */}
-          {t('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name: progressName(s) })}
-        </span>
-      </div>
+      <div className="time-bar" aria-hidden><i style={{ width: `${left * 100}%` }} /></div>
+      {/* In the queue the checkpoint is not named yet: it shows once you reach the officer. */}
+      <p className="progress-label">{pickOut(t('ui.progress', { count, name: progressName(s) }), count)}</p>
     </header>
   );
 }
 
-/** The name after "1/3 ·" in the strip. chromeLines() in src/game/transcript.ts mirrors it. */
+/** The text with its first `part` in amber, so the number reads first and the words stay one t() string. */
+function pickOut(text: string, part: string): ReactNode {
+  const at = text.indexOf(part);
+  if (at < 0) return text;
+  return <>{text.slice(0, at)}<span className="amber">{part}</span>{text.slice(at + part.length)}</>;
+}
+
+/** The name after "1 / 3 ·" in the strip. chromeLines() in src/game/transcript.ts mirrors it. */
 function progressName(s: RunState): string {
   return s.screen.kind === 'between' && !s.reaction
     ? t('ui.inQueue')
@@ -133,7 +137,10 @@ export function StoryContent({ s }: { s: RunState }) {
   const ch = CHARACTERS[s.character];
   return (
     <>
-      <p className="who"><strong>{t(`char.${ch.id}.name`)}</strong> · {t(`char.${ch.id}.blurb`)}</p>
+      <div className="who">
+        <Portrait id={ch.id} className="portrait-small" />
+        <p><strong>{t(`char.${ch.id}.name`)}</strong> · {t(`char.${ch.id}.blurb`)}</p>
+      </div>
       <h3>{t('ui.background')}</h3>
       <ul className="facts">{ch.background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
       <h3>{t('ui.contacts')}</h3>

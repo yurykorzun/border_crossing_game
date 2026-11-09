@@ -61,7 +61,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   // Time reads as hours until the last bus. Both routine passport cards have a -1 hour
   // option, so the first options screen shows a time chip.
-  await expect(page.locator('.strip .stat.time')).toContainText('8 hours remaining');
+  await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
   const timeChips: string[] = [];
 
   for (; steps < MAX_STEPS; steps++) {

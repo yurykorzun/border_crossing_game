@@ -36,7 +36,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
 
     // The queue is not named after the checkpoint yet.
     await expect(run.getByRole('heading', { name: 'In the queue' })).toBeVisible();
-    await expect(strip).toContainText('1/3 · In the queue');
+    await expect(strip).toContainText('1 / 3 · In the queue');
     for (const part of ['.strip', '.scene', '.panel', '.controls'])
       await expect(run.locator(part)).not.toContainText('Passport control');
 
@@ -60,16 +60,22 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     await expect(msgs).toHaveCount(2);
     await expect(button).toHaveText('Continue');
 
-    // 4. A tap on the phone works too: the booth light changes.
+    // 4. A tap on the phone works too: the booth light changes, red to green, on "Next.".
+    const light = scene.locator('svg.queue-art .booth-light');
+    const fill = () => light.evaluate((el) => getComputedStyle(el).fill);
+    await expect(light).toHaveAttribute('data-light', 'red');
+    const red = await fill();
     await phone.click();
     await expect(caption).toHaveText(en['msg.0.3']);
     await expect(caption).toHaveCount(1);
+    await expect(light).toHaveAttribute('data-light', 'green');
+    expect(await fill()).not.toBe(red);
 
     // 5. The walk up to the officer. The checkpoint is named only now.
     await expect(button).toHaveText('Approach the booth');
     await button.click();
     await expect(run.getByRole('heading', { name: 'In the queue' })).toHaveCount(0);
-    await expect(strip).toContainText('1/3 · Passport control');
+    await expect(strip).toContainText('1 / 3 · Passport control');
     await expect(run.locator('.officer')).toBeVisible();
     expect(errors).toEqual([]);
   });
