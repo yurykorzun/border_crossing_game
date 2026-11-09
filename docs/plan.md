@@ -36,7 +36,7 @@ Two epics run interleaved, because the rules work needs the eval tool from the o
 **Phase 1 - test and measure** (epic 67a)
 1. `67a.1` Phone-size browser test for one full run (adds Playwright)
 2. `67a.2` Autoplay bots: honest, liar, cautious, random, situational, plus the balance tables
-3. `67a.3` Scenario evals: story rules over autoplay transcripts
+3. ~~`67a.3` Scenario evals: story rules over autoplay transcripts~~ done (`npx tsx tools/eval.ts`)
 
 **Phase 2 - the opening reads as a journey** (epic 67a)
 
@@ -129,8 +129,6 @@ The world bible comes before the Russian text, so Russian is written once with f
 1. Art style, before `grd`: pixel art (PixelLab, needs its API token) or painted illustration (OpenAI or FLUX, needs that key; the mockup points this way). Decide after seeing the SVG pass on the phone. The UI style itself is decided (see UI rules).
 2. Mark's brother is in a fictional country at war, not Ukraine as in the original note. `0ts.1` proposes where it sits in the fictional world; change it if you want the real one.
 3. bd sync: create the `yurykorzun/beads` repo, then run `bd-attach migrate --db border_crossing_game`.
-4. `67a.3` (scenario evals) is parked on branch `feat/border_crossing_game-67a.3`, no PR. Its reviewer flagged the "runs too short" known failure three rounds running, and it can't be fixed in code because runs really are 3-5.5 minutes (that's `67a.12`). Either amend 67a.3's description to allow a `tooShort` known failure pointing at 67a.12 and re-run `agent-review border_crossing_game-67a.3 --round 3`, or ship it with `agent-finish --ship-unresolved`. 35 beads wait on it, including all of fsx.
-
 ## Not in this plan
 
 - A second mission. One mission keeps balance manageable. More encounters come only in phase 3b, after the rules.
