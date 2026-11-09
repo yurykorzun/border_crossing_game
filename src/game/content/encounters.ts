@@ -3,6 +3,10 @@
 // Text lives in src/i18n/en.ts: enc.<id>.q, enc.<id>.<approach>.label/.reaction.
 //
 // Rule: every encounter has an approach that needs no card and no contact.
+// Most answers cost something. A calm card (a helpful inspector, a glass of
+// water) costs nothing, so the escalation around it lands harder. Only the
+// pacing rule deals one (breather() in engine.ts). Passport control never
+// needs a breather, so it has none (the walk checks every card is dealt).
 //
 // Facts stay at the desk where they came out (docs/design.md "What each
 // official knows"). They travel on only through a channel: the records
@@ -56,7 +60,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'p_photo', checkpoint: 'passport', kind: 'routine', topic: 'identity',
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
-      { id: 'scan', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' },
+      { id: 'scan', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
     ],
   },
   {
@@ -66,7 +70,7 @@ export const ENCOUNTERS: Encounter[] = [
       // Honest, and the second passport goes on file: that entry is the reason for the scrutiny.
       { id: 'both', kind: 'say', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
-      { id: 'handOver', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' },
+      { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
     ],
   },
   {
@@ -100,6 +104,11 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
+    // Calm: a helpful inspector. One answer, and it costs nothing.
+    id: 'c_pen', checkpoint: 'customs', kind: 'routine', calm: true,
+    approaches: [{ id: 'yes', kind: 'say', effects: [] }],
+  },
+  {
     // The bag shows it: a tourist carrying a pensioner's prescription.
     id: 'c_tourist', checkpoint: 'customs', kind: 'related', priority: 3, topic: 'purpose',
     when: { claims: ['tourism'] },
@@ -112,7 +121,8 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'c_host', checkpoint: 'customs', kind: 'related', priority: 2, topic: 'accommodation',
-    when: { facts: ['familyAddress'] },
+    // An address on file, or a day when every host is phoned.
+    when: { any: [{ facts: ['familyAddress'] }, { bulletin: 'accommodation' }] },
     approaches: [
       { id: 'call', kind: 'verify', effects: [{ time: -1 }], check: 'hostCall' },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
@@ -160,6 +170,16 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'deny', kind: 'say', effects: [{ claim: 'noOtherFamily' }] },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
+  },
+  {
+    // Calm: the officer gives you a minute. One answer, and it costs nothing.
+    id: 'i_water', checkpoint: 'interview', kind: 'routine', calm: true,
+    approaches: [{ id: 'drink', kind: 'say', effects: [] }],
+  },
+  {
+    // Calm: the officer's phone interrupts. The interview can need two breathers.
+    id: 'i_phone', checkpoint: 'interview', kind: 'routine', calm: true,
+    approaches: [{ id: 'wait', kind: 'say', effects: [] }],
   },
   {
     // Inconsistency: something on file makes a claim look odd. Cheap to clear up.

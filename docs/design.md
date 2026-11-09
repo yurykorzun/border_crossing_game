@@ -69,7 +69,15 @@ Background facts come from ordinary life and are the "My story" panel. Encounter
 | Return ticket | Length of stay, money | A fixed departure date |
 | Apartment deed | Identity, accommodation | Your property inside |
 
-Each card covers two topics, so a "wrong" pick is never useless. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin hints at today's risk.
+Each card covers two topics, so a "wrong" pick is never useless. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
+
+| Bulletin | Warning | Topic it points at | What it changes |
+|---|---|---|---|
+| Customs | "Medicines are lab-tested today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file |
+| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call |
+| Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once |
+
+`npm run walk` checks the warning means something: for every bulletin, packings with a document on the warned topic get home in time more often (with random answers and deals) than packings without one.
 
 ## Encounters
 
@@ -86,6 +94,27 @@ Rules:
 2. Randomness picks the problem, the chosen solution has a predictable result.
 3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
+5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for cash; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
+
+### Encounter checklist
+
+Every new encounter must answer these six questions before it goes in (from the second design review, 2026-11-08):
+
+1. Why does it appear now?
+2. Why might someone choose each option?
+3. What can the player anticipate?
+4. How could officials know this?
+5. What changes afterward?
+6. Why is it interesting on replay?
+
+The structural parts are machine-checked by the content lint (`lintContent()` in `src/game/lint.ts`, run by `src/game/content.test.ts`):
+
+- Why now: every related or follow-up card has a `when` or a check result that queues it.
+- Why each option: no two answers on a card do the same thing (same effects, same check and same spend). Say and verify spend nothing of their own, so a say and a verify with the same effects count as twins.
+- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on.
+- What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card with exactly one answer is the one exception, because its job is the pause (the free answer from rule 5).
+
+The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
 
 ## Truth, claims, official knowledge
 
@@ -123,6 +152,8 @@ Claims stay one shared list for now.
 ## Director
 
 For each checkpoint: draw one routine card from that checkpoint's deck (seeded random, unseen first), then pick the highest-priority eligible related card. If nothing fits, deal another routine card. The seed is saved, so a run replays the same way and the branch checker can walk it.
+
+Pacing: no more than 2 escalating cards (related, follow-up, inspection) in a row while a routine card is still left at the desk. After 2, the dealer deals that routine card first, a calm one if there is one, and whatever was next comes after it (`breather()` in `src/game/engine.ts`, eval rule 6, and the walk checks every path). Calm cards are kept for this: customs has one and the interview two, because that is the most breathers any path needs, and a calm tap is not a decision, so the walk's 14-decision budget holds.
 
 ## Waiting room
 

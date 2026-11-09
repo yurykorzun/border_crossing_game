@@ -194,9 +194,9 @@ export const en: Record<string, string> = {
   'ev.hospitalNote.name': 'Hospital note',
   'ev.hospitalNote.desc': "Your father's admission, with his prescriptions. Answers medicine and purpose. Puts his condition on file.",
   'ev.returnTicket.name': 'Return ticket',
-  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Puts your departure date on file.',
+  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Shown for money, nothing goes on file.',
   'ev.deed.name': 'Apartment deed',
-  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Puts your property on file.',
+  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Shown for identity, nothing goes on file.',
   // Handed over: "Show your mother's letter". Used up: "Uses letter".
   // The packing screen's rows: a short name and what it helps with ("Reveals ..." comes from fact.<id>.reveal).
   'ev.hotel.label': 'Hotel booking',
@@ -267,10 +267,10 @@ export const en: Record<string, string> = {
   'fact.phoneRefused.reveal': 'Your refusal goes on file',
   'fact.cashCount.reveal': 'Puts your cash total on file',
 
-  // ── Bulletins
-  'bulletin.customs': 'Medicines may be sent for testing today.',
-  'bulletin.accommodation': 'Accommodation records may be verified by phone.',
-  'bulletin.records': 'Older records are being cross-checked.',
+  // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
+  'bulletin.customs': 'Medicines are lab-tested today.',
+  'bulletin.accommodation': 'Hosts are being phoned today.',
+  'bulletin.records': 'IDs are checked against old records.',
 
   // ── Checkpoints
   'checkpoint.passport': 'Passport control',
@@ -339,7 +339,7 @@ export const en: Record<string, string> = {
   'enc.p_photo.evidence.label': 'Show {cardThe}',
   'enc.p_photo.evidence.reaction': 'She compares the addresses and seems satisfied.',
   'enc.p_photo.scan.label': 'Offer a face scan',
-  'enc.p_photo.scan.reaction': 'Matching the scan takes an hour.',
+  'enc.p_photo.scan.reaction': 'Matching the scan takes an hour, two on records days.',
 
   'enc.p_secondPassport.q': '"You hold another passport. Which country do you consider yours?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
@@ -347,7 +347,7 @@ export const en: Record<string, string> = {
   'enc.p_secondPassport.evidence.label': 'Show {cardThe}',
   'enc.p_secondPassport.evidence.reaction': '"So you still own property here." She hands it back.',
   'enc.p_secondPassport.handOver.label': 'Hand over both passports',
-  'enc.p_secondPassport.handOver.reaction': 'Checking both passports takes an hour.',
+  'enc.p_secondPassport.handOver.reaction': 'Checking both passports takes an hour, two on records days.',
 
   'enc.p_employer.q': '"A tourist with a foreign salary. Who pays you?"',
   'enc.p_employer.perk.label': 'Explain your job plainly',
@@ -374,6 +374,10 @@ export const en: Record<string, string> = {
   'enc.c_cash.under.label': '"It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes down what you said and does not count it.',
 
+  'enc.c_pen.q': '"Long queue today. Need a pen for the form?"',
+  'enc.c_pen.yes.label': '"Yes, thanks."',
+  'enc.c_pen.yes.reaction': 'He lends you his and shows you where to sign.',
+
   'enc.c_tourist.q': '"Tourists don\'t usually carry a pensioner\'s prescriptions."',
   'enc.c_tourist.admit.label': '"I\'m visiting my father."',
   'enc.c_tourist.admit.reaction': '"Why not say so at the desk?" Changing your purpose means a new form, and that takes an hour.',
@@ -382,7 +386,7 @@ export const en: Record<string, string> = {
   'enc.c_tourist.mother.label': 'Ask him to call {contact}',
   'enc.c_tourist.mother.reaction': 'Your mother answers on the second ring.',
 
-  'enc.c_host.q': '"We need to confirm the address on your mother\'s letter."',
+  'enc.c_host.q': '"We need to confirm where you will stay."',
   'enc.c_host.call.label': 'Wait while they call',
   'enc.c_host.call.reaction': 'Reaching your mother takes an hour.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
@@ -415,6 +419,14 @@ export const en: Record<string, string> = {
   'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
   'enc.i_family.why.label': '"Why do you need to know?"',
   'enc.i_family.why.reaction': '"Routine." The officer waits an hour for your answer.',
+
+  'enc.i_water.q': 'The officer pushes a glass of water across the desk. "Take a minute."',
+  'enc.i_water.drink.label': 'Drink it',
+  'enc.i_water.drink.reaction': '"Better? Then we go on."',
+
+  'enc.i_phone.q': 'The officer\'s phone buzzes. He reads it and puts it face down.',
+  'enc.i_phone.wait.label': 'Wait for him',
+  'enc.i_phone.wait.reaction': '"Sorry. Where were we?"',
 
   'enc.i_clarify.q': '"You said you came as a tourist, but your family\'s details are in your file."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
@@ -517,7 +529,7 @@ export const en: Record<string, string> = {
   'check.hostCall.title': 'Your mother\'s address is being checked.',
   'check.hostCall.clear': 'Your mother answers. The officer hangs up and nods.',
   'check.hostCall.noAnswer': 'The officer puts the phone down without speaking.',
-  'check.hostCall.hint.clear': '"They are calling the number on the letter."',
+  'check.hostCall.hint.clear': '"They are calling your host."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',
   'check.medicineLab.name': 'Medicine check',
   'check.medicineLab.title': 'The medicine has gone for testing.',

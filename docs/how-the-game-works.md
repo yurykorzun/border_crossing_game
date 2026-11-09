@@ -1,6 +1,6 @@
 # Purpose of Visit - how the game works, as a card game
 
-TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints, and up to 3 more while your run stays quiet. Every question has 2-3 answers, and every answer has a price in time, suspicion, a card from your hand, or a person you expose. Nothing is free, so the game is about which price you can afford to pay right now.
+TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints, and up to 3 more while your run stays quiet. Most questions have 2-3 answers, and most answers have a price in time, suspicion, a card from your hand, or a person you expose. Most things cost; preparation and luck sometimes earn a no-cost answer. So the game is about which price you can afford to pay right now.
 
 ## The pieces
 
@@ -20,8 +20,9 @@ TL;DR: you hold a small hand of document cards and two people you can call on. T
 - Exposing anyone else costs time later: they are called in, so the next card that asks about something they can confirm takes 1 more hour. Every ending lists each person exposed with a severity (minor for a phone call, serious once their home is on file, severe for the protected person), plus the medicine and how much is on file.
 
 **The bulletin (the "modifier")**
-- One of 3 is dealt per run: customs is strict, accommodation calls are checked, or old records are being cross-checked.
+- One of 3 is dealt per run: medicines are lab-tested, hosts are phoned, or IDs are checked against old records.
 - It changes the price of some answers and the results of some checks. The same hand plays differently on a different day.
+- The packing screen shows it as a warning next to the documents. It points at a topic (medicine, accommodation, identity) and never names a document, so packing is a choice and not a lottery. The walk proves the warning pays: packings that cover its topic get home in time more often.
 
 ## The decks and the dealer
 
@@ -31,7 +32,12 @@ Each checkpoint (passport, customs, interview) has its own deck. At each one the
 2. A related card, which is the highest-priority card whose condition matches what you have done so far. If none match, you get another routine card.
 3. Only while the run is quiet: a third card. Quiet means every decision so far was a checkpoint card, with no follow-up, no inspection and no question asked in a waiting room. The third card is the routine question you have not had yet, else the best related card that fits, else nothing. It is existing content, so it adds a decision and very little reading. It exists because a quick, clean run was too short (eval rule 4), while a run full of checks and inspections is long enough already.
 
-This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, customs deals "We'll call your host" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
+Two more rules give the run some relief, so escalation lands harder:
+
+- Pacing: after 2 escalating cards in a row (related, follow-up, inspection), a routine card still left at that desk comes first. Whatever was next still comes after it. `npm run eval` rule 6 checks this on every transcript.
+- The breather is a calm card: an inspector lending you a pen at customs, a glass of water or a ringing phone at the interview. It has one answer, it costs nothing, and the tap is not counted as a decision. Calm cards are only dealt as breathers, so the desk always has one when the rule needs it.
+
+This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, or hosts are being phoned today, customs deals "We need to confirm where you will stay" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
 
 Some answers also queue a follow-up card that is dealt next. For example, a phone search that finds the protest photo queues "Were you at this rally?".
 
@@ -41,11 +47,13 @@ Every question card offers 2-3 answers, and they are always built from the same 
 
 | Kind | What you pay | Example |
 |---|---|---|
-| Show a document | A card from your hand, and its facts go on file | Show the employer letter, so "your employer" is now on file |
+| Show a document | A card from your hand, and its facts go on file. A document that settles the question keeps a harmless fact off file, so it costs only the card | Show the employer letter, so "your employer" is now on file. Show the deed for your photo, and nothing goes on file |
 | Let them check | Time (1-3), sometimes a waiting-room check | "Let them count it" -1 time |
 | Say something | Free now, but it adds a claim, or +1 scrutiny when something on file is the reason | "Say you're a tourist" adds a claim |
 | Name someone | Exposes a contact | "Ask your mother to vouch" |
 | Advantage | Your once-per-run ability | Lena explains her job plainly |
+
+A no-cost answer spends no time, no scrutiny and no contact, and puts no new fact on file (it may still use a document card). Preparation earns one (the deed for your photo, the return ticket for your cash), and so does luck (a calm card, a lie nobody catches yet). `npm run autoplay` prints how many each bot style gets per run.
 
 The rule that keeps it fair: every card has at least one answer that needs no document and no person, so you are never stuck. Missing options still show as greyed out ("Show a document - none packed"), so you can see what your packing cost you.
 
@@ -91,7 +99,7 @@ So there are two levels of winning. Getting through at all is the first level, a
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**
-A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-09) visited 8,845,731 states across 105 setups in about 57 s and checked, at every state and move:
+A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-09) visited 7,200,246 states across 105 setups in about 93 s and checked, at every state and move:
 - No dead ends and no loops: every run ends.
 - Time stays 0-8 and scrutiny 0-3; a spent document, an exposed contact or the used Advantage never comes back.
 - A double tap or a second resolution of the same check is refused; nothing is accepted after the ending.
@@ -99,11 +107,12 @@ A script (`npm run walk`) plays every possible choice and every card the dealer 
 - Scrutiny never rises without a reason that holds, the clarify and contradiction cards are only dealt when their claim and fact pair is on file, and the hotel is never shown after "Staying with family".
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
+- Every bulletin warning pays: with random answers and deals, packings with a document on the warned topic get home in time more often (customs, medicine: 35.9% vs 21.1%; accommodation: 44.1% vs 42.9%, against the one packing with no accommodation document; records, identity: 30.5% vs 28.4%).
 - The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.8 minutes and the median 5.7 (eval rule 4 asks for 4-8 and a median of 5 or more).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 
-Ending shares across all branches (share of branches, not of players): home in time 19.6%, at a cost 33.7%, too late 26.4%, turned back 20.2%.
+Ending shares across all branches (share of branches, not of players): home in time 16.4%, at a cost 29.7%, too late 34.6%, turned back 19.3%.
 
 **What is not balanced yet**
 The walk also works out the best ending a player can force in each setup whatever the dealer deals. Today it is "home in time" in all 105 setups, so for an informed player no packing is ever a real loss, and lying is too cheap (a tourism lie still got home with 6 of 8 hours left in playtesting). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost". Autoplay bots (67a.2) measure styles, and plj tunes the prices.
