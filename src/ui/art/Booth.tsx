@@ -1,31 +1,11 @@
 // The checkpoint booth as pixel art on a 30x32 grid: an officer silhouette behind
 // the glass, a counter, and the light on top. BoothArt is a group for a bigger scene
-// (the queue); Booth is the same drawing on its own, for the officer view of the run.
+// (the queue). The run's counter view is CheckpointScene, which shares OFFICER (officer.ts).
 
+import { OFFICER } from './officer';
 import { Pixels } from './pixels';
 
 export type BoothLight = 'red' | 'green';
-
-// A peaked cap, the head, and a dark uniform with amber shoulder marks.
-const OFFICER = [
-  '....oooo....',
-  '...oooooo...',
-  '..oooooooo..',
-  '....oooo....',
-  '...oooooo...',
-  '...oooooo...',
-  '....oooo....',
-  '.....oo.....',
-  '..oooooooo..',
-  '.oooooooooo.',
-  'oaaooooooaao',
-  'oaaooooooaao',
-  'oooooooooooo',
-  'oooooooooooo',
-  'oooooooooooo',
-  'oooooooooooo',
-  'oooooooooooo',
-];
 
 // The far queue on the other side, seen through the glass on either side of the officer.
 const CROWD = [
@@ -67,14 +47,5 @@ export function BoothArt({ light, x = 0, y = 0, counter = false }: { light: Boot
       <rect className="art-booth-panel" x="3" y="25" width="24" height="5" />
       {counter && <Pixels rows={PASSPORT} palette={{ r: 'art-passport', y: 'art-amber' }} x={18} y={20} />}
     </g>
-  );
-}
-
-/** The officer view: the booth filling the scene, decoration only. */
-export function Booth({ light = 'red' }: { light?: BoothLight }) {
-  return (
-    <svg className="art pixel booth" viewBox="-2 0 34 32" preserveAspectRatio="xMidYMax meet" shapeRendering="crispEdges" aria-hidden>
-      <BoothArt light={light} counter />
-    </svg>
   );
 }

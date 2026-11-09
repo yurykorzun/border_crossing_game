@@ -85,6 +85,11 @@ function chromeLines(s: RunState, p: Page): void {
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
   p.add('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length }, CHROME);
   p.add('ui.progress', { count, name }, CHROME);
+  // The counter scene's name for screen readers (CheckpointScene): on every run screen but the queue.
+  if (!(s.screen.kind === 'between' && !s.reaction)) {
+    const at = s.screen.kind === 'between' ? Math.max(0, s.screen.next - 1) : Math.min(s.checkpoint, 2);
+    p.add(`scene.${CHECKPOINTS[at]}`, {}, CHROME);
+  }
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   else if (s.screen.kind !== 'between')
     p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
@@ -145,6 +150,7 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.start');
   // Setup 1: TravelerStep. Title, stage label, the premise as the heading, two cards.
   p.add('ui.title');
+  p.add('scene.traveler', {}, CHROME);
   p.add('ui.traveler');
   p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 3 }), name: t('ui.traveler') });
   p.add('ui.premise');
@@ -166,6 +172,7 @@ function setupLines(setup: RunSetup, p: Page): void {
   // Setup 2: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
+  p.add('scene.preparation', {}, CHROME);
   const count = t('ui.progressCount', { n: 2, total: 3 });
   p.add('ui.preparation');
   p.add('ui.progress', { count, name: t('ui.preparation') });
@@ -227,7 +234,6 @@ function screenLines(s: RunState, p: Page): void {
   if (sc.kind === 'between') {
     // Queue in src/App.tsx: every beat, tap by tap, then the walk up to the officer.
     const beats = queueBeats(sc.next, s.character);
-    p.add('ui.inQueue');
     for (const b of beats) {
       if (b.from) p.add(`msg.from.${b.from}`);
       p.add(b.key);
@@ -270,6 +276,7 @@ function screenLines(s: RunState, p: Page): void {
 
 function endingLines(s: RunState, p: Page): void {
   const ending = s.ending!;
+  p.add(ending === 'turnedBack' ? 'scene.turnedBack' : s.medicine ? 'scene.bus' : 'scene.busEmpty', {}, CHROME);
   p.add('ui.timeLeft', { n: s.time });
   p.add(`ending.${ending}.title`);
   p.add(`ending.${ending}.body`);

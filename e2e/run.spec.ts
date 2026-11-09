@@ -131,7 +131,7 @@ test('after an answer: the reaction, what changed, and the next action', async (
   await expect(reaction).toContainText("Your mother's address is now on file.");
   await expect(next).toHaveText('Proceed to customs');
   await next.click();
-  await expect(page.locator('main.run .queue-title')).toBeVisible();
+  await expect(page.locator('main.run .queue-scene')).toBeVisible();
   expect(errors).toEqual([]);
 });
 

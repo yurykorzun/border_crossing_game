@@ -20,8 +20,10 @@ import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, Setting
 import { SEPARATOR, nextActionKey, packDetail } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
-import { Booth } from './ui/art/Booth';
-import { QueueScene } from './ui/art/QueueScene';
+import { CheckpointScene } from './ui/art/CheckpointScene';
+import type { SceneState } from './ui/art/CheckpointScene';
+import { BorderPost, Desk, NightBus } from './ui/art/JourneyScenes';
+import { CustomsQueueScene, InterviewQueueScene, QueueScene } from './ui/art/QueueScene';
 import { Icon } from './ui/art/icons';
 
 const store = browserStore();
@@ -191,8 +193,7 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
   return (
     <main className="setup setup-step documents-step">
       <div className="setup-body" ref={bodyRef} onScroll={onScroll}>
-        {/* The scene slot: a desk by a snowy window, drawn later (67a.19). */}
-        <div className="pack-scene" aria-hidden />
+        <div className="pack-scene"><Desk /></div>
         <header className="step-head">
           <div className="step-nav">
             <BackButton onBack={onBack} />
@@ -309,8 +310,7 @@ function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; on
     <main className="setup traveler-step">
       <div className="setup-body">
         <p className="setup-title">{t('ui.title')}</p>
-        {/* The scene slot: a border post at dusk, drawn later (67a.19). */}
-        <div className="traveler-scene" aria-hidden />
+        <div className="traveler-scene"><BorderPost /></div>
         <header className="step-head">
           <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.traveler') })} part={count} /></p>
           <h2 className="premise">{t('ui.premise')}</h2>
@@ -371,12 +371,21 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   onRestart: () => void;
 }) {
   const [sheet, setSheet] = useState<'story' | 'evidence' | 'scrutiny' | 'settings' | null>(null);
+  const usedBefore = useUsedBefore(s);
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
 
   const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)];
   const close = () => setSheet(null);
   const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
+  // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
+  const sceneAt = s.screen.kind === 'between' ? Math.max(0, s.screen.next - 1) : Math.min(s.checkpoint, 2);
+  const sceneState: SceneState = {
+    handedOver: s.used.length > (usedBefore[sceneAt] ?? s.used.length),
+    writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
+    away: s.screen.kind === 'wait',
+    medicine: s.medicine,
+  };
   return (
     <main className="run">
       <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
@@ -385,16 +394,16 @@ function Run({ s, dispatch, data, setData, onRestart }: {
         <Queue key={`${s.seed}.${queue}`} next={queue} character={s.character} still={data.settings.reduceMotion} onDone={() => dispatch({ type: 'ack' })} />
       ) : (
         <>
-          <div className={`scene scene-${CHECKPOINTS[Math.min(s.checkpoint, 2)]} ${data.settings.reduceMotion ? 'still' : ''}`} aria-hidden>
-            <div className="flicker" />
-            {s.screen.kind === 'wait' ? (
-              <div className="tray"><span className="mono">{t('ui.waiting')}</span></div>
-            ) : s.screen.kind !== 'between' ? (
-              <div className="officer">
-                <Booth />
-                <span className="mono officer-label">{t(`officer.${officerKey}`)}</span>
-              </div>
-            ) : null}
+          <div className={`scene scene-${CHECKPOINTS[sceneAt]} ${data.settings.reduceMotion ? 'still' : ''}`}>
+            <div className="officer">
+              <CheckpointScene checkpoint={CHECKPOINTS[sceneAt]} character={s.character} state={sceneState} />
+              {s.screen.kind === 'wait' ? (
+                <span className="mono officer-label" aria-hidden>{t('ui.waiting')}</span>
+              ) : s.screen.kind !== 'between' ? (
+                <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
+              ) : null}
+            </div>
+            <div className="flicker" aria-hidden />
           </div>
           <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
         </>
@@ -420,6 +429,21 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   );
 }
 
+/**
+ * How many documents were already used when each checkpoint began, so the scene shows
+ * only the ones handed over at this counter. Nothing is used before the first one; after
+ * a reload the count starts from what is used by then.
+ */
+function useUsedBefore(s: RunState): Record<number, number> {
+  const [seen, setSeen] = useState<{ seed: number; at: Record<number, number> }>(() => ({ seed: s.seed, at: { 0: 0 } }));
+  const cp = Math.min(s.checkpoint, 2);
+  let now = seen.seed === s.seed ? seen : { seed: s.seed, at: { 0: 0 } };
+  if (!(cp in now.at)) now = { ...now, at: { ...now.at, [cp]: s.used.length } };
+  // Adjusting state while rendering, as React allows for values derived from earlier renders.
+  if (now !== seen) setSeen(now);
+  return now.at;
+}
+
 /** The officer's line, then one line per change, then a button that says what comes next. */
 function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void }) {
   return (
@@ -437,7 +461,8 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
 
 /**
  * The queue before a checkpoint, one beat per tap (on the scene, the phone or the button).
- * Phone messages stack in the phone panel; said and seen beats are a caption over the scene.
+ * Phone messages stack in the phone panel joined to the scene's lower edge; said and seen
+ * beats are a caption over the scene. The strip already says "In the queue", so the scene does not.
  * The last beat swaps Continue for the walk up to the officer, which is the engine's ack.
  */
 function Queue({ next, character, still, onDone }: { next: number; character: CharacterId; still: boolean; onDone: () => void }) {
@@ -448,15 +473,16 @@ function Queue({ next, character, still, onDone }: { next: number; character: Ch
   const current = seen[seen.length - 1];
   const caption = seen.findLast((b) => b.kind !== 'phone');
   const advance = () => { if (!done) setShown((n) => n + 1); };
-  // Only the passport queue has its drawn scene so far; the light turns on the clerk's "Next.".
-  const art = next === 0 ? <QueueScene light={seen.some((b) => b.light === 'green') ? 'green' : 'red'} character={character} /> : null;
+  // In the passport queue the booth light turns green on the clerk's "Next.".
+  const art = next === 0 ? <QueueScene light={seen.some((b) => b.light === 'green') ? 'green' : 'red'} character={character} />
+    : next === 1 ? <CustomsQueueScene character={character} />
+    : <InterviewQueueScene character={character} />;
 
   return (
     <>
       <div className={`scene scene-${CHECKPOINTS[next]} queue-scene ${still ? 'still' : ''}`} onClick={advance}>
         {art}
         <div className="flicker" aria-hidden />
-        <h2 className="queue-title mono">{t('ui.inQueue')}</h2>
         <div className="caption-area" aria-live="polite">
           {caption && <p key={caption.key} className={`caption ${caption.kind}`}>{t(caption.key)}</p>}
         </div>
@@ -608,6 +634,9 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
   }
   return (
     <main className={`ending ending-${ending}`}>
+      <div className="ending-scene">
+        {ending === 'turnedBack' ? <BorderPost closed /> : <NightBus medicine={s.medicine} character={s.character} />}
+      </div>
       <section className="paper ending-card">
         <p className="mono">{t('ui.timeLeft', { n: s.time })}</p>
         <h1>{t(`ending.${ending}.title`)}</h1>

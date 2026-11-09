@@ -262,3 +262,73 @@ test('every card and waiting room fits at 390x844 with no page scroll', async ({
   }
   expect(errors).toEqual([]);
 });
+
+// ── Scenes (src/ui/art): one per checkpoint, named for screen readers, and the counter
+// changes after you act. The traveler, packing and ending screens each have one too.
+
+test('each checkpoint has its own named scene, and so do the traveler, packing and ending screens', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const requests: string[] = [];
+  page.on('request', (r) => requests.push(r.url()));
+  await page.goto('./');
+
+  await page.locator('.title-screen button.primary').click();
+  await expect(page.locator('.traveler-scene svg[role="img"]')).toBeVisible();
+  await page.getByRole('radio').first().click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  await expect(page.locator('.pack-scene svg[role="img"]')).toBeVisible();
+
+  const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+  const labels: string[] = [];
+  for (const [id, cp] of [['p_purpose', 0], ['c_medicine', 1], ['i_stay', 2]] as const) {
+    await openAt(page, { ...base, reaction: null, screen: { kind: 'encounter', id }, checkpoint: cp, slot: 1 });
+    const scene = page.locator('main.run .scene svg[role="img"]');
+    await expect(scene, id).toHaveCount(1);
+    await expect(scene, id).toBeVisible();
+    labels.push((await scene.getAttribute('aria-label')) ?? '');
+  }
+  expect(labels[0]).toMatch(/booth/);
+  expect(labels[1]).toMatch(/inspection table/);
+  expect(labels[2]).toMatch(/interview room/);
+  expect(new Set(labels).size).toBe(3);
+
+  // The ending: the night bus, or the border post if you were turned back.
+  for (const ending of ['homeInTime', 'turnedBack'] as const) {
+    const run: RunState = { ...base, reaction: null, screen: { kind: 'ending' }, ending };
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
+    await page.reload();
+    await expect(page.locator('.ending-scene svg[role="img"]'), ending).toBeVisible();
+  }
+
+  const origin = new URL(page.url()).origin;
+  expect(requests.filter((u) => !u.startsWith('data:') && new URL(u).origin !== origin)).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+for (const reduceMotion of [false, true]) {
+  test(`showing the letter puts a document on the clerk's side${reduceMotion ? ', with no animation under Reduce motion' : ''}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.goto('./');
+    const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+    const run: RunState = { ...base, reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 };
+    const save = { ...freshSave(), run };
+    save.settings = { ...save.settings, reduceMotion };
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify(save)] as const);
+    await page.reload();
+
+    const scene = page.locator('main.run .scene svg[data-scene="passport"]');
+    await expect(scene).toBeVisible();
+    await expect(scene.locator('[data-doc]')).toHaveCount(0);
+    await page.getByRole('button', { name: "Show your mother's letter" }).click();
+    await expect(page.locator('main.run .panel.reaction')).toBeVisible();
+    const doc = scene.locator('[data-doc]');
+    await expect(doc).toHaveCount(1);
+    await expect(doc).toBeVisible();
+    const running = await doc.evaluate((el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length);
+    if (reduceMotion) expect(running, 'animations on the document under Reduce motion').toBe(0);
+    await expectFits(page, 'reaction to the letter');
+    expect(errors).toEqual([]);
+  });
+}

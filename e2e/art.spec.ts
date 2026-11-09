@@ -49,7 +49,7 @@ test('portraits on the traveler cards and in My story, the queue scene, and no r
   const button = page.locator('main.run .controls button.primary');
   while ((await button.innerText()).trim() !== 'Approach the booth') await button.click();
   await button.click();
-  await expect(page.locator('main.run .officer svg.booth g.officer-art')).toBeVisible();
+  await expect(page.locator('main.run .officer svg.checkpoint-art g.officer-art')).toBeVisible();
 
   const origin = new URL(baseURL!).origin;
   const foreign = requests.filter((u) => !u.startsWith('data:') && new URL(u).origin !== origin);

@@ -231,6 +231,15 @@ export const en: Record<string, string> = {
   'officer.interview': 'Officer',
   'officer.followup': 'Officer',
   'officer.inspection': 'Supervisor',
+  // Scene names for screen readers (src/ui/art): never shown, so not counted as read.
+  'scene.passport': 'The passport booth: the clerk behind the glass',
+  'scene.customs': 'The customs inspection table',
+  'scene.interview': 'The interview room: an officer at a table',
+  'scene.traveler': 'A border post at dusk, in snow',
+  'scene.preparation': 'Your papers on a desk by a snowy window',
+  'scene.bus': 'The medicine box in your hand on a night bus, the hospital through the rain',
+  'scene.busEmpty': 'Your empty hand on a night bus, the hospital through the rain',
+  'scene.turnedBack': 'The border post at night, the barrier down',
 
   // ── The queue before each checkpoint (src/game/content/queues.ts says which beat
   // is a phone message and which is said or seen). A .lena / .mark key is one traveler's.

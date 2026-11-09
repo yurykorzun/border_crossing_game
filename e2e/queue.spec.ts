@@ -20,6 +20,20 @@ async function startRun(page: Page, id: CharacterId) {
   await page.locator('.begin-step .controls button.primary').click();
 }
 
+/** Nothing scrolls the page: the queue fits in the phone screen on every beat. */
+async function expectFits(page: Page, where: string) {
+  const scroll = await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight);
+  expect(scroll, `page scroll on ${where}`).toBeLessThanOrEqual(0);
+}
+
+/** The first message starts within 16 px of the scene's bottom edge, or overlaps it. */
+async function expectPhoneAgainstScene(page: Page) {
+  const scene = await page.locator('main.run .scene').boundingBox();
+  const msg = await page.locator('main.run .panel.phone .msg').first().boundingBox();
+  expect(scene && msg, 'scene and first message on screen').toBeTruthy();
+  expect(msg!.y - (scene!.y + scene!.height), 'gap between scene and first message').toBeLessThanOrEqual(16);
+}
+
 for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']] as const) {
   test(`first queue for ${id}: one beat per tap, ending in Approach the booth`, async ({ page }) => {
     const errors: string[] = [];
@@ -34,9 +48,12 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     const button = run.locator('.controls button.primary');
     const strip = run.locator('.strip');
 
-    // The queue is not named after the checkpoint yet.
-    await expect(run.getByRole('heading', { name: 'In the queue' })).toBeVisible();
+    // The queue is not named after the checkpoint yet, and the strip says so once:
+    // the scene carries no title of its own.
     await expect(strip).toContainText('1 / 3 · In the queue');
+    await expect(run.getByText('In the queue')).toHaveCount(1);
+    await expectFits(page, 'beat 1');
+    await expectPhoneAgainstScene(page);
     for (const part of ['.strip', '.scene', '.panel', '.controls'])
       await expect(run.locator(part)).not.toContainText('Passport control');
 
@@ -52,6 +69,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     await expect(msgs).toHaveCount(2);
     await expect(msgs.nth(1)).toContainText(own);
     await expect(phone).not.toContainText(other);
+    await expectFits(page, 'beat 2');
 
     // 3. The phone goes down; the passenger ahead speaks, as a caption over the scene.
     await button.click();
@@ -59,6 +77,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     await expect(phone).not.toContainText('Six times');
     await expect(msgs).toHaveCount(2);
     await expect(button).toHaveText('Continue');
+    await expectFits(page, 'beat 3');
 
     // 4. A tap on the phone works too: the booth light changes, red to green, on "Next.".
     const light = scene.locator('svg.queue-art .booth-light');
@@ -73,8 +92,11 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
 
     // 5. The walk up to the officer. The checkpoint is named only now.
     await expect(button).toHaveText('Approach the booth');
+    await expect(run.getByText('In the queue')).toHaveCount(1);
+    await expectFits(page, 'beat 4');
+    await expectPhoneAgainstScene(page);
     await button.click();
-    await expect(run.getByRole('heading', { name: 'In the queue' })).toHaveCount(0);
+    await expect(run.getByText('In the queue')).toHaveCount(0);
     await expect(strip).toContainText('1 / 3 · Passport control');
     await expect(run.locator('.officer')).toBeVisible();
     expect(errors).toEqual([]);
@@ -102,7 +124,11 @@ test('a whole Mark run never shows Ilya, and each queue ends in its own button',
     const option = page.locator('main.run .controls button:enabled').first();
     await expect(option).toBeVisible();
     const label = (await option.innerText()).trim();
-    if (queueGo.includes(label)) seenGo.push(label);
+    if (queueGo.includes(label)) {
+      seenGo.push(label);
+      // Every queue is a drawn scene, not a blank panel.
+      await expect(page.locator('main.run .queue-scene svg.queue-art'), label).toBeVisible();
+    }
     await option.click();
   }
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
