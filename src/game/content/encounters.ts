@@ -3,8 +3,10 @@
 // Text lives in src/i18n/en.ts: enc.<id>.q, enc.<id>.<approach>.label/.reaction.
 //
 // Rule: every encounter has an approach that needs no card and no contact.
-// Most answers cost something. A calm card (a quick stamp, a helpful
-// inspector) costs nothing, so the escalation around it lands harder.
+// Most answers cost something. A calm card (a helpful inspector, a glass of
+// water) costs nothing, so the escalation around it lands harder. Only the
+// pacing rule deals one (breather() in engine.ts). Passport control never
+// needs a breather, so it has none (the walk checks every card is dealt).
 //
 // Facts stay at the desk where they came out (docs/design.md "What each
 // official knows"). They travel on only through a channel: the records
@@ -60,11 +62,6 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'scan', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' },
     ],
-  },
-  {
-    // Calm: a quick stamp. Nothing is asked, so there is one answer and it costs nothing.
-    id: 'p_stamp', checkpoint: 'passport', kind: 'routine', calm: true,
-    approaches: [{ id: 'thanks', kind: 'say', effects: [] }],
   },
   {
     id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'identity',
@@ -172,6 +169,16 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'deny', kind: 'say', effects: [{ claim: 'noOtherFamily' }] },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
+  },
+  {
+    // Calm: the officer gives you a minute. One answer, and it costs nothing.
+    id: 'i_water', checkpoint: 'interview', kind: 'routine', calm: true,
+    approaches: [{ id: 'drink', kind: 'say', effects: [] }],
+  },
+  {
+    // Calm: the officer's phone interrupts. The interview can need two breathers.
+    id: 'i_phone', checkpoint: 'interview', kind: 'routine', calm: true,
+    approaches: [{ id: 'wait', kind: 'say', effects: [] }],
   },
   {
     // Inconsistency: something on file makes a claim look odd. Cheap to clear up.

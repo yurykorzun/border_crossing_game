@@ -465,7 +465,7 @@ function escalatesNext(s: RunState): boolean {
 /**
  * The pacing rule: after 2 escalating cards in a row, a routine card still left
  * at this desk comes first, a calm one if there is one. It is one more card, and
- * whatever was next still comes after it.
+ * whatever was next still comes after it. Calm cards are only dealt here.
  */
 function breather(s: RunState): Encounter | undefined {
   if ((s.streak ?? 0) < 2 || !escalatesNext(s)) return undefined;
@@ -519,18 +519,19 @@ function quiet(s: RunState): boolean {
 /**
  * The third card for a quiet run: the routine question not asked yet, so
  * everyone hears both, else the related card that fits best. Nothing new to
- * read, only one more decision.
+ * read, only one more decision. Never a calm card: those are kept for breathers.
  */
 function extraCard(s: RunState): Encounter | undefined {
   const cp = CHECKPOINTS[s.checkpoint];
-  const fits = ENCOUNTERS.filter((e) => e.checkpoint === cp && eligible(s, e));
+  const fits = ENCOUNTERS.filter((e) => e.checkpoint === cp && !e.calm && eligible(s, e));
   return fits.find((e) => e.kind === 'routine')
     ?? fits.filter((e) => e.kind === 'related').sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
 }
 
 function deal(s: RunState, dealer: Dealer): RunState {
   const cp = CHECKPOINTS[s.checkpoint];
-  const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && eligible(s, e));
+  // Calm cards are kept for breathers, so a desk always has one when the pacing rule needs it.
+  const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && !e.calm && eligible(s, e));
   let chosen: Encounter | undefined;
   let rng = s.rng;
   if (s.slot === 2) return show({ ...s, slot: 3 }, extraCard(s)!.id);

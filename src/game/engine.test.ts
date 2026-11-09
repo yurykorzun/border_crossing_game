@@ -56,12 +56,12 @@ describe('relief and pacing', () => {
   });
 
   it('a calm card is one free tap, not a decision', () => {
-    const s = at(newRun(lena), 'p_stamp', { slot: 2 });
+    const s = at(newRun(lena), 'c_pen', { checkpoint: 1, slot: 2 });
     const [o, ...rest] = options(s);
     expect(rest).toEqual([]);
     expect(noCost(s, o)).toBe(true);
     const r = tryStep(s, { type: 'choose', approach: o.approach.id });
-    if (!r.ok) throw new Error('the stamp card has one answer');
+    if (!r.ok) throw new Error('the pen card has one answer');
     expect(r.state.decisions).toBe(s.decisions);
   });
 

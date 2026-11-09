@@ -106,9 +106,9 @@ export interface Encounter {
   /** Drives the character's perk and weakness. */
   topic?: Topic;
   /**
-   * routine cards only: a kind or uneventful moment (a quick stamp, a helpful
-   * inspector). One answer that costs nothing, so it is not counted as a
-   * decision, and the dealer's breather deals one first.
+   * routine cards only: a kind or uneventful moment (a helpful inspector, a
+   * glass of water). One answer that costs nothing, so it is not counted as a
+   * decision. Only the dealer's breather deals one (breather() in src/game/engine.ts).
    */
   calm?: true;
   /** related cards: higher wins. Consequences of answers beat background. */

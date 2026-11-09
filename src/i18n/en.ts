@@ -341,10 +341,6 @@ export const en: Record<string, string> = {
   'enc.p_photo.scan.label': 'Offer a face scan',
   'enc.p_photo.scan.reaction': 'Matching the scan takes an hour.',
 
-  'enc.p_stamp.q': '"Look at the camera, please." The stamp comes down.',
-  'enc.p_stamp.thanks.label': '"Thank you."',
-  'enc.p_stamp.thanks.reaction': '"Have a good visit."',
-
   'enc.p_secondPassport.q': '"You hold another passport. Which country do you consider yours?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
   'enc.p_secondPassport.both.reaction': 'She writes "dual national" on your file and flags it.',
@@ -423,6 +419,14 @@ export const en: Record<string, string> = {
   'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
   'enc.i_family.why.label': '"Why do you need to know?"',
   'enc.i_family.why.reaction': '"Routine." The officer waits an hour for your answer.',
+
+  'enc.i_water.q': 'The officer pushes a glass of water across the desk. "Take a minute."',
+  'enc.i_water.drink.label': 'Drink it',
+  'enc.i_water.drink.reaction': '"Better? Then we go on."',
+
+  'enc.i_phone.q': 'The officer\'s phone buzzes. He reads it and puts it face down.',
+  'enc.i_phone.wait.label': 'Wait for him',
+  'enc.i_phone.wait.reaction': '"Sorry. Where were we?"',
 
   'enc.i_clarify.q': '"You said you came as a tourist, but your family\'s details are in your file."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',

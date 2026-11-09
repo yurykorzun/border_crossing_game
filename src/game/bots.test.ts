@@ -41,7 +41,7 @@ describe('autoplay bots', () => {
   });
 
   it('the honest bot gets at least 1 no-cost answer per run on average', () => {
-    // Preparation and luck: a document that settles the question, a calm card, the perk.
+    // Preparation and luck: a document that settles the question, a calm card, the perk, an evasion nothing on file contradicts.
     let free = 0;
     for (let i = 0; i < SETUP_COUNT; i++) free += playRun('honest', setupFor(i)).noCost;
     expect(free / SETUP_COUNT).toBeGreaterThanOrEqual(1);

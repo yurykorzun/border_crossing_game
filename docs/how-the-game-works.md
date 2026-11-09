@@ -33,8 +33,8 @@ Each checkpoint (passport, customs, interview) has its own deck. At each one the
 
 Two more rules give the run some relief, so escalation lands harder:
 
-- A few routine cards are calm: a quick stamp at passport control, an inspector lending you a pen at customs. They have one answer, it costs nothing, and the tap is not counted as a decision.
-- Pacing: after 2 escalating cards in a row (related, follow-up, inspection), a routine card still left at that desk comes first, a calm one if there is one. Whatever was next still comes after it. `npm run eval` rule 6 checks this on every transcript.
+- Pacing: after 2 escalating cards in a row (related, follow-up, inspection), a routine card still left at that desk comes first. Whatever was next still comes after it. `npm run eval` rule 6 checks this on every transcript.
+- The breather is a calm card: an inspector lending you a pen at customs, a glass of water or a ringing phone at the interview. It has one answer, it costs nothing, and the tap is not counted as a decision. Calm cards are only dealt as breathers, so the desk always has one when the rule needs it.
 
 This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, customs deals "We'll call your host" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
 
