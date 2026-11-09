@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import appSource from '../App.tsx?raw';
 import partsSource from '../ui/parts.tsx?raw';
 import { playRun, setupFor } from './bots';
-import { RULES, evaluate, formatFailure, transcriptOf } from './transcript';
+import { KNOWN_FAILURES, RULES, evaluate, formatFailure, transcriptOf } from './transcript';
 import type { KnownFailure, Transcript } from './transcript';
 
 // setupFor() cycles Lena's setups first, then Mark's; 60 is Mark's first.
@@ -91,6 +91,24 @@ describe('scenario evals', () => {
     expect(formatFailure(after.fresh[0])).toMatch(/step \d+ /);
     // Before the extra beats the run was short (covered) or in range: either way it passed.
     expect(before.fresh).toEqual([]);
+  });
+
+  it('rule 4: clean runs pass with no known entry, and no rule 4 entry is left', () => {
+    const trs = [run(LENA), run(LENA, 'liar'), run(MARK), run(MARK, 'liar')];
+    expect(only(4, trs).fresh).toEqual([]);
+    expect(KNOWN_FAILURES.filter((k) => k.rule === 4)).toEqual([]);
+  });
+
+  it('rule 4: a short run fails, unless you withdrew from it', () => {
+    const tr = run(LENA);
+    tr.lines = tr.lines.map((l) => ({ ...l, text: '' }));
+    tr.beatSeconds = 0;
+    const r = only(4, [tr]);
+    expect(r.exitCode).toBe(1);
+    expect(r.fresh[0]).toMatchObject({ rule: 4, key: 'tooShort' });
+    expect(only(4, [{ ...tr, ending: 'turnedBack' }]).exitCode).toBe(0);
+    // A withdrawn run still has the 8-minute ceiling.
+    expect(only(4, [{ ...tr, ending: 'turnedBack', beatSeconds: 600 }]).fresh[0]).toMatchObject({ key: 'tooLong' });
   });
 
   it('rule 4: the known tooShort entry covers only runs at or above its floor', () => {

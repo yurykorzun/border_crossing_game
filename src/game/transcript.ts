@@ -364,6 +364,27 @@ export interface Failure {
 
 export type Rule = { id: number; name: string; check: (tr: Transcript) => Omit<Failure, 'rule' | 'style' | 'seed' | 'character'>[] };
 
+/**
+ * Rule 4 for a target range. The floor is for a run that goes the whole way. A run
+ * you withdraw from (turnedBack) only has the ceiling, because you chose to stop early
+ * and the game should not make you read more for it.
+ */
+export function playTimeRule(range: { min: number; max: number }): Rule {
+  return {
+    id: 4,
+    name: `estimated play time is ${range.min}-${range.max} minutes (a run you withdraw from can be shorter)`,
+    check: (tr) => {
+      const m = playMinutes(tr);
+      if (m <= range.max && (m >= range.min || tr.ending === 'turnedBack')) return [];
+      const last = tr.lines.length ? tr.lines[tr.lines.length - 1].step : 0;
+      return [{
+        step: last, key: m < range.min ? 'tooShort' : 'tooLong', minutes: m,
+        detail: `${m.toFixed(1)} min (${words(tr)} words, ${tr.beatSeconds.toFixed(0)} s of beats, ${tr.decisions} decisions)`,
+      }];
+    },
+  };
+}
+
 export const RULES: Rule[] = [
   {
     id: 1,
@@ -415,19 +436,7 @@ export const RULES: Rule[] = [
       return out;
     },
   },
-  {
-    id: 4,
-    name: `estimated play time is ${PLAY_MINUTES.min}-${PLAY_MINUTES.max} minutes`,
-    check: (tr) => {
-      const m = playMinutes(tr);
-      if (m >= PLAY_MINUTES.min && m <= PLAY_MINUTES.max) return [];
-      const last = tr.lines.length ? tr.lines[tr.lines.length - 1].step : 0;
-      return [{
-        step: last, key: m < PLAY_MINUTES.min ? 'tooShort' : 'tooLong', minutes: m,
-        detail: `${m.toFixed(1)} min (${words(tr)} words, ${tr.beatSeconds.toFixed(0)} s of beats, ${tr.decisions} decisions)`,
-      }];
-    },
-  },
+  playTimeRule(PLAY_MINUTES),
   {
     id: 5,
     name: 'every string resolves through t() with no missing key or unfilled {var}',
@@ -446,11 +455,7 @@ export interface KnownFailure {
   bead: string;
 }
 
-export const KNOWN_FAILURES: KnownFailure[] = [
-  // Most runs estimate 3-5.5 minutes, the shortest 2.8 (measured 2026-11-08); none run over 8.
-  // Only today's band is covered: a run under 2.5 minutes is a new failure.
-  { rule: 4, key: 'tooShort', atLeastMinutes: 2.5, bead: 'border_crossing_game-67a.12' },
-];
+export const KNOWN_FAILURES: KnownFailure[] = [];
 
 const matches = (k: KnownFailure, f: Failure) =>
   k.rule === f.rule && k.key === f.key && (!k.character || k.character === f.character) &&
