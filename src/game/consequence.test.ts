@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
-import { BULLETINS, BULLETIN_TOPICS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
-import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -217,13 +217,16 @@ describe('packing rows', () => {
   });
 });
 
-describe('Relevant today, on the packing screen', () => {
-  it('tags the hospital note under the medicines bulletin, and nothing outside its topic', () => {
-    expect(t('bulletin.customs')).toBe('Medicines are lab-tested today.');
-    expect(EVIDENCE_IDS.filter((id) => relevantToday(id, 'customs'))).toEqual(['hospitalNote']);
-    for (const b of BULLETINS)
-      for (const id of EVIDENCE_IDS) expect(relevantToday(id, b), `${id} under ${b}`).toBe(EVIDENCE[id].topics.includes(BULLETIN_TOPICS[b]));
-    expect(t('ui.relevantToday')).toBe('Relevant today');
+describe('the packing cue, one per bulletin', () => {
+  it('is one sentence about officers, and no row tag is left', () => {
+    expect(t('bulletin.accommodation.cue')).toBe("Officers are calling hosts to check where you'll stay.");
+    for (const b of BULLETINS) {
+      const cue = t(`bulletin.${b}.cue`);
+      expect(cue, b).toMatch(/^Officers /);
+      expect(cue.match(/[.!?]/g), b).toHaveLength(1);
+      expect(cue, b).toMatch(/[.!?]$/);
+    }
+    expect(has('ui.relevantToday')).toBe(false);
   });
 });
 

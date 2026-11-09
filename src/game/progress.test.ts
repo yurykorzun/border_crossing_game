@@ -47,7 +47,7 @@ describe('top strip in the transcript', () => {
         if (at < 0 || !progress) continue;
         expect(progress.text, `${style} ${i} step ${st}`).toContain(`${at + 1} / ${CHECKPOINTS.length}`);
         // The officer's label stays up with the scene.
-        expect(chrome.some((l) => l.key.startsWith('officer.') || l.key === 'ui.waiting'), `${style} ${i} step ${st}`).toBe(true);
+        expect(chrome.some((l) => l.key.startsWith('officer.')), `${style} ${i} step ${st}`).toBe(true);
         checked++;
         if (tr.lines.some((l) => l.step === st && /^ui\.proceed\.(customs|interview)$/.test(l.key))) lastReactions++;
       }

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
-import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 
 // The three setup screens at 390x844: Choose your traveler, Pack your documents, Begin the crossing.
 
@@ -259,33 +259,66 @@ test('packing at large text: a "more below" cue until the list is scrolled to th
   await expect(docsScreen.locator('.doc').last()).toBeInViewport();
 });
 
-// A document whose topic the bulletin points at carries a quiet Relevant today tag
-// (2026-11-09 screenshot review). The bulletin comes from the setup seed, so the test
-// pins the seed's two sources for the one click that draws it: seed 3 is the medicines bulletin.
-test('under the medicines bulletin, only the hospital note says Relevant today', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('./');
-  await page.evaluate(() => {
-    const w = window as unknown as { __now: () => number; __random: () => number };
-    w.__now = Date.now; w.__random = Math.random;
-    Date.now = () => 3; Math.random = () => 0;
-  });
-  await page.locator('.title-screen button.primary').click();
-  await page.evaluate(() => {
-    const w = window as unknown as { __now: () => number; __random: () => number };
-    Date.now = w.__now; Math.random = w.__random;
-  });
-  await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
-  await page.locator('.traveler-step .controls button.primary').click();
+// One cue above the list says what officers are doing today, in place of a Relevant today
+// tag on each row (2026-11-09 design review). Names are 17-18 px and both detail lines 16 px.
+// The bulletin comes from the setup seed, so the test pins the seed's two sources for the
+// one click that draws it: seed 3, 4 and 5 give the bulletins in BULLETINS order.
+for (const [n, bulletin] of BULLETINS.entries()) {
+  test(`packing under the ${bulletin} bulletin: one cue above the list, no row tags, readable rows`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.goto('./');
+    await page.evaluate((seed) => {
+      const w = window as unknown as { __now: () => number; __random: () => number };
+      w.__now = Date.now; w.__random = Math.random;
+      Date.now = () => seed; Math.random = () => 0;
+    }, BULLETINS.length + n);
+    await page.locator('.title-screen button.primary').click();
+    await page.evaluate(() => {
+      const w = window as unknown as { __now: () => number; __random: () => number };
+      Date.now = w.__now; Math.random = w.__random;
+    });
+    await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
+    await page.locator('.traveler-step .controls button.primary').click();
 
-  const docsScreen = page.locator('main.documents-step');
-  await expect(docsScreen.getByRole('note', { name: "Today's bulletin" })).toHaveText(en['bulletin.customs']);
-  const tagged = docsScreen.locator('.doc', { has: page.locator('.tag.relevant') });
-  await expect(tagged).toHaveCount(1);
-  await expect(tagged.locator('strong')).toHaveText(en['ev.hospitalNote.label']);
-  await expect(tagged.locator('.tag.relevant')).toHaveText(en['ui.relevantToday']);
-  // The tag sits on the name line and the list still fits with no scroll.
-  await stepFits(page, 'documents, medicines bulletin');
-  expect(errors).toEqual([]);
-});
+    const docsScreen = page.locator('main.documents-step');
+    await expect(docsScreen.getByRole('note', { name: "Today's bulletin" })).toHaveText(en[`bulletin.${bulletin}`]);
+    // Exactly one cue, one sentence, and it sits between the bulletin and the list.
+    const cue = docsScreen.locator('.pack-cue');
+    await expect(cue).toHaveCount(1);
+    await expect(cue).toHaveText(en[`bulletin.${bulletin}.cue`]);
+    const sentence = (await cue.innerText()).trim();
+    expect(sentence.match(/[.!?]/g), sentence).toHaveLength(1);
+    const order = await page.evaluate(() => {
+      const top = (s: string) => document.querySelector(`.documents-step ${s}`)!.getBoundingClientRect();
+      return { bulletin: top('.bulletin').bottom, cueTop: top('.pack-cue').top, cueBottom: top('.pack-cue').bottom, list: top('.cards.pick').top };
+    });
+    expect(order.cueTop, 'cue below the bulletin').toBeGreaterThanOrEqual(order.bulletin);
+    expect(order.cueBottom, 'cue above the list').toBeLessThanOrEqual(order.list);
+    await expect(docsScreen.locator('.tag')).toHaveCount(0);
+    await expect(docsScreen).not.toContainText('Relevant today');
+
+    // Every row: name 17-18 px, topics and Reveals at 16 px, each on its own line.
+    const rows = docsScreen.locator('.doc');
+    await expect(rows).toHaveCount(EVIDENCE_IDS.length);
+    for (const [i, id] of EVIDENCE_IDS.entries()) {
+      const px = (el: import('@playwright/test').Locator) => el.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+      const name = await px(rows.nth(i).locator('strong'));
+      expect(name, `${id} name size`).toBeGreaterThanOrEqual(17);
+      expect(name, `${id} name size`).toBeLessThanOrEqual(18);
+      const details = await rows.nth(i).locator('.doc-detail').all();
+      for (const d of details) expect(await px(d), `${id} detail size`).toBe(16);
+      const reveals = rows.nth(i).locator('.doc-reveals');
+      if (await reveals.count()) {
+        const topics = await rows.nth(i).locator('.doc-topics').boundingBox();
+        const below = await reveals.boundingBox();
+        expect(below!.y, `${id}: Reveals on its own line under the topics`).toBeGreaterThanOrEqual(topics!.y + topics!.height - 1);
+      }
+    }
+    // The cue and the bigger rows still fit: six rows and Continue with no scroll.
+    const scrolls = await page.evaluate(() => { const b = document.querySelector('.documents-step .setup-body')!; return b.scrollHeight - b.clientHeight; });
+    expect(scrolls, `packing list scrolls under the ${bulletin} bulletin`).toBeLessThanOrEqual(0);
+    await stepFits(page, `documents, ${bulletin} bulletin`);
+    expect(errors).toEqual([]);
+  });
+}

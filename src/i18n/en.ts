@@ -113,7 +113,6 @@ export const en: Record<string, string> = {
   'ui.proceed.customs': 'Proceed to customs',
   'ui.proceed.interview': 'Proceed to the interview',
   'ui.proceed.ending': 'See how it ends',
-  'ui.verifying': 'Verification in progress',
   // Once the bus is out of reach (doomed() in src/game/engine.ts), the card offers to finish quickly.
   'ui.doomed': 'You will not make the bus now.',
   'ui.finishQuickly': 'Finish the crossing quickly',
@@ -123,7 +122,6 @@ export const en: Record<string, string> = {
   'ui.showDocument': 'Show a document',
   'ui.nameSomeone': 'Name someone',
   'ui.reduceWait': 'Shorter waits',
-  'ui.waiting': 'Waiting',
   'ui.tapToSkip': 'Tap to skip',
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
@@ -290,11 +288,14 @@ export const en: Record<string, string> = {
   'fact.cashCount.reveal': 'Cash total recorded',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
-  // A quiet tag on a packing document whose topic the bulletin points at (relevantToday).
-  'ui.relevantToday': 'Relevant today',
   'bulletin.customs': 'Medicines are lab-tested today.',
   'bulletin.accommodation': 'Hosts are being phoned today.',
   'bulletin.records': 'IDs are checked against old records.',
+  // The one cue above the packing list: what officers are doing today, in the words of
+  // the topic the bulletin points at (BULLETIN_TOPICS), so the rows that answer it stand out.
+  'bulletin.customs.cue': 'Officers are testing any medicine you carry.',
+  'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
+  'bulletin.records.cue': 'Officers are checking who you are against old files.',
 
   // ── Checkpoints
   'checkpoint.passport': 'Passport control',
@@ -531,7 +532,7 @@ export const en: Record<string, string> = {
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
   'insp.s_bag.contact.reaction': 'They make the call, and the search stops early.',
   'insp.s_bag.withdraw.label': 'Withdraw your entry request',
-  'insp.s_bag.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_bag.withdraw.reaction': 'They pack your things back into the suitcase. The officer hands back your passport.',
 
   'insp.s_medicine.q': 'They are holding the medicine for testing.',
   'insp.s_medicine.surrender.label': 'Leave without it',
@@ -539,7 +540,7 @@ export const en: Record<string, string> = {
   'insp.s_medicine.wait.label': 'Wait to get it back',
   'insp.s_medicine.wait.reaction': 'They test the medicine, then the bag comes back.',
   'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
-  'insp.s_medicine.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport.',
 
   'insp.s_connection.q': 'While they keep you here, the shuttle to the station leaves without you. The next one is an hour later.',
   'insp.s_connection.later.label': 'Take the later shuttle',
@@ -547,7 +548,7 @@ export const en: Record<string, string> = {
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
   'insp.s_connection.drive.reaction': 'A short call. Someone will be waiting past the gate.',
   'insp.s_connection.withdraw.label': 'Withdraw your entry request',
-  'insp.s_connection.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_connection.withdraw.reaction': 'The officer hands back your passport and points you to departures.',
 
   'insp.s_supervisor.q': 'A supervisor opens your file. "Why are you here?"',
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
@@ -555,31 +556,27 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.accept.label': 'Let her phone the hospital',
   'insp.s_supervisor.accept.reaction': 'The hospital confirms your father is a patient. She writes it down.',
   'insp.s_supervisor.withdraw.label': 'Withdraw your entry request',
-  'insp.s_supervisor.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_supervisor.withdraw.reaction': 'She closes your file and hands back your passport.',
 
   // ── Checks and the waiting room
-  'check.hostCall.name': 'Address check',
-  'check.hostCall.title': 'Your mother\'s address is being checked.',
+  'check.hostCall.title': "They're calling your mother.",
   'check.hostCall.clear': 'Your mother answers. The officer hangs up and nods.',
   'check.hostCall.noAnswer': 'The officer puts the phone down without speaking.',
   'check.hostCall.hint.clear': '"They are calling your host."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',
-  'check.medicineLab.name': 'Medicine check',
-  'check.medicineLab.title': 'The medicine has gone for testing.',
+  'check.medicineLab.title': "They're testing the medicine.",
   'check.medicineLab.clear': 'The cool bag comes back. Nothing is missing.',
   'check.medicineLab.lab': 'The bag comes back with a note instead of a stamp.',
   'check.medicineLab.hint.clear': '"Routine."',
   'check.medicineLab.hint.lab': '"The lab has questions."',
-  'check.phoneSearch.name': 'Phone search',
-  'check.phoneSearch.title': 'Your phone is behind glass.',
+  'check.phoneSearch.title': "They're searching your phone.",
   'check.phoneSearch.clear': 'Your phone comes back, warm.',
   'check.phoneSearch.photo': 'A second officer looks at the screen, then at you.',
   'check.phoneSearch.donation': 'The officer prints something out.',
   'check.phoneSearch.hint.clear': '"Almost finished."',
   'check.phoneSearch.hint.photo': '"They are looking at your photos."',
   'check.phoneSearch.hint.donation': '"They are looking at your payments."',
-  'check.recordsCheck.name': 'Records check',
-  'check.recordsCheck.title': 'Your passport is being checked.',
+  'check.recordsCheck.title': "They're checking your passport.",
   'check.recordsCheck.clear': 'Your passport comes back.',
   'check.recordsCheck.flagged': 'Your passport goes into a different tray.',
   'check.recordsCheck.noted': 'The clerk reads something on her screen for a long time.',

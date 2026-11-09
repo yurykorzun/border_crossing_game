@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { newRun, options } from '../src/game/engine';
-import { ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
+import { CHECKS, ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import { own, t } from '../src/i18n';
 import { en } from '../src/i18n/en';
-import type { RunState, Screen } from '../src/game/types';
+import type { CheckId, RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
 
 // One full run on a phone-size screen: title → character → documents → begin → play by
@@ -236,33 +236,39 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('the medicine check says what is verified, with the header still on screen', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('./');
-  const screen: Screen = { kind: 'wait', check: 'medicineLab', beats: [0, 1], shown: 2, resolved: { result: 'clear' }, asked: false };
-  await openAt(page, { ...lenaRun(), screen, checkpoint: 1, slot: 1 });
+// Every check reads the same: one plain line for what they are doing, one observation, the actions.
+for (const check of Object.keys(CHECKS) as CheckId[]) {
+  test(`the ${check} wait shows one plain line, one observation and the actions, with the header still on screen`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.goto('./');
+    const screen: Screen = { kind: 'wait', check, beats: [0, 1], shown: 2, resolved: { result: 'clear' }, asked: false };
+    await openAt(page, { ...lenaRun(), screen, checkpoint: 1, slot: 1 });
 
-  const panel = page.locator('main.run .panel.waiting');
-  await expect(panel.locator('h2')).toHaveText('Medicine check');
-  await expect(panel).toContainText('The medicine has gone for testing.');
-  await expect(panel.locator('.verifying')).toHaveText('Verification in progress');
-  await expect(panel.locator('.dots i')).toHaveCount(3);
-  await expect(panel.locator('.dots i.now')).toHaveCount(1);
+    const panel = page.locator('main.run .panel.waiting');
+    await expect(panel.locator('h2')).toHaveText(en[`check.${check}.title`]);
+    await expect(panel.locator('p')).toHaveText([en['beat.customs.1']]);
+    // The old labels are gone: no "Waiting", no "Verification in progress", no check name.
+    await expect(page.locator('main.run')).not.toContainText('Waiting');
+    await expect(page.locator('main.run')).not.toContainText('Verification in progress');
+    await expect(page.locator('main.run')).not.toContainText(/(Address|Medicine|Records) check|Phone search/);
 
-  const buttons = page.locator('main.run .controls button');
-  await expect(buttons.nth(0)).toHaveText('Wait for the result');
-  await expect(buttons.nth(0)).toHaveClass(/wait-go/);
-  await expect(buttons.nth(1)).toContainText('Ask for an update');
-  await expect(buttons.nth(1).locator('.consequence')).toHaveText('Your urgency goes on file');
-  await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
-  await expect(page.locator('.strip .scrutiny')).toContainText('Scrutiny');
+    const buttons = page.locator('main.run .controls button');
+    await expect(buttons.nth(0)).toHaveText('Wait for the result');
+    await expect(buttons.nth(0)).toHaveClass(/wait-go/);
+    await expect(buttons.nth(1)).toContainText('Ask for an update');
+    await expect(buttons.nth(1).locator('.consequence')).toHaveText('Your urgency goes on file');
+    await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
+    await expect(page.locator('.strip .scrutiny')).toContainText('Scrutiny');
 
-  // Asking puts the urgency on file, and the reaction says so.
-  await buttons.nth(1).click();
-  await expect(page.locator('main.run .panel.reaction')).toContainText('Your urgency is now on file.');
-  expect(errors).toEqual([]);
-});
+    if (check === 'medicineLab') {
+      // Asking puts the urgency on file, and the reaction says so.
+      await buttons.nth(1).click();
+      await expect(page.locator('main.run .panel.reaction')).toContainText('Your urgency is now on file.');
+    }
+    expect(errors).toEqual([]);
+  });
+}
 
 test('a Home in time ending is a short result card that fits the screen', async ({ page }) => {
   const errors: string[] = [];
