@@ -4,9 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { t, tn } from '../i18n';
 import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
-import { CHARACTERS, CONTACTS, EVIDENCE, OFFICERS } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE, MISSION_MIN_TIME, OFFICERS } from './content/world';
 import { consequence, consequences, SEPARATOR } from './consequence';
-import { cardFor, deskIntro, endingFor, factIds, knows, newRun, officerFlags, options, step, waitActions } from './engine';
+import { cardFor, deskIntro, endingFor, factIds, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { tryStep } from './play';
 import { FACT_IDS } from './types';
@@ -552,7 +552,7 @@ describe('officers with one stated priority each (fsx.10)', () => {
   });
 
   it('the officer reacts only on their own cards, not in an inspection', () => {
-    const s: RunState = { ...relatives(2), screen: { kind: 'inspection', id: 's_biometric' } };
+    const s: RunState = { ...relatives(2), screen: { kind: 'inspection', id: 's_connection' } };
     expect(officerFlags(s, [{ fact: 'brotherAbroad' }])).toEqual([]);
   });
 
@@ -564,5 +564,78 @@ describe('officers with one stated priority each (fsx.10)', () => {
     expect(deskIntro({ ...first, reaction: [{ key: 'ui.continue' }] })).toBeUndefined();
     expect(deskIntro(at(newRun(lena), 'i_stay'))).toBe('interview');
     expect(t('officer.passport.priority')).toBe('The clerk checks every stamp and every date.');
+  });
+});
+
+describe('inspections change the problem, and doomed runs end quickly', () => {
+  /** An inspection at customs, as dealt when scrutiny reaches the max. */
+  const inspection = (id: string, extra: Partial<RunState> = {}): RunState => ({
+    ...newRun(lena), checkpoint: 1, slot: 1, scrutiny: 3, inspections: 1, seen: [id], screen: { kind: 'inspection', id }, ...extra,
+  });
+  const play = (s: RunState, approach: string): RunState => {
+    const r = tryStep(s, { type: 'choose', approach });
+    expect(r.ok, approach).toBe(true);
+    return r.state;
+  };
+
+  it('has one inspection of each kind that changes the problem', () => {
+    const kinds = INSPECTIONS.map((i) => i.kind).filter((k) => k !== 'search').sort();
+    expect(kinds).toEqual(['confiscation', 'connection', 'verification']);
+  });
+
+  it('confiscation: leaving without the medicine loses it, getting it back costs hours', () => {
+    const s = inspection('s_medicine');
+    const left = play(s, 'surrender');
+    expect(left.medicine).toBe(false);
+    expect(left.time).toBe(s.time);
+    const waited = play(s, 'wait');
+    expect(waited.medicine).toBe(true);
+    expect(waited.time).toBe(s.time - 3);
+  });
+
+  it('missed connection: the later shuttle moves the deadline, a lift exposes a contact', () => {
+    const s = inspection('s_connection');
+    const later = play(s, 'later');
+    expect(later.time).toBe(s.time);
+    expect(later.travel).toBe(3);
+    // The same hours left now miss the bus: the deadline moved, not the clock.
+    expect(endingFor({ ...later, time: 2 })).toBe('tooLate');
+    expect(endingFor({ ...s, time: 2 })).toBe('homeInTime');
+    const drive = play(s, 'drive');
+    expect(drive.exposed).toEqual(['mother']);
+    expect(drive.travel).toBe(2);
+    expect(drive.time).toBe(s.time);
+  });
+
+  it('extra verification: spend the document that backs the claim, or a fact goes on file', () => {
+    const s = inspection('s_supervisor');
+    const shown = play(s, 'evidence');
+    expect(shown.used).toEqual(['motherLetter']);
+    expect(knows(shown, 'fatherCondition')).toBe(false);
+    const accepted = play(s, 'accept');
+    expect(accepted.used).toEqual([]);
+    expect(knows(accepted, 'fatherCondition')).toBe(true);
+    expect(accepted.time).toBe(s.time);
+  });
+
+  it('under MISSION_MIN_TIME a card says the bus is gone and offers to finish quickly', () => {
+    const s = { ...at(newRun(lena), 'i_stay'), time: MISSION_MIN_TIME - 1 };
+    expect(t('ui.doomed')).toBe('You will not make the bus now.');
+    expect(legalActions(s)).toContainEqual({ type: 'finish' });
+    const r = tryStep(s, { type: 'finish' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.ending).toBe('tooLate');
+    expect(r.state.decisions).toBe(s.decisions);
+    // With enough hours left, there is nothing to finish early.
+    const fine = { ...s, time: MISSION_MIN_TIME };
+    expect(legalActions(fine)).not.toContainEqual({ type: 'finish' });
+    expect(tryStep(fine, { type: 'finish' }).ok).toBe(false);
+  });
+
+  it('a later shuttle can be what dooms the run', () => {
+    const later = play(inspection('s_connection', { time: 2 }), 'later');
+    const next: RunState = { ...later, reaction: null, screen: { kind: 'encounter', id: 'c_cash' } };
+    expect(legalActions(next)).toContainEqual({ type: 'finish' });
   });
 });

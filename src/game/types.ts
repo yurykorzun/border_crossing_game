@@ -72,6 +72,8 @@ export type Effect =
   | { fact: FactId; when?: Cond }
   | { claim: ClaimId; when?: Cond }
   | { loseMedicine: true; when?: Cond }
+  /** Adds hours to the trip from the border to the bus (a missed connection): the run needs that many more left. */
+  | { travel: number; when?: Cond }
   /** Sends these facts (all this desk knows when unset) that this desk knows on to the next desk. */
   | { send: Channel; facts?: FactId[]; when?: Cond };
 
@@ -134,8 +136,19 @@ export interface Check {
   beats: number;
 }
 
+/**
+ * What a secondary inspection does to the problem. search: the bag is searched
+ * and the cash counted. The other three change something besides time, so a
+ * setback is a new decision, not only lost hours: confiscation holds the
+ * medicine (wait to get it back, or leave without it), connection moves the
+ * bus out of reach (a longer trip, or a contact drives you), verification
+ * checks one claim (spend the document that backs it, or a fact goes on file).
+ */
+export type InspectionKind = 'search' | 'confiscation' | 'connection' | 'verification';
+
 export interface Inspection {
   id: string;
+  kind: InspectionKind;
   /** What a contact could confirm here. Without one, nobody can be named. */
   topic?: Topic;
   when?: Cond;
@@ -262,6 +275,12 @@ export interface RunState {
    */
   calledIn?: ContactId[];
   time: number;
+  /**
+   * Hours the trip from the border to the bus takes: MISSION_MIN_TIME, or more
+   * after a missed connection. The run needs at least this many left (travelOf()
+   * in src/game/engine.ts). Unset in saves from before it existed.
+   */
+  travel?: number;
   scrutiny: number;
   facts: FactMap;
   claims: ClaimId[];
@@ -293,4 +312,6 @@ export type Action =
   | { type: 'choose'; approach: string }
   | { type: 'beat' }
   | { type: 'waitAction'; action: WaitAction }
-  | { type: 'ack' };
+  | { type: 'ack' }
+  /** Only once the bus is out of reach (doomed()): the rest of the crossing plays out, Too late. */
+  | { type: 'finish' };

@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t, tn } from './i18n';
-import { deskIntro, endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { canFinish, deskIntro, endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -524,9 +524,12 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   const short = question.length <= SHORT_QUESTION;
   // On reaching a desk, one line says what this officer cares about.
   const desk = deskIntro(s);
+  // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
+  const finishing = canFinish(s);
   return (
     <>
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
+        {finishing && <p className="priority doomed">{t('ui.doomed')}</p>}
         {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         <h2 className="question">{question}</h2>
       </section>
@@ -542,6 +545,9 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
             <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
+        {finishing && (
+          <button className="primary finish" onClick={() => dispatch({ type: 'finish' })}>{t('ui.finishQuickly')}</button>
+        )}
       </div>
     </>
   );

@@ -11,7 +11,7 @@ import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
 
-export type PartKind = 'medicine' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
+export type PartKind = 'medicine' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
 export type Tone = 'plain' | 'amber' | 'red';
 export type IconKind = 'document' | 'clock' | 'check' | 'shield' | 'flag';
@@ -34,14 +34,15 @@ export const MAX_PARTS = 3;
 export const SEPARATOR = ' · ';
 
 /** Most serious first. Picks the icon and decides what goes when there are more than 3 parts. */
-const SEVERITY: PartKind[] = ['medicine', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
+const SEVERITY: PartKind[] = ['medicine', 'travel', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
 /** Never dropped from the line. */
-const KEEP: PartKind[] = ['medicine', 'contact', 'scrutiny', 'time'];
+const KEEP: PartKind[] = ['medicine', 'travel', 'contact', 'scrutiny', 'time'];
 /** Reading order on the line: what you hand over, then what happens, then what it costs. */
-const ORDER: PartKind[] = ['card', 'contact', 'vouch', 'fact', 'claim', 'check', 'time', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
+const ORDER: PartKind[] = ['card', 'contact', 'vouch', 'fact', 'claim', 'check', 'time', 'travel', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
 
 const ICON: Record<PartKind, IconKind> = {
   medicine: 'shield',
+  travel: 'clock',
   contact: 'document',
   vouch: 'check',
   withdraw: 'flag',
@@ -76,10 +77,12 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;
+  let travel = 0;
   const claims: ClaimId[] = [];
   for (const e of o.effects) {
     if ('time' in e) time += e.time;
     else if ('scrutiny' in e) scrutiny += e.scrutiny;
+    else if ('travel' in e) travel += e.travel;
     else if ('loseMedicine' in e) all.push({ kind: 'medicine', key: 'ui.line.medicine', tone: 'red' });
     else if ('fact' in e) all.push({ kind: 'fact', key: `fact.${e.fact}.reveal`, tone: 'plain' });
     else if ('claim' in e) claims.push(e.claim);
@@ -87,6 +90,8 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   const checkKey = `${cardKey}.check`;
   if (a.check || has(checkKey)) all.push({ kind: 'check', key: has(checkKey) ? checkKey : 'ui.line.check', tone: 'amber' });
   if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });
+  // A later connection: the trip to the bus grows, so the run needs more hours left.
+  if (travel) all.push({ kind: 'travel', key: 'ui.line.travel', n: travel, tone: 'amber' });
   if (scrutiny) all.push({ kind: 'scrutiny', key: 'ui.line.scrutiny', vars: { n: scrutiny }, tone: 'amber' });
   if (a.kind === 'withdraw') all.push({ kind: 'withdraw', key: 'ui.line.withdraw', tone: 'plain' });
   // A claim only shows when nothing else does: "Recorded as your reason for visiting",
@@ -113,7 +118,7 @@ export function packDetail(id: EvidenceId): string[] {
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */
-export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost'] as const;
+export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged'] as const;
 
 /**
  * What a step changed, one plain line each, built from its events: "Your mother's
@@ -135,6 +140,7 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
   for (const e of events)
     if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
+  for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
   return out;
 }
 

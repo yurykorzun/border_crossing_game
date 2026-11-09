@@ -15,7 +15,7 @@ import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/e
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
-import { deskIntro, deskOf, factIds, knownAt, loggedAt, newRun, options, shownCheckpoint, waitActions } from './engine';
+import { canFinish, deskIntro, deskOf, factIds, knownAt, loggedAt, newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -279,6 +279,9 @@ function screenLines(s: RunState, p: Page): void {
     const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
     // Panel in src/App.tsx: the officer's priority line above the first question at a desk.
     const desk = deskIntro(s);
+    const finishing = canFinish(s);
+    // Once the bus is out of reach, the line saying so sits above the priority line.
+    if (finishing) p.add('ui.doomed');
     if (desk) p.add(`officer.${desk}.priority`);
     p.add(`${prefix}.${sc.id}.q`);
     for (const o of options(s)) {
@@ -292,6 +295,7 @@ function screenLines(s: RunState, p: Page): void {
       }
       consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
     }
+    if (finishing) p.add('ui.finishQuickly');
   }
 }
 

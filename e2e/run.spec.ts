@@ -240,6 +240,19 @@ test('a Home in time ending is a short result card that fits the screen', async 
   expect(errors).toEqual([]);
 });
 
+test('once the bus is out of reach, the card says so and finishes the crossing quickly', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  await openAt(page, { ...lenaRun(), time: 1, screen: { kind: 'encounter', id: 'c_cash' }, checkpoint: 1, slot: 1, seen: ['c_cash'] });
+  await expect(page.locator('main.run .panel.ask')).toContainText('You will not make the bus now.');
+  await page.getByRole('button', { name: 'Finish the crossing quickly' }).click();
+  await expect(page.locator('main.run .panel.reaction')).toContainText('Nobody asks you anything more.');
+  await page.getByRole('button', { name: 'See how it ends' }).click();
+  await expect(page.locator('.ending-card h1')).toHaveText('Too late');
+  expect(errors).toEqual([]);
+});
+
 test('a Too late ending still lists the exposed mother, scored', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));

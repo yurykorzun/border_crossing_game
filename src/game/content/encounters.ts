@@ -292,11 +292,15 @@ export const CHECKS: Record<CheckId, Check> = {
   },
 };
 
-/** Drawn when scrutiny reaches 3. Every one has a time option and a way out. */
+/**
+ * Drawn when scrutiny reaches 3. Every one has an answer that needs no card and
+ * no contact, and a way out. Apart from the bag search, each changes the
+ * problem instead of only costing hours (InspectionKind, checked in checkState).
+ */
 export const INSPECTIONS: Inspection[] = [
   {
     // The prescription is in the bag, and your mother can confirm it.
-    id: 's_bag', topic: 'medicine',
+    id: 's_bag', kind: 'search', topic: 'medicine',
     approaches: [
       // A full search counts the cash, so the total goes on file.
       // The search report, cash total included, goes with you to the next desk.
@@ -306,7 +310,9 @@ export const INSPECTIONS: Inspection[] = [
     ],
   },
   {
-    id: 's_medicine', when: undefined,
+    // Confiscation: the medicine is held. Get it back now, or leave without it.
+    // Only dealt while you still carry it (inspect() in src/game/engine.ts).
+    id: 's_medicine', kind: 'confiscation',
     approaches: [
       { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
       { id: 'wait', kind: 'verify', effects: [{ time: -3 }] },
@@ -314,18 +320,26 @@ export const INSPECTIONS: Inspection[] = [
     ],
   },
   {
-    id: 's_biometric',
+    // Missed connection: the shuttle to the station has gone. The next one makes
+    // the trip an hour longer, so the run needs an hour more left; or someone
+    // drives out for you, which puts them on file. Driving is not confirming
+    // anything, so anyone close enough will do (namesOnly).
+    id: 's_connection', kind: 'connection',
     approaches: [
-      { id: 'wait', kind: 'verify', effects: [{ time: -2 }] },
+      { id: 'later', kind: 'say', effects: [{ travel: 1 }] },
+      { id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true, effects: [] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
-    // The supervisor wants to know why you travel, and your mother can confirm the visit.
-    id: 's_supervisor', topic: 'purpose',
+    // Extra verification: the supervisor checks why you travel. Spend the document
+    // that backs it, or let her phone the hospital and your father's condition goes
+    // on file. Only dealt while that call would tell this desk something new.
+    id: 's_supervisor', kind: 'verification', topic: 'purpose',
+    when: { noFacts: ['fatherCondition'] },
     approaches: [
-      { id: 'wait', kind: 'verify', effects: [{ time: -3 }] },
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ time: -1 }] },
+      { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
+      { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },

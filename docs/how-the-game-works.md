@@ -75,7 +75,7 @@ After every answer the officer's reaction shows with one line per change ("Your 
 
 Checked in this order:
 1. Turned back: you withdrew during an inspection.
-2. Too late: you finished with under 2 time.
+2. Too late: you finished with fewer hours left than the trip to the bus takes (2, or more after a missed connection).
 3. Home at a cost: you lost the medicine or exposed your protected person.
 4. Home in time: none of the above.
 
@@ -86,7 +86,8 @@ So there are two levels of winning. Getting through at all is the first level, a
 **Design rules every card follows**
 - Each answer costs something different, so no answer is the best one on every card. Documents are limited (3-4 for 6-9 questions), time is limited (8, and you need 2 left), and suspicion has a hard ceiling (3).
 - Honesty costs time now, and lying costs suspicion or a contradiction later. That trade is the core tension.
-- An inspection is a big tax (2-3 time, or the medicine, or a person), but it resets scrutiny to 1, so one inspection hurts and does not end the run.
+- An inspection changes the problem instead of only costing hours, and it resets scrutiny to 1, so one inspection hurts and does not end the run. The bag search costs 3 hours (and counts your cash) or a person. Confiscation holds the medicine: wait 3 hours to get it back, or leave without it. A missed connection makes the trip to the bus an hour longer, so you need an hour more left, unless someone drives out for you (a person on file). Extra verification checks why you travel: spend the document that backs it, or your father's condition goes on file.
+- Once you have fewer hours left than the trip takes, the bus is out of reach: the card says "You will not make the bus now." and offers to finish the crossing quickly (Too late), so a doomed run does not need more clicking. The walk checks that no deal from such a state still reaches the bus.
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**

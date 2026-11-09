@@ -6,7 +6,7 @@
 // random style never moves the dealer's picks.
 
 import { CHARACTERS } from './content/world';
-import { legalActions, newRun, options, step } from './engine';
+import { legalActions, newRun, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, RunState } from './types';
@@ -49,6 +49,8 @@ function traits(s: RunState, o: Option): Traits {
   for (const e of o.effects) {
     if ('time' in e) t.time -= e.time;
     else if ('scrutiny' in e) t.scrutiny += e.scrutiny;
+    // An hour more on the trip is an hour less to spare.
+    else if ('travel' in e) t.time += e.travel;
     else if ('claim' in e) {
       if (s.claims.includes(e.claim)) continue;
       if (LIES.includes(e.claim)) t.lies++;
@@ -94,7 +96,7 @@ const ENDING_VALUE: Record<EndingId, number> = { homeInTime: 200, homeAtCost: 12
 export function stateValue(s: RunState): number {
   if (s.ending) return ENDING_VALUE[s.ending] + s.time;
   const ch = CHARACTERS[s.character];
-  let v = 10 * s.time - 6 * s.scrutiny;
+  let v = 10 * (s.time - travelOf(s)) - 6 * s.scrutiny;
   if (!s.medicine) v -= 45;
   if (s.exposed.includes(ch.protectedContact)) v -= 45;
   v += 3 * (ch.contacts.length - s.exposed.length) + 2 * (s.loadout.length - s.used.length);
@@ -122,7 +124,8 @@ export interface BotPick {
 
 /** The bot's next action, or null when the run is over. */
 export function botAction(style: BotStyle, s: RunState, botRng: number): BotPick | null {
-  const legal = legalActions(s);
+  // Bots play every card out, so finishing quickly never shortens what autoplay and the evals measure.
+  const legal = legalActions(s).filter((a) => a.type !== 'finish');
   if (!legal.length) return null;
   if (legal.length === 1) return { action: legal[0], botRng };
   if (style === 'random') {
