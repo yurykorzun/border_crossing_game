@@ -17,6 +17,15 @@ Watch and stay quiet. Note down:
 - Whether they read the bulletin warning on the packing screen.
 - The ending they got.
 
+### The expectation question (3 taps)
+
+On three taps, ask before and after, then go quiet again: the first answer card at passport control, the first card that shows a check (an amber part like "Register check"), and one card at the security interview. These check screen rules 1, 4, 6 and 7 in `docs/design.md`, which no test can.
+
+- Before the tap, while their finger is still over the answer: "What do you expect to happen if you tap this?"
+- After the tap, once the screen has settled: "What changed?"
+
+Write down both answers word for word, with the card and the answer they picked.
+
 ## Ask 5 questions (about 4 minutes)
 
 Ask them in this order, word for word, and write the answers down as close to their words as you can.
@@ -37,6 +46,9 @@ Ask them in this order, word for word, and write the answers down as close to th
 | Hesitated on | |
 | Said out loud | |
 | Read the bulletin warning | yes / no |
+| Expected / what changed, tap 1 | |
+| Expected / what changed, tap 2 | |
+| Expected / what changed, tap 3 | |
 | 1. Trying to do | |
 | 2. Most tense moment | |
 | 3. Bad thing with no reason | |
@@ -49,6 +61,10 @@ Ask them in this order, word for word, and write the answers down as close to th
 - "Pick another button and hope" means causality is unclear. The player could not tie what happened to what they chose, so find the card from question 3 and check its reaction text and the line under each answer.
 - Question 3 names the card to fix. If they can't name one, good.
 - Question 4 checks the On file cards. If their list is far from what was really on file, the On file panel is not doing its job.
+- The expectation question checks the screen, not the player. When "expect" and "what changed" match (for example "It costs an hour and they check the register", then "I lost an hour and the register came back clear"), the card said what it would do and the result said what it did.
+- An expectation that misses the guaranteed part (the hour, the card used, the name shared) means the consequence row is not being read, so check its order and that the biggest tradeoff comes first. Missing only the possible part is fine, because that is the uncertainty the game is about.
+- A "what changed" answer that names nothing, or the wrong desk, means the result did not say what happened and who learned it. Check that card's reaction and its result row.
+- "I don't know" before a tap usually means the screen does more than one job. Find what is competing with the question.
 - Hesitation is fine on a hard choice and bad on a confusing one. Compare where they hesitated with what they said about it.
 - Read the answers from 3 or more players before changing content, because one player's run can be luck.
 

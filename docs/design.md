@@ -116,6 +116,27 @@ The structural parts are machine-checked by the content lint (`lintContent()` in
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
 
+## Screen rules
+
+From Yury's design guidelines (2026-11-09). Every screen tells the player where they are, what they can do and what each choice could cost. The uncertainty comes from the people and the situation, not from a screen that hides its rules. Every new screen, and every change to an old one, must pass all eight:
+
+1. One job per screen. A screen asks one thing: pick a traveler, pack, answer this officer, wait for this check, read how it ended. Anything else is one tap away.
+2. Recurring controls stay in place. On every run screen the header (mission, hours left, scrutiny, `N / 3 · checkpoint`) sits at the top and the tray (My story, Evidence, Settings) at the bottom, so the player never hunts for them.
+3. Each answer is an action row, then a consequence row, and the consequence row puts the biggest tradeoff first ("Uses letter · Reveals her address").
+4. Guaranteed effects are told apart from possible results. The answer card shows what will happen for sure (hours, a card used, a name shared) and names what might happen as a check ("Register check"). After the tap, the screen reports what happened and which desk learned it.
+5. Answers get equal weight: same size, same type weight, no default answer. Amber is for forward navigation or a warning, and always comes with a label or an icon, because color alone is lost on some players. Red is only for a confirmed escalation or harm (a protected contact exposed, the medicine lost).
+6. Detail sits one tap away in My story, with the current decision first. The card carries what this choice needs, and the full record opens from the tray.
+7. Art shows what changed, type stays crisp. The scene changes to show what a tap did (your document slides under the glass), and text stays real text, never drawn into the art, scaled or blurred.
+8. Design for the crowded screen: the longest question, three answers that wrap, translations about 30 percent longer, and 200 percent text. With big text the screen scrolls, and it never shrinks or clips text.
+
+What checks them so far:
+
+- Rule 2: `e2e/layout.spec.ts` checks the header and the tray on the run screen.
+- Rule 3 and the equal weight in rule 5: `e2e/layout.spec.ts` checks every card has an action row then one consequence row, in one type weight on every card.
+- The red half of rule 5: `src/game/consequence.test.ts`.
+- Rule 8: `e2e/crowded.spec.ts` opens the longest question in `src/i18n/en.ts` with three answers at 390x844, then again at 200 percent text, and checks every answer can be reached and seen whole, no text is cut off, and at 200 percent the answers wrap and the screen scrolls. The card is picked from the strings, so a longer question added later becomes the one under test.
+- Rules 1, 4, 6 and 7 need a person: the expectation question in `docs/playtest.md` checks them.
+
 ## Truth, claims, official knowledge
 
 - Truth: fixed by your character ("My story" panel).
