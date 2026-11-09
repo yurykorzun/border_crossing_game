@@ -18,11 +18,11 @@ export const BOT_STYLES: readonly BotStyle[] = ['honest', 'liar', 'cautious', 'r
 export const isBotStyle = (x: unknown): x is BotStyle => BOT_STYLES.includes(x as BotStyle);
 
 /** Claims that are not true for anyone in this mission. */
-const LIES: readonly ClaimId[] = ['tourism', 'hotelStay', 'noOtherFamily', 'neverDonated'];
+const LIES: readonly ClaimId[] = ['tourism', 'hotelStay', 'noOtherFamily', 'neverDonated', 'cashUnderLimit'];
 /** Lies that hide the family visit, the liar's whole story. */
 const HIDES_FAMILY: readonly ClaimId[] = ['tourism', 'hotelStay', 'noOtherFamily'];
-/** Say-approaches that are untrue without adding a claim (deny the photo, under-declare cash). */
-const LYING_SAYS = new Set(['deny', 'under']);
+/** Say-approaches that are untrue without adding a claim (deny the photo). */
+const LYING_SAYS = new Set(['deny']);
 
 /** Hard cap on steps in one run; a run that hits it is a bug, not a result. */
 export const MAX_RUN_STEPS = 200;
@@ -100,6 +100,7 @@ export function stateValue(s: RunState): number {
   const familyOnFile = s.facts.includes('familyAddress') || s.facts.includes('fatherCondition');
   if (s.claims.includes('tourism') && familyOnFile) v -= 20;
   if (s.claims.includes('noOtherFamily') && s.facts.includes('brotherAbroad')) v -= 20;
+  if (s.claims.includes('cashUnderLimit') && s.facts.includes('cashCount')) v -= 20;
   if (s.screen.kind === 'encounter' && s.screen.id.startsWith('f_')) v -= 8;
   return v;
 }

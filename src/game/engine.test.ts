@@ -32,8 +32,8 @@ describe('rules', () => {
   });
 
   it('a spent document cannot be played again', () => {
-    const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, used: ['motherLetter'], claims: ['familyVisit'] });
-    // the hotel is blocked by the family-visit claim, the letter is spent: no card fits
+    const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, used: ['motherLetter'], claims: ['stayingWithFamily'] });
+    // the hotel is blocked by the staying-with-family claim, the letter is spent: no card fits
     expect(tryStep(s, { type: 'choose', approach: 'evidence' })).toMatchObject({ ok: false, reason: 'notAllowed' });
   });
 
@@ -51,8 +51,8 @@ describe('rules', () => {
 
 describe('boundaries', () => {
   it('scrutiny rising from 2 to 3 starts exactly one inspection and resets after it', () => {
-    const s = at(newRun(lena), 'c_cash', { checkpoint: 1, slot: 1, scrutiny: MAX_SCRUTINY - 1 });
-    const r = tryStep(s, { type: 'choose', approach: 'under' });
+    const s = at(newRun(lena), 'c_phone', { checkpoint: 1, slot: 1, scrutiny: MAX_SCRUTINY - 1 });
+    const r = tryStep(s, { type: 'choose', approach: 'refuse' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.screen.kind).toBe('inspection');
@@ -63,7 +63,7 @@ describe('boundaries', () => {
   });
 
   it('scrutiny overflow does not carry over: +2 at 2 stops at the max', () => {
-    const s = at(newRun(lena), 'i_contradiction', { checkpoint: 2, slot: 2, scrutiny: 2 });
+    const s = at(newRun(lena), 'i_contradiction', { checkpoint: 2, slot: 2, scrutiny: 2, claims: ['cashUnderLimit'], facts: ['cashCount'] });
     const r = tryStep(s, { type: 'choose', approach: 'apologise' });
     expect(r.ok && r.events).toContainEqual({ type: 'scrutinyChanged', from: 2, to: MAX_SCRUTINY });
   });
@@ -73,14 +73,15 @@ describe('scenarios', () => {
   const interviewSlot2 = (extra: Partial<RunState>): RunState =>
     ({ ...newRun(lena), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra });
 
-  it('a tourism claim plus the family address on file deals the contradiction', () => {
+  it('a tourism claim plus the family address on file deals the clarify card', () => {
     const s = step(interviewSlot2({ claims: ['tourism'], facts: ['familyAddress'] }), { type: 'ack' });
-    expect(s.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
+    expect(s.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
-  it('a family-visit claim with the same address deals no contradiction', () => {
+  it('a family-visit claim with the same address deals neither', () => {
     const s = step(interviewSlot2({ claims: ['familyVisit'], facts: ['familyAddress'] }), { type: 'ack' });
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_contradiction' });
+    expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
   // Passport after "tourism" and the employer card: 2 decisions, both checkpoint cards.

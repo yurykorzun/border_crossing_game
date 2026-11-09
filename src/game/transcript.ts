@@ -11,7 +11,7 @@
 
 import { t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
-import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
+import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
@@ -386,12 +386,14 @@ export const CONTACT_WORDS: Record<ContactId, RegExp> = {
   brother: /\b(brother|Tom)\b/i,
 };
 
-/** Claim and fact pairs that officials could catch. The contradiction card needs one of them. */
-export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
-  ['noOtherFamily', 'brotherAbroad'],
-  ['tourism', 'familyAddress'],
-  ['tourism', 'fatherCondition'],
-];
+/**
+ * Claim and fact pairs that officials could catch, per card: the clarify card
+ * needs an inconsistency, the contradiction card a disproof.
+ */
+export const CATCHES: Record<string, readonly [ClaimId, FactId][]> = {
+  i_clarify: INCONSISTENCIES,
+  i_contradiction: DISPROOFS,
+};
 
 export interface Failure {
   rule: number;
@@ -497,12 +499,13 @@ export const RULES: Rule[] = [
   },
   {
     id: 3,
-    name: 'a contradiction card needs both the claim and the conflicting fact',
+    name: 'a clarify or contradiction card needs both the claim and the fact that catches it',
     check: (tr) => {
       const out: ReturnType<Rule['check']> = [];
       for (const h of tr.happenings) {
-        if (h.type !== 'cardDealt' || h.id !== 'i_contradiction') continue;
-        if (CONTRADICTIONS.some(([c, f]) => h.claims.includes(c) && h.facts.includes(f))) continue;
+        const pairs = h.type === 'cardDealt' ? CATCHES[h.id] : undefined;
+        if (h.type !== 'cardDealt' || !pairs) continue;
+        if (pairs.some(([c, f]) => h.claims.includes(c) && h.facts.includes(f))) continue;
         out.push({ step: h.step, key: h.id, detail: `dealt with claims [${h.claims.join(', ')}] and facts [${h.facts.join(', ')}]` });
       }
       return out;

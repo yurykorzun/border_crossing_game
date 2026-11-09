@@ -3,7 +3,7 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Cond, ContactId, Effect, Encounter,
-  EndingId, EvidenceId, Inspection, LogEntry, RunState, Screen, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, Inspection, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
@@ -153,7 +153,48 @@ function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev:
   list.push(...a.effects);
   const weak = topic && CHARACTERS[s.character].weakTopics.includes(topic);
   if (a.kind === 'verify' && weak) list.push({ time: -1 });
-  return list.filter((e) => check(e.when, s));
+  const card = s.screen.kind === 'encounter' ? s.screen.id : undefined;
+  return activeEffects(s, list.filter((e) => check(e.when, s)), { card });
+}
+
+/** Where a scrutiny effect comes from: the card on screen, or the check being resolved. */
+export interface ReasonSource {
+  card?: string;
+  check?: CheckId;
+}
+
+/**
+ * Whether a scrutiny reason holds: the fact is on file (`facts`), or the reason
+ * is a check and the effect belongs to its result or to a follow-up only that
+ * check deals. Officials need something they can point at.
+ */
+export function scrutinyApplies(reason: ScrutinyReason, facts: readonly FactId[], from: ReasonSource): boolean {
+  if (reason in CHECKS) {
+    if (from.check === reason) return true;
+    return !!from.card && CHECKS[reason as CheckId].cases.some((c) => c.followUp === from.card);
+  }
+  return facts.includes(reason as FactId);
+}
+
+/**
+ * Drops scrutiny effects whose reason does not hold. Facts recorded earlier in
+ * the same list count, so "Yes, I have both" can put the passport on file and
+ * then add scrutiny for it.
+ */
+export function activeEffects(s: RunState, effects: Effect[], from: ReasonSource): Effect[] {
+  const facts = [...s.facts];
+  const out: Effect[] = [];
+  for (const e of effects) {
+    if ('fact' in e && !facts.includes(e.fact)) facts.push(e.fact);
+    if ('scrutiny' in e && !scrutinyApplies(e.reason, facts, from)) continue;
+    out.push(e);
+  }
+  return out;
+}
+
+/** The effects a check result applies, with conditions and scrutiny reasons resolved. */
+export function checkEffects(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
+  return activeEffects(s, (result.effects ?? []).filter((e) => check(e.when, s)), { check: checkId });
 }
 
 // ── Applying things
@@ -322,7 +363,7 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
     result = { result: 'clear' };
   }
-  n = apply(n, result.effects ?? []);
+  n = apply(n, checkEffects(n, w.check, result));
   n = say(n, [{ key: `check.${w.check}.${result.result}` }]);
   if (result.followUp && !n.seen.includes(result.followUp)) n = { ...n, pending: [result.followUp, ...n.pending] };
   return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer);
