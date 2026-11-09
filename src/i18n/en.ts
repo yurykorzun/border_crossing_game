@@ -11,7 +11,6 @@ export const en: Record<string, string> = {
   'ui.start': 'Begin',
   'ui.continue': 'Continue',
   'ui.resume': 'Resume crossing',
-  'ui.newRun': 'Start again',
   // Time is hours until the last bus to the hospital. Plural keys end in .one / .other (tn()).
   // The run header reads "8 hours left", with "8 hours" picked out in amber.
   'ui.hours.one': '{n} hour',
@@ -47,7 +46,6 @@ export const en: Record<string, string> = {
   'ui.beginCrossing': 'Begin the crossing',
   'ui.yourDocuments': 'Your documents',
   'ui.picked': '{picked} of {count} packed',
-  'ui.onFileNow': 'On file now',
   'ui.bulletin': "Today's bulletin",
   'ui.mission': 'Mission',
   'ui.medicine': "Father's medicine",
@@ -101,8 +99,18 @@ export const en: Record<string, string> = {
   'ui.inQueue': 'In the queue',
   'ui.portraitOf': 'Passport photo of {name}',
   'ui.endingsSeen': 'Endings seen: {n} of 4',
+  // Ending card (Ending in src/App.tsx)
+  'ui.crossingComplete': 'Crossing complete',
+  'ui.crossingRefused': 'Entry refused',
+  'ui.hoursLeftRow': 'Hours left',
+  'ui.medicineRow': 'Medicine',
+  'ui.kept': 'Kept',
+  'ui.lost': 'Lost',
+  'ui.notNamed': 'Not named',
+  'ui.calledIn': 'Called in',
+  'ui.seeOnFile': "See what's on file",
+  'ui.playAgain': 'Play again',
   'ui.yourCrossing': 'Your crossing',
-  'ui.timeLeft': 'Hours left: {n}',
   'ui.missionRule': 'Get through with at least {n} hours left to reach the bus.',
 
   // ── Mission
@@ -501,13 +509,17 @@ export const en: Record<string, string> = {
   'beat.interview.5': 'Your phone buzzes in the tray. You cannot reach it.',
 
   // ── Endings
-  'ending.homeInTime.title': 'Admitted. Home in time',
+  'ending.homeInTime.title': 'Home in time',
+  'ending.homeInTime.summary': "You make the last bus with your father's medicine.",
   'ending.homeInTime.body': 'You reach the hospital before visiting hours end. Your father squeezes your hand. Your mother laughs and cries at once, then makes you eat something from the machine in the hall. Tonight you sleep on two chairs by his bed, with your passport still in your coat.',
-  'ending.homeAtCost.title': 'Admitted, at a cost',
+  'ending.homeAtCost.title': 'Home at a cost',
+  'ending.homeAtCost.summary': 'You make the last bus, but not everything comes with you.',
   'ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Your father is awake and asks how the trip was. You tell him it was fine. Later, in the corridor, you read your messages twice and think about who you can still call.',
-  'ending.tooLate.title': 'Admitted. Too late',
+  'ending.tooLate.title': 'Too late',
+  'ending.tooLate.summary': 'You get through, but reach the hospital after visiting hours.',
   'ending.tooLate.body': 'By the time you reach the hospital, visiting hours are over. Your mother is asleep in the corridor. You sit down next to her and do not wake her. A nurse says you can see your father at eight. You watch the door until it gets light.',
   'ending.turnedBack.title': 'Turned back',
+  'ending.turnedBack.summary': 'They stamp your passport red and send you back.',
   'ending.turnedBack.body': 'You sit in the departures hall with a red stamp in your passport. Your mother calls. You let it ring. The next bus back leaves in the morning. You write her a message three times and delete it three times.',
   'ending.line.medicineLost': 'The medicine stays at the border.',
   'ending.line.exposed': 'The officers call {contact} in for a conversation.',

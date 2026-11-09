@@ -15,7 +15,7 @@ import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
-import { newRun, options, waitActions } from './engine';
+import { newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -79,7 +79,7 @@ function chromeLines(s: RunState, p: Page): void {
   p.plural('ui.hours', s.time, CHROME);
   p.add('ui.hoursLeft', { hours: tn('ui.hours', s.time) }, CHROME);
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
-  const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
+  const now = shownCheckpoint(s);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
   const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
@@ -87,12 +87,12 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.progress', { count, name }, CHROME);
   // The counter scene's name for screen readers (CheckpointScene): on every run screen but the queue.
   if (!(s.screen.kind === 'between' && !s.reaction)) {
-    const at = s.screen.kind === 'between' ? Math.max(0, s.screen.next - 1) : Math.min(s.checkpoint, 2);
-    p.add(`scene.${CHECKPOINTS[at]}`, {}, CHROME);
+    p.add(`scene.${CHECKPOINTS[now]}`, {}, CHROME);
   }
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
-  else if (s.screen.kind !== 'between')
-    p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
+  // The officer's label stays up with the last reaction, before the queue.
+  else if (!(s.screen.kind === 'between' && !s.reaction))
+    p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[now]}`, {}, CHROME);
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.evidence', {}, CHROME);
   p.add('ui.settings', {}, CHROME);
@@ -104,33 +104,7 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.scrutinyHelp.what', {}, CHROME);
   p.add('ui.scrutinyHelp.rise', {}, CHROME);
   p.add('ui.scrutinyHelp.max', { max: MAX_SCRUTINY, after: SCRUTINY_AFTER_INSPECTION }, CHROME);
-  // StoryContent
-  const ch = CHARACTERS[s.character];
-  p.add('ui.portraitOf', { name: t(`char.${ch.id}.name`) }, CHROME);
-  p.add(`char.${ch.id}.name`, {}, CHROME);
-  p.add(`char.${ch.id}.blurb`, {}, CHROME);
-  p.add('ui.background', {}, CHROME);
-  for (const b of ch.background) p.add(`bg.${b}`, {}, CHROME);
-  p.add('ui.contacts', {}, CHROME);
-  for (const c of ch.contacts) {
-    p.add(`contact.${c}`, {}, CHROME);
-    if (c === ch.protectedContact) p.add('ui.protected', {}, CHROME);
-    if (s.exposed.includes(c)) p.add('ui.exposed', {}, CHROME);
-    p.add(`contact.${c}.note`, {}, CHROME);
-  }
-  p.add('ui.claims', {}, CHROME);
-  for (const c of s.claims) p.add(`claim.${c}`, {}, CHROME);
-  if (!s.claims.length) p.add('ui.nothingYet', {}, CHROME);
-  p.add('ui.onFile', {}, CHROME);
-  for (const f of s.facts) p.add(`fact.${f}`, {}, CHROME);
-  if (!s.facts.length) p.add('ui.nothingYet', {}, CHROME);
-  // EvidenceContent
-  for (const id of s.loadout) {
-    p.add(`ev.${id}.name`, {}, CHROME);
-    if (s.used.includes(id)) p.add('ui.used', {}, CHROME);
-    p.add(`ev.${id}.desc`, {}, CHROME);
-  }
-  p.add(s.medicine ? 'ui.medicine' : 'ui.medicineLost', {}, CHROME);
+  storyLines(s, p);
 }
 
 function render(fn: () => string, key: string): { key: string; text: string; problem?: string } {
@@ -201,6 +175,36 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.missionRule', { n: MISSION_MIN_TIME });
   p.add('ui.yourDocuments');
   for (const id of setup.loadout) p.add(`ev.${id}.name`);
+}
+
+/** StoryContent in src/ui/parts.tsx: My story, from the tool bar or the ending. */
+function storyLines(s: RunState, p: Page): void {
+  const ch = CHARACTERS[s.character];
+  p.add('ui.portraitOf', { name: t(`char.${ch.id}.name`) }, CHROME);
+  p.add(`char.${ch.id}.name`, {}, CHROME);
+  p.add(`char.${ch.id}.blurb`, {}, CHROME);
+  p.add('ui.background', {}, CHROME);
+  for (const b of ch.background) p.add(`bg.${b}`, {}, CHROME);
+  p.add('ui.contacts', {}, CHROME);
+  for (const c of ch.contacts) {
+    p.add(`contact.${c}`, {}, CHROME);
+    if (c === ch.protectedContact) p.add('ui.protected', {}, CHROME);
+    if (s.exposed.includes(c)) p.add('ui.exposed', {}, CHROME);
+    p.add(`contact.${c}.note`, {}, CHROME);
+  }
+  p.add('ui.claims', {}, CHROME);
+  for (const c of s.claims) p.add(`claim.${c}`, {}, CHROME);
+  if (!s.claims.length) p.add('ui.nothingYet', {}, CHROME);
+  p.add('ui.onFile', {}, CHROME);
+  for (const f of s.facts) p.add(`fact.${f}`, {}, CHROME);
+  if (!s.facts.length) p.add('ui.nothingYet', {}, CHROME);
+  // EvidenceContent
+  for (const id of s.loadout) {
+    p.add(`ev.${id}.name`, {}, CHROME);
+    if (s.used.includes(id)) p.add('ui.used', {}, CHROME);
+    p.add(`ev.${id}.desc`, {}, CHROME);
+  }
+  p.add(s.medicine ? 'ui.medicine' : 'ui.medicineLost', {}, CHROME);
 }
 
 /** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */
@@ -274,24 +278,38 @@ function screenLines(s: RunState, p: Page): void {
   }
 }
 
+/**
+ * Ending in src/App.tsx: the result card is the story; what sits behind "See what's on
+ * file" (the longer text, who was called in, My story) is chrome, read only if opened.
+ */
 function endingLines(s: RunState, p: Page): void {
   const ending = s.ending!;
+  const ch = CHARACTERS[s.character];
+  p.add('ui.title', {}, CHROME);
   p.add(ending === 'turnedBack' ? 'scene.turnedBack' : s.medicine ? 'scene.bus' : 'scene.busEmpty', {}, CHROME);
-  p.add('ui.timeLeft', { n: s.time });
+  p.add(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete');
   p.add(`ending.${ending}.title`);
-  p.add(`ending.${ending}.body`);
-  if (!s.medicine) p.add('ending.line.medicineLost');
+  p.add(`ending.${ending}.summary`);
+  // resultRows(): hours left, the medicine, the protected contact.
+  p.add('ui.hoursLeftRow');
+  p.add('ui.medicineRow');
+  p.add(s.medicine ? 'ui.kept' : 'ui.lost');
+  p.add(`contact.${ch.protectedContact}`);
+  p.add(s.exposed.includes(ch.protectedContact) ? 'ui.calledIn' : 'ui.notNamed');
+  p.add('ui.seeOnFile');
+  p.add('ui.playAgain');
+  // The sheet behind "See what's on file".
+  p.add('ui.myStory', {}, CHROME);
+  p.add('ui.close', {}, CHROME);
+  p.add(`ending.${ending}.body`, {}, CHROME);
+  if (!s.medicine) p.add('ending.line.medicineLost', {}, CHROME);
   for (const c of s.exposed) {
-    p.add('ending.line.exposed', { contact: c });
-    if (c === CHARACTERS[s.character].protectedContact) p.add('ending.line.protectedExposed', { contact: c });
-  }
-  if (s.facts.length) {
-    p.add('ui.onFileNow');
-    for (const f of s.facts) p.add(`fact.${f}`);
+    p.add('ending.line.exposed', { contact: c }, CHROME);
+    if (c === ch.protectedContact) p.add('ending.line.protectedExposed', { contact: c }, CHROME);
   }
   // The count includes this ending; a first run shows 1.
   p.add('ui.endingsSeen', { n: 1 }, CHROME);
-  p.add('ui.newRun');
+  storyLines(s, p);
 }
 
 /** Replays a bot run from its setup and records every screen. */

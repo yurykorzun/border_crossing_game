@@ -4,6 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { t, tn } from '../i18n';
+import { shownCheckpoint } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -16,7 +17,7 @@ import { Icon } from './art/icons';
 
 export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => void }) {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
-  const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
+  const now = shownCheckpoint(s);
   const hours = tn('ui.hours', s.time);
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
   const left = Math.max(0, Math.min(s.time, START_TIME)) / START_TIME;
@@ -58,7 +59,7 @@ function pickOut(text: string, part: string): ReactNode {
 function progressName(s: RunState): string {
   return s.screen.kind === 'between' && !s.reaction
     ? t('ui.inQueue')
-    : t(`checkpoint.${CHECKPOINTS[Math.min(s.checkpoint, CHECKPOINTS.length - 1)]}`);
+    : t(`checkpoint.${CHECKPOINTS[shownCheckpoint(s)]}`);
 }
 
 export function ScrutinyContent({ s }: { s: RunState }) {

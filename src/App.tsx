@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
-import { endingFor, newRun, options, waitActions } from './game/engine';
+import { endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -375,11 +375,11 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
 
-  const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)];
+  // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
+  const sceneAt = shownCheckpoint(s);
+  const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[sceneAt];
   const close = () => setSheet(null);
   const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
-  // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
-  const sceneAt = s.screen.kind === 'between' ? Math.max(0, s.screen.next - 1) : Math.min(s.checkpoint, 2);
   const sceneState: SceneState = {
     handedOver: s.used.length > (usedBefore[sceneAt] ?? s.used.length),
     writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
@@ -399,9 +399,9 @@ function Run({ s, dispatch, data, setData, onRestart }: {
               <CheckpointScene checkpoint={CHECKPOINTS[sceneAt]} character={s.character} state={sceneState} />
               {s.screen.kind === 'wait' ? (
                 <span className="mono officer-label" aria-hidden>{t('ui.waiting')}</span>
-              ) : s.screen.kind !== 'between' ? (
+              ) : (
                 <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
-              ) : null}
+              )}
             </div>
             <div className="flicker" aria-hidden />
           </div>
@@ -623,38 +623,78 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
   );
 }
 
+/**
+ * The ending as a short result card (Yury's mockup, 2026-11-09): the title, the scene,
+ * the outcome and the ending's name in amber, one sentence, three summary rows, then
+ * "See what's on file" and "Play again". The longer text and who was called in sit
+ * behind "See what's on file", above My story, so nothing is lost.
+ */
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
+  const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
-  const ch = CHARACTERS[s.character];
-  const lines: string[] = [];
-  if (!s.medicine) lines.push(t('ending.line.medicineLost'));
-  for (const c of s.exposed) {
-    lines.push(t('ending.line.exposed', { contact: c }));
-    if (c === ch.protectedContact) lines.push(t('ending.line.protectedExposed', { contact: c }));
-  }
+  const record = endingRecord(s);
   return (
     <main className={`ending ending-${ending}`}>
+      <p className="setup-title">{t('ui.title')}</p>
       <div className="ending-scene">
         {ending === 'turnedBack' ? <BorderPost closed /> : <NightBus medicine={s.medicine} character={s.character} />}
       </div>
       <section className="paper ending-card">
-        <p className="mono">{t('ui.timeLeft', { n: s.time })}</p>
+        <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
         <h1>{t(`ending.${ending}.title`)}</h1>
-        <p>{t(`ending.${ending}.body`)}</p>
-        {lines.length > 0 && <ul className="record">{lines.map((l, i) => <li key={i}>{capitalize(l)}</li>)}</ul>}
-        {s.facts.length > 0 && (
-          <>
-            <h3 className="mono muted">{t('ui.onFileNow')}</h3>
-            <ul className="record">{s.facts.map((f) => <li key={f}>{t(`fact.${f}`)}</li>)}</ul>
-          </>
-        )}
+        <p className="summary">{t(`ending.${ending}.summary`)}</p>
+        <dl className="result-rows">
+          {resultRows(s).map((r) => (
+            <div key={r.label} className="result-row">
+              <dt>{r.label}</dt>
+              <dd className={r.tone}>{r.value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
       <div className="controls">
-        <p className="muted-dark">{t('ui.endingsSeen', { n: seen })}</p>
-        <button className="primary" onClick={onRestart}>{t('ui.newRun')}</button>
+        <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
+        <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
       </div>
+      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.myStory')}>
+        <div className="ending-record">
+          <p>{t(`ending.${ending}.body`)}</p>
+          {record.length > 0 && <ul className="record">{record.map((l, i) => <li key={i}>{l}</li>)}</ul>}
+          <p className="mono muted">{t('ui.endingsSeen', { n: seen })}</p>
+        </div>
+        <StoryContent s={s} />
+      </Sheet>
     </main>
   );
+}
+
+/** The three summary rows: hours left, the medicine, the contact the traveler was asked to protect. */
+function resultRows(s: RunState): { label: string; value: string; tone: 'plain' | 'red' }[] {
+  const ch = CHARACTERS[s.character];
+  const calledIn = s.exposed.includes(ch.protectedContact);
+  return [
+    // "Hours left", not the mockup's "Time remaining": time is counted in hours (src/i18n/terms.test.ts).
+    { label: t('ui.hoursLeftRow'), value: String(s.time), tone: 'plain' },
+    // Red only for a confirmed serious consequence (docs/plan.md "UI rules").
+    { label: t('ui.medicineRow'), value: t(s.medicine ? 'ui.kept' : 'ui.lost'), tone: s.medicine ? 'plain' : 'red' },
+    {
+      label: capitalize(t(`contact.${ch.protectedContact}`)),
+      value: t(calledIn ? 'ui.calledIn' : 'ui.notNamed'),
+      tone: calledIn ? 'red' : 'plain',
+    },
+  ];
+}
+
+/** What the old ending page listed under its text: the medicine left behind, each contact called in. */
+function endingRecord(s: RunState): string[] {
+  const ch = CHARACTERS[s.character];
+  const lines: string[] = [];
+  if (!s.medicine) lines.push(t('ending.line.medicineLost'));
+  for (const c of s.exposed) {
+    lines.push(capitalize(t('ending.line.exposed', { contact: c })));
+    if (c === ch.protectedContact) lines.push(t('ending.line.protectedExposed', { contact: c }));
+  }
+  return lines;
 }
 
 /** Contact names start lowercase ("your brother Tom") so they read mid-sentence. */

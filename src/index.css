@@ -599,7 +599,28 @@ p { margin: 0 0 var(--gap); }
   overflow: hidden;
   background: var(--booth);
 }
-.ending-card h1 { font-size: 1.6rem; }
+.ending .setup-title { margin: 0; flex: none; }
+.ending-card { flex: none; padding: 14px 16px; }
+.ending-card .outcome { margin: 0 0 2px; color: var(--muted); }
+/* The ending's name is the one amber word on the card: amber marks attention (docs/plan.md "UI rules"). */
+.ending-card h1 { font-size: 1.6rem; margin: 0 0 4px; color: var(--amber-paper); }
+.ending-card .summary { margin: 0 0 10px; }
+.result-rows { margin: 0; display: grid; }
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--paper-2);
+  font-size: 0.95rem;
+}
+.result-row dt { color: var(--muted); }
+.result-row dd { margin: 0; font-weight: 600; text-align: end; }
+/* Red only for a confirmed serious consequence: the medicine lost, the protected contact called in. */
+.result-row dd.red { color: var(--danger-paper); }
+.ending .controls .see-file { background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
+.ending .controls .play-again { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
+.ending-record { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--paper-2); }
 .ending-turnedBack .ending-card { border-top: 6px solid var(--danger-paper); }
 .ending-tooLate .ending-card, .ending-homeAtCost .ending-card { border-top: 6px solid var(--amber-paper); }
 .ending-homeInTime .ending-card { border-top: 6px solid var(--navy); }

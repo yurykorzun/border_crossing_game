@@ -1,6 +1,6 @@
 # Purpose of Visit - how the game works, as a card game
 
-TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints. Every question has 2-3 answers, and every answer has a price in time, suspicion, a card from your hand, or a person you expose. Nothing is free, so the game is about which price you can afford to pay right now.
+TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints, and up to 3 more while your run stays quiet. Every question has 2-3 answers, and every answer has a price in time, suspicion, a card from your hand, or a person you expose. Nothing is free, so the game is about which price you can afford to pay right now.
 
 ## The pieces
 
@@ -27,6 +27,7 @@ Each checkpoint (passport, customs, interview) has its own deck. At each one the
 
 1. A routine card, which is a question everybody gets. The first checkpoint always opens with "Purpose of your visit?".
 2. A related card, which is the highest-priority card whose condition matches what you have done so far. If none match, you get another routine card.
+3. Only while the run is quiet: a third card. Quiet means every decision so far was a checkpoint card, with no follow-up, no inspection and no question asked in a waiting room. The third card is the routine question you have not had yet, else the best related card that fits, else nothing. It is existing content, so it adds a decision and very little reading. It exists because a quick, clean run was too short (eval rule 4), while a run full of checks and inspections is long enough already.
 
 This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, customs deals "We'll call your host" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
 
@@ -68,33 +69,33 @@ After every answer the officer's reaction shows with one line per change ("Your 
 
 Checked in this order:
 1. Turned back: you withdrew during an inspection.
-2. Admitted, too late: you finished with under 2 time.
-3. Admitted, at a cost: you lost the medicine or exposed your protected person.
-4. Admitted, home in time: none of the above.
+2. Too late: you finished with under 2 time.
+3. Home at a cost: you lost the medicine or exposed your protected person.
+4. Home in time: none of the above.
 
 So there are two levels of winning. Getting through at all is the first level, and getting through without paying with people or the medicine is the second.
 
 ## How balance works
 
 **Design rules every card follows**
-- Each answer costs something different, so no answer is the best one on every card. Documents are limited (3-4 for 6 questions), time is limited (8, and you need 2 left), and suspicion has a hard ceiling (3).
+- Each answer costs something different, so no answer is the best one on every card. Documents are limited (3-4 for 6-9 questions), time is limited (8, and you need 2 left), and suspicion has a hard ceiling (3).
 - Honesty costs time now, and lying costs suspicion or a contradiction later. That trade is the core tension.
 - An inspection is a big tax (2-3 time, or the medicine, or a person), but it resets scrutiny to 1, so one inspection hurts and does not end the run.
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**
-A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-08) visited 2,546,689 states across 105 setups in about 15 s and checked, at every state and move:
+A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-09) visited 11,681,978 states across 105 setups in about 60 s and checked, at every state and move:
 - No dead ends and no loops: every run ends.
 - Time stays 0-8 and scrutiny 0-3; a spent document, an exposed contact or the used Advantage never comes back.
 - A double tap or a second resolution of the same check is refused; nothing is accepted after the ending.
 - The ending matches the final state, and no follow-up is left queued.
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
-- The longest run is 11 decisions (the limit is 14), which keeps a full run at 4-8 minutes with the median at 5 or more (eval rule 4).
+- The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.9 minutes and the median 5.9 (eval rule 4 asks for 4-8 and a median of 5 or more).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 
-Ending shares across all branches (share of branches, not of players): home in time 21.8%, at a cost 31.7%, too late 24.7%, turned back 21.8%.
+Ending shares across all branches (share of branches, not of players): home in time 13.6%, at a cost 29.2%, too late 30.6%, turned back 26.5%.
 
 **What is not balanced yet**
 The walk also works out the best ending a player can force in each setup whatever the dealer deals. Today it is "home in time" in all 105 setups, so for an informed player no packing is ever a real loss, and lying is too cheap (a tourism lie still got home with 6 of 8 hours left in playtesting). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost". Autoplay bots (67a.2) measure styles, and plj tunes the prices.

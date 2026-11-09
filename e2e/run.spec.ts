@@ -162,3 +162,50 @@ test('the medicine check says what is verified, with the header still on screen'
   await expect(page.locator('main.run .panel.reaction')).toContainText('Your urgency is now on file.');
   expect(errors).toEqual([]);
 });
+
+test('a Home in time ending is a short result card that fits the screen', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  const run: RunState = { ...lenaRun(), time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime' };
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['homeInTime'] })] as const);
+  await page.reload();
+
+  const card = page.locator('.ending-card');
+  await expect(card).toBeVisible();
+  await expect(page.locator('.ending .setup-title')).toHaveText('Purpose of Visit');
+  await expect(card.locator('.outcome')).toHaveText('Crossing complete');
+  await expect(card.locator('h1')).toHaveText('Home in time');
+  await expect(card.locator('.summary')).toHaveText("You make the last bus with your father's medicine.");
+  const rows = card.locator('.result-row');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toHaveText(/Hours left\s*5$/);
+  await expect(rows.nth(1)).toHaveText(/Medicine\s*Kept/);
+  await expect(rows.nth(2)).toHaveText(/Your cousin Ilya\s*Not named/);
+  // The longer text is behind "See what's on file", not on the card.
+  await expect(card).not.toContainText('visiting hours end');
+
+  // The whole ending fits the phone: no page scroll, nothing cut off.
+  await noHorizontalScroll(page, 'ending');
+  const fits = await page.evaluate(() => {
+    const main = document.querySelector('main.ending') as HTMLElement;
+    return { doc: document.documentElement.scrollHeight <= window.innerHeight, main: main.scrollHeight <= main.clientHeight };
+  });
+  expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
+  await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport();
+
+  // See what's on file opens My story, with the longer ending text on top.
+  await page.getByRole('button', { name: "See what's on file" }).click();
+  const sheet = page.locator('dialog.sheet[open]');
+  await expect(sheet.locator('h2')).toHaveText('My story');
+  await expect(sheet).toContainText('visiting hours end');
+  await expect(sheet).toContainText('Background');
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(sheet).toHaveCount(0);
+
+  // Play again goes back to picking a traveler.
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await expect(page.locator('.traveler-step')).toBeVisible();
+  await expect(page.getByRole('radio').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
