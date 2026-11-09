@@ -243,22 +243,24 @@ export const ENCOUNTERS: Encounter[] = [
 
 /** Results are fixed when the check starts; the waiting room only reveals them. */
 export const CHECKS: Record<CheckId, Check> = {
+  // Your host can be vouched for: whoever can confirm the address.
   hostCall: {
-    id: 'hostCall', important: true, beats: 3,
+    id: 'hostCall', topic: 'accommodation', beats: 3,
     cases: [
       { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer' },
       { result: 'clear' },
     ],
   },
   medicineLab: {
-    id: 'medicineLab', important: false, beats: 2,
+    id: 'medicineLab', beats: 2,
     cases: [
       { when: { bulletin: 'customs', noFacts: ['fatherCondition'] }, followUp: 'f_lab', result: 'lab' },
       { result: 'clear' },
     ],
   },
+  // Data: nobody can vouch away what is on the phone or in the records.
   phoneSearch: {
-    id: 'phoneSearch', important: true, beats: 3,
+    id: 'phoneSearch', beats: 3,
     cases: [
       { when: { background: 'protestPhoto' }, followUp: 'f_photo', result: 'photo' },
       { when: { background: 'donation' }, followUp: 'f_donation', result: 'donation' },
@@ -266,7 +268,7 @@ export const CHECKS: Record<CheckId, Check> = {
     ],
   },
   recordsCheck: {
-    id: 'recordsCheck', important: false, beats: 2,
+    id: 'recordsCheck', beats: 2,
     cases: [
       { when: { bulletin: 'records', background: 'donation' }, followUp: 'f_donation', result: 'flagged', effects: [{ fact: 'donationRecord' }] },
       { when: { bulletin: 'records', background: 'brotherAtWar' }, result: 'noted', effects: [{ fact: 'brotherAbroad' }] },

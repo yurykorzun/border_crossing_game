@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm,
 } from './content/world';
 import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
@@ -87,8 +87,7 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
   return null;
 }
 
-const topicOf = (card: Encounter | Inspection | null): Topic | undefined =>
-  card && 'topic' in card ? card.topic : undefined;
+export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
 export function cardFor(s: RunState, topic: Topic): EvidenceId | undefined {
   return s.loadout.find((id) => {
@@ -97,9 +96,18 @@ export function cardFor(s: RunState, topic: Topic): EvidenceId | undefined {
   });
 }
 
-export function freeContact(s: RunState, wanted: ContactId[] | undefined): ContactId | undefined {
+/**
+ * The character's contacts from `wanted` (all of them when undefined). With
+ * `topic`, only those who can confirm it; null is a topic nobody can confirm.
+ */
+export function contactsFor(s: RunState, wanted: ContactId[] | undefined, topic?: Topic | null): ContactId[] {
   const ch = CHARACTERS[s.character];
-  return (wanted ?? ch.contacts).find((c) => ch.contacts.includes(c) && !s.exposed.includes(c));
+  return (wanted ?? ch.contacts).filter((c) => ch.contacts.includes(c) && (topic === undefined || canConfirm(c, topic ?? undefined)));
+}
+
+/** The first unexposed one of contactsFor(). */
+export function freeContact(s: RunState, wanted: ContactId[] | undefined, topic?: Topic | null): ContactId | undefined {
+  return contactsFor(s, wanted, topic).find((c) => !s.exposed.includes(c));
 }
 
 export type Unavailable = 'noCard' | 'noContact' | null;
@@ -110,13 +118,23 @@ export interface Option {
   blocked: Unavailable;
   card?: EvidenceId;
   contact?: ContactId;
+  /** contact: what they are asked to confirm (the card's topic). Unset when the answer only names them. */
+  vouches?: Topic;
   /** Effects as they would apply now (conditions resolved, character weakness added). */
   effects: Effect[];
 }
 
 /**
+ * For a contact answer, the topic the contact must be able to confirm: the
+ * card's, or null when the card has none. Undefined when no ability is needed.
+ */
+export const vouchTopic = (a: Approach, topic: Topic | undefined): Topic | null | undefined =>
+  a.kind !== 'contact' || a.namesOnly ? undefined : (topic ?? null);
+
+/**
  * The approaches the player sees. Ones that can never apply to this character
- * (a contact they don't have, someone else's perk) are hidden; ones missing a
+ * (a contact they don't have or who can't confirm the card's topic, someone
+ * else's perk) are hidden; ones missing a
  * card or an unexposed contact are shown but blocked, so the cost of the loadout
  * is visible.
  */
@@ -129,7 +147,8 @@ export function options(s: RunState): Option[] {
   for (const a of card.approaches) {
     if (!check(a.requires, s)) continue;
     if (a.kind === 'perk' && !(topic && ch.perkTopics.includes(topic))) continue;
-    if (a.kind === 'contact' && !(a.contacts ?? ch.contacts).some((c) => ch.contacts.includes(c))) continue;
+    const vouches = vouchTopic(a, topic);
+    if (a.kind === 'contact' && !contactsFor(s, a.contacts, vouches).length) continue;
     let blocked: Unavailable = null;
     let ev: EvidenceId | undefined;
     let contact: ContactId | undefined;
@@ -139,10 +158,12 @@ export function options(s: RunState): Option[] {
       if (!ev) blocked = 'noCard';
     }
     if (a.kind === 'contact') {
-      contact = freeContact(s, a.contacts);
+      contact = freeContact(s, a.contacts, vouches);
       if (!contact) blocked = 'noContact';
     }
-    out.push({ approach: a, blocked, card: ev, contact, effects: resolvedEffects(s, a, topic, ev) });
+    const o: Option = { approach: a, blocked, card: ev, contact, effects: resolvedEffects(s, a, topic, ev) };
+    if (vouches) o.vouches = vouches;
+    out.push(o);
   }
   return out;
 }
@@ -195,6 +216,11 @@ export function activeEffects(s: RunState, effects: Effect[], from: ReasonSource
 /** The effects a check result applies, with conditions and scrutiny reasons resolved. */
 export function checkEffects(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
   return activeEffects(s, (result.effects ?? []).filter((e) => check(e.when, s)), { check: checkId });
+}
+
+/** The facts a check result puts on file. A contact can explain them, never erase them. */
+export function checkFindings(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
+  return checkEffects(s, checkId, result).filter((e) => 'fact' in e);
 }
 
 // ── Applying things
@@ -348,14 +374,21 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   if (s.screen.kind !== 'wait') return [];
   const done = s.screen.shown >= s.screen.beats.length;
   if (!done) return [];
-  // Every check can be waited out or asked about; only an important one lets you name someone.
+  // Every check can be waited out or asked about. Someone can vouch only when a
+  // free contact can confirm what the check is about; nobody vouches away data.
   const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId }[] = [
     { action: 'wait', blocked: null },
     { action: 'ask', blocked: null },
   ];
-  if (!CHECKS[s.screen.check].important) return out;
-  const contact = freeContact(s, undefined);
-  return [...out, { action: 'assist', blocked: contact ? null : 'noContact', contact }];
+  const contact = assistContact(s);
+  return contact ? [...out, { action: 'assist', blocked: null, contact }] : out;
+}
+
+/** Who could vouch on the check in the waiting room, if anyone. */
+function assistContact(s: RunState): ContactId | undefined {
+  if (s.screen.kind !== 'wait') return undefined;
+  const topic = CHECKS[s.screen.check].topic;
+  return topic ? freeContact(s, undefined, topic) : undefined;
 }
 
 function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
@@ -368,10 +401,13 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     n = say(n, [{ key: `check.${w.check}.hint.${result.result}` }]);
   }
   if (how === 'assist') {
-    const c = freeContact(n, undefined);
+    const c = assistContact(n);
     if (!c) return s;
     n = { ...n, exposed: [...n.exposed, c] };
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
+    // The finding stays on file; the contact only settles what it means, so
+    // the check clears with no follow-up and no scrutiny from it.
+    n = apply(n, checkFindings(n, w.check, result));
     result = { result: 'clear' };
   }
   n = apply(n, checkEffects(n, w.check, result));

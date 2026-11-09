@@ -13,12 +13,12 @@
 // What this proves: rule and structural correctness for every reachable state.
 // What it does not: balance (bots) or whether the game feels right (people).
 
-import { checkEffects, currentCard, endingFor, legalActions, newRun, options } from './engine';
+import { checkEffects, checkFindings, currentCard, endingFor, legalActions, newRun, options, topicOf } from './engine';
 import type { RunSetup } from './engine';
 import type { Dealer } from './rng';
 import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, START_TIME,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, START_TIME, canConfirm,
 } from './content/world';
 import { CHECKS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
 import { t } from '../i18n';
@@ -191,6 +191,22 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   }
   if (n.scrutiny > s.scrutiny && !reasoned)
     bad.push(`scrutiny rose from ${s.scrutiny} to ${n.scrutiny} with no reason`);
+  // A contact is only named for what they can confirm: the card's topic, or the
+  // check's in the waiting room. Naming a relative (namesOnly) confirms nothing.
+  const named = n.exposed.filter((c) => !s.exposed.includes(c));
+  if (action.type === 'choose' && named.length) {
+    const o = options(s).find((x) => x.approach.id === action.approach);
+    const topic = topicOf(currentCard(s));
+    if (!o?.approach.namesOnly && !named.every((c) => canConfirm(c, topic)))
+      bad.push(`${named} named on ${(s.screen as { id: string }).id}, which asks about ${topic ?? 'nothing they can confirm'}`);
+  }
+  if (action.type === 'waitAction' && action.action === 'assist' && s.screen.kind === 'wait') {
+    const topic = CHECKS[s.screen.check].topic;
+    if (!named.every((c) => canConfirm(c, topic))) bad.push(`${named} vouched on ${s.screen.check}, which asks about ${topic ?? 'data nobody can vouch away'}`);
+    // A contact explains what a check found; the finding stays on file.
+    const lost = checkFindings(s, s.screen.check, s.screen.resolved).flatMap((e) => ('fact' in e && !n.facts.includes(e.fact) ? [e.fact] : []));
+    if (lost.length) bad.push(`${lost} found by ${s.screen.check} is not on file after a contact vouched`);
+  }
   // A double tap, or resolving the same check twice, must be refused.
   if ((action.type === 'choose' || action.type === 'waitAction') && tryStep(n, action).ok)
     bad.push(`${JSON.stringify(action)} could be played twice in a row`);
