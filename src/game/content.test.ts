@@ -133,6 +133,10 @@ describe('content lint', () => {
       approaches: [{ id: 'ok', kind: 'say', effects: [] }],
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_nothing: no answer changes anything/)]);
+    // Effects that move nothing are no change either.
+    for (const e of [{ time: 0 }, { scrutiny: 0, reason: 'employer' as const }, { travel: 0 }])
+      expect(withCard({ ...card, when: { facts: ['employer'] }, approaches: [{ id: 'ok', kind: 'say', effects: [e] }] }))
+        .toEqual([expect.stringMatching(/^x_nothing: no answer changes anything/)]);
     expect(withCard({ ...card, calm: true })).toEqual([]);
     // Calm with two answers that both do nothing is a dead choice, not a pause.
     const two: Encounter = { ...card, calm: true, approaches: [...card.approaches, { id: 'no', kind: 'say', effects: [] }] };

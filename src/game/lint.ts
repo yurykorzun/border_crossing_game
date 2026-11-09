@@ -109,8 +109,12 @@ function reasonHolds(content: Content, card: Encounter | Inspection, a: Approach
     files(check.cases[index].effects) || openers.some((o) => o.check === check.id && files(o.effects)));
 }
 
-/** Whether an answer changes something: spends a resource, has an effect, or opens a check. */
-const changes = (a: Approach) => (a.kind !== 'say' && a.kind !== 'verify') || a.effects.length > 0 || !!a.check;
+/** Whether an effect does anything: an amount of 0 hours, scrutiny or travel changes nothing. */
+const acts = (e: Effect) =>
+  !('time' in e && e.time === 0) && !('scrutiny' in e && e.scrutiny === 0) && !('travel' in e && e.travel === 0);
+
+/** Whether an answer changes something: spends a resource, has an effect that acts, or opens a check. */
+const changes = (a: Approach) => (a.kind !== 'say' && a.kind !== 'verify') || a.effects.some(acts) || !!a.check;
 
 /** Every structural problem in the content, one line each. Empty means it passes. */
 export function lintContent(content: Content, text: Text): string[] {
