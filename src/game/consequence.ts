@@ -7,9 +7,9 @@ import { has } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
 import { factIds } from './engine';
-import type { ChangeLine, ContactId, EndingLine, EvidenceId, RunState } from './types';
+import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
-import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
 
 export type PartKind = 'medicine' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -61,7 +61,7 @@ const ICON: Record<PartKind, IconKind> = {
  * (`enc.p_purpose.family`): a `<cardKey>.check` text, when there is one, names the
  * check ("Register check"), and a `<cardKey>.contact` text replaces "Puts {contact} on file".
  */
-export function consequence(o: Option, cardKey: string, protectedContact: ContactId): Consequence {
+export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint): Consequence {
   const a = o.approach;
   if (o.blocked) return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, tone: 'plain' }] };
 
@@ -76,7 +76,7 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;
-  const claims: string[] = [];
+  const claims: ClaimId[] = [];
   for (const e of o.effects) {
     if ('time' in e) time += e.time;
     else if ('scrutiny' in e) scrutiny += e.scrutiny;
@@ -89,8 +89,10 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });
   if (scrutiny) all.push({ kind: 'scrutiny', key: 'ui.line.scrutiny', vars: { n: scrutiny }, tone: 'amber' });
   if (a.kind === 'withdraw') all.push({ kind: 'withdraw', key: 'ui.line.withdraw', tone: 'plain' });
-  // A claim only shows when nothing else does: "Recorded as your reason for visiting".
-  if (!all.length && claims.length) all.push({ kind: 'claim', key: `claim.${claims[0]}.recorded`, tone: 'plain' });
+  // A claim only shows when nothing else does: "Recorded as your reason for visiting",
+  // or, where this officer does not write it down (writesDown), that it is only said.
+  if (!all.length && claims.length)
+    all.push({ kind: 'claim', key: !desk || writesDown(desk, claims[0]) ? `claim.${claims[0]}.recorded` : 'claim.said', tone: 'plain' });
   if (a.kind === 'perk') all.push({ kind: 'perk', key: 'ui.line.perk', tone: 'plain' });
   if (!all.length) all.push({ kind: 'free', key: 'ui.line.free', tone: 'plain' });
 

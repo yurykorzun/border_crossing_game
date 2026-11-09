@@ -2,12 +2,12 @@
 // and returns the next state. The UI only renders state and sends actions.
 
 import type {
-  Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, Cond, ContactId, Effect, Encounter,
+  Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
   CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm, writesDown,
 } from './content/world';
 import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
@@ -37,6 +37,7 @@ export function newRun(setup: RunSetup): RunState {
     scrutiny: ch.startScrutiny,
     facts: {},
     claims: [],
+    logged: {},
     medicine: true,
     perkUsed: false,
     withdrew: false,
@@ -83,6 +84,18 @@ function teach(facts: FactMap, f: FactId, desks: Checkpoint[]): FactMap {
  */
 export function desksLearning(bulletin: BulletinId, desk: Checkpoint): Checkpoint[] {
   return bulletin === 'records' ? CHECKPOINTS.slice(CHECKPOINTS.indexOf(desk)) : [desk];
+}
+
+/** The desks that wrote `c` down, in CHECKPOINTS order. Empty: only said aloud, or not said. */
+export const loggedAt = (s: RunState, c: ClaimId): Checkpoint[] => s.logged?.[c] ?? [];
+
+/** `s` after claiming `c` here: on the record of what you said, and written down if this officer does (writesDown). */
+function claim(s: RunState, c: ClaimId): RunState {
+  const desk = deskOf(s);
+  const n = s.claims.includes(c) ? s : { ...s, claims: [...s.claims, c] };
+  const had = loggedAt(n, c);
+  if (!writesDown(desk, c) || had.includes(desk)) return n;
+  return { ...n, logged: { ...n.logged, [c]: CHECKPOINTS.filter((d) => had.includes(d) || d === desk) } };
 }
 
 /** The facts a send effect passes on: the ones it names (all by default) that this desk knows. */
@@ -334,7 +347,7 @@ function apply(s: RunState, effects: Effect[]): RunState {
       const to = nextDesk(deskOf(n));
       if (to) for (const f of sentFacts(n, e)) n = { ...n, facts: teach(n.facts, f, [to]) };
     }
-    else if ('claim' in e) n = n.claims.includes(e.claim) ? n : { ...n, claims: [...n.claims, e.claim] };
+    else if ('claim' in e) n = claim(n, e.claim);
     else if ('loseMedicine' in e) n = { ...n, medicine: false };
   }
   return n;

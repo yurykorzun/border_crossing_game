@@ -178,6 +178,8 @@ export interface Officer {
   priority: OfficerPriority;
   /** The answers this officer reacts to. Empty: their priority is already in what their cards cost. */
   reactions: OfficerReaction[];
+  /** The claims this officer writes down when you make them here. Any other claim is only said aloud. */
+  writesDown: ClaimId[];
 }
 
 /** A person the traveler can name, and what they can confirm. */
@@ -263,6 +265,11 @@ export interface RunState {
   scrutiny: number;
   facts: FactMap;
   claims: ClaimId[];
+  /**
+   * The desks that wrote each claim down (Officer.writesDown), in CHECKPOINTS order.
+   * A claim in `claims` with no desk here was only said aloud. Unset in saves from before it existed.
+   */
+  logged?: Partial<Record<ClaimId, Checkpoint[]>>;
   medicine: boolean;
   perkUsed: boolean;
   withdrew: boolean;

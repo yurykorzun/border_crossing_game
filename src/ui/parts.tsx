@@ -4,7 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { t, tn } from '../i18n';
-import { factIds, shownCheckpoint } from '../game/engine';
+import { deskOf, factIds, loggedAt, shownCheckpoint } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -91,7 +91,7 @@ export function SettingsContent({ settings, onChange }: { settings: Settings; on
 
 /** One icon and one plain line under an answer: what it costs now or puts at risk. */
 export function ConsequenceLine({ o, cardKey, s }: { o: Option; cardKey: string; s: RunState }) {
-  const c = consequence(o, cardKey, CHARACTERS[s.character].protectedContact);
+  const c = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s));
   return (
     <span className={`consequence ${o.blocked ? 'blocked' : ''}`}>
       <Icon name={c.icon} />
@@ -168,7 +168,27 @@ export function StoryContent({ s }: { s: RunState }) {
       <div className="two-col">
         <section>
           <h3>{t('ui.claims')}</h3>
-          {s.claims.length ? <ul className="record">{s.claims.map((c) => <li key={c}>{t(`claim.${c}`)}</li>)}</ul> : <p className="muted">{t('ui.nothingYet')}</p>}
+          {/* A claim an officer wrote down shows the desks that have it, so a later contradiction is fair. */}
+          {s.claims.length ? (
+            <ul className="record">
+              {s.claims.map((c) => {
+                const desks = loggedAt(s, c);
+                return (
+                  <li key={c} data-claim={c} className={desks.length ? 'logged' : 'said'}>
+                    <span>{t(`claim.${c}`)}</span>
+                    <span className="desks">
+                      {desks.length ? (
+                        <>
+                          <span className="tag logged">{t('ui.writtenDown')}</span>
+                          {desks.map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
+                        </>
+                      ) : <span className="tag said">{t('ui.saidAloud')}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <p className="muted">{t('ui.nothingYet')}</p>}
         </section>
         <section>
           <h3>{t('ui.onFile')}</h3>

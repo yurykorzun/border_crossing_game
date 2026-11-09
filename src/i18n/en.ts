@@ -55,6 +55,9 @@ export const en: Record<string, string> = {
   'ui.protected': 'protect',
   'ui.background': 'Background',
   'ui.claims': 'What you said',
+  // Tags beside a claim in My story: the desks that wrote it down, or that it was only said.
+  'ui.writtenDown': 'On file',
+  'ui.saidAloud': 'Said only',
   'ui.onFile': 'On file',
   'ui.onFileHelp': 'Each desk knows only what came out there or was sent on.',
   'ui.nothingYet': 'Nothing yet.',
@@ -241,6 +244,8 @@ export const en: Record<string, string> = {
   'claim.neverDonated.recorded': 'Recorded as a denial',
   'claim.stayingWithFamily.recorded': "Recorded as where you're staying",
   'claim.cashUnderLimit.recorded': 'Recorded as your cash declaration',
+  // The same, where this officer does not write the claim down (OFFICERS writesDown).
+  'claim.said': 'Said aloud, not written down',
   'fact.familyAddress.reveal': 'Reveals her address',
   'fact.employer.reveal': 'Reveals your employer',
   'fact.fatherCondition.reveal': "Reveals your father's condition",

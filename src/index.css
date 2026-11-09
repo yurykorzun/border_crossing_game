@@ -513,6 +513,11 @@ p { margin: 0 0 var(--gap); }
 /* Which desks know a fact: one small tag each, on their own line under it. */
 .record .desks { display: flex; flex-wrap: wrap; gap: 3px; }
 .record .tag.desk { margin-inline-start: 0; font-size: 0.62rem; }
+/* A claim an officer wrote down reads firm; one only said aloud reads faint. */
+.record .tag.logged, .record .tag.said { margin-inline-start: 0; font-size: 0.62rem; }
+.record .tag.logged { color: var(--ink); border-color: var(--ink); }
+.record li.said > span:first-child { font-style: italic; color: var(--muted); }
+.record .tag.said { border-style: dashed; }
 .small { font-size: 0.78rem; margin: 0 0 4px; }
 .who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .who p { margin: 0; }
