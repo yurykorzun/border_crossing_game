@@ -14,10 +14,10 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, packDetail } from './consequence';
-import { newRun, options, step, waitActions } from './engine';
+import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
+import { newRun, options, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
-import { eventsBetween } from './play';
+import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
@@ -143,25 +143,25 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.title');
   p.add('ui.tagline');
   p.add('ui.start');
-  // Setup 1: Choose your traveler
+  // Setup 1: TravelerStep. Title, stage label, the premise as the heading, two cards.
+  p.add('ui.title');
+  p.add('ui.traveler');
+  p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 3 }), name: t('ui.traveler') });
   p.add('ui.premise');
-  p.add('ui.pickCharacter');
+  // The radio group's accessible name: read out, never shown.
+  p.add('ui.pickCharacter', {}, CHROME);
   for (const id of CHARACTER_IDS) {
     p.add('ui.portraitOf', { name: t(`char.${id}.name`) }, { who: id });
     p.add(`char.${id}.name`, {}, { who: id });
     p.add(`char.${id}.role`, {}, { who: id });
-    for (const b of CHARACTERS[id].background) p.add(`bg.${b}.short`, {}, { who: id });
-    p.add('ui.advantage');
-    p.add(`char.${id}.advantage`, {}, { who: id });
-    p.add('ui.complication');
-    p.add(`char.${id}.complication`, {}, { who: id });
+    p.add(`char.${id}.card`, {}, { who: id });
   }
-  // Before a pick the screen shows the hint, after it the chosen history.
-  p.add('ui.historyHint');
   p.add('ui.continue');
+  // After a pick: the history link, and the history behind it. It stays closed
+  // unless opened, so its words are not counted as read (chrome, like the sheets).
   const name = t(`char.${setup.character}.name`);
-  p.add('ui.historyOf', { name });
-  for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character });
+  p.add('ui.readHistory', { name });
+  for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character, ...CHROME });
   p.add('ui.continueAs', { name });
   // Setup 2: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;
@@ -215,8 +215,13 @@ function screenLines(s: RunState, p: Page): void {
   if (s.ending && !s.reaction) return endingLines(s, p);
   chromeLines(s, p);
   if (s.reaction) {
+    // Reaction in src/App.tsx: the officer's line, one line per change, the next-action button.
     for (const r of s.reaction) p.add(r.key, r.vars);
-    return p.add('ui.continue');
+    for (const c of s.changes ?? []) {
+      if (c.n === undefined) p.add(c.key, c.vars);
+      else p.lines.push({ step: p.step, ...render(() => tn(c.key, c.n!, c.vars), c.key) });
+    }
+    return p.add(nextActionKey(s));
   }
   const sc = s.screen;
   if (sc.kind === 'between') {
@@ -231,12 +236,15 @@ function screenLines(s: RunState, p: Page): void {
     return p.add(`queue.${sc.next}.go`);
   }
   if (sc.kind === 'wait') {
+    // Waiting in src/App.tsx: name, what is happening, "Verification in progress", the latest beat.
     const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
+    p.add(`check.${sc.check}.name`);
     p.add(`check.${sc.check}.title`);
-    for (const b of sc.beats.slice(0, sc.shown)) p.add(`beat.${cp}.${b}`);
+    p.add('ui.verifying');
+    if (sc.shown > 0) p.add(`beat.${cp}.${sc.beats[sc.shown - 1]}`);
     if (sc.shown < sc.beats.length) return p.add('ui.tapToSkip');
     for (const w of waitActions(s)) {
-      if (!CHECKS[sc.check].important) { p.add('ui.continue'); continue; }
+      if (w.action === 'wait') { p.add('wait.wait.label'); continue; }
       if (w.blocked) { p.add('ui.nameSomeone'); p.add(`ui.blocked.${w.blocked}`); continue; }
       p.add(`wait.${w.action}.label`, w.contact ? { contact: w.contact } : {});
       p.add(`wait.${w.action}.detail`);
@@ -296,14 +304,16 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
         ? `${sc.kind === 'inspection' ? 'insp' : 'enc'}.${sc.id}.${action.approach}.label`
         : action.type === 'waitAction' ? `wait.${action.action}.label`
-        : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go` : 'ui.continue';
+        : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`
+        : s.reaction ? nextActionKey(s) : 'ui.continue';
     const picked = page.lines.find((l) => l.key === pickedKey) ?? page.lines.find((l) => l.key === 'ui.continue');
     if (picked && action.type !== 'beat') picked.picked = true;
     lines.push(...page.lines);
     if (action.type === 'choose') decisions++;
-    if (action.type === 'waitAction' && s.screen.kind === 'wait' && CHECKS[s.screen.check].important) decisions++;
+    // Every check offers at least waiting or asking, so each pick there is a decision.
+    if (action.type === 'waitAction') decisions++;
     if (action.type === 'beat' && s.screen.kind === 'wait') beatMs += beatDelayMs(s.screen.beats[s.screen.shown] ?? 0);
-    const n = step(s, action);
+    const n = playStep(s, action);
     for (const e of eventsBetween(s, n, action)) {
       if (e.type === 'checkStarted') happenings.push({ step: i, type: 'checkStarted', id: e.id });
       if (e.type === 'checkResolved') happenings.push({ step: i, type: 'checkResolved', id: e.id, result: e.result });

@@ -5,8 +5,10 @@
 
 import { has } from '../i18n';
 import type { Option } from './engine';
-import type { ContactId, EvidenceId } from './types';
-import { EVIDENCE } from './content/world';
+import type { GameEvent } from './play';
+import type { ChangeLine, ContactId, EvidenceId, RunState } from './types';
+import { CHECKPOINTS } from './types';
+import { EVIDENCE, MAX_SCRUTINY } from './content/world';
 
 export type PartKind = 'medicine' | 'contact' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -100,4 +102,35 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
 export function packDetail(id: EvidenceId): string[] {
   const facts = EVIDENCE[id].onUse.flatMap((e) => ('fact' in e ? [e.fact] : []));
   return [`ev.${id}.helps`, ...facts.map((f) => `fact.${f}.reveal`)];
+}
+
+/** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */
+export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'timeSpent', 'scrutinyChanged', 'medicineLost'] as const;
+
+/**
+ * What a step changed, one plain line each, built from its events: "Your mother's
+ * address is now on file.", "1 hour lost.", "Scrutiny 2/3.". Reaction in src/App.tsx
+ * shows them under the officer's line and screenLines() in src/game/transcript.ts
+ * writes them down.
+ */
+export function changeLines(events: GameEvent[], protectedContact: ContactId): ChangeLine[] {
+  const out: ChangeLine[] = [];
+  for (const e of events)
+    if (e.type === 'contactExposed') out.push({ key: 'change.contact', vars: { contact: e.id }, tone: e.id === protectedContact ? 'red' : 'amber' });
+  for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.fact.${e.id}`, tone: 'plain' });
+  for (const e of events) if (e.type === 'timeSpent') out.push({ key: 'change.time', n: e.hours, tone: 'plain' });
+  for (const e of events)
+    if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
+  if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
+  return out;
+}
+
+/**
+ * The button under a reaction: Continue within a checkpoint, then the walk to the
+ * next one, or the ending. The key, so Reaction and the transcript say the same.
+ */
+export function nextActionKey(s: RunState): string {
+  if (s.ending) return 'ui.proceed.ending';
+  if (s.screen.kind === 'between') return `ui.proceed.${CHECKPOINTS[s.screen.next]}`;
+  return 'ui.continue';
 }

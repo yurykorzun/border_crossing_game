@@ -7,7 +7,7 @@ import { t, tn } from '../i18n';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
-import type { RunState } from '../game/types';
+import type { ChangeLine, RunState } from '../game/types';
 import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
 import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, START_TIME } from '../game/content/world';
@@ -107,6 +107,18 @@ export function ConsequenceLine({ o, cardKey, s }: { o: Option; cardKey: string;
 }
 
 const partText = (p: Part) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars));
+
+/** Under the officer's reaction: one plain line per thing that changed ("1 hour lost."). */
+export function ChangeLines({ changes }: { changes: ChangeLine[] }) {
+  if (!changes.length) return null;
+  return (
+    <ul className="changes">
+      {changes.map((c, i) => (
+        <li key={c.key + i} className={`change ${c.tone}`}>{c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)}</li>
+      ))}
+    </ul>
+  );
+}
 
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);

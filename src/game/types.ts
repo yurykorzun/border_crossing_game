@@ -90,7 +90,7 @@ export interface CheckCase {
 
 export interface Check {
   id: CheckId;
-  /** Important checks offer a waiting-room action. */
+  /** Important checks also let you name someone to vouch for you. */
   important: boolean;
   /** First matching case wins; the last case should have no `when`. */
   cases: CheckCase[];
@@ -142,6 +142,16 @@ export interface LogEntry {
   vars?: Record<string, string>;
 }
 
+/** One "what changed" line under the officer's reaction (changeLines() in src/game/consequence.ts). */
+export interface ChangeLine {
+  key: string;
+  vars?: Record<string, string | number>;
+  /** Plural count: render with tn(key, n). */
+  n?: number;
+  /** amber: attention or escalation. red: a confirmed serious consequence. */
+  tone: 'plain' | 'amber' | 'red';
+}
+
 export interface RunState {
   v: 1;
   seed: number;
@@ -166,6 +176,8 @@ export interface RunState {
   screen: Screen;
   /** Reaction to the last choice, shown above the next screen until acknowledged. */
   reaction: LogEntry[] | null;
+  /** What the last action changed, shown under the reaction. Set by playStep() in src/game/play.ts. */
+  changes?: ChangeLine[] | null;
   log: LogEntry[];
   decisions: number;
   inspections: number;

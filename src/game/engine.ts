@@ -260,13 +260,14 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   if (s.screen.kind !== 'wait') return [];
   const done = s.screen.shown >= s.screen.beats.length;
   if (!done) return [];
-  if (!CHECKS[s.screen.check].important) return [{ action: 'wait', blocked: null }];
-  const contact = freeContact(s, undefined);
-  return [
+  // Every check can be waited out or asked about; only an important one lets you name someone.
+  const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId }[] = [
     { action: 'wait', blocked: null },
     { action: 'ask', blocked: null },
-    { action: 'assist', blocked: contact ? null : 'noContact', contact },
   ];
+  if (!CHECKS[s.screen.check].important) return out;
+  const contact = freeContact(s, undefined);
+  return [...out, { action: 'assist', blocked: contact ? null : 'noContact', contact }];
 }
 
 function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {

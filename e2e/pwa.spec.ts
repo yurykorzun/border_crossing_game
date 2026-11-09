@@ -45,7 +45,7 @@ test('manifest, service worker, and the title screen offline', async ({ page, co
   await expect(page.locator('.title-screen button.primary')).toBeVisible();
   // The script and styles came from the cache too: the game starts.
   await page.locator('.title-screen button.primary').click();
-  await expect(page.getByRole('heading', { name: 'Choose your traveler' })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
   expect(failed).toEqual([]);
   expect(errors).toEqual([]);
   await context.setOffline(false);

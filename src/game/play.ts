@@ -3,6 +3,8 @@
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
 import { legalActions, newRun, step } from './engine';
+import { changeLines } from './consequence';
+import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
@@ -48,6 +50,18 @@ export function tryStep(s: RunState, action: Action, dealer: Dealer = randomDeal
   if (!legalActions(s).some((a) => sameAction(a, action))) return { ok: false, state: s, reason: 'notAllowed' };
   const n = step(s, action, dealer);
   return { ok: true, state: n, events: eventsBetween(s, n, action) };
+}
+
+/**
+ * step() plus what it changed, for the screen: while a reaction shows, `changes`
+ * holds its lines ("1 hour lost."), and any step that clears the reaction clears
+ * them. The game and the transcript move a run with this.
+ */
+export function playStep(s: RunState, action: Action, dealer: Dealer = randomDealer): RunState {
+  const n = step(s, action, dealer);
+  if (n === s) return s;
+  const changes = n.reaction ? changeLines(eventsBetween(s, n, action), CHARACTERS[n.character].protectedContact) : null;
+  return { ...n, changes };
 }
 
 const added = <T>(before: T[], after: T[]) => after.filter((x) => !before.includes(x));
