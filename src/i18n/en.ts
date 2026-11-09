@@ -118,6 +118,7 @@ export const en: Record<string, string> = {
   'ui.waiting': 'Waiting',
   'ui.tapToSkip': 'Tap to skip',
   'ui.inQueue': 'In the queue',
+  'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
   'ui.endingsSeen': 'Endings seen: {n} of 4',
   // Ending card (Ending in src/App.tsx)

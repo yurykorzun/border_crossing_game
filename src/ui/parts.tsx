@@ -4,7 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { own, t, tn } from '../i18n';
-import { deskOf, factIds, loggedAt, shownCheckpoint } from '../game/engine';
+import { deskOf, factIds, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -21,13 +21,24 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
   const hours = tn('ui.hours', s.time);
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
   const left = Math.max(0, Math.min(s.time, START_TIME)) / START_TIME;
+  // The hours the trip to the bus needs: once the bar runs past this mark, the last bus is gone.
+  const reserve = Math.max(0, Math.min(travelOf(s), START_TIME)) / START_TIME;
   return (
     <header className="strip" aria-label={t('ui.yourCrossing')}>
       <p className="goal">{t('ui.goal')}</p>
+      {/* Checkpoint and phase on one line. In the queue the checkpoint is not named yet: it shows once you reach the officer. */}
+      <p className="progress-label">{pickOut(t('ui.progress', { count, name: progressName(s) }), count)}</p>
       <div className="strip-stats">
+        {/* The time bar belongs to the clock, so it reads as hours left and not as progress. */}
         <span className="stat time">
-          <Icon name="clock" />
-          <span className="stat-label hours">{pickOut(t('ui.hoursLeft', { hours }), hours)}</span>
+          <span className="clock-line">
+            <Icon name="clock" />
+            <span className="stat-label hours">{pickOut(t('ui.hoursLeft', { hours }), hours)}</span>
+          </span>
+          <span className="time-bar" aria-hidden>
+            <i style={{ width: `${left * 100}%` }} />
+            <b className="reserve" style={{ left: `${reserve * 100}%` }} />
+          </span>
         </span>
         <span className="strip-divider" aria-hidden />
         {/* A button, not a readout: the word "Noticed" never said what scrutiny does, the sheet does. */}
@@ -36,9 +47,6 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
           <span className="scrutiny-text">{t('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY })}</span>
         </button>
       </div>
-      <div className="time-bar" aria-hidden><i style={{ width: `${left * 100}%` }} /></div>
-      {/* In the queue the checkpoint is not named yet: it shows once you reach the officer. */}
-      <p className="progress-label">{pickOut(t('ui.progress', { count, name: progressName(s) }), count)}</p>
     </header>
   );
 }
@@ -57,9 +65,9 @@ function pickOut(text: string, part: string): ReactNode {
 
 /** The name after "1 / 3 ·" in the strip. chromeLines() in src/game/transcript.ts mirrors it. */
 function progressName(s: RunState): string {
-  return s.screen.kind === 'between' && !s.reaction
-    ? t('ui.inQueue')
-    : t(`checkpoint.${CHECKPOINTS[shownCheckpoint(s)]}`);
+  if (s.screen.kind === 'between' && !s.reaction) return t('ui.inQueue');
+  const name = t(`checkpoint.${CHECKPOINTS[shownCheckpoint(s)]}`);
+  return s.screen.kind === 'inspection' ? t('ui.inInspection', { name }) : name;
 }
 
 export function ScrutinyContent({ s }: { s: RunState }) {

@@ -82,7 +82,12 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
   const now = shownCheckpoint(s);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
-  const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
+  const cpName = t(`checkpoint.${CHECKPOINTS[now]}`);
+  let name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : cpName;
+  if (s.screen.kind === 'inspection') {
+    p.add('ui.inInspection', { name: cpName }, CHROME);
+    name = t('ui.inInspection', { name: cpName });
+  }
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
   p.add('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length }, CHROME);
   p.add('ui.progress', { count, name }, CHROME);
