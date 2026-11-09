@@ -352,13 +352,26 @@ p { margin: 0 0 var(--gap); }
 .ask-short .question { font-size: 1.4rem; line-height: 1.25; }
 .ask-card { padding: 12px 14px; }
 .ask-short.inspection { padding-inline-start: 10px; }
-.reaction p { font-style: italic; }
+.reaction .said { font-style: italic; }
+/* What changed: plain lines under the officer's words, amber for escalation, red only for a confirmed loss. */
+.changes { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px dashed var(--bg-line); display: flex; flex-direction: column; gap: 4px; }
+.change { font-size: 0.95rem; }
+.change.amber { color: var(--amber-paper); font-weight: 600; }
+.change.red { color: var(--danger-paper); font-weight: 600; }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
 .waiting { cursor: pointer; }
+.waiting .happening { margin: 6px 0 0; }
+.verifying { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+.dots { display: inline-flex; gap: 4px; }
+/* Square pixel dots: done, the current step in amber, then the ones still to come. */
+.dots i { width: 8px; height: 8px; border: 2px solid var(--muted); box-sizing: border-box; }
+.dots i.past { background: var(--muted); }
+.dots i.now { background: var(--amber-dark); border-color: var(--amber-paper); }
 .waiting .beat { margin: 8px 0 0; color: var(--muted); }
+.controls .wait-go { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 .skip { font-size: 0.8rem; margin: 10px 0 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .waiting .beat, .reaction p, .msg, .caption { animation: fade-in 400ms ease-out both; }
+  .waiting .beat, .reaction p, .change, .msg, .caption { animation: fade-in 400ms ease-out both; }
 }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 

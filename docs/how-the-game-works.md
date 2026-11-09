@@ -57,10 +57,12 @@ The rule that keeps it fair: every card has at least one answer that needs no do
 
 Some answers start a check, like a records scan, a call to your host, a lab test of the medicine or a phone search. The result is fixed the moment the check starts, from your background, the bulletin and the facts on file. The waiting room then plays 2-3 short beats, and the player cannot change the result, only how they meet it.
 
-On important checks (the host call and the phone search) you get 3 options:
-- Wait quietly: free.
+Every check names itself ("Medicine check"), says what is happening, and shows "Verification in progress" with three dots. Once the beats are done you choose:
+- Wait for the result: free.
 - Ask for an update: you learn what is happening, and "you're in a hurry" goes on file.
-- Ask a contact to vouch: clears the check, and exposes them.
+- On important checks (the host call and the phone search) only: ask a contact to vouch. It clears the check and exposes them.
+
+After every answer the officer's reaction shows with one line per change ("Your mother's address is now on file.", "1 hour lost.", "Scrutiny 2/3."). The button says what comes next: Continue within a checkpoint, then "Proceed to customs", "Proceed to the interview" or "See how it ends".
 
 ## Endings (the scoring)
 

@@ -1,23 +1,23 @@
 // Screens. The game state lives in one useState; every change goes through
-// step() from src/game/engine.ts and is autosaved.
+// playStep() from src/game/play.ts and is autosaved.
 // ?autoplay=<style> (honest, liar, cautious, random, situational) instead plays
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
-import { endingFor, newRun, options, step, waitActions } from './game/engine';
+import { endingFor, newRun, options, waitActions } from './game/engine';
+import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
-import { CHECKS } from './game/content/encounters';
 import { queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, packDetail } from './game/consequence';
+import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip, PickOut } from './ui/parts';
+import { SEPARATOR, nextActionKey, packDetail } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { Booth } from './ui/art/Booth';
@@ -42,7 +42,7 @@ function Game() {
   const dispatch = (a: Action) => {
     if (!run) return;
     if (a.type === 'choose') sound.stamp();
-    const next = step(run, a);
+    const next = playStep(run, a);
     setData((d) => ({
       ...d,
       run: next,
@@ -101,14 +101,14 @@ function Autoplay({ style }: { style: BotStyle }) {
     if (s.ending && !s.reaction) return;
     const timer = setTimeout(() => setAuto((a) => {
       // The officer's last line is dismissed like a player would, then the ending card shows.
-      if (a.s.ending) return a.s.reaction ? { ...a, s: step(a.s, { type: 'ack' }) } : a;
+      if (a.s.ending) return a.s.reaction ? { ...a, s: playStep(a.s, { type: 'ack' }) } : a;
       const pick = botAction(style, a.s, a.botRng);
-      return pick ? { s: step(a.s, pick.action), botRng: pick.botRng } : a;
+      return pick ? { s: playStep(a.s, pick.action), botRng: pick.botRng } : a;
     }), AUTOPLAY_STEP_MS);
     return () => clearTimeout(timer);
   }, [s, style]);
 
-  const dispatch = (a: Action) => setAuto((x) => ({ ...x, s: step(x.s, a) }));
+  const dispatch = (a: Action) => setAuto((x) => ({ ...x, s: playStep(x.s, a) }));
   const shown = { ...data, endingsSeen: s.ending && !data.endingsSeen.includes(s.ending) ? [...data.endingsSeen, s.ending] : data.endingsSeen };
   return (
     <div className="shell" data-autoplay={style}>
@@ -406,14 +406,16 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   );
 }
 
+/** The officer's line, then one line per change, then a button that says what comes next. */
 function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void }) {
   return (
     <>
       <section className="panel paper reaction" aria-live="polite">
-        {s.reaction!.map((r, i) => <p key={i}>{t(r.key, r.vars)}</p>)}
+        {s.reaction!.map((r, i) => <p key={i} className="said">{t(r.key, r.vars)}</p>)}
+        <ChangeLines changes={s.changes ?? []} />
       </section>
       <div className="controls">
-        <button className="primary" autoFocus onClick={() => dispatch({ type: 'ack' })}>{t('ui.continue')}</button>
+        <button className="primary" autoFocus onClick={() => dispatch({ type: 'ack' })}>{t(nextActionKey(s))}</button>
       </div>
     </>
   );
@@ -512,12 +514,22 @@ function optionLabel(prefix: string, id: string, o: Option): string {
   return t(`${prefix}.${id}.${o.approach.id}.label`, vars);
 }
 
-/** Beats play on their own (2-5 s, or 0.6 s with shorter waits); a tap skips ahead. */
+/** How many dots "Verification in progress" shows; the current one is amber. */
+const VERIFY_DOTS = 3;
+
+/**
+ * A check, as in the customs mockup: its name, what is happening, "Verification in
+ * progress" with three dots, then the actions. Beats play on their own (2-5 s, or
+ * 0.6 s with shorter waits) and a tap skips ahead; the buttons show once they are done.
+ */
 function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean }) {
   const sc = s.screen as Extract<RunState['screen'], { kind: 'wait' }>;
   const done = sc.shown >= sc.beats.length;
   const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
   const delay = useMemo(() => beatDelayMs(sc.beats[sc.shown] ?? 0, reduceWait), [reduceWait, sc.shown, sc.beats]);
+  const at = Math.min(VERIFY_DOTS - 1, Math.floor((sc.shown / sc.beats.length) * VERIFY_DOTS));
+  const beat = sc.shown > 0 ? sc.beats[sc.shown - 1] : null;
+  const protectedContact = CHARACTERS[s.character].protectedContact;
 
   useEffect(() => {
     if (done) return;
@@ -532,24 +544,38 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
         aria-live="polite"
         onClick={() => { if (!done) dispatch({ type: 'beat' }); }}
       >
-        <p className="question">{t(`check.${sc.check}.title`)}</p>
-        {sc.beats.slice(0, sc.shown).map((b) => <p key={b} className="beat">{t(`beat.${cp}.${b}`)}</p>)}
+        <h2 className="question">{t(`check.${sc.check}.name`)}</h2>
+        <p className="happening">{t(`check.${sc.check}.title`)}</p>
+        <p className="verifying">
+          <span className="dots" aria-hidden>
+            {Array.from({ length: VERIFY_DOTS }, (_, i) => <i key={i} className={i < at ? 'past' : i === at ? 'now' : ''} />)}
+          </span>
+          {t('ui.verifying')}
+        </p>
+        {beat !== null && <p key={beat} className="beat">{t(`beat.${cp}.${beat}`)}</p>}
         {!done && <p className="muted skip">{t('ui.tapToSkip')}</p>}
       </section>
       <div className="controls stack">
         {done && waitActions(s).map((w) => (
           <button
             key={w.action}
-            className={CHECKS[sc.check].important ? 'choice' : 'primary'}
+            className={w.action === 'wait' ? 'primary wait-go' : 'choice'}
             disabled={!!w.blocked}
             onClick={() => { sound.result(); dispatch({ type: 'waitAction', action: w.action }); }}
           >
-            {CHECKS[sc.check].important ? (
+            {w.action === 'wait' ? t('wait.wait.label') : (
               <>
                 <span className="choice-label">{w.blocked ? t('ui.nameSomeone') : t(`wait.${w.action}.label`, w.contact ? { contact: w.contact } : {})}</span>
-                <span className="chips"><span className={`chip ${w.action === 'assist' ? 'person' : 'info'}`}>{w.blocked ? t(`ui.blocked.${w.blocked}`) : t(`wait.${w.action}.detail`)}</span></span>
+                <span className={`consequence ${w.blocked ? 'blocked' : ''}`}>
+                  <Icon name={w.action === 'ask' ? 'clock' : 'document'} />
+                  <span className="consequence-text">
+                    <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : 'amber'}`}>
+                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(`wait.${w.action}.detail`)}
+                    </span>
+                  </span>
+                </span>
               </>
-            ) : t('ui.continue')}
+            )}
           </button>
         ))}
       </div>

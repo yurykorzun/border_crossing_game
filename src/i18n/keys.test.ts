@@ -17,7 +17,7 @@ function contentKeys(): string[] {
     for (const a of i.approaches) keys.push(`insp.${i.id}.${a.id}.label`, `insp.${i.id}.${a.id}.reaction`);
   }
   for (const c of Object.values(CHECKS)) {
-    keys.push(`check.${c.id}.title`);
+    keys.push(`check.${c.id}.name`, `check.${c.id}.title`);
     for (const k of c.cases) keys.push(`check.${c.id}.${k.result}`, `check.${c.id}.hint.${k.result}`);
     keys.push(`check.${c.id}.clear`);
   }

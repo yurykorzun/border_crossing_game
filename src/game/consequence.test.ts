@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
-import { MAX_PARTS, SEPARATOR, consequence } from './consequence';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, nextActionKey } from './consequence';
+import { BOT_STYLES, playRun, setupFor } from './bots';
+import { newRun } from './engine';
+import { eventsBetween, playStep } from './play';
+import type { GameEvent } from './play';
+import { en } from '../i18n/en';
 import type { Part } from './consequence';
 import type { Option } from './engine';
 import type { CharacterId, ContactId, Effect, EvidenceId, Topic } from './types';
@@ -112,5 +117,66 @@ describe('consequence line', () => {
     const a = ENCOUNTERS[0].approaches[0];
     const c = consequence({ approach: a, blocked: 'noCard', effects: [] }, 'enc.x.y', 'cousin');
     expect(c.parts.map(text)).toEqual([t('ui.blocked.noCard')]);
+  });
+});
+
+describe('what changed, under the reaction', () => {
+  // Every event a run can produce, from bot runs of every style.
+  function seenEvents(): GameEvent[] {
+    const out: GameEvent[] = [];
+    for (const style of BOT_STYLES)
+      for (let i = 0; i < 60; i++) {
+        const setup = setupFor(i);
+        let s = newRun(setup);
+        for (const action of playRun(style, setup).actions) {
+          const n = playStep(s, action);
+          out.push(...eventsBetween(s, n, action));
+          s = n;
+        }
+      }
+    return out;
+  }
+
+  it('every fact, time and scrutiny event has a change line key in en.ts', () => {
+    const events = seenEvents().filter((e) => (CHANGE_EVENTS as readonly string[]).includes(e.type));
+    for (const type of ['factRecorded', 'timeSpent', 'scrutinyChanged']) expect(events.some((e) => e.type === type), type).toBe(true);
+    const missing = changeLines(events, 'cousin').flatMap((c) =>
+      c.n === undefined ? (c.key in en ? [] : [c.key]) : [`${c.key}.one`, `${c.key}.other`].filter((k) => !(k in en)),
+    );
+    expect([...new Set(missing)]).toEqual([]);
+    // And every fact in the game, not only the ones the bots happened to reveal.
+    const facts = Object.keys(en).filter((k) => /^fact\.[^.]+$/.test(k)).map((k) => k.slice('fact.'.length));
+    expect(facts.filter((f) => !(`change.fact.${f}` in en))).toEqual([]);
+  });
+
+  it('reads as plain sentences: an address on file, an hour lost, scrutiny up', () => {
+    const lines = changeLines(
+      [{ type: 'factRecorded', id: 'familyAddress' }, { type: 'timeSpent', hours: 1 }, { type: 'scrutinyChanged', from: 1, to: 2 }],
+      'cousin',
+    );
+    expect(lines.map((c) => (c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)))).toEqual([
+      "Your mother's address is now on file.",
+      '1 hour lost.',
+      'Scrutiny 2/3.',
+    ]);
+    expect(lines.map((c) => c.tone)).toEqual(['plain', 'plain', 'amber']);
+  });
+
+  it('marks the protected contact and the medicine red, and a scrutiny drop plain', () => {
+    const lines = changeLines(
+      [{ type: 'contactExposed', id: 'cousin' }, { type: 'medicineLost' }, { type: 'scrutinyChanged', from: 3, to: 1 }],
+      'cousin',
+    );
+    expect(lines.map((c) => [c.key, c.tone])).toEqual([['change.contact', 'red'], ['change.scrutiny', 'plain'], ['change.medicine', 'red']]);
+  });
+
+  it('playStep keeps the lines only while the reaction shows', () => {
+    const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+    const s = { ...base, screen: { kind: 'encounter', id: 'p_purpose' } as const, slot: 2 };
+    const after = playStep(s, { type: 'choose', approach: 'evidence' });
+    expect(after.reaction).not.toBeNull();
+    expect(after.changes?.map((c) => c.key)).toContain('change.fact.familyAddress');
+    expect(nextActionKey(after)).toBe('ui.proceed.customs');
+    expect(playStep(after, { type: 'ack' }).changes).toBeNull();
   });
 });
