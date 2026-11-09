@@ -181,6 +181,8 @@ test('in a secondary inspection the header names it with the checkpoint, and the
     // Checkpoint and phase on one line, the clock and scrutiny below it.
     await expect(strip.locator('.progress-label')).toHaveText(`${cp + 1} / 3 · ${name} · Secondary inspection`);
     const label = (await strip.locator('.progress-label').boundingBox())!;
+    const lineHeight = await strip.locator('.progress-label').evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+    expect(label.height, `${name}: checkpoint and phase on one line`).toBeLessThan(lineHeight * 1.5);
     const clock = (await strip.locator('.stat.time').boundingBox())!;
     const scrutiny = (await strip.locator('.scrutiny').boundingBox())!;
     expect(clock.y, 'clock below the checkpoint line').toBeGreaterThanOrEqual(label.y + label.height);
