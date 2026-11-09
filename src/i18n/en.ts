@@ -525,7 +525,7 @@ export const en: Record<string, string> = {
   'wait.ask.label': 'Ask for an update',
   'wait.ask.detail': 'Your urgency goes on file',
   'wait.assist.label': 'Ask {contact} to vouch for you',
-  'wait.assist.detail': 'Clears the check. Exposes them',
+  'wait.assist.detail': 'Exposes them',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'weak.work.reaction': "Your employer's name comes up in an old investigation. Checking it takes another hour.",
 

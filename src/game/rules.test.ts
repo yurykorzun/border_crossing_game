@@ -313,6 +313,8 @@ describe('contacts confirm only what they know', () => {
       const a = assist(waitRoom(setup, 'hostCall', exposed));
       expect(a?.contact, `${setup.character} with ${exposed} named`).toBe(who);
       if (a) expect(a.blocked).toBeNull();
+      // The option names what they may confirm, after the cost: "May confirm the address".
+      if (a) expect(a.vouches).toBe('accommodation');
     }
   });
 

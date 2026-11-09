@@ -409,18 +409,20 @@ function startWait(s: RunState, checkId: NonNullable<Approach['check']>): RunSta
   return { ...s, rng, screen: { kind: 'wait', check: checkId, beats, shown: 0, resolved, asked: false } };
 }
 
-export function waitActions(s: RunState): { action: WaitAction; blocked: Unavailable; contact?: ContactId }[] {
+export function waitActions(s: RunState): { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] {
   if (s.screen.kind !== 'wait') return [];
   const done = s.screen.shown >= s.screen.beats.length;
   if (!done) return [];
   // Every check can be waited out or asked about. Someone can vouch only when a
   // free contact can confirm what the check is about; nobody vouches away data.
-  const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId }[] = [
+  const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] = [
     { action: 'wait', blocked: null },
     { action: 'ask', blocked: null },
   ];
   const contact = assistContact(s);
-  return contact ? [...out, { action: 'assist', blocked: null, contact }] : out;
+  // vouches: the check's topic, so the option can say what the contact may confirm.
+  const vouches = CHECKS[s.screen.check].topic;
+  return contact && vouches ? [...out, { action: 'assist', blocked: null, contact, vouches }] : out;
 }
 
 /** Who could vouch on the check in the waiting room, if anyone. */

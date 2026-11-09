@@ -612,6 +612,10 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
                     <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : 'amber'}`}>
                       {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(`wait.${w.action}.detail`)}
                     </span>
+                    {/* After the guaranteed cost, the possible gain: "May confirm the address". */}
+                    {!w.blocked && w.contact && w.vouches && (
+                      <>{SEPARATOR}<span className="part plain">{t(`contact.${w.contact}.can.${w.vouches}`)}</span></>
+                    )}
                   </span>
                 </span>
               </>
