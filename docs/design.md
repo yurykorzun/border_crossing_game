@@ -77,6 +77,8 @@ Each card covers two topics, so a "wrong" pick is never useless. History questio
 | Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call |
 | Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once |
 
+Under the bulletin, one plain cue says what officers are doing today in the words of that topic ("Officers are calling hosts to check where you'll stay.", `bulletin.<id>.cue`). It replaced a Relevant today tag on each row, so the rows stay clean and the player matches the cue to the topics line.
+
 `npm run walk` checks the warning means something: for every bulletin, packings with a document on the warned topic get home in time more often (with random answers and deals) than packings without one.
 
 ## Encounters

@@ -32,7 +32,7 @@ function contentKeys(): string[] {
   }
   for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`, `ev.${id}.label`);
   for (const id of EVIDENCE_IDS) for (const topic of EVIDENCE[id].topics) keys.push(`topic.${topic}.helps`);
-  for (const b of BULLETINS) keys.push(`bulletin.${b}`);
+  for (const b of BULLETINS) keys.push(`bulletin.${b}`, `bulletin.${b}.cue`);
   for (const cp of CHECKPOINTS) {
     keys.push(`checkpoint.${cp}`, `officer.${cp}`, `officer.${cp}.priority`);
     if (OFFICERS[cp].reactions.length) keys.push(`officer.${cp}.flags`);

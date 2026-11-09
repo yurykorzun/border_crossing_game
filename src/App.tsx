@@ -18,7 +18,7 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, consequences, keptLines, nextActionKey, packDetail, protectedRow, relevantToday } from './game/consequence';
+import { SEPARATOR, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -207,16 +207,15 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
           <Icon name="alert" />
           <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
         </p>
+        {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
+        <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
         <ul className="cards pick" aria-label={t('ui.prepareDocuments')}>
           {EVIDENCE_IDS.map((id) => (
             <li key={id}>
               <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
                 <span className="checkbox" aria-hidden>{picked.includes(id) && <Icon name="check" />}</span>
                 <span className="doc-text">
-                  <span className="doc-name">
-                    <strong>{t(`ev.${id}.label`)}</strong>
-                    {relevantToday(id, bulletin) && <span className="tag relevant">{t('ui.relevantToday')}</span>}
-                  </span>
+                  <strong className="doc-name">{t(`ev.${id}.label`)}</strong>
                   {packDetail(id).map((line, n) => (
                     <span key={n} className={n ? 'doc-detail doc-reveals' : 'doc-detail doc-topics'}>{line.map((k) => t(k)).join(SEPARATOR)}</span>
                   ))}

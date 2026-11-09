@@ -14,7 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
+import { SEPARATOR, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
 import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -160,10 +160,10 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
+  // The one cue above the list: what officers are doing today. It is read, so it counts.
+  p.add(`bulletin.${setup.bulletin}.cue`);
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.label`);
-    // A muted tag that restates the bulletin, so chrome, like the endings seen count.
-    if (relevantToday(id, setup.bulletin)) p.add('ui.relevantToday', {}, CHROME);
     for (const line of packDetail(id)) {
       const parts = line.map((k) => render(() => t(k), k));
       const problem = parts.find((x) => x.problem)?.problem;
