@@ -40,16 +40,14 @@ export const en: Record<string, string> = {
   'ui.historyOf': "{name}'s history",
   'ui.historyHint': 'Pick a traveler to see their history.',
   'ui.back': 'Back',
-  // Setup 2: hours and scrutiny are explained where they first matter, one short line each.
-  'ui.prepareDocuments': 'Prepare your documents',
-  'ui.explainHours': 'Every check costs hours. The bus leaves in {hours} hours. You need {travel} hours to reach the station.',
-  'ui.explainScrutiny': 'Officers grow suspicious. At Scrutiny {max}/{max} you go to secondary inspection.',
+  // Setup 2: packing. The stage label, the title and a live count; the rules wait for the run.
+  'ui.preparation': 'Preparation',
+  'ui.prepareDocuments': 'Pack your documents',
+  'ui.moreBelow': 'More below',
   // Setup 3: the heading and the one strong button.
   'ui.beginCrossing': 'Begin the crossing',
   'ui.yourDocuments': 'Your documents',
-  'ui.pickEvidence': 'Pack {count} documents',
   'ui.picked': '{picked} of {count} packed',
-  'ui.packed': 'Packed',
   'ui.onFileNow': 'On file now',
   'ui.bulletin': "Today's bulletin",
   'ui.mission': 'Mission',
@@ -140,6 +138,19 @@ export const en: Record<string, string> = {
   'ev.deed.name': 'Apartment deed',
   'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Puts your property on file.',
   // Handed over: "Show your mother's letter". Used up: "Uses letter".
+  // The packing screen's rows: a short name and what it helps with ("Reveals ..." comes from fact.<id>.reveal).
+  'ev.hotel.label': 'Hotel booking',
+  'ev.motherLetter.label': "Mother's letter",
+  'ev.employerLetter.label': 'Employer letter',
+  'ev.hospitalNote.label': 'Hospital note',
+  'ev.returnTicket.label': 'Return ticket',
+  'ev.deed.label': 'Apartment deed',
+  'ev.hotel.helps': 'Accommodation',
+  'ev.motherLetter.helps': 'Visit purpose',
+  'ev.employerLetter.helps': 'Work and money',
+  'ev.hospitalNote.helps': 'Medicine',
+  'ev.returnTicket.helps': 'Length of stay',
+  'ev.deed.helps': 'Identity',
   'ev.hotel.the': 'your hotel booking',
   'ev.motherLetter.the': "your mother's letter",
   'ev.employerLetter.the': "your employer's letter",
@@ -185,9 +196,9 @@ export const en: Record<string, string> = {
   'fact.brotherAbroad.reveal': 'Reveals your brother abroad',
 
   // ── Bulletins
-  'bulletin.customs': 'Heightened customs checks today. Medicines may be sent for testing.',
+  'bulletin.customs': 'Medicines may be sent for testing today.',
   'bulletin.accommodation': 'Accommodation records may be verified by phone.',
-  'bulletin.records': 'New records system at Halden Central. Older files are being cross-checked.',
+  'bulletin.records': 'Older records are being cross-checked.',
 
   // ── Checkpoints
   'checkpoint.passport': 'Passport control',

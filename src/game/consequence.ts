@@ -5,7 +5,8 @@
 
 import { has } from '../i18n';
 import type { Option } from './engine';
-import type { ContactId } from './types';
+import type { ContactId, EvidenceId } from './types';
+import { EVIDENCE } from './content/world';
 
 export type PartKind = 'medicine' | 'contact' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -89,4 +90,14 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   const kept = [...all].sort((x, y) => rank(x) - rank(y)).slice(0, MAX_PARTS);
   const icon = ICON[[...kept].sort((x, y) => SEVERITY.indexOf(x.kind) - SEVERITY.indexOf(y.kind))[0].kind];
   return { icon, parts: kept.sort((x, y) => ORDER.indexOf(x.kind) - ORDER.indexOf(y.kind)) };
+}
+
+/**
+ * The one line under a document on the packing screen: what it helps with, then
+ * " · Reveals <x>" for each fact it puts on file. The keys, so DocumentsStep in
+ * src/App.tsx and setupLines() in src/game/transcript.ts show the same words.
+ */
+export function packDetail(id: EvidenceId): string[] {
+  const facts = EVIDENCE[id].onUse.flatMap((e) => ('fact' in e ? [e.fact] : []));
+  return [`ev.${id}.helps`, ...facts.map((f) => `fact.${f}.reveal`)];
 }

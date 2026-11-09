@@ -99,7 +99,21 @@ const SHIELD = [
   '...####...',
 ];
 
-const ICONS = { clock: CLOCK, flag: FLAG, document: DOCUMENT, folder: FOLDER, gear: GEAR, check: CHECK, shield: SHIELD } as const;
+/** Today's bulletin: something to watch for. */
+const ALERT = [
+  '....##....',
+  '....##....',
+  '....##....',
+  '....##....',
+  '....##....',
+  '....##....',
+  '..........',
+  '..........',
+  '....##....',
+  '....##....',
+];
+
+const ICONS = { alert: ALERT, clock: CLOCK, flag: FLAG, document: DOCUMENT, folder: FOLDER, gear: GEAR, check: CHECK, shield: SHIELD } as const;
 export type IconName = keyof typeof ICONS;
 
 export function Icon({ name }: { name: IconName }) {

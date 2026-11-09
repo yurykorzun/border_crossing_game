@@ -14,7 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence } from './consequence';
+import { SEPARATOR, consequence, packDetail } from './consequence';
 import { newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween } from './play';
@@ -163,21 +163,28 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.historyOf', { name });
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character });
   p.add('ui.continueAs', { name });
-  // Setup 2: Prepare your documents
+  // Setup 2: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
+  const count = t('ui.progressCount', { n: 2, total: 3 });
+  p.add('ui.preparation');
+  p.add('ui.progress', { count, name: t('ui.preparation') });
   p.add('ui.prepareDocuments');
+  p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
-  p.add('ui.explainHours', { hours: START_TIME, travel: MISSION_MIN_TIME });
-  p.add('ui.explainScrutiny', { max: MAX_SCRUTINY });
-  p.add('ui.pickEvidence', { count: slots });
   for (const id of EVIDENCE_IDS) {
-    p.add(`ev.${id}.name`);
-    if (setup.loadout.includes(id)) p.add('ui.packed');
-    p.add(`ev.${id}.desc`);
+    p.add(`ev.${id}.label`);
+    const parts = packDetail(id).map((k) => render(() => t(k), k));
+    const problem = parts.find((x) => x.problem)?.problem;
+    p.lines.push({
+      step: p.step,
+      key: parts.map((x) => x.key).join(SEPARATOR),
+      text: parts.map((x) => x.text).join(SEPARATOR),
+      ...(problem ? { problem } : {}),
+    });
   }
-  p.add('ui.picked', { picked: slots, count: slots });
+  p.add('ui.moreBelow');
   p.add('ui.continue');
   // Setup 3: Begin the crossing
   p.add('ui.beginCrossing');

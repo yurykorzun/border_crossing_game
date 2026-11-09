@@ -43,6 +43,11 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
 }
 
 /** The text with its first `part` in amber, so the number reads first and the words stay one t() string. */
+/** pickOut() as a component, for the setup screens' "2 / 3 · Preparation". */
+export function PickOut({ text, part }: { text: string; part: string }) {
+  return <>{pickOut(text, part)}</>;
+}
+
 function pickOut(text: string, part: string): ReactNode {
   const at = text.indexOf(part);
   if (at < 0) return text;

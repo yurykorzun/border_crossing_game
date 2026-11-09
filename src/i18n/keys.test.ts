@@ -26,7 +26,7 @@ function contentKeys(): string[] {
     for (const b of ch.background) keys.push(`bg.${b}`, `bg.${b}.short`);
     for (const c of ch.contacts) keys.push(`contact.${c}`, `contact.${c}.note`);
   }
-  for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`);
+  for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`, `ev.${id}.label`, `ev.${id}.helps`);
   for (const b of BULLETINS) keys.push(`bulletin.${b}`);
   for (const cp of CHECKPOINTS) {
     keys.push(`checkpoint.${cp}`, `officer.${cp}`);
