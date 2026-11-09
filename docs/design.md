@@ -31,7 +31,7 @@ Endings (crossing result x mission result):
 3. Too late - admitted with under 2 hours left, so you miss the bus.
 4. Turned back - you withdrew.
 
-Every ending also lists who was exposed and what is on file about you.
+Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
 ## Run shape
 

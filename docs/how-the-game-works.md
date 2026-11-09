@@ -17,6 +17,7 @@ TL;DR: you hold a small hand of document cards and two people you can call on. T
 - Lena: once per run she can answer a work question without a document. Checks on her employer cost 1 extra time. Her background has a foreign employer, an old donation and an apartment.
 - Mark: packs 4 documents instead of 3, and starts at Scrutiny 1. His background has a second passport, a brother across the border and a protest photo.
 - Each has one protected person. Exposing them costs you the clean ending.
+- Exposing anyone else costs time later: they are called in, so the next card that asks about something they can confirm takes 1 more hour. Every ending lists each person exposed with a severity (minor for a phone call, serious once their home is on file, severe for the protected person), plus the medicine and how much is on file.
 
 **The bulletin (the "modifier")**
 - One of 3 is dealt per run: customs is strict, accommodation calls are checked, or old records are being cross-checked.

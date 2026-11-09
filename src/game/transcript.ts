@@ -14,7 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
+import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
 import { factIds, knownAt, newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -308,10 +308,13 @@ function endingLines(s: RunState, p: Page): void {
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.close', {}, CHROME);
   p.add(`ending.${ending}.body`, {}, CHROME);
-  if (!s.medicine) p.add('ending.line.medicineLost', {}, CHROME);
-  for (const c of s.exposed) {
-    p.add('ending.line.exposed', { contact: c }, CHROME);
-    if (c === ch.protectedContact) p.add('ending.line.protectedExposed', { contact: c }, CHROME);
+  // What it cost: one scored line per consequence, from the engine.
+  const cost = consequences(s);
+  if (cost.length) p.add('ui.whatItCost', {}, CHROME);
+  for (const l of cost) {
+    p.add(`ending.severity.${l.severity}`, {}, CHROME);
+    if (l.n === undefined) p.add(l.key, l.vars, CHROME);
+    else p.plural(l.key, l.n, CHROME);
   }
   // The count includes this ending; a first run shows 1.
   p.add('ui.endingsSeen', { n: 1 }, CHROME);

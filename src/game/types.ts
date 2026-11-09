@@ -160,6 +160,21 @@ export interface Contact {
   id: ContactId;
   /** Topics they can confirm. A contact answer shows only on a card or check with one of these. */
   abilities: Topic[];
+  /** The fact that puts their home on file. With it on file, a call-in becomes a visit (a worse exposure). */
+  home?: FactId;
+}
+
+/** How badly something on the ending's list hurts: 1 minor, 2 serious, 3 severe. */
+export type Severity = 1 | 2 | 3;
+
+/** One line of the ending's scored list (consequences() in src/game/consequence.ts). */
+export interface EndingLine {
+  kind: 'medicine' | 'contact' | 'facts';
+  key: string;
+  vars?: Record<string, string | number>;
+  /** Plural count: render with tn(key, n). */
+  n?: number;
+  severity: Severity;
 }
 
 export interface EvidenceCard {
@@ -213,6 +228,12 @@ export interface RunState {
   loadout: EvidenceId[];
   used: EvidenceId[];
   exposed: ContactId[];
+  /**
+   * Contacts called in whose statement is still to be checked: the next card that
+   * asks about something they can confirm costs 1 hour for each. Never the protected
+   * contact, whose cost is the ending. Unset in saves from before it existed.
+   */
+  calledIn?: ContactId[];
   time: number;
   scrutiny: number;
   facts: FactMap;

@@ -32,6 +32,7 @@ export function newRun(setup: RunSetup): RunState {
     loadout: [...setup.loadout],
     used: [],
     exposed: [],
+    calledIn: [],
     time: START_TIME,
     scrutiny: ch.startScrutiny,
     facts: {},
@@ -209,8 +210,26 @@ function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev:
   list.push(...a.effects);
   const weak = topic && CHARACTERS[s.character].weakTopics.includes(topic);
   if (a.kind === 'verify' && weak) list.push({ time: -1 });
+  // Checking a statement from someone called in earlier takes an hour each.
+  for (let i = callInsDue(s, a, topic).length; i > 0; i--) list.push({ time: -1 });
   const card = s.screen.kind === 'encounter' ? s.screen.id : undefined;
   return activeEffects(s, list.filter((e) => check(e.when, s)), { card });
+}
+
+/**
+ * The contacts called in earlier whose statement this card checks: the ones who
+ * can confirm its topic. Each costs 1 hour on whatever the player answers, except
+ * walking away.
+ */
+export function callInsDue(s: RunState, a: Approach, topic: Topic | undefined): ContactId[] {
+  if (a.kind === 'withdraw') return [];
+  return (s.calledIn ?? []).filter((c) => canConfirm(c, topic));
+}
+
+/** `calledIn` after `c` is exposed: anyone but the protected contact waits to be checked. */
+function callIn(s: RunState, c: ContactId): ContactId[] {
+  const list = s.calledIn ?? [];
+  return c === CHARACTERS[s.character].protectedContact || list.includes(c) ? list : [...list, c];
 }
 
 /** Where a scrutiny effect comes from: the card on screen, or the check being resolved. */
@@ -444,7 +463,7 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
   if (how === 'assist') {
     const c = assistContact(n);
     if (!c) return s;
-    n = { ...n, exposed: [...n.exposed, c] };
+    n = { ...n, exposed: [...n.exposed, c], calledIn: callIn(n, c) };
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
     // The finding stays on file; the contact only settles what it means, so
     // the check clears with no follow-up and no scrutiny from it.
@@ -464,17 +483,21 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const opt = options(s).find((o) => o.approach.id === approachId);
   if (!card || !opt || opt.blocked) return s;
   const prefix = s.screen.kind === 'inspection' ? 'insp' : 'enc';
-  let n: RunState = { ...s, reaction: null, decisions: s.decisions + 1 };
+  const topic = topicOf(card);
+  // The statements this card checks are settled now, whatever the answer.
+  const due = callInsDue(s, opt.approach, topic);
+  let n: RunState = { ...s, reaction: null, decisions: s.decisions + 1, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
-  if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact] };
+  if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
   n = apply(n, opt.effects);
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
   n = say(n, [{ key: `${prefix}.${card.id}.${approachId}.reaction`, vars }]);
+  // The call-in hour is a real cost too, so the reaction names whose statement it checks.
+  for (const c of due) n = say(n, [{ key: 'calledIn.reaction', vars: { contact: c } }]);
   // The weakness hour is a real cost, so the reaction says what it is spent on.
-  const topic = topicOf(card);
   if (opt.approach.kind === 'verify' && topic && CHARACTERS[s.character].weakTopics.includes(topic)) {
     n = say(n, [{ key: `weak.${topic}.reaction` }]);
   }

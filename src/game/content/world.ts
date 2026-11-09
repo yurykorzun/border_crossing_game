@@ -38,7 +38,8 @@ export const CHARACTERS: Record<CharacterId, Character> = {
  */
 export const CONTACTS: Record<ContactId, Contact> = {
   // The address, the visit and the prescription.
-  mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'] },
+  // With her address on file, officers visit her instead of phoning.
+  mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress' },
   // He can host.
   cousin: { id: 'cousin', abilities: ['accommodation'] },
   // A job offer abroad.

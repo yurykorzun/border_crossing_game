@@ -14,8 +14,9 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  checkEffects, checkFindings, currentCard, deskOf, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
+  callInsDue, checkEffects, checkFindings, currentCard, deskOf, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
 } from './engine';
+import { consequences } from './consequence';
 import type { RunSetup } from './engine';
 import type { Dealer } from './rng';
 import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
@@ -24,7 +25,7 @@ import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, START_TIME, canConfirm,
 } from './content/world';
 import { CHECKS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
-import { t } from '../i18n';
+import { t, tn } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
 
@@ -153,6 +154,24 @@ export function checkState(s: RunState): string[] {
   if (!s.used.every((id) => s.loadout.includes(id)) || !unique(s.used)) bad.push(`used ${s.used} not a subset of loadout`);
   if (!s.exposed.every((c) => ch.contacts.includes(c)) || !unique(s.exposed)) bad.push(`exposed ${s.exposed} not a subset of contacts`);
   if (!unique(s.claims) || !unique(s.seen)) bad.push('claims or seen repeat');
+  // Only someone exposed waits to be checked, never the protected contact, whose cost is the ending.
+  const calledIn = s.calledIn ?? [];
+  if (!calledIn.every((c) => s.exposed.includes(c) && c !== ch.protectedContact) || !unique(calledIn))
+    bad.push(`called in [${calledIn}] with exposed [${s.exposed}]`);
+  // Every exposure and loss has its own scored line, whatever the ending, and the text exists.
+  const cost = consequences(s);
+  if (cost.filter((l) => l.kind === 'contact').length !== s.exposed.length) bad.push(`exposed [${s.exposed}] but ${cost.length} lines on the ending list`);
+  if (cost.some((l) => l.kind === 'medicine') === s.medicine) bad.push('medicine line does not match the state');
+  for (const l of cost) {
+    if (l.kind === 'contact' && (l.vars?.contact === ch.protectedContact) !== (l.severity === 3))
+      bad.push(`${l.vars?.contact} exposed with severity ${l.severity}`);
+    try {
+      if (l.n === undefined) t(l.key, l.vars);
+      else tn(l.key, l.n, l.vars);
+    } catch (e) {
+      bad.push((e as Error).message);
+    }
+  }
   // Every fact is known somewhere, each desk once, in crossing order.
   for (const f of factIds(s)) {
     const desks = s.facts[f] ?? [];
@@ -183,6 +202,21 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   const bad: string[] = [];
   if (!keeps(s.used, n.used)) bad.push('a spent document came back');
   if (!keeps(s.exposed, n.exposed)) bad.push('a contact exposure disappeared');
+  // Exposing anyone but the protected contact puts them on the call-in list, and
+  // the next card that asks about what they can confirm takes the hour.
+  const before = s.calledIn ?? [];
+  const after = n.calledIn ?? [];
+  for (const c of after.filter((x) => !before.includes(x)))
+    if (s.exposed.includes(c)) bad.push(`${c} called in again`);
+  for (const c of n.exposed.filter((x) => !s.exposed.includes(x)))
+    if (c !== CHARACTERS[s.character].protectedContact && !after.includes(c)) bad.push(`${c} exposed but not called in`);
+  if (action.type === 'choose') {
+    const o = options(s).find((x) => x.approach.id === action.approach);
+    const due = o ? callInsDue(s, o.approach, topicOf(currentCard(s))) : [];
+    if (due.some((c) => after.includes(c))) bad.push(`${due} checked on ${(s.screen as { id: string }).id} but still called in`);
+    if (s.time - n.time < Math.min(due.length, s.time)) bad.push(`${due} checked on ${(s.screen as { id: string }).id} for less than an hour each`);
+    if (before.some((c) => !due.includes(c) && !after.includes(c))) bad.push('a call-in disappeared without being checked');
+  } else if (before.some((c) => !after.includes(c))) bad.push('a call-in disappeared without a card checking it');
   if (!factIds(s).every((f) => keeps(s.facts[f] ?? [], n.facts[f] ?? [])) || !keeps(s.claims, n.claims) || !keeps(s.seen, n.seen))
     bad.push('a fact, claim or seen card disappeared');
   if (s.perkUsed && !n.perkUsed) bad.push('the once-per-run advantage came back');
