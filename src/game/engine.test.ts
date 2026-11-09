@@ -82,6 +82,27 @@ describe('scenarios', () => {
     const s = step(interviewSlot2({ claims: ['familyVisit'], facts: ['familyAddress'] }), { type: 'ack' });
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_contradiction' });
   });
+
+  // Passport after "tourism" and the employer card: 2 decisions, both checkpoint cards.
+  const quietPassport = (extra: Partial<RunState> = {}): RunState =>
+    at(newRun(lena), 'p_employer', {
+      slot: 2, decisions: 1, seen: ['p_purpose', 'p_employer'], claims: ['tourism'], ...extra,
+    });
+
+  it('a quiet run gets a third card: the routine question not asked yet', () => {
+    const s = step(quietPassport(), { type: 'choose', approach: 'perk' });
+    expect(s.screen).toEqual({ kind: 'encounter', id: 'p_photo' });
+    expect(s.checkpoint).toBe(0);
+    const after = step(step(s, { type: 'choose', approach: 'mother' }), { type: 'ack' });
+    expect(after.screen).toEqual({ kind: 'between', next: 1 });
+  });
+
+  it('a run that asked in a waiting room or met an inspection gets only 2 cards', () => {
+    const asked = step(quietPassport({ decisions: 2 }), { type: 'choose', approach: 'perk' });
+    expect(asked.screen).toEqual({ kind: 'between', next: 1 });
+    const inspected = step(quietPassport({ inspections: 1 }), { type: 'choose', approach: 'perk' });
+    expect(inspected.screen).toEqual({ kind: 'between', next: 1 });
+  });
 });
 
 describe('illegal actions', () => {

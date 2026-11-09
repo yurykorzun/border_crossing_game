@@ -196,7 +196,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     s = { ...s, pending: rest };
     if (!s.seen.includes(id)) return show(s, id);
   }
-  if (s.slot >= 2) {
+  if (s.slot >= 2 && !(s.slot === 2 && quiet(s) && extraCard(s))) {
     const next = s.checkpoint + 1;
     if (next >= CHECKPOINTS.length) return finish(s);
     return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
@@ -204,11 +204,37 @@ function advance(s: RunState, dealer: Dealer): RunState {
   return deal(s, dealer);
 }
 
+/**
+ * The run has been quiet so far: every decision was a checkpoint card, with no
+ * follow-up, no inspection and no question asked in a waiting room. Only such a
+ * run gets a third card, so a short run grows and a long one does not.
+ */
+function quiet(s: RunState): boolean {
+  if (s.inspections || s.decisions !== s.seen.length) return false;
+  return s.seen.every((id) => {
+    const kind = ENCOUNTER_BY_ID.get(id)?.kind;
+    return kind === 'routine' || kind === 'related';
+  });
+}
+
+/**
+ * The third card for a quiet run: the routine question not asked yet, so
+ * everyone hears both, else the related card that fits best. Nothing new to
+ * read, only one more decision.
+ */
+function extraCard(s: RunState): Encounter | undefined {
+  const cp = CHECKPOINTS[s.checkpoint];
+  const fits = ENCOUNTERS.filter((e) => e.checkpoint === cp && eligible(s, e));
+  return fits.find((e) => e.kind === 'routine')
+    ?? fits.filter((e) => e.kind === 'related').sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
+}
+
 function deal(s: RunState, dealer: Dealer): RunState {
   const cp = CHECKPOINTS[s.checkpoint];
   const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && eligible(s, e));
   let chosen: Encounter | undefined;
   let rng = s.rng;
+  if (s.slot === 2) return show({ ...s, slot: 3 }, extraCard(s)!.id);
   if (s.slot === 0) chosen = routine.find((e) => e.opening);
   if (s.slot === 1) {
     const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && eligible(s, e));
