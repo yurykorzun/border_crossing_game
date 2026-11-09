@@ -220,38 +220,38 @@ p { margin: 0 0 var(--gap); }
 .history-detail h3 { color: #c5cec9; margin-bottom: 6px; }
 .history-detail ul { margin: 0; padding-inline-start: 18px; font-size: 0.9rem; display: grid; gap: 4px; }
 
-/* ── Run: strip / scene / panel / controls / tools */
+/* ── Run: header / scene / question / answers / tray, like standing at a border counter */
 .run { gap: 10px !important; }
-/* Two rows: time and the scrutiny button, then the checkpoint dots with their name. */
-.strip { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
-.stat { display: grid; align-items: center; justify-content: start; row-gap: 2px; }
-/* "8 hours remaining" is a sentence, so it keeps its case. */
-.stat-label.hours { font-size: 0.85rem; color: var(--paper); white-space: nowrap; }
-.pips, .boxes { display: flex; gap: 3px; }
-.pips i { width: 6px; height: 12px; background: var(--bg-2); border-radius: 1px; }
-.pips i.on { background: var(--paper); }
+/* Where you stand: the goal, hours and scrutiny, the time bar, then which checkpoint. */
+.strip { display: grid; gap: 2px; flex: none; }
+.goal { margin: 0; font-weight: 700; font-size: 1.05rem; }
+.strip-stats { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.stat { display: flex; align-items: center; gap: 6px; }
+/* "8 hours left" is a sentence, so it keeps its case. */
+.stat-label.hours { font-size: 0.9rem; color: var(--paper); white-space: nowrap; }
+.amber { color: var(--amber-dark); }
+.strip-divider { width: 1px; height: 16px; background: var(--bg-line); opacity: 0.4; }
 .scrutiny {
   min-height: 44px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: 6px;
+  padding: 0 4px;
   background: transparent;
-  border: 1px solid var(--bg-line);
+  border: 0;
   border-radius: var(--radius);
   color: var(--paper);
   cursor: pointer;
 }
-.scrutiny-text { font-size: 0.85rem; white-space: nowrap; }
-.boxes i { width: 14px; height: 14px; border: 2px solid var(--bg-line); border-radius: 2px; }
-.boxes i.on { background: var(--amber-dark); border-color: var(--amber-dark); }
-.scrutiny.lvl-3 .boxes i.on { background: var(--danger-dark); border-color: var(--danger-dark); }
-.progress-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.progress { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; flex: none; }
-.progress li { width: 18px; height: 6px; background: var(--bg-2); border-radius: 3px; }
-.progress li.done { background: var(--paper); }
-.progress li.now { background: var(--amber-dark); }
-.progress-label { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: #c5cec9; }
+/* Dotted underline: it opens the scrutiny sheet, so it should look tappable. */
+.scrutiny-text { font-size: 0.9rem; white-space: nowrap; text-decoration: underline dotted; text-underline-offset: 3px; }
+.scrutiny.lvl-3 .scrutiny-text { color: var(--danger-dark); }
+.time-bar { height: 4px; background: var(--bg-2); border-radius: 2px; overflow: hidden; }
+.time-bar i { display: block; height: 100%; background: var(--amber-dark); }
+.progress-label { margin: 4px 0 0; font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: #c5cec9; }
+/* Pixel icons (src/ui/art/icons.tsx), 10 cells across, kept crisp. */
+.icon { width: 16px; height: 16px; flex: none; display: block; }
+.icon-ink { fill: currentColor; }
 
 /* Scene: placeholder rectangles until generated art (docs/design.md).
    It takes the spare height, and it is the first thing to shrink. */
@@ -306,6 +306,12 @@ p { margin: 0 0 var(--gap); }
 /* The dialogue sits right under the scene. With larger text the panel scrolls; answers never shrink. */
 .panel { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
 .question { font-size: 1.15rem; font-weight: 600; margin: 0; }
+/* On a card the question sits right on top of the answers, the biggest text on screen. */
+.ask { flex: none; }
+.ask-short { padding: 2px 2px 0; }
+.ask-short .question { font-size: 1.4rem; line-height: 1.25; }
+.ask-card { padding: 12px 14px; }
+.ask-short.inspection { padding-inline-start: 10px; }
 .reaction p { font-style: italic; }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
 .waiting { cursor: pointer; }
@@ -345,11 +351,17 @@ p { margin: 0 0 var(--gap); }
   max-width: 92%;
 }
 
-/* Bottom tray: three equal buttons, on every run screen. */
-.tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); flex: none; }
+/* Bottom tray, on every run screen: My story and Evidence share the width, Settings is a gear on the end. */
+.tools { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--gap); flex: none; }
+.tools .tool-settings { width: 44px; padding: 0; }
+.tools .tool-settings .icon { width: 20px; height: 20px; }
 .tools button {
   min-height: 44px;
   padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: transparent;
   border: 1px solid var(--bg-line);
   border-radius: var(--radius);

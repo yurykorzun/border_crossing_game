@@ -36,7 +36,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
 
     // The queue is not named after the checkpoint yet.
     await expect(run.getByRole('heading', { name: 'In the queue' })).toBeVisible();
-    await expect(strip).toContainText('1/3 · In the queue');
+    await expect(strip).toContainText('1 / 3 · In the queue');
     for (const part of ['.strip', '.scene', '.panel', '.controls'])
       await expect(run.locator(part)).not.toContainText('Passport control');
 
@@ -75,7 +75,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     await expect(button).toHaveText('Approach the booth');
     await button.click();
     await expect(run.getByRole('heading', { name: 'In the queue' })).toHaveCount(0);
-    await expect(strip).toContainText('1/3 · Passport control');
+    await expect(strip).toContainText('1 / 3 · Passport control');
     await expect(run.locator('.officer')).toBeVisible();
     expect(errors).toEqual([]);
   });

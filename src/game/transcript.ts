@@ -74,12 +74,16 @@ const CHROME = { chrome: true } as const;
 function chromeLines(s: RunState, p: Page): void {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
   p.add('ui.yourCrossing', {}, CHROME);
-  p.plural('ui.hoursRemaining', s.time, CHROME);
+  p.add('ui.goal', {}, CHROME);
+  p.plural('ui.hours', s.time, CHROME);
+  p.add('ui.hoursLeft', { hours: tn('ui.hours', s.time) }, CHROME);
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
   const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
   const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
-  p.add('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name }, CHROME);
+  const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
+  p.add('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length }, CHROME);
+  p.add('ui.progress', { count, name }, CHROME);
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   else if (s.screen.kind !== 'between')
     p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
