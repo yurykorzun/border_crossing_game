@@ -9,7 +9,7 @@ import { CHECKPOINTS } from './types';
 import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME,
 } from './content/world';
-import { CHECKS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
@@ -248,11 +248,22 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (!s.seen.includes(id)) return show(s, id);
   }
   if (s.slot >= 2 && !(s.slot === 2 && quiet(s) && extraCard(s))) {
+    const challenge = pendingChallenge(s);
+    if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
     if (next >= CHECKPOINTS.length) return finish(s);
     return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
   }
   return deal(s, dealer);
+}
+
+/** A challenge card for this checkpoint that applies and has not been dealt yet. */
+function pendingChallenge(s: RunState): string | undefined {
+  const cp = CHECKPOINTS[s.checkpoint];
+  return CHALLENGES.find((id) => {
+    const e = ENCOUNTER_BY_ID.get(id);
+    return !!e && e.checkpoint === cp && eligible(s, e);
+  });
 }
 
 /**

@@ -3,14 +3,14 @@
 
 import { describe, expect, it } from 'vitest';
 import { t, tn } from '../i18n';
-import { CHECKS, ENCOUNTERS, INSPECTIONS } from './content/encounters';
+import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
 import { CHARACTERS, EVIDENCE } from './content/world';
 import { consequence, SEPARATOR } from './consequence';
 import { cardFor, newRun, options, step } from './engine';
 import type { Option, RunSetup } from './engine';
 import { tryStep } from './play';
 import { FACT_IDS } from './types';
-import type { Effect, RunState } from './types';
+import type { ClaimId, Effect, FactId, RunState } from './types';
 
 const lena: RunSetup = { character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin: 'records', seed: 7 };
 const mark: RunSetup = { character: 'mark', loadout: ['motherLetter', 'hotel', 'employerLetter', 'returnTicket'], bulletin: 'records', seed: 7 };
@@ -217,6 +217,33 @@ describe('no scrutiny without a reason', () => {
       expect(r.state.facts, card).toContain(fact);
       expect(r.state.scrutiny, card).toBeGreaterThan(newRun(mark).scrutiny);
     }
+  });
+});
+
+describe('a challenge is dealt even when the last interview answer creates it', () => {
+  // Slot 3: the third interview card a quiet run gets, so nothing else would follow it.
+  const last = (s: RunState, id: string, extra: Partial<RunState>): RunState => ({ ...at(s, id), slot: 3, ...extra });
+
+  it('denying relatives on the final card, with the brother on file, deals the disproof card', () => {
+    const s = last(newRun(mark), 'i_family', { facts: ['brotherAbroad'] });
+    const r = tryStep(s, { type: 'choose', approach: 'deny' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.state.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
+  });
+
+  // One row per pair: the claim and the fact are both standing when the final card ends.
+  const rows = [...DISPROOFS.map((p) => [...p, 'i_contradiction']), ...INCONSISTENCIES.map((p) => [...p, 'i_clarify'])] as const;
+  it.each(rows)('%s + %s at the end of the interview deals %s', (claim, fact, challenge) => {
+    const s = last(newRun(lena), 'i_family', { claims: [claim as ClaimId], facts: [fact as FactId] });
+    const r = tryStep(s, { type: 'choose', approach: 'why' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.state.screen).toEqual({ kind: 'encounter', id: challenge });
+  });
+
+  it('with nothing to challenge, the final card still ends the run', () => {
+    const r = tryStep(last(newRun(lena), 'i_family', {}), { type: 'choose', approach: 'why' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.state.screen.kind).not.toBe('encounter');
   });
 });
 

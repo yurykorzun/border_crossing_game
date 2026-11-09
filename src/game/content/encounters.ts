@@ -21,7 +21,14 @@ export const DISPROOFS: readonly [ClaimId, FactId][] = [
   ['cashUnderLimit', 'cashCount'],
 ];
 
-const anyPair = (pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
+/**
+ * The cards that challenge a claim, most expensive first. One that applies is
+ * always dealt before its checkpoint ends, so a lie disproved by the last
+ * answer still has to be answered.
+ */
+export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
+
+const anyPair =(pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
 
 export const ENCOUNTERS: Encounter[] = [
   // ── Passport control: identity and purpose (the clerk wants complete paperwork)
