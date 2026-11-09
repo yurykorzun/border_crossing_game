@@ -217,15 +217,14 @@ test('My story shows which desk knows each fact', async ({ page }) => {
 
   await page.getByRole('button', { name: 'My story' }).click();
   const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet).toContainText('Each desk sees what it learns or receives from another desk.');
   const row = sheet.locator('.record li[data-fact="familyAddress"]');
   await expect(row).toContainText('Family address');
   // Passport control and customs know it; the interview does not.
-  await expect(row.locator('.tag.desk')).toHaveText(['Passport', 'Customs']);
+  await expect(row.locator('.desks')).toHaveText('Passport control and Customs have this on file');
   await noHorizontalScroll(page, 'My story with desks');
 
   // Records first, then the messages so far, the biography below, every section one full-width column (2026-11-09 review).
-  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'Messages', 'People', 'Background']);
+  await expect(sheet.locator('h3')).toHaveText(['Your answers', 'Information recorded', 'Messages', 'People', 'Background']);
   const widths = await sheet.locator('.story-section').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
   expect(widths).toHaveLength(5);
   for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
@@ -269,7 +268,11 @@ test('a Home in time ending is a short result card that fits the screen', async 
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
-  const run: RunState = { ...lenaRun(), time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime' };
+  // One answer recorded at a desk, one only said aloud, and a fact two desks have, for the Border records sheet.
+  const run: RunState = {
+    ...lenaRun(), time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime',
+    claims: ['familyVisit', 'cashUnderLimit'], logged: { cashUnderLimit: ['customs'] }, facts: { familyAddress: ['customs', 'interview'] },
+  };
   await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['homeInTime'] })] as const);
   await page.reload();
 
@@ -298,11 +301,19 @@ test('a Home in time ending is a short result card that fits the screen', async 
   expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
   await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport();
 
-  // See what's on file opens the records alone: no epilogue, no costs, no biography.
+  // See what's on file opens Border records alone: no epilogue, no costs, no biography.
   await page.getByRole('button', { name: "See what's on file" }).click();
   const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet.locator('h2')).toHaveText("What's on file");
-  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file']);
+  await expect(sheet.locator('h2')).toHaveText('Border records');
+  await expect(sheet.locator('h3')).toHaveText(['Your answers', 'Information recorded']);
+  // Each item written out with the desks that have it, and no ON FILE badge or help paragraph.
+  await expect(sheet.locator('li[data-claim="cashUnderLimit"] .desks')).toHaveText('Recorded at Customs');
+  await expect(sheet.locator('li[data-claim="familyVisit"] .desks')).toHaveText('Said aloud, not recorded');
+  await expect(sheet.locator('li[data-fact="familyAddress"]')).toHaveText(/Family address\s*Customs and Security interview have this on file/);
+  await expect(sheet.locator('.tag')).toHaveCount(0);
+  await expect(sheet).not.toContainText('Each desk sees');
+  const sizes = await sheet.locator('.record li > *').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)));
+  for (const px of sizes) expect(px, 'records text size').toBeGreaterThanOrEqual(15);
   await expect(sheet).not.toContainText('visiting hours end');
   await expect(sheet).not.toContainText('Background');
   await expect(sheet.locator('.what-it-cost')).toHaveCount(0);

@@ -115,19 +115,17 @@ describe('rules', () => {
     expect(admitted.state.claims).toContain('familyVisit');
     expect(loggedAt(admitted.state, 'familyVisit')).toEqual([]);
 
-    // My story: the written-down claim carries "on file" and the desk name, the spoken one neither.
+    // My story: the written-down claim names the desk that recorded it, the spoken one says it was not recorded.
     const story = (s: RunState) => {
       const html = renderToStaticMarkup(createElement(StoryContent, { s }));
       return (c: string) => html.match(new RegExp(`<li data-claim="${c}"[^>]*>.*?</li>`))?.[0] ?? '';
     };
     const logged = story(declared.state)('cashUnderLimit');
-    expect(logged).toContain(t('ui.writtenDown'));
-    expect(logged).toContain(`data-desk="customs">${t('desk.customs')}<`);
+    expect(logged).toContain('Recorded at Customs');
     const said = story(admitted.state)('familyVisit');
     expect(said).toContain(t('claim.familyVisit'));
     expect(said).toContain(t('ui.saidAloud'));
-    expect(said).not.toContain(t('ui.writtenDown'));
-    expect(said).not.toContain('data-desk');
+    expect(said).not.toContain('Recorded at');
   });
 
   it('the same claim made again at a desk that writes it down goes on file there too', () => {

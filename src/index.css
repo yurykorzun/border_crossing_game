@@ -521,17 +521,12 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .tag.risk { color: var(--danger-paper); border-color: var(--danger-paper); }
 /* My story: each section takes the sheet's full width, one under the other (2026-11-09 review). */
 .story-section { display: block; width: 100%; }
-.record { font-family: var(--mono); font-size: 0.8rem; }
-.record li { margin-bottom: 4px; }
-/* Which desks know a fact: one small tag each, on their own line under it. */
-.record .desks { display: flex; flex-wrap: wrap; gap: 3px; }
-.record .tag.desk { margin-inline-start: 0; font-size: 0.62rem; }
-/* A claim an officer wrote down reads firm; one only said aloud reads faint. */
-.record .tag.logged, .record .tag.said { margin-inline-start: 0; font-size: 0.62rem; }
-.record .tag.logged { color: var(--ink); border-color: var(--ink); }
+.record { list-style: none; padding: 0; font-size: 1.05rem; }
+.record li { padding: 6px 0; border-bottom: 1px solid var(--paper-2); }
+/* Who has each item, written out under it: "Recorded at Customs". */
+.record .desks { display: block; font-size: 0.95rem; color: var(--muted); }
+/* An answer only said aloud reads faint; one an officer wrote down reads firm. */
 .record li.said > span:first-child { font-style: italic; color: var(--muted); }
-.record .tag.said { border-style: dashed; }
-.small { font-size: 0.78rem; margin: 0 0 4px; }
 .who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .who p { margin: 0; }
 .portrait-small { width: 36px; height: auto; flex: none; }

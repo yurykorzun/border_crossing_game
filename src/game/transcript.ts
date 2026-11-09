@@ -9,7 +9,7 @@
 // screen. When a screen there changes, change it here too, or the transcript
 // stops being what the player reads.
 
-import { own, t, tn } from '../i18n';
+import { andList, own, t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
@@ -212,21 +212,19 @@ function storyLines(s: RunState, p: Page): void {
   }
   if (!messages.length) p.add('ui.nothingYet', {}, CHROME);
   p.add('ui.claims', {}, CHROME);
+  const desks = (ds: readonly string[]) => andList(ds.map((d) => t(`checkpoint.${d}`)));
   for (const c of s.claims) {
     p.add(own(`claim.${c}`, s.character), {}, CHROME);
-    const desks = loggedAt(s, c);
-    if (!desks.length) p.add('ui.saidAloud', {}, CHROME);
-    else {
-      p.add('ui.writtenDown', {}, CHROME);
-      for (const d of desks) p.add(`desk.${d}`, {}, CHROME);
-    }
+    const at = loggedAt(s, c);
+    if (!at.length) p.add('ui.saidAloud', {}, CHROME);
+    else p.add('ui.recordedAt', { desks: desks(at) }, CHROME);
   }
   if (!s.claims.length) p.add('ui.nothingYet', {}, CHROME);
   p.add('ui.onFile', {}, CHROME);
-  p.add('ui.onFileHelp', {}, CHROME);
   for (const f of factIds(s)) {
     p.add(`fact.${f}`, {}, CHROME);
-    for (const d of s.facts[f] ?? []) p.add(`desk.${d}`, {}, CHROME);
+    const at = s.facts[f] ?? [];
+    p.add(`ui.haveOnFile.${at.length === 1 ? 'one' : 'other'}`, { desks: desks(at), n: at.length }, CHROME);
   }
   if (!factIds(s).length) p.add('ui.nothingYet', {}, CHROME);
   // EvidenceContent
@@ -352,7 +350,7 @@ function endingLines(s: RunState, p: Page): void {
   p.add('ui.endingsSeen', { n: 1 }, CHROME);
   p.add('ui.seeOnFile');
   p.add('ui.playAgain');
-  // The sheet behind "See what's on file".
+  // The Border records sheet behind "See what's on file".
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.close', {}, CHROME);
   storyLines(s, p);

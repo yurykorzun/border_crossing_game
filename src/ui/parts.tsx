@@ -3,7 +3,7 @@
 
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { own, t, tn } from '../i18n';
+import { andList, own, t, tn } from '../i18n';
 import { deskOf, factIds, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
@@ -203,28 +203,25 @@ export function StoryContent({ s, messages = messagesSoFar(s) }: { s: RunState; 
   );
 }
 
-/** What you said, then On file. The ending's "See what's on file" shows only these. */
+/**
+ * Your answers, then Information recorded, each item with a line naming the desks that have it,
+ * so the player can scan who knows what. The ending's Border records sheet shows only these.
+ */
 export function StoryRecords({ s }: { s: RunState }) {
+  const desks = (ds: readonly string[]) => andList(ds.map((d) => t(`checkpoint.${d}`)));
   return (
     <>
       <section className="story-section">
         <h3>{t('ui.claims')}</h3>
-        {/* A claim an officer wrote down shows the desks that have it, so a later contradiction is fair. */}
+        {/* A claim an officer wrote down names the desks that have it, so a later contradiction is fair. */}
         {s.claims.length ? (
           <ul className="record">
             {s.claims.map((c) => {
-              const desks = loggedAt(s, c);
+              const at = loggedAt(s, c);
               return (
-                <li key={c} data-claim={c} className={desks.length ? 'logged' : 'said'}>
+                <li key={c} data-claim={c} className={at.length ? 'logged' : 'said'}>
                   <span>{t(own(`claim.${c}`, s.character))}</span>
-                  <span className="desks">
-                    {desks.length ? (
-                      <>
-                        <span className="tag logged">{t('ui.writtenDown')}</span>
-                        {desks.map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
-                      </>
-                    ) : <span className="tag said">{t('ui.saidAloud')}</span>}
-                  </span>
+                  <small className="desks">{at.length ? t('ui.recordedAt', { desks: desks(at) }) : t('ui.saidAloud')}</small>
                 </li>
               );
             })}
@@ -233,18 +230,18 @@ export function StoryRecords({ s }: { s: RunState }) {
       </section>
       <section className="story-section">
         <h3>{t('ui.onFile')}</h3>
-        <p className="muted small">{t('ui.onFileHelp')}</p>
         {/* Each fact with the desks that know it: officials share only through a channel. */}
         {factIds(s).length ? (
           <ul className="record">
-            {factIds(s).map((f) => (
-              <li key={f} data-fact={f}>
-                <span>{t(`fact.${f}`)}</span>
-                <span className="desks">
-                  {(s.facts[f] ?? []).map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
-                </span>
-              </li>
-            ))}
+            {factIds(s).map((f) => {
+              const at = s.facts[f] ?? [];
+              return (
+                <li key={f} data-fact={f}>
+                  <span>{t(`fact.${f}`)}</span>
+                  <small className="desks">{tn('ui.haveOnFile', at.length, { desks: desks(at) })}</small>
+                </li>
+              );
+            })}
           </ul>
         ) : <p className="muted">{t('ui.nothingYet')}</p>}
       </section>

@@ -708,7 +708,7 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
         <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
       </div>
       {/* The records alone: the epilogue and the consequences stay on the ending screen above. */}
-      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.whatsOnFile')}>
+      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.borderRecords')}>
         <StoryRecords s={s} />
       </Sheet>
     </main>

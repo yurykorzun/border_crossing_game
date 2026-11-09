@@ -54,14 +54,16 @@ export const en: Record<string, string> = {
   'ui.exposed': 'exposed',
   'ui.protected': 'protect',
   'ui.background': 'Background',
-  'ui.claims': 'What you said',
+  'ui.claims': 'Your answers',
   // My story: the phone messages so far, because the queue shows only the current one.
   'ui.messages': 'Messages',
-  // Tags beside a claim in My story: the desks that wrote it down, or that it was only said.
-  'ui.writtenDown': 'On file',
-  'ui.saidAloud': 'Said only',
-  'ui.onFile': 'On file',
-  'ui.onFileHelp': 'Each desk sees what it learns or receives from another desk.',
+  // The line under each answer and fact in the records: which desks have it. {desks} reads "Customs and Security interview".
+  'ui.recordedAt': 'Recorded at {desks}',
+  'ui.saidAloud': 'Said aloud, not recorded',
+  'ui.onFile': 'Information recorded',
+  'ui.haveOnFile.one': '{desks} has this on file',
+  'ui.haveOnFile.other': '{desks} have this on file',
+  'ui.and': 'and',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
   // The one line under each answer (src/game/consequence.ts), parts joined by " · ".
@@ -137,7 +139,7 @@ export const en: Record<string, string> = {
   'ui.lost': 'Lost',
   'ui.notNamed': 'Not named',
   'ui.seeOnFile': "See what's on file",
-  'ui.whatsOnFile': "What's on file",
+  'ui.borderRecords': 'Border records',
   'ui.playAgain': 'Play again',
   'ui.yourCrossing': 'Your crossing',
   'ui.missionRule': 'Get through with at least {n} hours left to reach the bus.',
