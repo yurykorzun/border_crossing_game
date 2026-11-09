@@ -143,25 +143,25 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.title');
   p.add('ui.tagline');
   p.add('ui.start');
-  // Setup 1: Choose your traveler
+  // Setup 1: TravelerStep. Title, stage label, the premise as the heading, two cards.
+  p.add('ui.title');
+  p.add('ui.traveler');
+  p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 3 }), name: t('ui.traveler') });
   p.add('ui.premise');
-  p.add('ui.pickCharacter');
+  // The radio group's accessible name: read out, never shown.
+  p.add('ui.pickCharacter', {}, CHROME);
   for (const id of CHARACTER_IDS) {
     p.add('ui.portraitOf', { name: t(`char.${id}.name`) }, { who: id });
     p.add(`char.${id}.name`, {}, { who: id });
     p.add(`char.${id}.role`, {}, { who: id });
-    for (const b of CHARACTERS[id].background) p.add(`bg.${b}.short`, {}, { who: id });
-    p.add('ui.advantage');
-    p.add(`char.${id}.advantage`, {}, { who: id });
-    p.add('ui.complication');
-    p.add(`char.${id}.complication`, {}, { who: id });
+    p.add(`char.${id}.card`, {}, { who: id });
   }
-  // Before a pick the screen shows the hint, after it the chosen history.
-  p.add('ui.historyHint');
   p.add('ui.continue');
+  // After a pick: the history link, and the history behind it. It stays closed
+  // unless opened, so its words are not counted as read (chrome, like the sheets).
   const name = t(`char.${setup.character}.name`);
-  p.add('ui.historyOf', { name });
-  for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character });
+  p.add('ui.readHistory', { name });
+  for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character, ...CHROME });
   p.add('ui.continueAs', { name });
   // Setup 2: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;

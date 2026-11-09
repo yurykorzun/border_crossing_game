@@ -32,13 +32,12 @@ export const en: Record<string, string> = {
   'ui.evidence': 'Evidence',
   'ui.close': 'Close',
   // Setup 1: the premise is two sentences at most; the rest of the mission waits for later.
-  'ui.premise': "You're going home. Your father has had a stroke and your mother needs help.",
+  'ui.premise': "You're going home. Your father is in hospital.",
+  'ui.traveler': 'Traveler',
   'ui.pickCharacter': 'Choose your traveler',
   'ui.continueAs': 'Continue as {name}',
-  'ui.advantage': 'Advantage',
-  'ui.complication': 'Complication',
-  'ui.historyOf': "{name}'s history",
-  'ui.historyHint': 'Pick a traveler to see their history.',
+  // The history link under the cards: a disclosure, closed until opened.
+  'ui.readHistory': "Read {name}'s history",
   'ui.back': 'Back',
   // Setup 2: packing. The stage label, the title and a live count; the rules wait for the run.
   'ui.preparation': 'Preparation',
@@ -116,11 +115,14 @@ export const en: Record<string, string> = {
   'char.lena.role': 'Software tester',
   'char.lena.advantage': 'Resolve one work question without a document.',
   'char.lena.complication': 'Employer checks take one extra hour.',
+  // The one line on the traveler card.
+  'char.lena.card': 'Resolve one work question without a document.',
   'char.mark.name': 'Mark',
   'char.mark.blurb': 'Holds a second passport. Left four years ago.',
   'char.mark.role': 'Dual citizen',
   'char.mark.advantage': 'Pack 4 documents instead of 3.',
   'char.mark.complication': 'Start with Scrutiny 1/3.',
+  'char.mark.card': 'Pack 4 documents · Start at Scrutiny 1/3',
 
   // History: a short name for the traveler card, the full line for the detail under the cards.
   'bg.foreignEmployer.short': 'Foreign employer',

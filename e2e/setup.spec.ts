@@ -5,30 +5,36 @@ import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/wor
 
 // The three setup screens at 390x844: Choose your traveler, Pack your documents, Begin the crossing.
 
-async function fits(page: Page, where: string) {
+/** The traveler screen: no page scroll, and Continue in view. `bodyMayScroll` for the open history. */
+async function fits(page: Page, where: string, bodyMayScroll = false) {
   const m = await page.evaluate(() => {
     const button = document.querySelector('.traveler-step .controls button')!.getBoundingClientRect();
     return {
       pageScroll: document.documentElement.scrollHeight - document.documentElement.clientHeight,
       bodyScroll: (() => { const b = document.querySelector('.setup-body')!; return b.scrollHeight - b.clientHeight; })(),
+      buttonTop: button.top,
       buttonBottom: button.bottom,
       viewport: window.innerHeight,
     };
   });
   expect(m.pageScroll, `page scroll on ${where}`).toBeLessThanOrEqual(0);
-  expect(m.bodyScroll, `content scroll on ${where}`).toBeLessThanOrEqual(0);
+  if (!bodyMayScroll) expect(m.bodyScroll, `content scroll on ${where}`).toBeLessThanOrEqual(0);
+  expect(m.buttonTop, `button off the top on ${where}`).toBeGreaterThanOrEqual(0);
   expect(m.buttonBottom, `button below the screen on ${where}`).toBeLessThanOrEqual(m.viewport);
 }
 
-test('choose your traveler: radio cards, history, and Continue as the pick', async ({ page }) => {
+test('choose your traveler: premise heading, role lines, history link, Continue as the pick', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
   await page.locator('.title-screen button.primary').click();
 
   const screen = page.locator('main.traveler-step');
-  await expect(screen.getByText('Purpose of Visit')).toBeVisible();
-  await expect(screen.getByRole('heading', { name: 'Choose your traveler' })).toBeVisible();
+  await expect(screen.locator('.setup-title')).toHaveText('Purpose of Visit');
+  await expect(screen.locator('.traveler-scene')).toBeVisible();
+  await expect(screen.locator('.stage-label')).toHaveText('1 / 3 · Traveler');
+  await expect(screen.locator('.stage-label .amber')).toHaveText('1 / 3');
+  await expect(screen.getByRole('heading', { name: "You're going home. Your father is in hospital." })).toBeVisible();
 
   // A two-sentence premise at most: count every sentence that ends in . ! or ?
   const premise = (await screen.locator('.premise').innerText()).trim();
@@ -41,52 +47,61 @@ test('choose your traveler: radio cards, history, and Continue as the pick', asy
   const group = screen.getByRole('radiogroup', { name: 'Choose your traveler' });
   const cards = group.getByRole('radio');
   await expect(cards).toHaveCount(CHARACTER_IDS.length);
-  for (const [i, id] of CHARACTER_IDS.entries()) {
-    const card = cards.nth(i);
+  const lena = cards.nth(CHARACTER_IDS.indexOf('lena'));
+  const mark = cards.nth(CHARACTER_IDS.indexOf('mark'));
+  // One bold name line and one short line per card, and the portrait.
+  await expect(lena.locator('.traveler-name')).toHaveText('Lena · Software tester');
+  await expect(mark.locator('.traveler-name')).toHaveText('Mark · Dual citizen');
+  await expect(lena.locator('.traveler-line')).toHaveText('Resolve one work question without a document.');
+  await expect(mark.locator('.traveler-line')).toHaveText('Pack 4 documents · Start at Scrutiny 1/3');
+  for (const card of [lena, mark]) {
     await expect(card).toHaveAttribute('aria-checked', 'false');
-    await expect(card).toContainText(en[`char.${id}.name`]);
-    await expect(card).toContainText('Advantage');
-    await expect(card).toContainText('Complication');
-    await expect(card).toContainText(en[`char.${id}.advantage`]);
-    await expect(card).toContainText(en[`char.${id}.complication`]);
-    // Each card names its 3 history traits.
-    const traits = card.locator('.trait');
-    await expect(traits).toHaveText(CHARACTERS[id].background.map((b) => en[`bg.${b}.short`]));
     await expect(card.locator('.portrait')).toBeVisible();
+    await expect(card.locator('.radio svg')).toHaveCount(0);
   }
-  expect(en['char.lena.advantage']).toBe('Resolve one work question without a document.');
-  expect(en['char.lena.complication']).toBe('Employer checks take one extra hour.');
-  expect(en['char.mark.advantage']).toBe('Pack 4 documents instead of 3.');
-  expect(en['char.mark.complication']).toBe('Start with Scrutiny 1/3.');
 
   await expect(screen.locator('.consequence')).toHaveCount(0);
 
   const cont = screen.locator('.controls button.primary');
   await expect(cont).toBeDisabled();
-  const detail = screen.locator('.history-detail');
-  await expect(detail.locator('li')).toHaveCount(0);
+  await expect(screen.locator('.history-toggle')).toHaveCount(0);
   await fits(page, 'no pick');
 
-  // Tapping Lena selects her and stays on this screen.
-  const lena = cards.nth(CHARACTER_IDS.indexOf('lena'));
-  const mark = cards.nth(CHARACTER_IDS.indexOf('mark'));
+  // Tapping Lena selects her and stays on this screen; the picked card gets the amber check.
   await lena.click();
   await expect(lena).toHaveAttribute('aria-checked', 'true');
   await expect(mark).toHaveAttribute('aria-checked', 'false');
+  await expect(lena.locator('.radio svg')).toHaveCount(1);
   await expect(cont).toBeEnabled();
   await expect(cont).toHaveText('Continue as Lena');
   await expect(screen).toBeVisible();
-  // Only the selected traveler's history is spelled out.
-  await expect(detail.locator('li')).toHaveText(CHARACTERS.lena.background.map((b) => en[`bg.${b}`]));
-  await fits(page, 'Lena picked');
 
-  // Arrow keys move the selection, as in a radio group.
+  // Her history is closed until the link is activated.
+  const toggle = screen.getByRole('button', { name: "Read Lena's history" });
+  const detail = screen.locator('.history-detail');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(detail).toBeHidden();
+  await fits(page, 'Lena picked, history closed');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(detail.locator('li')).toHaveText(CHARACTERS.lena.background.map((b) => en[`bg.${b}`]));
+  await expect(detail).toBeVisible();
+  await fits(page, 'Lena picked, history open', true);
+  await expect(cont).toBeInViewport();
+
+  // Arrow keys move the selection, as in a radio group; the new pick starts closed.
   await lena.press('ArrowDown');
   await expect(mark).toHaveAttribute('aria-checked', 'true');
   await expect(mark).toBeFocused();
   await expect(cont).toHaveText('Continue as Mark');
+  const markToggle = screen.getByRole('button', { name: "Read Mark's history" });
+  await expect(markToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(detail).toBeHidden();
+  await fits(page, 'Mark picked, history closed');
+  await markToggle.click();
+  await expect(markToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(detail.locator('li')).toHaveText(CHARACTERS.mark.background.map((b) => en[`bg.${b}`]));
-  await fits(page, 'Mark picked');
+  await fits(page, 'Mark picked, history open', true);
 
   await cont.click();
   await expect(page.locator('.setup .doc').first()).toBeVisible();
@@ -126,7 +141,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   // Title, then each setup heading in order, into the first queue.
   await expect(page.locator('.title-screen h1')).toHaveText('Purpose of Visit');
   await page.locator('.title-screen button.primary').click();
-  await expect(page.getByRole('heading', { name: 'Choose your traveler' })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
 

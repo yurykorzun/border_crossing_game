@@ -278,10 +278,20 @@ function BeginStep({ picked, onBack, onBegin }: { picked: EvidenceId[]; onBack: 
   );
 }
 
-/** Setup 1. The cards are a radio group: a tap selects, and only the button moves on. */
+/**
+ * Setup 1. The premise is the heading; the cards are a radio group, so a tap
+ * selects and only the button moves on. The picked traveler's history waits
+ * behind a disclosure, closed until opened.
+ */
 function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; onContinue: (c: CharacterId) => void }) {
   const [chosen, setChosen] = useState<CharacterId | null>(initial);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
+  // A new pick starts with its history closed.
+  const pick = (id: CharacterId) => {
+    if (id !== chosen) setHistoryOpen(false);
+    setChosen(id);
+  };
 
   // Arrow keys move the selection, as in a native radio group.
   const onKey = (e: React.KeyboardEvent, i: number) => {
@@ -289,20 +299,23 @@ function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; on
     if (!delta) return;
     e.preventDefault();
     const next = (i + delta + CHARACTER_IDS.length) % CHARACTER_IDS.length;
-    setChosen(CHARACTER_IDS[next]);
+    pick(CHARACTER_IDS[next]);
     cards.current[next]?.focus();
   };
   const focusable = chosen ?? CHARACTER_IDS[0];
+  const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('traveler') + 1, total: SETUP_STEPS.length });
 
   return (
     <main className="setup traveler-step">
       <div className="setup-body">
-        <header className="setup-head">
-          <p className="mono setup-title">{t('ui.title')}</p>
-          <p className="premise">{t('ui.premise')}</p>
+        <p className="setup-title">{t('ui.title')}</p>
+        {/* The scene slot: a border post at dusk, drawn later (67a.19). */}
+        <div className="traveler-scene" aria-hidden />
+        <header className="step-head">
+          <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.traveler') })} part={count} /></p>
+          <h2 className="premise">{t('ui.premise')}</h2>
         </header>
-        <h2 id="traveler-heading" className="on-dark">{t('ui.pickCharacter')}</h2>
-        <div className="travelers" role="radiogroup" aria-labelledby="traveler-heading">
+        <div className="travelers" role="radiogroup" aria-label={t('ui.pickCharacter')}>
           {CHARACTER_IDS.map((id, i) => (
             <button
               key={id}
@@ -312,33 +325,34 @@ function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; on
               aria-checked={chosen === id}
               tabIndex={id === focusable ? 0 : -1}
               className="traveler"
-              onClick={() => setChosen(id)}
+              onClick={() => pick(id)}
               onKeyDown={(e) => onKey(e, i)}
             >
-              <span className="radio" aria-hidden />
               <Portrait id={id} className="portrait" />
               <span className="traveler-text">
-                <span className="traveler-name"><strong>{t(`char.${id}.name`)}</strong> · {t(`char.${id}.role`)}</span>
-                <span className="traveler-history">
-                  {CHARACTERS[id].background.map((b) => <span key={b} className="trait">{t(`bg.${b}.short`)}</span>)}
-                </span>
-                <span className="traveler-row"><span className="row-label">{t('ui.advantage')}</span> {t(`char.${id}.advantage`)}</span>
-                <span className="traveler-row"><span className="row-label">{t('ui.complication')}</span> {t(`char.${id}.complication`)}</span>
+                <strong className="traveler-name">{t(`char.${id}.name`)}{SEPARATOR}{t(`char.${id}.role`)}</strong>
+                <span className="traveler-line">{t(`char.${id}.card`)}</span>
               </span>
+              <span className="radio" aria-hidden>{chosen === id && <Icon name="check" />}</span>
             </button>
           ))}
         </div>
-        {/* One shared detail area: only the selected traveler's history is spelled out. */}
-        <section className="history-detail" aria-live="polite">
-          {chosen ? (
-            <>
-              <h3 className="mono">{t('ui.historyOf', { name: t(`char.${chosen}.name`) })}</h3>
-              <ul>{CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
-            </>
-          ) : (
-            <p className="muted-dark">{t('ui.historyHint')}</p>
-          )}
-        </section>
+        {chosen && (
+          <section className="history">
+            <button
+              type="button"
+              className="history-toggle"
+              aria-expanded={historyOpen}
+              aria-controls="traveler-history"
+              onClick={() => setHistoryOpen((o) => !o)}
+            >
+              {t('ui.readHistory', { name: t(`char.${chosen}.name`) })}
+            </button>
+            <ul id="traveler-history" className="history-detail" hidden={!historyOpen}>
+              {CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}
+            </ul>
+          </section>
+        )}
       </div>
       <div className="controls">
         <button className="primary" disabled={!chosen} onClick={() => chosen && onContinue(chosen)}>
