@@ -4,13 +4,16 @@
 import { describe, expect, it } from 'vitest';
 import { t, tn } from '../i18n';
 import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
-import { CHARACTERS, EVIDENCE } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE } from './content/world';
 import { consequence, SEPARATOR } from './consequence';
-import { cardFor, newRun, options, step } from './engine';
+import { cardFor, factIds, knows, newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { tryStep } from './play';
 import { FACT_IDS } from './types';
-import type { ClaimId, Effect, FactId, RunState } from './types';
+import type { Action, CheckId, ClaimId, ContactId, Effect, FactId, FactMap, RunState } from './types';
+
+/** Facts the interview officer knows: the desk most fixtures here are at. */
+const known = (...f: FactId[]): FactMap => Object.fromEntries(f.map((x) => [x, ['interview']]));
 
 const lena: RunSetup = { character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin: 'records', seed: 7 };
 const mark: RunSetup = { character: 'mark', loadout: ['motherLetter', 'hotel', 'employerLetter', 'returnTicket'], bulletin: 'records', seed: 7 };
@@ -108,7 +111,7 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
 
   it('an inconsistency (tourism + family address) deals the cheap clarify card', () => {
     for (const fact of ['familyAddress', 'fatherCondition'] as const) {
-      const s = interview({ claims: ['tourism'], facts: [fact] });
+      const s = interview({ claims: ['tourism'], facts: known(fact) });
       expect(s.screen, fact).toEqual({ kind: 'encounter', id: 'i_clarify' });
       // clarify: +0 and a new claim; evidence; or accept +1 scrutiny
       expect(options(s).map((o) => o.approach.id)).toEqual(['clarify', 'evidence', 'accept']);
@@ -120,24 +123,24 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
 
   it('a disproof (no other relatives + brother abroad, under the limit + a count) deals the expensive card', () => {
     const cases: Partial<RunState>[] = [
-      { claims: ['noOtherFamily'], facts: ['brotherAbroad'] },
-      { claims: ['cashUnderLimit'], facts: ['cashCount'] },
-      { claims: ['noOtherFamily', 'cashUnderLimit', 'tourism'], facts: ['brotherAbroad', 'cashCount', 'familyAddress'] },
+      { claims: ['noOtherFamily'], facts: known('brotherAbroad') },
+      { claims: ['cashUnderLimit'], facts: known('cashCount') },
+      { claims: ['noOtherFamily', 'cashUnderLimit', 'tourism'], facts: known('brotherAbroad', 'cashCount', 'familyAddress') },
     ];
     for (const extra of cases) {
       const s = interview(extra, mark);
       expect(s.screen, JSON.stringify(extra)).toEqual({ kind: 'encounter', id: 'i_contradiction' });
-      // 2-3 time, +2 scrutiny, or a contact
+      // 2-3 time or +2 scrutiny. Nobody can vouch away a fact on file.
       expect(cost(s, 'review').time).toBeGreaterThanOrEqual(2);
       expect(cost(s, 'review').time).toBeLessThanOrEqual(3);
       expect(cost(s, 'apologise')).toMatchObject({ time: 0, scrutiny: 2 });
-      expect(cost(s, 'mother')).toMatchObject({ time: 0, scrutiny: 0, contact: 'mother' });
+      expect(options(s).filter((o) => o.approach.kind === 'contact')).toEqual([]);
     }
   });
 
   it('the disproof costs more than the inconsistency on every axis it charges', () => {
-    const clarify = interview({ claims: ['tourism'], facts: ['familyAddress'] });
-    const disproof = interview({ claims: ['noOtherFamily'], facts: ['brotherAbroad'] }, mark);
+    const clarify = interview({ claims: ['tourism'], facts: known('familyAddress') });
+    const disproof = interview({ claims: ['noOtherFamily'], facts: known('brotherAbroad') }, mark);
     expect(cost(disproof, 'apologise').scrutiny).toBeGreaterThan(cost(clarify, 'accept').scrutiny);
     expect(cost(disproof, 'review').time).toBeGreaterThan(cost(clarify, 'clarify').time);
   });
@@ -193,7 +196,7 @@ describe('no scrutiny without a reason', () => {
     const free = at(newRun(lena), 'i_stay');
     expect(options(free).map((o) => o.approach.id)).toContain('undecided');
     expect(cost(free, 'undecided').scrutiny).toBe(0);
-    const onFile = at({ ...newRun(lena), facts: ['familyAddress'] }, 'i_stay');
+    const onFile = at({ ...newRun(lena), facts: known('familyAddress') }, 'i_stay');
     expect(options(onFile).map((o) => o.approach.id)).not.toContain('undecided');
     expect(cost(onFile, 'undecidedOnFile').scrutiny).toBe(1);
   });
@@ -214,7 +217,7 @@ describe('no scrutiny without a reason', () => {
       const r = tryStep(at(newRun(mark), card), { type: 'choose', approach });
       expect(r.ok, card).toBe(true);
       if (!r.ok) continue;
-      expect(r.state.facts, card).toContain(fact);
+      expect(factIds(r.state), card).toContain(fact);
       expect(r.state.scrutiny, card).toBeGreaterThan(newRun(mark).scrutiny);
     }
   });
@@ -225,7 +228,7 @@ describe('a challenge is dealt even when the last interview answer creates it', 
   const last = (s: RunState, id: string, extra: Partial<RunState>): RunState => ({ ...at(s, id), slot: 3, ...extra });
 
   it('denying relatives on the final card, with the brother on file, deals the disproof card', () => {
-    const s = last(newRun(mark), 'i_family', { facts: ['brotherAbroad'] });
+    const s = last(newRun(mark), 'i_family', { facts: known('brotherAbroad') });
     const r = tryStep(s, { type: 'choose', approach: 'deny' });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.state.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
@@ -234,7 +237,7 @@ describe('a challenge is dealt even when the last interview answer creates it', 
   // One row per pair: the claim and the fact are both standing when the final card ends.
   const rows = [...DISPROOFS.map((p) => [...p, 'i_contradiction']), ...INCONSISTENCIES.map((p) => [...p, 'i_clarify'])] as const;
   it.each(rows)('%s + %s at the end of the interview deals %s', (claim, fact, challenge) => {
-    const s = last(newRun(lena), 'i_family', { claims: [claim as ClaimId], facts: [fact as FactId] });
+    const s = last(newRun(lena), 'i_family', { claims: [claim as ClaimId], facts: known(fact as FactId) });
     const r = tryStep(s, { type: 'choose', approach: 'why' });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.state.screen).toEqual({ kind: 'encounter', id: challenge });
@@ -262,5 +265,171 @@ describe('detection needs something on file', () => {
     const m = tryStep(at(newRun(mark), 'p_employer'), { type: 'choose', approach: 'check' });
     expect(m.ok).toBe(true);
     if (m.ok) expect(m.state.reaction?.map((e) => e.key)).not.toContain('weak.work.reaction');
+  });
+});
+
+describe('contacts confirm only what they know', () => {
+  const allContacts: ContactId[] = ['mother', 'cousin', 'brother'];
+  /** The waiting room for `check`, beats done, with `exposed` already named. */
+  const waitRoom = (setup: RunSetup, check: CheckId, exposed: ContactId[], bulletin = setup.bulletin): RunState => ({
+    ...newRun({ ...setup, bulletin }),
+    exposed,
+    checkpoint: 1,
+    slot: 1,
+    screen: { kind: 'wait', check, beats: [0, 1, 2], shown: 3, resolved: { result: 'clear' }, asked: false },
+  });
+  const assist = (s: RunState) => waitActions(s).find((w) => w.action === 'assist');
+
+  it('the abilities table: mother the address, visit and prescription, Ilya hosting, Tom work', () => {
+    expect(CONTACTS.mother.abilities).toEqual(['accommodation', 'purpose', 'medicine']);
+    expect(CONTACTS.cousin.abilities).toEqual(['accommodation']);
+    expect(CONTACTS.brother.abilities).toEqual(['work']);
+  });
+
+  it('a phoneSearch wait room offers no assist action', () => {
+    for (const setup of [lena, mark]) {
+      const s = waitRoom(setup, 'phoneSearch', []);
+      expect(waitActions(s).map((w) => w.action)).toEqual(['wait', 'ask']);
+      expect(tryStep(s, { type: 'waitAction', action: 'assist' }).ok).toBe(false);
+    }
+  });
+
+  it('the records check offers no assist either: nobody vouches away data', () => {
+    expect(assist(waitRoom(lena, 'recordsCheck', []))).toBeUndefined();
+    expect(assist(waitRoom(mark, 'recordsCheck', []))).toBeUndefined();
+  });
+
+  it('hostCall offers assist only when the mother or Ilya is free', () => {
+    const rows: [RunSetup, ContactId[], ContactId | undefined][] = [
+      [lena, [], 'mother'],
+      [lena, ['mother'], 'cousin'],
+      [lena, ['cousin'], 'mother'],
+      [lena, ['mother', 'cousin'], undefined],
+      [mark, [], 'mother'],
+      // Tom is free, but he can't confirm where you stay.
+      [mark, ['mother'], undefined],
+    ];
+    for (const [setup, exposed, who] of rows) {
+      const a = assist(waitRoom(setup, 'hostCall', exposed));
+      expect(a?.contact, `${setup.character} with ${exposed} named`).toBe(who);
+      if (a) expect(a.blocked).toBeNull();
+      // The option names what they may confirm, after the cost: "May confirm the address".
+      if (a) expect(a.vouches).toBe('accommodation');
+    }
+  });
+
+  it('Tom never appears as an option on a medicine card', () => {
+    const medicine = [...ENCOUNTERS, ...INSPECTIONS].filter((c) => c.topic === 'medicine');
+    expect(medicine.map((c) => c.id).sort()).toEqual(['c_medicine', 'f_lab', 's_bag']);
+    for (const card of medicine)
+      for (const exposed of [[], ['mother']] as ContactId[][]) {
+        const s = { ...at({ ...newRun(mark), exposed }, card.id), screen: { kind: card.id.startsWith('s_') ? 'inspection' : 'encounter', id: card.id } } as RunState;
+        expect(options(s).map((o) => o.contact), card.id).not.toContain('brother');
+      }
+  });
+
+  it('Tom can confirm a job offer: he shows on the work question', () => {
+    const s = at({ ...newRun(mark), facts: known('employer') }, 'i_employer');
+    const o = options(s).find((x) => x.approach.id === 'brother');
+    expect(o?.contact).toBe('brother');
+    expect(o?.vouches).toBe('work');
+    // Lena has no brother, so the answer is hidden for her.
+    expect(options(at(newRun(lena), 'i_employer')).map((x) => x.approach.id)).not.toContain('brother');
+  });
+
+  it('every contact answer names only someone who can confirm the card topic', () => {
+    for (const card of [...ENCOUNTERS, ...INSPECTIONS])
+      for (const a of card.approaches) {
+        if (a.kind !== 'contact' || a.namesOnly) continue;
+        const able = (a.contacts ?? allContacts).filter((c) => !!card.topic && CONTACTS[c].abilities.includes(card.topic));
+        expect(able, `${card.id}.${a.id}`).toEqual(a.contacts ?? allContacts);
+      }
+  });
+
+  it('the answer says the guaranteed cost, then the possible gain', () => {
+    const s = at(newRun(lena), 'i_stay');
+    const o = options(s).find((x) => x.approach.id === 'mother')!;
+    const text = consequence(o, 'enc.i_stay.mother', 'cousin').parts.map((p) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars)));
+    expect(text.slice(0, 2)).toEqual(['Puts your mother on file', 'May confirm the address']);
+  });
+
+  it('a contact explains a finding but cannot erase it', () => {
+    // With the accommodation bulletin nobody answers the host call; the mother settles it, so no follow-up.
+    const s = { ...waitRoom(lena, 'hostCall', [], 'accommodation'), screen: { kind: 'wait', check: 'hostCall', beats: [0], shown: 1, resolved: CHECKS.hostCall.cases[0], asked: false } } as RunState;
+    const r = tryStep(s, { type: 'waitAction', action: 'assist' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.exposed).toEqual(['mother']);
+    expect(r.state.pending).not.toContain('f_host');
+  });
+
+  it('My story lists what each contact can confirm', () => {
+    expect(t('contact.mother.can')).toBe('Can confirm: address, visit, prescription');
+    for (const c of allContacts) expect(t(`contact.${c}.can`)).toMatch(/^Can confirm: /);
+  });
+});
+
+describe('what each official knows: facts travel between desks only through a channel', () => {
+  const lenaWith = (bulletin: RunSetup['bulletin']): RunState =>
+    newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin, seed: 7 });
+  const play = (s: RunState, action: Action): RunState => {
+    const r = tryStep(s, action);
+    if (!r.ok) throw new Error(`${JSON.stringify(action)} rejected: ${r.reason}`);
+    return r.state;
+  };
+  /** Shows the mother's letter at passport control: her address comes out at that desk. */
+  const letterAtPassport = (bulletin: RunSetup['bulletin']) =>
+    play({ ...lenaWith(bulletin), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
+  /** Walks up to the interview with "tourism" said, and lets the director deal its related card. */
+  const toInterview = (s: RunState): RunState =>
+    step({ ...s, reaction: null, pending: [], claims: [...s.claims, 'tourism'], checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 } }, { type: 'ack' });
+
+  it('a fact is known only at the desk where it came out', () => {
+    const s = letterAtPassport('customs');
+    expect(s.facts).toEqual({ familyAddress: ['passport'] });
+    expect(knows(s, 'familyAddress', 'customs')).toBe(false);
+  });
+
+  it('a passport-desk fact does not deal the interview clarify card without a channel', () => {
+    const s = toInterview(letterAtPassport('customs'));
+    expect(s.claims).toContain('tourism');
+    expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
+    expect(knows(s, 'familyAddress')).toBe(false);
+  });
+
+  it('through the shared records (records bulletin) it reaches every later desk at once and deals the card', () => {
+    const s = letterAtPassport('records');
+    expect(s.facts).toEqual({ familyAddress: ['passport', 'customs', 'interview'] });
+    expect(toInterview(s).screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
+  });
+
+  it('through a call to customs and the address check printout it reaches the interview and deals the card', () => {
+    // Accommodation bulletin: the passport clerk phones customs about the address.
+    let s = letterAtPassport('accommodation');
+    expect(s.facts).toEqual({ familyAddress: ['passport', 'customs'] });
+    // A call reaches only the next desk, so the interview still knows nothing.
+    expect(toInterview(s).screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
+    // Customs checks the address, and the call note goes with your file.
+    s = play({ ...s, reaction: null, checkpoint: 1, slot: 1, screen: { kind: 'encounter', id: 'c_host' }, seen: [...s.seen, 'c_host'] }, { type: 'choose', approach: 'call' });
+    while (s.screen.kind === 'wait' && (s.reaction || s.screen.shown < s.screen.beats.length)) s = play(s, { type: s.reaction ? 'ack' : 'beat' });
+    s = play(s, { type: 'waitAction', action: 'wait' });
+    expect(s.facts.familyAddress).toEqual(['passport', 'customs', 'interview']);
+    expect(toInterview(s).screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
+  });
+
+  it('a send effect passes on only what this desk knows', () => {
+    // The phone report names the brother, but nothing came out at customs, so nothing reaches the interview.
+    const wait: RunState = {
+      ...newRun(mark), checkpoint: 1, slot: 1, facts: { brotherAbroad: ['passport'] },
+      screen: { kind: 'wait', check: 'phoneSearch', beats: [0], shown: 1, resolved: CHECKS.phoneSearch.cases[0], asked: false },
+    };
+    const s = play(wait, { type: 'waitAction', action: 'wait' });
+    expect(s.facts.brotherAbroad).toEqual(['passport']);
+  });
+
+  it('the reaction says where a fact was sent', () => {
+    const r = tryStep({ ...lenaWith('accommodation'), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
+    expect(r.ok && r.events).toContainEqual({ type: 'factSent', id: 'familyAddress', desks: ['customs'], via: 'desk' });
+    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Sent on to Customs: Family address.');
   });
 });

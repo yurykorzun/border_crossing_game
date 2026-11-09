@@ -135,6 +135,31 @@ test('after an answer: the reaction, what changed, and the next action', async (
   expect(errors).toEqual([]);
 });
 
+test('My story shows which desk knows each fact', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  const reaction = page.locator('main.run .panel.reaction');
+
+  // Accommodation bulletin: the letter puts her address on file at passport control, and the clerk phones customs.
+  const run = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'accommodation', seed: 7 });
+  await openAt(page, { ...run, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
+  await page.getByRole('button', { name: /Show your mother's letter/ }).click();
+  await expect(reaction).toContainText("Your mother's address is now on file.");
+  await expect(reaction).toContainText('Sent on to Customs: Family address.');
+  await page.locator('main.run .controls button.primary').click();
+
+  await page.getByRole('button', { name: 'My story' }).click();
+  const sheet = page.locator('dialog.sheet[open]');
+  await expect(sheet).toContainText('Each desk knows only what came out there or was sent on.');
+  const row = sheet.locator('.record li[data-fact="familyAddress"]');
+  await expect(row).toContainText('Family address');
+  // Passport control and customs know it; the interview does not.
+  await expect(row.locator('.tag.desk')).toHaveText(['Passport', 'Customs']);
+  await noHorizontalScroll(page, 'My story with desks');
+  expect(errors).toEqual([]);
+});
+
 test('the medicine check says what is verified, with the header still on screen', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
@@ -200,6 +225,11 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(sheet.locator('h2')).toHaveText('My story');
   await expect(sheet).toContainText('visiting hours end');
   await expect(sheet).toContainText('Background');
+  // Each contact's abilities, from the table in src/game/content/world.ts.
+  await expect(sheet.locator('.people .can')).toHaveText([
+    'Can confirm: address, visit, prescription',
+    /^Can confirm: (a place to stay|a job offer abroad)$/,
+  ]);
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toHaveCount(0);
 

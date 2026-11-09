@@ -1,7 +1,7 @@
 // Characters, evidence and bulletins for the first mission. No prose here:
 // names and descriptions are in src/i18n/en.ts under the same ids.
 
-import type { BulletinId, Character, CharacterId, EvidenceCard, EvidenceId } from '../types';
+import type { BulletinId, Character, CharacterId, Contact, ContactId, EvidenceCard, EvidenceId, Topic } from '../types';
 
 export const START_TIME = 8;
 export const MISSION_MIN_TIME = 2;
@@ -30,6 +30,22 @@ export const CHARACTERS: Record<CharacterId, Character> = {
     weakTopics: [],
   },
 };
+
+/**
+ * What each person can confirm. Nobody can vouch away data (a phone search, a
+ * records scan), so no contact covers history or identity. My story lists them
+ * from contact.<id>.can, and an answer's line from contact.<id>.can.<topic>.
+ */
+export const CONTACTS: Record<ContactId, Contact> = {
+  // The address, the visit and the prescription.
+  mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'] },
+  // He can host.
+  cousin: { id: 'cousin', abilities: ['accommodation'] },
+  // A job offer abroad.
+  brother: { id: 'brother', abilities: ['work'] },
+};
+
+export const canConfirm = (c: ContactId, topic: Topic | undefined): boolean => !!topic && CONTACTS[c].abilities.includes(topic);
 
 export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
   hotel: {

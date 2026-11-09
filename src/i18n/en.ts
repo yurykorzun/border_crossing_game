@@ -56,6 +56,7 @@ export const en: Record<string, string> = {
   'ui.background': 'Background',
   'ui.claims': 'What you said',
   'ui.onFile': 'On file',
+  'ui.onFileHelp': 'Each desk knows only what came out there or was sent on.',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
   // The one line under each answer (src/game/consequence.ts), parts joined by " · ".
@@ -87,6 +88,8 @@ export const en: Record<string, string> = {
   'change.fact.secondPassport': 'Your second passport is now on file.',
   'change.fact.phoneRefused': 'Your refusal is now on file.',
   'change.fact.cashCount': 'Your cash total is now on file.',
+  'change.sent': 'Sent on to {desk}: {fact}.',
+  'change.records': 'Into the shared records for the desks ahead: {fact}.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
   'ui.proceed.customs': 'Proceed to customs',
   'ui.proceed.interview': 'Proceed to the interview',
@@ -156,6 +159,16 @@ export const en: Record<string, string> = {
   'contact.mother.note': 'At the hospital most of the day.',
   'contact.cousin.note': 'Your mother asked you not to mention him.',
   'contact.brother.note': 'Lives across the border. Calls every Sunday.',
+  // What each contact can confirm (CONTACTS in src/game/content/world.ts): one line in My story,
+  // and the possible gain on an answer that names them, after the guaranteed cost.
+  'contact.mother.can': 'Can confirm: address, visit, prescription',
+  'contact.cousin.can': 'Can confirm: a place to stay',
+  'contact.brother.can': 'Can confirm: a job offer abroad',
+  'contact.mother.can.accommodation': 'May confirm the address',
+  'contact.mother.can.purpose': 'May confirm the visit',
+  'contact.mother.can.medicine': 'May confirm the prescription',
+  'contact.cousin.can.accommodation': 'May confirm he can host you',
+  'contact.brother.can.work': 'May confirm the job offer',
   // The contact as a sentence opener, for an answer in your own words: "My cousin Ilya lives here."
   'contact.cousin.mine': 'My cousin Ilya',
   'contact.brother.mine': 'My brother Tom',
@@ -250,6 +263,9 @@ export const en: Record<string, string> = {
   'checkpoint.passport': 'Passport control',
   'checkpoint.customs': 'Customs',
   'checkpoint.interview': 'Security interview',
+  'desk.passport': 'Passport',
+  'desk.customs': 'Customs',
+  'desk.interview': 'Interview',
   'officer.passport': 'Clerk',
   'officer.customs': 'Inspector',
   'officer.interview': 'Officer',
@@ -305,8 +321,6 @@ export const en: Record<string, string> = {
   'enc.p_photo.evidence.reaction': 'She compares the addresses and seems satisfied.',
   'enc.p_photo.scan.label': 'Offer a face scan',
   'enc.p_photo.scan.reaction': 'A camera on a stalk turns towards you.',
-  'enc.p_photo.mother.label': 'Ask her to call {contact}',
-  'enc.p_photo.mother.reaction': 'She writes your mother\'s number on a slip of paper.',
 
   'enc.p_secondPassport.q': '"You hold another passport. Which country do you consider yours?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
@@ -396,8 +410,6 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.apologise.reaction': 'The officer underlines the entry in your file that disproves what you said.',
   'enc.i_contradiction.review.label': 'Ask for a formal review',
   'enc.i_contradiction.review.reaction': 'A form, then another form. The review takes three hours.',
-  'enc.i_contradiction.mother.label': 'Let them call {contact}',
-  'enc.i_contradiction.mother.reaction': 'Your mother explains, too fast, in her hospital voice.',
 
   'enc.i_employer.q': '"Your company has an office in a hostile state. Do you report to it?"',
   'enc.i_employer.perk.label': 'Explain your job plainly',
@@ -406,12 +418,12 @@ export const en: Record<string, string> = {
   'enc.i_employer.evidence.reaction': 'The officer photographs the letterhead.',
   'enc.i_employer.contract.label': 'Let them check your contract',
   'enc.i_employer.contract.reaction': 'The officer leaves with your phone for the contract.',
+  'enc.i_employer.brother.label': 'Let them call {contact}',
+  'enc.i_employer.brother.reaction': 'Tom explains the job offer. The officer writes his name down.',
 
   'enc.i_brother.q': '"Your brother lives across the border. When did you last speak?"',
   'enc.i_brother.honest.label': '"Last Sunday. He\'s fine."',
   'enc.i_brother.honest.reaction': 'Your brother across the border goes on file, and the officer flags it.',
-  'enc.i_brother.number.label': "Give {contact}'s number",
-  'enc.i_brother.number.reaction': 'The officer reads the number back to you, slowly.',
   'enc.i_brother.calls.label': 'Let them check your call history',
   'enc.i_brother.calls.reaction': 'Your phone goes back into the grey box.',
 
@@ -513,7 +525,7 @@ export const en: Record<string, string> = {
   'wait.ask.label': 'Ask for an update',
   'wait.ask.detail': 'Your urgency goes on file',
   'wait.assist.label': 'Ask {contact} to vouch for you',
-  'wait.assist.detail': 'Clears the check. Exposes them',
+  'wait.assist.detail': 'Exposes them',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'weak.work.reaction': "Your employer's name comes up in an old investigation. Checking it takes another hour.",
 

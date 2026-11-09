@@ -39,6 +39,7 @@ export interface Cond {
   character?: CharacterId;
   background?: BackgroundId;
   bulletin?: BulletinId;
+  /** Known at the current desk (not anywhere on the crossing). */
   facts?: FactId[];
   noFacts?: FactId[];
   claims?: ClaimId[];
@@ -57,12 +58,22 @@ export interface Cond {
  */
 export type ScrutinyReason = FactId | CheckId;
 
+/**
+ * How a fact reaches another desk (docs/design.md "What each official knows").
+ * call: one desk phones the next. printout: a check's report goes with your
+ * file to the next desk. The shared records system is not an effect: with the
+ * records bulletin every fact reaches the later desks at once.
+ */
+export type Channel = 'call' | 'printout';
+
 export type Effect =
   | { time: number; when?: Cond }
   | { scrutiny: number; reason: ScrutinyReason; when?: Cond }
   | { fact: FactId; when?: Cond }
   | { claim: ClaimId; when?: Cond }
-  | { loseMedicine: true; when?: Cond };
+  | { loseMedicine: true; when?: Cond }
+  /** Sends these facts (all this desk knows when unset) that this desk knows on to the next desk. */
+  | { send: Channel; facts?: FactId[]; when?: Cond };
 
 export type ApproachKind = 'evidence' | 'verify' | 'contact' | 'say' | 'perk' | 'withdraw';
 
@@ -71,8 +82,13 @@ export interface Approach {
   kind: ApproachKind;
   /** evidence: any held, unused card covering this topic. */
   topic?: Topic;
-  /** contact: the first unexposed one from this list is named. */
+  /**
+   * contact: the first unexposed one from this list who can confirm the card's
+   * topic (CONTACTS in src/game/content/world.ts) is named.
+   */
   contacts?: ContactId[];
+  /** contact: the answer only names them (the relatives question), so they confirm nothing and need no ability. */
+  namesOnly?: true;
   requires?: Cond;
   effects: Effect[];
   /** Opens the waiting room for this check after the effects apply. */
@@ -106,8 +122,12 @@ export interface CheckCase {
 
 export interface Check {
   id: CheckId;
-  /** Important checks also let you name someone to vouch for you. */
-  important: boolean;
+  /**
+   * What a contact could confirm to settle this check. A free contact who can
+   * confirm it may vouch for you in the waiting room. None means nobody can
+   * vouch away what it finds (a phone search, a records scan).
+   */
+  topic?: Topic;
   /** First matching case wins; the last case should have no `when`. */
   cases: CheckCase[];
   /** How many ordinary beats to show from the checkpoint's pool. */
@@ -116,6 +136,8 @@ export interface Check {
 
 export interface Inspection {
   id: string;
+  /** What a contact could confirm here. Without one, nobody can be named. */
+  topic?: Topic;
   when?: Cond;
   approaches: Approach[];
 }
@@ -131,6 +153,13 @@ export interface Character {
   perkTopics: Topic[];
   /** Topics that cost 1 extra time when verified. */
   weakTopics: Topic[];
+}
+
+/** A person the traveler can name, and what they can confirm. */
+export interface Contact {
+  id: ContactId;
+  /** Topics they can confirm. A contact answer shows only on a card or check with one of these. */
+  abilities: Topic[];
 }
 
 export interface EvidenceCard {
@@ -168,8 +197,15 @@ export interface ChangeLine {
   tone: 'plain' | 'amber' | 'red';
 }
 
+/**
+ * What each official knows: every fact that came out, and the desks that know
+ * it, in CHECKPOINTS order. A fact is known where it came out and travels on
+ * only through a channel (Channel, or the records bulletin).
+ */
+export type FactMap = Partial<Record<FactId, Checkpoint[]>>;
+
 export interface RunState {
-  v: 1;
+  v: 2;
   seed: number;
   rng: number;
   character: CharacterId;
@@ -179,7 +215,7 @@ export interface RunState {
   exposed: ContactId[];
   time: number;
   scrutiny: number;
-  facts: FactId[];
+  facts: FactMap;
   claims: ClaimId[];
   medicine: boolean;
   perkUsed: boolean;

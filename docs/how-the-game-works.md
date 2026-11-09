@@ -9,6 +9,7 @@ TL;DR: you hold a small hand of document cards and two people you can call on. T
 - Scrutiny: a 0-3 track. It only rises for a reason you can see: something on file or a check result that catches a lie, or an honest answer that puts something awkward on file. At 3 you are pulled into a secondary inspection, and it drops back to 1 afterwards.
 - Your hand: 3 document cards (Mark packs 4), chosen from 6 before you leave. Each card can be played once.
 - Your people: 2 contacts (your mother, plus a cousin or a brother). Naming one solves a problem but exposes them for the rest of the run.
+- Each contact can confirm only some topics, and My story lists them: your mother the address, the visit and the prescription; cousin Ilya a place to stay; brother Tom a job offer abroad. A contact answer shows only on a card whose topic they can confirm, and it reads cost first, then gain ("Puts your mother on file · May confirm the address"). Nobody can vouch away data, so identity and history cards have no contact answer. Naming a relative when asked is different: it confirms nothing, so it needs no ability.
 - Medicine: your father's medicine. You can give it up to get out of trouble, and it costs you the clean ending.
 
 **Your character (the "class")**
@@ -52,7 +53,8 @@ The rule that keeps it fair: every card has at least one answer that needs no do
 - Claims are what you said: visiting family, tourism, a hotel stay, no other family.
 - An answer records only what its words say. Asked about relatives, you name your contact, say "I have no other relatives here." or ask why. Only the denial records "No other relatives", because leaving someone out is not a lie.
 - Facts are what the state now knows (shown as "On file"): the family address, your employer, your phone was searched, your brother abroad.
-- A lie has three tiers. Unchallenged: nothing on file speaks against it, so it is free and you saved what the truth would have cost. Inconsistency: a fact makes it look odd (say "tourist", then your family address goes on file), and the interview deals a cheap clarify card: clarify for free, show a document, or take +1 scrutiny. Disproof: a fact says the opposite (deny other relatives while your brother abroad is on file, or say your cash is under the limit and then the bag search counts it), and the interview deals an expensive card: 3 hours, +2 scrutiny or a contact.
+- Each desk knows only what came out there, and My story tags each fact with the desks that know it. A fact travels on only through a channel: the shared records (with the records bulletin it reaches every later desk at once), a call from one desk to the next, or a printout handed over after a check. So the address you showed at passport control is not known at the interview unless something carried it there.
+- A lie has three tiers. Unchallenged: nothing on file speaks against it, so it is free and you saved what the truth would have cost. Inconsistency: a fact makes it look odd (say "tourist", then your family address goes on file), and the interview deals a cheap clarify card: clarify for free, show a document, or take +1 scrutiny. Disproof: a fact says the opposite (deny other relatives while your brother abroad is on file, or say your cash is under the limit and then the bag search counts it), and the interview deals an expensive card: 3 hours or +2 scrutiny. Nobody can vouch it away.
 - Every scrutiny gain names its reason (a fact on file or a check result), and the reaction says it. A lie never adds scrutiny until something catches it.
 - Only claims that truly exclude each other block a document. Saying you stay with your mother blocks the hotel booking; visiting family does not.
 
@@ -63,7 +65,7 @@ Some answers start a check, like a records scan, a call to your host, a lab test
 Every check names itself ("Medicine check"), says what is happening, and shows "Verification in progress" with three dots. Once the beats are done you choose:
 - Wait for the result: free.
 - Ask for an update: you learn what is happening, and "you're in a hurry" goes on file.
-- On important checks (the host call and the phone search) only: ask a contact to vouch. It clears the check and exposes them.
+- Ask a contact to vouch, only when a free contact can confirm what the check is about. Today that is the host call, which your mother or Ilya can settle. It clears the check and exposes them, but anything the check found stays on file. The phone search and the records check have no vouching, because nobody can vouch away data.
 
 After every answer the officer's reaction shows with one line per change ("Your mother's address is now on file.", "1 hour lost.", "Scrutiny 2/3."). The button says what comes next: Continue within a checkpoint, then "Proceed to customs", "Proceed to the interview" or "See how it ends".
 

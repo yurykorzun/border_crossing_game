@@ -506,6 +506,11 @@ p { margin: 0 0 var(--gap); }
 .tag.risk { color: var(--danger-paper); border-color: var(--danger-paper); }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .record { font-family: var(--mono); font-size: 0.8rem; }
+.record li { margin-bottom: 4px; }
+/* Which desks know a fact: one small tag each, on their own line under it. */
+.record .desks { display: flex; flex-wrap: wrap; gap: 3px; }
+.record .tag.desk { margin-inline-start: 0; font-size: 0.62rem; }
+.small { font-size: 0.78rem; margin: 0 0 4px; }
 .who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .who p { margin: 0; }
 .portrait-small { width: 36px; height: auto; flex: none; }

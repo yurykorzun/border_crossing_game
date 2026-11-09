@@ -2,12 +2,12 @@
 // and returns the next state. The UI only renders state and sends actions.
 
 import type {
-  Action, Approach, BulletinId, CharacterId, CheckCase, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, Inspection, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, Cond, ContactId, Effect, Encounter,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm,
 } from './content/world';
 import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
@@ -24,7 +24,7 @@ export function newRun(setup: RunSetup): RunState {
   const ch = CHARACTERS[setup.character];
   if (setup.loadout.length !== ch.evidenceSlots) throw new Error(`${ch.id} takes ${ch.evidenceSlots} evidence cards`);
   return {
-    v: 1,
+    v: 2,
     seed: setup.seed,
     rng: setup.seed,
     character: ch.id,
@@ -34,7 +34,7 @@ export function newRun(setup: RunSetup): RunState {
     exposed: [],
     time: START_TIME,
     scrutiny: ch.startScrutiny,
-    facts: [],
+    facts: {},
     claims: [],
     medicine: true,
     perkUsed: false,
@@ -52,6 +52,41 @@ export function newRun(setup: RunSetup): RunState {
   };
 }
 
+// ── What each official knows
+
+/** The desk the run is at: where a fact that comes out now is known. */
+export const deskOf = (s: RunState): Checkpoint => CHECKPOINTS[Math.min(s.checkpoint, CHECKPOINTS.length - 1)];
+
+/** Every fact that came out anywhere, in the order it came out. */
+export const factIds = (s: RunState): FactId[] => Object.keys(s.facts) as FactId[];
+
+/** Whether the official at `desk` (the current one by default) knows `f`. */
+export const knows = (s: RunState, f: FactId, desk: Checkpoint = deskOf(s)): boolean => !!s.facts[f]?.includes(desk);
+
+/** What the official at `desk` knows, in the order it came out. */
+export const knownAt = (s: RunState, desk: Checkpoint = deskOf(s)): FactId[] => factIds(s).filter((f) => knows(s, f, desk));
+
+/** The desk after `desk`, or undefined after the last one. */
+export const nextDesk = (desk: Checkpoint): Checkpoint | undefined => CHECKPOINTS[CHECKPOINTS.indexOf(desk) + 1];
+
+/** `facts` with `f` known at `desks` too, desks kept in CHECKPOINTS order. */
+function teach(facts: FactMap, f: FactId, desks: Checkpoint[]): FactMap {
+  const had = facts[f] ?? [];
+  if (facts[f] && desks.every((d) => had.includes(d))) return facts;
+  return { ...facts, [f]: CHECKPOINTS.filter((d) => had.includes(d) || desks.includes(d)) };
+}
+
+/**
+ * The desks that learn a fact when it comes out at `desk`: that desk, and with
+ * the records bulletin every later one, through the shared records system.
+ */
+export function desksLearning(bulletin: BulletinId, desk: Checkpoint): Checkpoint[] {
+  return bulletin === 'records' ? CHECKPOINTS.slice(CHECKPOINTS.indexOf(desk)) : [desk];
+}
+
+/** The facts a send effect passes on: the ones it names (all by default) that this desk knows. */
+export const sentFacts = (s: RunState, e: { facts?: FactId[] }): FactId[] => (e.facts ?? knownAt(s)).filter((f) => knows(s, f));
+
 // ── Conditions
 
 export function check(cond: Cond | undefined, s: RunState): boolean {
@@ -60,8 +95,8 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.character && cond.character !== s.character) return false;
   if (cond.background && !ch.background.includes(cond.background)) return false;
   if (cond.bulletin && cond.bulletin !== s.bulletin) return false;
-  if (cond.facts && !cond.facts.every((f) => s.facts.includes(f))) return false;
-  if (cond.noFacts && cond.noFacts.some((f) => s.facts.includes(f))) return false;
+  if (cond.facts && !cond.facts.every((f) => knows(s, f))) return false;
+  if (cond.noFacts && cond.noFacts.some((f) => knows(s, f))) return false;
   if (cond.claims && !cond.claims.every((c) => s.claims.includes(c))) return false;
   if (cond.noClaims && cond.noClaims.some((c) => s.claims.includes(c))) return false;
   if (cond.contactFree && !cond.contactFree.some((c) => ch.contacts.includes(c) && !s.exposed.includes(c))) return false;
@@ -87,8 +122,7 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
   return null;
 }
 
-const topicOf = (card: Encounter | Inspection | null): Topic | undefined =>
-  card && 'topic' in card ? card.topic : undefined;
+export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
 export function cardFor(s: RunState, topic: Topic): EvidenceId | undefined {
   return s.loadout.find((id) => {
@@ -97,9 +131,18 @@ export function cardFor(s: RunState, topic: Topic): EvidenceId | undefined {
   });
 }
 
-export function freeContact(s: RunState, wanted: ContactId[] | undefined): ContactId | undefined {
+/**
+ * The character's contacts from `wanted` (all of them when undefined). With
+ * `topic`, only those who can confirm it; null is a topic nobody can confirm.
+ */
+export function contactsFor(s: RunState, wanted: ContactId[] | undefined, topic?: Topic | null): ContactId[] {
   const ch = CHARACTERS[s.character];
-  return (wanted ?? ch.contacts).find((c) => ch.contacts.includes(c) && !s.exposed.includes(c));
+  return (wanted ?? ch.contacts).filter((c) => ch.contacts.includes(c) && (topic === undefined || canConfirm(c, topic ?? undefined)));
+}
+
+/** The first unexposed one of contactsFor(). */
+export function freeContact(s: RunState, wanted: ContactId[] | undefined, topic?: Topic | null): ContactId | undefined {
+  return contactsFor(s, wanted, topic).find((c) => !s.exposed.includes(c));
 }
 
 export type Unavailable = 'noCard' | 'noContact' | null;
@@ -110,13 +153,23 @@ export interface Option {
   blocked: Unavailable;
   card?: EvidenceId;
   contact?: ContactId;
+  /** contact: what they are asked to confirm (the card's topic). Unset when the answer only names them. */
+  vouches?: Topic;
   /** Effects as they would apply now (conditions resolved, character weakness added). */
   effects: Effect[];
 }
 
 /**
+ * For a contact answer, the topic the contact must be able to confirm: the
+ * card's, or null when the card has none. Undefined when no ability is needed.
+ */
+export const vouchTopic = (a: Approach, topic: Topic | undefined): Topic | null | undefined =>
+  a.kind !== 'contact' || a.namesOnly ? undefined : (topic ?? null);
+
+/**
  * The approaches the player sees. Ones that can never apply to this character
- * (a contact they don't have, someone else's perk) are hidden; ones missing a
+ * (a contact they don't have or who can't confirm the card's topic, someone
+ * else's perk) are hidden; ones missing a
  * card or an unexposed contact are shown but blocked, so the cost of the loadout
  * is visible.
  */
@@ -129,7 +182,8 @@ export function options(s: RunState): Option[] {
   for (const a of card.approaches) {
     if (!check(a.requires, s)) continue;
     if (a.kind === 'perk' && !(topic && ch.perkTopics.includes(topic))) continue;
-    if (a.kind === 'contact' && !(a.contacts ?? ch.contacts).some((c) => ch.contacts.includes(c))) continue;
+    const vouches = vouchTopic(a, topic);
+    if (a.kind === 'contact' && !contactsFor(s, a.contacts, vouches).length) continue;
     let blocked: Unavailable = null;
     let ev: EvidenceId | undefined;
     let contact: ContactId | undefined;
@@ -139,10 +193,12 @@ export function options(s: RunState): Option[] {
       if (!ev) blocked = 'noCard';
     }
     if (a.kind === 'contact') {
-      contact = freeContact(s, a.contacts);
+      contact = freeContact(s, a.contacts, vouches);
       if (!contact) blocked = 'noContact';
     }
-    out.push({ approach: a, blocked, card: ev, contact, effects: resolvedEffects(s, a, topic, ev) });
+    const o: Option = { approach: a, blocked, card: ev, contact, effects: resolvedEffects(s, a, topic, ev) };
+    if (vouches) o.vouches = vouches;
+    out.push(o);
   }
   return out;
 }
@@ -164,7 +220,7 @@ export interface ReasonSource {
 }
 
 /**
- * Whether a scrutiny reason holds: the fact is on file (`facts`), or the reason
+ * Whether a scrutiny reason holds: this desk knows the fact (`facts`), or the reason
  * is a check and the effect belongs to its result or to a follow-up only that
  * check deals. Officials need something they can point at.
  */
@@ -177,12 +233,12 @@ export function scrutinyApplies(reason: ScrutinyReason, facts: readonly FactId[]
 }
 
 /**
- * Drops scrutiny effects whose reason does not hold. Facts recorded earlier in
- * the same list count, so "Yes, I have both" can put the passport on file and
- * then add scrutiny for it.
+ * Drops scrutiny effects whose reason this desk does not know. Facts recorded
+ * earlier in the same list count, so "Yes, I have both" can put the passport on
+ * file and then add scrutiny for it.
  */
 export function activeEffects(s: RunState, effects: Effect[], from: ReasonSource): Effect[] {
-  const facts = [...s.facts];
+  const facts = knownAt(s);
   const out: Effect[] = [];
   for (const e of effects) {
     if ('fact' in e && !facts.includes(e.fact)) facts.push(e.fact);
@@ -197,6 +253,11 @@ export function checkEffects(s: RunState, checkId: CheckId, result: CheckCase): 
   return activeEffects(s, (result.effects ?? []).filter((e) => check(e.when, s)), { check: checkId });
 }
 
+/** The facts a check result puts on file. A contact can explain them, never erase them. */
+export function checkFindings(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
+  return checkEffects(s, checkId, result).filter((e) => 'fact' in e);
+}
+
 // ── Applying things
 
 function apply(s: RunState, effects: Effect[]): RunState {
@@ -206,7 +267,11 @@ function apply(s: RunState, effects: Effect[]): RunState {
     if ('time' in e) n = { ...n, time: Math.max(0, n.time + e.time) };
     // Capped at the max, because anything at the max already means an inspection.
     else if ('scrutiny' in e) n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)) };
-    else if ('fact' in e) n = n.facts.includes(e.fact) ? n : { ...n, facts: [...n.facts, e.fact] };
+    else if ('fact' in e) n = { ...n, facts: teach(n.facts, e.fact, desksLearning(n.bulletin, deskOf(n))) };
+    else if ('send' in e) {
+      const to = nextDesk(deskOf(n));
+      if (to) for (const f of sentFacts(n, e)) n = { ...n, facts: teach(n.facts, f, [to]) };
+    }
     else if ('claim' in e) n = n.claims.includes(e.claim) ? n : { ...n, claims: [...n.claims, e.claim] };
     else if ('loseMedicine' in e) n = { ...n, medicine: false };
   }
@@ -344,18 +409,27 @@ function startWait(s: RunState, checkId: NonNullable<Approach['check']>): RunSta
   return { ...s, rng, screen: { kind: 'wait', check: checkId, beats, shown: 0, resolved, asked: false } };
 }
 
-export function waitActions(s: RunState): { action: WaitAction; blocked: Unavailable; contact?: ContactId }[] {
+export function waitActions(s: RunState): { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] {
   if (s.screen.kind !== 'wait') return [];
   const done = s.screen.shown >= s.screen.beats.length;
   if (!done) return [];
-  // Every check can be waited out or asked about; only an important one lets you name someone.
-  const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId }[] = [
+  // Every check can be waited out or asked about. Someone can vouch only when a
+  // free contact can confirm what the check is about; nobody vouches away data.
+  const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] = [
     { action: 'wait', blocked: null },
     { action: 'ask', blocked: null },
   ];
-  if (!CHECKS[s.screen.check].important) return out;
-  const contact = freeContact(s, undefined);
-  return [...out, { action: 'assist', blocked: contact ? null : 'noContact', contact }];
+  const contact = assistContact(s);
+  // vouches: the check's topic, so the option can say what the contact may confirm.
+  const vouches = CHECKS[s.screen.check].topic;
+  return contact && vouches ? [...out, { action: 'assist', blocked: null, contact, vouches }] : out;
+}
+
+/** Who could vouch on the check in the waiting room, if anyone. */
+function assistContact(s: RunState): ContactId | undefined {
+  if (s.screen.kind !== 'wait') return undefined;
+  const topic = CHECKS[s.screen.check].topic;
+  return topic ? freeContact(s, undefined, topic) : undefined;
 }
 
 function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
@@ -368,10 +442,13 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     n = say(n, [{ key: `check.${w.check}.hint.${result.result}` }]);
   }
   if (how === 'assist') {
-    const c = freeContact(n, undefined);
+    const c = assistContact(n);
     if (!c) return s;
     n = { ...n, exposed: [...n.exposed, c] };
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
+    // The finding stays on file; the contact only settles what it means, so
+    // the check clears with no follow-up and no scrutiny from it.
+    n = apply(n, checkFindings(n, w.check, result));
     result = { result: 'clear' };
   }
   n = apply(n, checkEffects(n, w.check, result));
