@@ -5,6 +5,7 @@
 // A bot keeps its own random stream (botRng), separate from the run's, so the
 // random style never moves the dealer's picks.
 
+import { DISPROOFS, INCONSISTENCIES } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import { legalActions, newRun, noCost, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
@@ -167,24 +168,44 @@ export function setupFor(i: number): RunSetup {
 export const botSeed = (seed: number) => (seed ^ 0x5bd1e995) | 0;
 
 export interface BotRun {
-  style: BotStyle;
+  /** A style, or 'memorised' for a run played from a Script (playScript()). */
+  style: BotStyle | 'memorised';
   final: RunState;
   actions: Action[];
   /** Card or inspection id and the approach or wait action picked there, in order. */
   choices: { card: string; pick: string }[];
   /** Answers picked that cost nothing (noCost() in src/game/engine.ts). */
   noCost: number;
+  /** Lies told: a new untrue claim, or an untrue answer such as denying the photo (traits() above). */
+  lies: number;
+  /** Lie claims that a challenge card put to the player (caughtLies()). */
+  caught: number;
 }
 
-export function playRun(style: BotStyle, setup: RunSetup): BotRun {
+/**
+ * Lie claims on file that a challenge card was dealt for: i_clarify for a claim
+ * a fact makes look odd, i_contradiction for one a fact disproves. Denying the
+ * photo adds no claim, so no card can catch it.
+ */
+export function caughtLies(s: RunState): number {
+  const onFile = (f: FactId) => (s.facts[f] ?? []).length > 0;
+  const hit = (pairs: readonly (readonly [ClaimId, FactId])[], card: string) =>
+    s.seen.includes(card) ? pairs.filter(([c, f]) => s.claims.includes(c) && onFile(f)).map(([c]) => c) : [];
+  return new Set([...hit(INCONSISTENCIES, 'i_clarify'), ...hit(DISPROOFS, 'i_contradiction')]).size;
+}
+
+type Picker = (s: RunState, botRng: number) => BotPick | null;
+
+function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): BotRun {
   let s = newRun(setup);
   let botRng = botSeed(setup.seed);
   const actions: Action[] = [];
   const choices: BotRun['choices'] = [];
   let free = 0;
+  let lies = 0;
   while (!s.ending) {
     if (actions.length >= MAX_RUN_STEPS) throw new Error(`${style} run did not end in ${MAX_RUN_STEPS} steps`);
-    const pick = botAction(style, s, botRng);
+    const pick = pickFor(s, botRng);
     if (!pick) break;
     const sc = s.screen;
     if (pick.action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) {
@@ -192,11 +213,75 @@ export function playRun(style: BotStyle, setup: RunSetup): BotRun {
       choices.push({ card: sc.id, pick: id });
       const o = options(s).find((x) => x.approach.id === id);
       if (o && noCost(s, o)) free++;
+      if (o) lies += traits(s, o).lies;
     }
     if (pick.action.type === 'waitAction' && sc.kind === 'wait') choices.push({ card: sc.check, pick: pick.action.action });
     s = step(s, pick.action);
     botRng = pick.botRng;
     actions.push(pick.action);
   }
-  return { style, final: s, actions, choices, noCost: free };
+  return { style, final: s, actions, choices, noCost: free, lies, caught: caughtLies(s) };
+}
+
+export function playRun(style: BotStyle, setup: RunSetup): BotRun {
+  return playWith(style, setup, (s, botRng) => botAction(style, s, botRng));
+}
+
+// ── The memorised script: a harsher probe than the styles above.
+// It reads no state. Per card id it always gives the one answer that won most
+// often in a first pass, the way a player who learned the game by heart would.
+
+/** Card or waiting-room check id to the answer given there. */
+export type Script = ReadonlyMap<string, string>;
+
+/**
+ * For each card, the pick with the best homeInTime rate across `runs`. The rate
+ * is smoothed ((won + 1) / (played + 2)) so a pick seen once does not beat one
+ * seen a hundred times; ties go to the pick played more, then by name.
+ */
+export function buildScript(runs: readonly BotRun[]): Script {
+  const tally = new Map<string, Map<string, { won: number; played: number }>>();
+  for (const r of runs) {
+    const win = r.final.ending === 'homeInTime' ? 1 : 0;
+    for (const c of r.choices) {
+      const card = tally.get(c.card) ?? new Map<string, { won: number; played: number }>();
+      const t = card.get(c.pick) ?? { won: 0, played: 0 };
+      card.set(c.pick, { won: t.won + win, played: t.played + 1 });
+      tally.set(c.card, card);
+    }
+  }
+  const rate = (t: { won: number; played: number }) => (t.won + 1) / (t.played + 2);
+  const script = new Map<string, string>();
+  for (const [card, picks] of tally) {
+    const ranked = [...picks].sort(([pa, a], [pb, b]) => rate(b) - rate(a) || b.played - a.played || pa.localeCompare(pb));
+    script.set(card, ranked[0][0]);
+  }
+  return script;
+}
+
+/** The first pass: every style over setups seed..seed + runs - 1, the ones autoplay plays. */
+export function firstPassScript(runs: number, seed = 0): Script {
+  const pass: BotRun[] = [];
+  for (const style of BOT_STYLES) for (let i = 0; i < runs; i++) pass.push(playRun(style, setupFor(seed + i)));
+  return buildScript(pass);
+}
+
+/** The memorised answer for this card when it is open, else the first open one. Never reads anything but the card id. */
+export function scriptAction(script: Script, s: RunState): Action | null {
+  const legal = legalActions(s);
+  if (!legal.length) return null;
+  const finish = legal.find((a) => a.type === 'finish');
+  if (finish) return finish;
+  const sc = s.screen;
+  const card = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : sc.kind === 'wait' ? sc.check : undefined;
+  const want = card === undefined ? undefined : script.get(card);
+  return legal.find((a) => (a.type === 'choose' && a.approach === want) || (a.type === 'waitAction' && a.action === want))
+    ?? legal[0];
+}
+
+export function playScript(script: Script, setup: RunSetup): BotRun {
+  return playWith('memorised', setup, (s, botRng) => {
+    const action = scriptAction(script, s);
+    return action && { action, botRng };
+  });
 }

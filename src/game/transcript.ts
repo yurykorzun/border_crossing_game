@@ -10,7 +10,7 @@
 // stops being what the player reads.
 
 import { andList, own, t, tn } from '../i18n';
-import type { BotRun, BotStyle } from './bots';
+import type { BotRun } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
@@ -43,7 +43,7 @@ export type Happening =
   | { step: number; type: 'cardDealt'; id: string; claims: ClaimId[]; facts: FactId[]; routinesLeft: string[] };
 
 export interface Transcript {
-  style: BotStyle;
+  style: BotRun['style'];
   setup: RunSetup;
   lines: Line[];
   happenings: Happening[];
@@ -443,7 +443,7 @@ export const CATCHES: Record<string, readonly [ClaimId, FactId][]> = {
 
 export interface Failure {
   rule: number;
-  style: BotStyle;
+  style: BotRun['style'];
   seed: number;
   step: number;
   character: CharacterId;
