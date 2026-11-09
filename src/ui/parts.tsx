@@ -150,72 +150,88 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   );
 }
 
+/**
+ * My story during a crossing: the records first (what you said, what is on file), then the
+ * people, then the traveler's biography. Every section is one full-width column, because two
+ * columns wrapped every line at 390 px (2026-11-09 screenshot review). Nothing is in a
+ * carousel: Pope's phone port lost this overview that way.
+ */
 export function StoryContent({ s }: { s: RunState }) {
   const ch = CHARACTERS[s.character];
   return (
     <>
-      <div className="who">
-        <Portrait id={ch.id} className="portrait-small" />
-        <p><strong>{t(`char.${ch.id}.name`)}</strong> · {t(`char.${ch.id}.blurb`)}</p>
-      </div>
-      <h3>{t('ui.background')}</h3>
-      <ul className="facts">{ch.background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
-      <h3>{t('ui.contacts')}</h3>
-      <ul className="people">
-        {ch.contacts.map((c) => (
-          <li key={c} className={s.exposed.includes(c) ? 'exposed' : ''}>
-            <span>{t(`contact.${c}`)}</span>
-            {c === ch.protectedContact && <span className="tag">{t('ui.protected')}</span>}
-            {s.exposed.includes(c) && <span className="tag risk">{t('ui.exposed')}</span>}
-            <small>{t(`contact.${c}.note`)}</small>
-            <small className="can">{t(`contact.${c}.can`)}</small>
-          </li>
-        ))}
-      </ul>
-      {/* Side by side on purpose: Pope's phone port lost this overview in a carousel. */}
-      <div className="two-col">
-        <section>
-          <h3>{t('ui.claims')}</h3>
-          {/* A claim an officer wrote down shows the desks that have it, so a later contradiction is fair. */}
-          {s.claims.length ? (
-            <ul className="record">
-              {s.claims.map((c) => {
-                const desks = loggedAt(s, c);
-                return (
-                  <li key={c} data-claim={c} className={desks.length ? 'logged' : 'said'}>
-                    <span>{t(own(`claim.${c}`, s.character))}</span>
-                    <span className="desks">
-                      {desks.length ? (
-                        <>
-                          <span className="tag logged">{t('ui.writtenDown')}</span>
-                          {desks.map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
-                        </>
-                      ) : <span className="tag said">{t('ui.saidAloud')}</span>}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <p className="muted">{t('ui.nothingYet')}</p>}
-        </section>
-        <section>
-          <h3>{t('ui.onFile')}</h3>
-          <p className="muted small">{t('ui.onFileHelp')}</p>
-          {/* Each fact with the desks that know it: officials share only through a channel. */}
-          {factIds(s).length ? (
-            <ul className="record">
-              {factIds(s).map((f) => (
-                <li key={f} data-fact={f}>
-                  <span>{t(`fact.${f}`)}</span>
+      <StoryRecords s={s} />
+      <section className="story-section">
+        <h3>{t('ui.contacts')}</h3>
+        <ul className="people">
+          {ch.contacts.map((c) => (
+            <li key={c} className={s.exposed.includes(c) ? 'exposed' : ''}>
+              <span>{t(`contact.${c}`)}</span>
+              {c === ch.protectedContact && <span className="tag">{t('ui.protected')}</span>}
+              {s.exposed.includes(c) && <span className="tag risk">{t('ui.exposed')}</span>}
+              <small>{t(`contact.${c}.note`)}</small>
+              <small className="can">{t(`contact.${c}.can`)}</small>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="story-section">
+        <h3>{t('ui.background')}</h3>
+        <div className="who">
+          <Portrait id={ch.id} className="portrait-small" />
+          <p><strong>{t(`char.${ch.id}.name`)}</strong> · {t(`char.${ch.id}.blurb`)}</p>
+        </div>
+        <ul className="facts">{ch.background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
+      </section>
+    </>
+  );
+}
+
+/** What you said, then On file. The ending's "See what's on file" shows only these. */
+export function StoryRecords({ s }: { s: RunState }) {
+  return (
+    <>
+      <section className="story-section">
+        <h3>{t('ui.claims')}</h3>
+        {/* A claim an officer wrote down shows the desks that have it, so a later contradiction is fair. */}
+        {s.claims.length ? (
+          <ul className="record">
+            {s.claims.map((c) => {
+              const desks = loggedAt(s, c);
+              return (
+                <li key={c} data-claim={c} className={desks.length ? 'logged' : 'said'}>
+                  <span>{t(own(`claim.${c}`, s.character))}</span>
                   <span className="desks">
-                    {(s.facts[f] ?? []).map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
+                    {desks.length ? (
+                      <>
+                        <span className="tag logged">{t('ui.writtenDown')}</span>
+                        {desks.map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
+                      </>
+                    ) : <span className="tag said">{t('ui.saidAloud')}</span>}
                   </span>
                 </li>
-              ))}
-            </ul>
-          ) : <p className="muted">{t('ui.nothingYet')}</p>}
-        </section>
-      </div>
+              );
+            })}
+          </ul>
+        ) : <p className="muted">{t('ui.nothingYet')}</p>}
+      </section>
+      <section className="story-section">
+        <h3>{t('ui.onFile')}</h3>
+        <p className="muted small">{t('ui.onFileHelp')}</p>
+        {/* Each fact with the desks that know it: officials share only through a channel. */}
+        {factIds(s).length ? (
+          <ul className="record">
+            {factIds(s).map((f) => (
+              <li key={f} data-fact={f}>
+                <span>{t(`fact.${f}`)}</span>
+                <span className="desks">
+                  {(s.facts[f] ?? []).map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="muted">{t('ui.nothingYet')}</p>}
+      </section>
     </>
   );
 }

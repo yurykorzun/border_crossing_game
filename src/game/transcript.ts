@@ -14,7 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
+import { SEPARATOR, consequence, consequences, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
 import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -162,6 +162,8 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add(`bulletin.${setup.bulletin}`);
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.label`);
+    // A muted tag that restates the bulletin, so chrome, like the severity tags on the ending.
+    if (relevantToday(id, setup.bulletin)) p.add('ui.relevantToday', {}, CHROME);
     for (const line of packDetail(id)) {
       const parts = line.map((k) => render(() => t(k), k));
       const problem = parts.find((x) => x.problem)?.problem;
@@ -278,7 +280,7 @@ function screenLines(s: RunState, p: Page): void {
       if (w.action === 'wait') { p.add('wait.wait.label'); continue; }
       if (w.blocked) { p.add('ui.nameSomeone'); p.add(`ui.blocked.${w.blocked}`); continue; }
       p.add(`wait.${w.action}.label`, w.contact ? { contact: w.contact } : {});
-      p.add(`wait.${w.action}.detail`);
+      p.add(w.contact ? `contact.${w.contact}.shares` : `wait.${w.action}.detail`);
       if (w.contact && w.vouches) p.add(`contact.${w.contact}.can.${w.vouches}`);
     }
     return;
@@ -316,7 +318,10 @@ function endingLines(s: RunState, p: Page): void {
   const text = endingText(s);
   const ch = CHARACTERS[s.character];
   p.add('ui.title', {}, CHROME);
-  p.add(ending === 'turnedBack' ? 'scene.turnedBack' : s.medicine ? 'scene.bus' : 'scene.busEmpty', {}, CHROME);
+  const scene = ending === 'turnedBack' ? 'scene.turnedBack'
+    : text === 'missedBus' ? (s.medicine ? 'scene.emptyStop' : 'scene.emptyStopEmpty')
+    : s.medicine ? 'scene.bus' : 'scene.busEmpty';
+  p.add(scene, {}, CHROME);
   p.add(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete');
   p.add(`ending.${text}.title`);
   p.add(`ending.${text}.summary`);
@@ -325,7 +330,7 @@ function endingLines(s: RunState, p: Page): void {
   p.add('ui.medicineRow');
   p.add(s.medicine ? 'ui.kept' : 'ui.lost');
   p.add(`contact.${ch.protectedContact}`);
-  p.add(s.exposed.includes(ch.protectedContact) ? 'ui.calledIn' : 'ui.notNamed');
+  p.add(protectedRow(s).key);
   p.add('ui.seeOnFile');
   p.add('ui.playAgain');
   // The sheet behind "See what's on file".

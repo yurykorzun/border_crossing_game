@@ -17,13 +17,13 @@ import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, consequences, nextActionKey, packDetail, severityTone } from './game/consequence';
+import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
+import { SEPARATOR, consequences, nextActionKey, packDetail, protectedRow, relevantToday, severityTone } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
 import type { SceneState } from './ui/art/CheckpointScene';
-import { BorderPost, Desk, NightBus } from './ui/art/JourneyScenes';
+import { BorderPost, Desk, EmptyStop, NightBus } from './ui/art/JourneyScenes';
 import { CustomsQueueScene, InterviewQueueScene, QueueScene } from './ui/art/QueueScene';
 import { Icon } from './ui/art/icons';
 
@@ -213,7 +213,10 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
               <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
                 <span className="checkbox" aria-hidden>{picked.includes(id) && <Icon name="check" />}</span>
                 <span className="doc-text">
-                  <strong>{t(`ev.${id}.label`)}</strong>
+                  <span className="doc-name">
+                    <strong>{t(`ev.${id}.label`)}</strong>
+                    {relevantToday(id, bulletin) && <span className="tag relevant">{t('ui.relevantToday')}</span>}
+                  </span>
                   {packDetail(id).map((line, n) => (
                     <span key={n} className={n ? 'doc-detail doc-reveals' : 'doc-detail doc-topics'}>{line.map((k) => t(k)).join(SEPARATOR)}</span>
                   ))}
@@ -622,10 +625,11 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
                 <span className={`consequence ${w.blocked ? 'blocked' : ''}`}>
                   <Icon name={w.action === 'ask' ? 'clock' : 'document'} />
                   <span className="consequence-text">
-                    <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : 'amber'}`}>
-                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(`wait.${w.action}.detail`)}
+                    {/* A contact reads like the answer cards: what it shares, red only for the protected one. */}
+                    <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : w.contact ? 'plain' : 'amber'}`}>
+                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(w.contact ? `contact.${w.contact}.shares` : `wait.${w.action}.detail`)}
                     </span>
-                    {/* After the guaranteed cost, the possible gain: "May confirm the address". */}
+                    {/* After the guaranteed cost, the possible gain: "May verify your address". */}
                     {!w.blocked && w.contact && w.vouches && (
                       <>{SEPARATOR}<span className="part plain">{t(`contact.${w.contact}.can.${w.vouches}`)}</span></>
                     )}
@@ -643,8 +647,8 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 /**
  * The ending as a short result card (Yury's mockup, 2026-11-09): the title, the scene,
  * the outcome and the ending's name in amber, one sentence, three summary rows, then
- * "See what's on file" and "Play again". The longer text and who was called in sit
- * behind "See what's on file", above My story, so nothing is lost.
+ * "See what's on file" and "Play again". The epilogue and What it cost sit on the card under
+ * the rows; "See what's on file" opens the records alone (2026-11-09 screenshot review).
  */
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
   const [story, setStory] = useState(false);
@@ -655,7 +659,9 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
       <div className="ending-scene">
-        {ending === 'turnedBack' ? <BorderPost closed /> : <NightBus medicine={s.medicine} character={s.character} />}
+        {ending === 'turnedBack' ? <BorderPost closed />
+          : text === 'missedBus' ? <EmptyStop medicine={s.medicine} character={s.character} />
+          : <NightBus medicine={s.medicine} character={s.character} />}
       </div>
       <section className="paper ending-card">
         <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
@@ -669,14 +675,8 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
             </div>
           ))}
         </dl>
-      </section>
-      <div className="controls">
-        <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
-        <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
-      </div>
-      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.myStory')}>
         <div className="ending-record">
-          <p>{t(`ending.${text}.body`)}</p>
+          <p className="epilogue">{t(`ending.${text}.body`)}</p>
           {cost.length > 0 && (
             <>
               <h3 className="mono what-it-cost">{t('ui.whatItCost')}</h3>
@@ -690,9 +690,16 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
               </ul>
             </>
           )}
-          <p className="mono muted">{t('ui.endingsSeen', { n: seen })}</p>
+          <p className="mono muted seen">{t('ui.endingsSeen', { n: seen })}</p>
         </div>
-        <StoryContent s={s} />
+      </section>
+      <div className="controls">
+        <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
+        <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
+      </div>
+      {/* The records alone: the epilogue and What it cost stay on the ending screen above. */}
+      <Sheet open={story} onClose={() => setStory(false)} title={t('ui.whatsOnFile')}>
+        <StoryRecords s={s} />
       </Sheet>
     </main>
   );
@@ -701,7 +708,8 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
 /** The three summary rows: hours left, the medicine, the contact the traveler was asked to protect. */
 function resultRows(s: RunState): { label: string; value: string; tone: 'plain' | 'red' }[] {
   const ch = CHARACTERS[s.character];
-  const calledIn = s.exposed.includes(ch.protectedContact);
+  // The exact result ("Added to watch list"), from the same line as What it cost.
+  const contact = protectedRow(s);
   return [
     // "Hours left", not the mockup's "Time remaining": time is counted in hours (src/i18n/terms.test.ts).
     { label: t('ui.hoursLeftRow'), value: String(s.time), tone: 'plain' },
@@ -709,8 +717,8 @@ function resultRows(s: RunState): { label: string; value: string; tone: 'plain' 
     { label: t('ui.medicineRow'), value: t(s.medicine ? 'ui.kept' : 'ui.lost'), tone: s.medicine ? 'plain' : 'red' },
     {
       label: capitalize(t(`contact.${ch.protectedContact}`)),
-      value: t(calledIn ? 'ui.calledIn' : 'ui.notNamed'),
-      tone: calledIn ? 'red' : 'plain',
+      value: t(contact.key),
+      tone: contact.tone,
     },
   ];
 }

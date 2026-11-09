@@ -256,7 +256,7 @@ test('the passport question: answers as speech or an action, one icon and one li
   ]);
   await expect(answers.locator('.consequence-text')).toHaveText([
     'Uses letter · Reveals her address',
-    'Register check · Costs 1 hour',
+    'Costs 1 hour · Register check',
     'Recorded as your reason for visiting',
   ]);
   for (const answer of await answers.all()) {
@@ -299,13 +299,27 @@ test('every card and waiting room fits at 390x844 with no page scroll', async ({
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
+  const weights = new Set<string>();
   for (const { name, run, card } of crowdedStates()) {
     await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
     await page.reload();
     await expect(page.locator('main.run .controls button').first(), name).toBeVisible();
     await expectFits(page, name, card);
     await expectLinesVisible(page, name);
+    // Each answer card: an action row and one consequence row, and the consequence text
+    // in one weight on every card, contacts included (colour marks the protected one).
+    const answers = await page.locator('main.run .controls button.choice').evaluateAll((buttons) =>
+      buttons.map((b) => ({
+        rows: [...b.children].map((r) => r.className.split(' ')[0]),
+        weights: [...b.querySelectorAll('.consequence-text, .part')].map((el) => getComputedStyle(el).fontWeight),
+      })),
+    );
+    for (const a of answers) {
+      expect(a.rows, name).toEqual(['choice-label', 'consequence']);
+      a.weights.forEach((w) => weights.add(w));
+    }
   }
+  expect([...weights], 'consequence row weights across every card').toHaveLength(1);
   expect(errors).toEqual([]);
 });
 

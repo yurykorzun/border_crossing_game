@@ -258,3 +258,34 @@ test('packing at large text: a "more below" cue until the list is scrolled to th
   await expect(cue).toHaveCount(0);
   await expect(docsScreen.locator('.doc').last()).toBeInViewport();
 });
+
+// A document whose topic the bulletin points at carries a quiet Relevant today tag
+// (2026-11-09 screenshot review). The bulletin comes from the setup seed, so the test
+// pins the seed's two sources for the one click that draws it: seed 3 is the medicines bulletin.
+test('under the medicines bulletin, only the hospital note says Relevant today', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  await page.evaluate(() => {
+    const w = window as unknown as { __now: () => number; __random: () => number };
+    w.__now = Date.now; w.__random = Math.random;
+    Date.now = () => 3; Math.random = () => 0;
+  });
+  await page.locator('.title-screen button.primary').click();
+  await page.evaluate(() => {
+    const w = window as unknown as { __now: () => number; __random: () => number };
+    Date.now = w.__now; Math.random = w.__random;
+  });
+  await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
+  await page.locator('.traveler-step .controls button.primary').click();
+
+  const docsScreen = page.locator('main.documents-step');
+  await expect(docsScreen.getByRole('note', { name: "Today's bulletin" })).toHaveText(en['bulletin.customs']);
+  const tagged = docsScreen.locator('.doc', { has: page.locator('.tag.relevant') });
+  await expect(tagged).toHaveCount(1);
+  await expect(tagged.locator('strong')).toHaveText(en['ev.hospitalNote.label']);
+  await expect(tagged.locator('.tag.relevant')).toHaveText(en['ui.relevantToday']);
+  // The tag sits on the name line and the list still fits with no scroll.
+  await stepFits(page, 'documents, medicines bulletin');
+  expect(errors).toEqual([]);
+});

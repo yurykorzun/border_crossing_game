@@ -71,6 +71,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   // option, so the first options screen shows a time cost on an answer's line.
   await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
   const timeChips: string[] = [];
+  const cards: (AnswerCard & { step: number })[] = [];
 
   for (; steps < MAX_STEPS; steps++) {
     if (await ending.isVisible()) break;
@@ -88,6 +89,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
       // The waiting screen swaps its skip hint for buttons; give the screen a moment.
       await expect(option).toBeVisible();
       timeChips.push(...(await page.locator('main.run .consequence .part', { hasText: /^Costs / }).allInnerTexts()));
+      cards.push(...(await answerCards(page)).map((c) => ({ ...c, step: steps })));
       previous = 'option';
       await option.click();
     }
@@ -96,6 +98,17 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
   expect(timeChips.length, 'time costs seen').toBeGreaterThan(0);
   for (const chip of timeChips) expect(chip).toMatch(/^Costs \d+ hours?$/);
+  // Every answer card: the action row, then one consequence row, and no answer
+  // outweighs another (colour marks the protected contact, never bold).
+  expect(cards.length, 'answer cards seen').toBeGreaterThan(0);
+  for (const c of cards) {
+    const where = `step ${c.step}: ${c.rows.join(' / ')}`;
+    expect(c.rows, where).toHaveLength(2);
+    expect(c.rows.every((r) => r.trim() !== ''), where).toBe(true);
+    expect(c.stacked, where).toBe(true);
+  }
+  expect(new Set(cards.map((c) => c.labelWeight)), 'action row weights').toEqual(new Set([cards[0].labelWeight]));
+  expect(new Set(cards.flatMap((c) => c.lineWeights)), 'consequence row weights').toEqual(new Set([cards[0].lineWeights[0]]));
   await expect(ending).toBeVisible();
   await expect(ending.locator('h1')).not.toBeEmpty();
   await expect(page.locator('.ending .controls button.primary')).toBeVisible();
@@ -107,6 +120,33 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   expect(errors, 'console errors').toEqual([]);
 });
+
+interface AnswerCard {
+  /** The text of each row: the button's direct children. */
+  rows: string[];
+  /** The consequence row sits below the action row. */
+  stacked: boolean;
+  labelWeight: string;
+  /** The weight of every piece of text on the consequence row. */
+  lineWeights: string[];
+}
+
+/** The answer cards on screen, as rows and font weights. */
+async function answerCards(page: Page): Promise<AnswerCard[]> {
+  return page.locator('main.run .controls button.choice').evaluateAll((buttons) =>
+    buttons.map((b) => {
+      const rows = [...b.children] as HTMLElement[];
+      const [label, line] = rows;
+      const pieces = line ? [line, ...line.querySelectorAll<HTMLElement>('.consequence-text, .part')] : [];
+      return {
+        rows: rows.map((r) => r.innerText),
+        stacked: !!label && !!line && line.getBoundingClientRect().top >= label.getBoundingClientRect().bottom,
+        labelWeight: label ? getComputedStyle(label).fontWeight : '',
+        lineWeights: pieces.map((el) => getComputedStyle(el).fontWeight),
+      };
+    }),
+  );
+}
 
 /** Opens the run on a saved state, as a returning player would. */
 async function openAt(page: Page, run: RunState) {
@@ -162,6 +202,17 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   // Passport control and customs know it; the interview does not.
   await expect(row.locator('.tag.desk')).toHaveText(['Passport', 'Customs']);
   await noHorizontalScroll(page, 'My story with desks');
+
+  // Records first, the biography below, every section one full-width column (2026-11-09 review).
+  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'People', 'Background']);
+  const widths = await sheet.locator('.story-section').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
+  expect(widths).toHaveLength(4);
+  for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
+  // Each contact's abilities, from the table in src/game/content/world.ts.
+  await expect(sheet.locator('.people .can')).toHaveText([
+    'Can confirm: address, visit, prescription',
+    /^Can confirm: (a place to stay|a job offer abroad)$/,
+  ]);
   expect(errors).toEqual([]);
 });
 
@@ -212,8 +263,8 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(rows.nth(0)).toHaveText(/Hours left\s*5$/);
   await expect(rows.nth(1)).toHaveText(/Medicine\s*Kept/);
   await expect(rows.nth(2)).toHaveText(/Your cousin Ilya\s*Not named/);
-  // The longer text is behind "See what's on file", not on the card.
-  await expect(card).not.toContainText('visiting hours end');
+  // The epilogue stays on the ending screen, under the rows.
+  await expect(card.locator('.epilogue')).toContainText('visiting hours end');
 
   // The whole ending fits the phone: no page scroll, nothing cut off.
   await noHorizontalScroll(page, 'ending');
@@ -224,17 +275,14 @@ test('a Home in time ending is a short result card that fits the screen', async 
   expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
   await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport();
 
-  // See what's on file opens My story, with the longer ending text on top.
+  // See what's on file opens the records alone: no epilogue, no costs, no biography.
   await page.getByRole('button', { name: "See what's on file" }).click();
   const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet.locator('h2')).toHaveText('My story');
-  await expect(sheet).toContainText('visiting hours end');
-  await expect(sheet).toContainText('Background');
-  // Each contact's abilities, from the table in src/game/content/world.ts.
-  await expect(sheet.locator('.people .can')).toHaveText([
-    'Can confirm: address, visit, prescription',
-    /^Can confirm: (a place to stay|a job offer abroad)$/,
-  ]);
+  await expect(sheet.locator('h2')).toHaveText("What's on file");
+  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file']);
+  await expect(sheet).not.toContainText('visiting hours end');
+  await expect(sheet).not.toContainText('Background');
+  await expect(sheet.locator('.what-it-cost')).toHaveCount(0);
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toHaveCount(0);
 
@@ -274,8 +322,15 @@ for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
     await expect(card.locator('.summary')).toHaveText(en[`ending.${text}.summary`]);
     await expect(card).toBeInViewport();
     await noHorizontalScroll(page, `${text} ending`);
-    await page.getByRole('button', { name: "See what's on file" }).click();
-    await expect(page.locator('dialog.sheet[open] .ending-record > p').first()).toHaveText(en[`ending.${text}.body`]);
+    await expect(card.locator('.epilogue')).toHaveText(en[`ending.${text}.body`]);
+    // The bus left without you: an empty stop under a streetlight, not the inside of the bus.
+    const scene = page.locator('.ending-scene svg[role="img"]');
+    await expect(scene).toHaveCount(1);
+    await expect(scene).toBeVisible();
+    if (text === 'missedBus') {
+      await expect(scene).toHaveAttribute('data-scene', 'emptyStop');
+      await expect(scene).toHaveAttribute('aria-label', en['scene.emptyStop']);
+    } else await expect(scene).toHaveAttribute('data-scene', 'bus');
     expect(errors).toEqual([]);
   });
 }
@@ -293,11 +348,9 @@ test('a Too late ending still lists the exposed mother, scored', async ({ page }
 
   const card = page.locator('.ending-card');
   await expect(card.locator('h1')).toHaveText('Too late');
-  // The headline stays the same; the cost of each exposure is behind "See what's on file".
-  await page.getByRole('button', { name: "See what's on file" }).click();
-  const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet.locator('.what-it-cost')).toHaveText('What it cost');
-  const lines = sheet.locator('.costs li');
+  // The headline stays the same; the cost of each exposure is on the ending screen too.
+  await expect(card.locator('.what-it-cost')).toHaveText('What it cost');
+  const lines = card.locator('.costs li');
   await expect(lines).toHaveCount(2);
   await expect(lines.nth(0)).toHaveText(/^Minor Your mother gets a call from the border/);
   await expect(lines.nth(1)).toHaveText('Minor 1 thing about you is on file now.');
