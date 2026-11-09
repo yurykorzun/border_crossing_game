@@ -115,8 +115,9 @@ p { margin: 0 0 var(--gap); }
 .consequence { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: var(--muted); }
 .consequence .icon { margin-top: 2px; }
 .consequence-text { min-width: 0; overflow-wrap: anywhere; }
-.part.amber { color: var(--amber-paper); font-weight: 600; }
-.part.red { color: var(--danger-paper); font-weight: 600; }
+/* Colour only, no bold: every available answer carries the same weight. */
+.part.amber { color: var(--amber-paper); }
+.part.red { color: var(--danger-paper); }
 
 /* ── Title */
 .title-screen { justify-content: space-between; }

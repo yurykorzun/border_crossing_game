@@ -71,6 +71,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   // option, so the first options screen shows a time cost on an answer's line.
   await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
   const timeChips: string[] = [];
+  const cards: (AnswerCard & { step: number })[] = [];
 
   for (; steps < MAX_STEPS; steps++) {
     if (await ending.isVisible()) break;
@@ -88,6 +89,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
       // The waiting screen swaps its skip hint for buttons; give the screen a moment.
       await expect(option).toBeVisible();
       timeChips.push(...(await page.locator('main.run .consequence .part', { hasText: /^Costs / }).allInnerTexts()));
+      cards.push(...(await answerCards(page)).map((c) => ({ ...c, step: steps })));
       previous = 'option';
       await option.click();
     }
@@ -96,6 +98,17 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
   expect(timeChips.length, 'time costs seen').toBeGreaterThan(0);
   for (const chip of timeChips) expect(chip).toMatch(/^Costs \d+ hours?$/);
+  // Every answer card: the action row, then one consequence row, and no answer
+  // outweighs another (colour marks the protected contact, never bold).
+  expect(cards.length, 'answer cards seen').toBeGreaterThan(0);
+  for (const c of cards) {
+    const where = `step ${c.step}: ${c.rows.join(' / ')}`;
+    expect(c.rows, where).toHaveLength(2);
+    expect(c.rows.every((r) => r.trim() !== ''), where).toBe(true);
+    expect(c.stacked, where).toBe(true);
+  }
+  expect(new Set(cards.map((c) => c.labelWeight)), 'action row weights').toEqual(new Set([cards[0].labelWeight]));
+  expect(new Set(cards.flatMap((c) => c.lineWeights)), 'consequence row weights').toEqual(new Set([cards[0].lineWeights[0]]));
   await expect(ending).toBeVisible();
   await expect(ending.locator('h1')).not.toBeEmpty();
   await expect(page.locator('.ending .controls button.primary')).toBeVisible();
@@ -107,6 +120,33 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   expect(errors, 'console errors').toEqual([]);
 });
+
+interface AnswerCard {
+  /** The text of each row: the button's direct children. */
+  rows: string[];
+  /** The consequence row sits below the action row. */
+  stacked: boolean;
+  labelWeight: string;
+  /** The weight of every piece of text on the consequence row. */
+  lineWeights: string[];
+}
+
+/** The answer cards on screen, as rows and font weights. */
+async function answerCards(page: Page): Promise<AnswerCard[]> {
+  return page.locator('main.run .controls button.choice').evaluateAll((buttons) =>
+    buttons.map((b) => {
+      const rows = [...b.children] as HTMLElement[];
+      const [label, line] = rows;
+      const pieces = line ? [line, ...line.querySelectorAll<HTMLElement>('.consequence-text, .part')] : [];
+      return {
+        rows: rows.map((r) => r.innerText),
+        stacked: !!label && !!line && line.getBoundingClientRect().top >= label.getBoundingClientRect().bottom,
+        labelWeight: label ? getComputedStyle(label).fontWeight : '',
+        lineWeights: pieces.map((el) => getComputedStyle(el).fontWeight),
+      };
+    }),
+  );
+}
 
 /** Opens the run on a saved state, as a returning player would. */
 async function openAt(page: Page, run: RunState) {

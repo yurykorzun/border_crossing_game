@@ -278,7 +278,7 @@ function screenLines(s: RunState, p: Page): void {
       if (w.action === 'wait') { p.add('wait.wait.label'); continue; }
       if (w.blocked) { p.add('ui.nameSomeone'); p.add(`ui.blocked.${w.blocked}`); continue; }
       p.add(`wait.${w.action}.label`, w.contact ? { contact: w.contact } : {});
-      p.add(`wait.${w.action}.detail`);
+      p.add(w.contact ? `contact.${w.contact}.shares` : `wait.${w.action}.detail`);
       if (w.contact && w.vouches) p.add(`contact.${w.contact}.can.${w.vouches}`);
     }
     return;

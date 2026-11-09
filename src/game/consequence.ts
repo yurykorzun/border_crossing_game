@@ -37,8 +37,12 @@ export const SEPARATOR = ' · ';
 const SEVERITY: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
 /** Never dropped from the line. */
 const KEEP: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'scrutiny', 'time'];
-/** Reading order on the line: what you hand over, then what happens, then what it costs. */
-const ORDER: PartKind[] = ['card', 'contact', 'vouch', 'fact', 'claim', 'check', 'time', 'miss', 'travel', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
+/**
+ * Reading order on the line: the cost most likely to change the decision first (the
+ * bus, time, the medicine, scrutiny, a check), then what goes on file and what it may
+ * gain: "Costs 3 hours · Cash total recorded".
+ */
+const ORDER: PartKind[] = ['miss', 'time', 'travel', 'medicine', 'scrutiny', 'check', 'card', 'contact', 'vouch', 'fact', 'claim', 'withdraw', 'perk', 'free', 'blocked'];
 
 const ICON: Record<PartKind, IconKind> = {
   medicine: 'shield',
@@ -75,12 +79,16 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
 
   const all: Part[] = [];
   if (o.card) all.push({ kind: 'card', key: 'ui.line.uses', vars: { cardShort: o.card }, tone: 'plain' });
-  // A `<cardKey>.contact` text, when there is one, says it in the answer's words ("His name goes on file").
+  // What naming them shares ("Shares her number"), or a `<cardKey>.contact` text in the
+  // answer's words ("His name goes on file"). Red for the protected contact, plain for
+  // anyone else, so no answer outweighs the others.
   const contactKey = `${cardKey}.contact`;
   if (o.contact)
-    all.push({ kind: 'contact', key: has(contactKey) ? contactKey : 'ui.line.contact', vars: { contact: o.contact }, tone: o.contact === protectedContact ? 'red' : 'amber' });
-  // After the guaranteed cost, the possible gain, from the contact's abilities: "May confirm the address".
-  if (o.contact && o.vouches) all.push({ kind: 'vouch', key: `contact.${o.contact}.can.${o.vouches}`, tone: 'plain' });
+    all.push({ kind: 'contact', key: has(contactKey) ? contactKey : `contact.${o.contact}.shares`, vars: { contact: o.contact }, tone: o.contact === protectedContact ? 'red' : 'plain' });
+  // After the guaranteed cost, the possible gain, from the contact's abilities ("May verify
+  // your address"), or a `<cardKey>.vouch` text that says why it helps on this card.
+  const vouchKey = `${cardKey}.vouch`;
+  if (o.contact && o.vouches) all.push({ kind: 'vouch', key: has(vouchKey) ? vouchKey : `contact.${o.contact}.can.${o.vouches}`, tone: 'plain' });
   // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;

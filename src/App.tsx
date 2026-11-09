@@ -622,10 +622,11 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
                 <span className={`consequence ${w.blocked ? 'blocked' : ''}`}>
                   <Icon name={w.action === 'ask' ? 'clock' : 'document'} />
                   <span className="consequence-text">
-                    <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : 'amber'}`}>
-                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(`wait.${w.action}.detail`)}
+                    {/* A contact reads like the answer cards: what it shares, red only for the protected one. */}
+                    <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : w.contact ? 'plain' : 'amber'}`}>
+                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(w.contact ? `contact.${w.contact}.shares` : `wait.${w.action}.detail`)}
                     </span>
-                    {/* After the guaranteed cost, the possible gain: "May confirm the address". */}
+                    {/* After the guaranteed cost, the possible gain: "May verify your address". */}
                     {!w.blocked && w.contact && w.vouches && (
                       <>{SEPARATOR}<span className="part plain">{t(`contact.${w.contact}.can.${w.vouches}`)}</span></>
                     )}

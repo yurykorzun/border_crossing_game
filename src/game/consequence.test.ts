@@ -71,7 +71,7 @@ describe('consequence line', () => {
       if (time) expect(line, name).toContain(tn('ui.line.time', Math.abs(time)));
       if (scrutiny) expect(line, name).toContain(t('ui.line.scrutiny', { n: scrutiny }));
       // A card can say it in its own words ("His name goes on file"); the part is still there.
-      const contactKey = has(`${cardKey}.contact`) ? `${cardKey}.contact` : 'ui.line.contact';
+      const contactKey = has(`${cardKey}.contact`) ? `${cardKey}.contact` : `contact.${o.contact}.shares`;
       if (o.contact) expect(line, name).toContain(t(contactKey, { contact: o.contact }));
       if (o.effects.some((e) => 'loseMedicine' in e)) expect(line, name).toContain(t('ui.line.medicine'));
       for (const p of parts) expect(text(p), `${name}: ${p.key}`).not.toMatch(/\{\w+\}/);
@@ -94,6 +94,25 @@ describe('consequence line', () => {
     expect(reds, 'some line is red').toBeGreaterThan(0);
   });
 
+  it('leads with the cost: time or the bus before anything that goes on file', () => {
+    const costs = ['miss', 'time', 'travel'];
+    const onFile = ['card', 'contact', 'vouch', 'fact', 'claim'];
+    for (const { name, option: o, cardKey, character } of all) {
+      const kinds = consequence(o, cardKey, CHARACTERS[character].protectedContact).parts.map((p) => p.kind);
+      const lastCost = Math.max(-1, ...kinds.map((k, i) => (costs.includes(k) ? i : -1)));
+      const firstFile = kinds.findIndex((k) => onFile.includes(k));
+      if (lastCost >= 0 && firstFile >= 0) expect(lastCost, `${name}: ${kinds.join(', ')}`).toBeLessThan(firstFile);
+    }
+  });
+
+  it('shows a contact other than the protected one in plain, the same as any other part', () => {
+    for (const { name, option: o, cardKey, character } of all) {
+      const guarded = CHARACTERS[character].protectedContact;
+      for (const p of consequence(o, cardKey, guarded).parts)
+        if (p.kind === 'contact') expect(p.tone, name).toBe(o.contact === guarded ? 'red' : 'plain');
+    }
+  });
+
   it('marks scrutiny and a check in amber', () => {
     for (const { option: o, cardKey, character } of all)
       for (const p of consequence(o, cardKey, CHARACTERS[character].protectedContact).parts)
@@ -110,7 +129,7 @@ describe('consequence line', () => {
     expect(t('enc.p_purpose.evidence.label', { cardThe: 'motherLetter' })).toBe("Show your mother's letter");
     expect(line('evidence', 'motherLetter').text).toBe('Uses letter · Reveals her address');
     expect(t('enc.p_purpose.family.label')).toBe('"I\'m visiting family."');
-    expect(line('family').text).toBe('Register check · Costs 1 hour');
+    expect(line('family').text).toBe('Costs 1 hour · Register check');
     expect(t('enc.p_purpose.tourism.label')).toBe('"I\'m here as a tourist."');
     expect(line('tourism')).toEqual({ icon: 'check', text: 'Recorded as your reason for visiting' });
   });
@@ -162,6 +181,21 @@ describe('the last bus, on the answer line', () => {
     expect(line(s, 'wait').some((p) => p.kind === 'time')).toBe(false);
     // An answer with no time or travel cost changes nothing about the bus, so it says nothing about it.
     expect(line(at('s_medicine', 1), 'surrender').some((p) => p.kind === 'miss')).toBe(false);
+  });
+
+  it('the bag search answers lead with the cost, then what goes on file', () => {
+    const s = at('s_bag', 8);
+    expect(line(s, 'wait').map(text).join(SEPARATOR)).toBe('Costs 3 hours · Cash total recorded');
+    // The mother says what calling her shares, and why her word helps end the search.
+    expect(line(s, 'contact').map(text).join(SEPARATOR)).toBe('Costs 1 hour · Shares her number · May verify the prescription, ending the search');
+    expect(line(s, 'contact').find((p) => p.kind === 'contact')?.tone).toBe('plain');
+  });
+
+  it('the mother on the host question says what she shares and what she may verify', () => {
+    const s: RunState = { ...at('s_bag', 8), screen: { kind: 'encounter', id: 'c_host' }, checkpoint: 1, slot: 1 };
+    const o = options(s).find((x) => x.approach.id === 'mother')!;
+    expect(o.contact).toBe('mother');
+    expect(consequence(o, 'enc.c_host.mother', 'cousin', deskOf(s), s).parts.map(text).join(SEPARATOR)).toBe('Shares her number · May verify your address');
   });
 
   it('an answer that keeps the bus possible shows neither line', () => {
