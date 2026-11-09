@@ -165,6 +165,11 @@ p { margin: 0 0 var(--gap); }
 /* ── Setup screens: the body scrolls when it must (larger text, the packing list); the button stays put. */
 .traveler-step, .setup-step { overflow: hidden; }
 .setup-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+/* On a wide window the body only takes the height it needs, so Continue sits right under the
+   cards instead of at the bottom of the window. It still shrinks and scrolls when it must. */
+@media (min-width: 600px) {
+  .setup-body { flex: 0 1 auto; }
+}
 .step-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .step-head h2 { margin: 0; }
 .back {
