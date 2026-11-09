@@ -97,10 +97,11 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   const checkKey = `${cardKey}.check`;
   if (a.check || has(checkKey)) all.push({ kind: 'check', key: has(checkKey) ? checkKey : 'ui.line.check', tone: 'amber' });
   // Against the last bus, the way the engine applies it (apply() and doomed() in
-  // src/game/engine.ts): time floors at 0 and the trip only grows. A run already
-  // past the bus keeps the plain cost, because no answer changes that.
+  // src/game/engine.ts): time floors at 0 and the trip only grows. Only an answer that
+  // costs time or adds travel says it misses the bus, so on a run already short of the
+  // trip a free answer still reads as free.
   const need = clock ? travelOf(clock) + travel : 0;
-  const misses = !!clock && a.kind !== 'withdraw' && clock.time >= travelOf(clock) && Math.max(0, clock.time + time) < need;
+  const misses = !!clock && a.kind !== 'withdraw' && (time < 0 || travel > 0) && Math.max(0, clock.time + time) < need;
   if (misses) all.push({ kind: 'miss', key: 'ui.line.miss', tone: 'red' });
   else {
     if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });

@@ -155,6 +155,15 @@ describe('the last bus, on the answer line', () => {
     expect(line(at('s_connection', 2), 'later').map(text)).toEqual(expect.arrayContaining(['Misses the last bus']));
   });
 
+  it('a run already short of the trip still says a costly answer misses the bus, and a free one does not', () => {
+    const s = at('s_bag', 1);
+    expect(travelOf(s)).toBe(2);
+    expect(line(s, 'wait').map(text)).toContain('Misses the last bus');
+    expect(line(s, 'wait').some((p) => p.kind === 'time')).toBe(false);
+    // An answer with no time or travel cost changes nothing about the bus, so it says nothing about it.
+    expect(line(at('s_medicine', 1), 'surrender').some((p) => p.kind === 'miss')).toBe(false);
+  });
+
   it('an answer that keeps the bus possible shows neither line', () => {
     const parts = line(at('s_bag', 8), 'wait');
     expect(parts.map(text)).toContain('Costs 3 hours');
