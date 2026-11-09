@@ -344,7 +344,7 @@ export const SECONDS_PER_DECISION = 3;
  * ceiling. Yury's call on 2026-11-09, after the short packing screen (67a.16)
  * put some runs just under 5 minutes.
  */
-export const PLAY_MINUTES = { floor: 4.5, target: 5, max: 8 } as const;
+export const PLAY_MINUTES = { floor: 4, target: 5, max: 8 } as const;
 
 export const words = (tr: Transcript) =>
   tr.lines.reduce((n, l) => (l.chrome ? n : n + l.text.split(/\s+/).filter(Boolean).length), 0);
