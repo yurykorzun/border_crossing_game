@@ -3,13 +3,13 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Cond, ContactId, Effect, Encounter,
-  EndingId, EvidenceId, Inspection, LogEntry, RunState, Screen, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, Inspection, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME,
 } from './content/world';
-import { CHECKS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
@@ -153,7 +153,48 @@ function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev:
   list.push(...a.effects);
   const weak = topic && CHARACTERS[s.character].weakTopics.includes(topic);
   if (a.kind === 'verify' && weak) list.push({ time: -1 });
-  return list.filter((e) => check(e.when, s));
+  const card = s.screen.kind === 'encounter' ? s.screen.id : undefined;
+  return activeEffects(s, list.filter((e) => check(e.when, s)), { card });
+}
+
+/** Where a scrutiny effect comes from: the card on screen, or the check being resolved. */
+export interface ReasonSource {
+  card?: string;
+  check?: CheckId;
+}
+
+/**
+ * Whether a scrutiny reason holds: the fact is on file (`facts`), or the reason
+ * is a check and the effect belongs to its result or to a follow-up only that
+ * check deals. Officials need something they can point at.
+ */
+export function scrutinyApplies(reason: ScrutinyReason, facts: readonly FactId[], from: ReasonSource): boolean {
+  if (reason in CHECKS) {
+    if (from.check === reason) return true;
+    return !!from.card && CHECKS[reason as CheckId].cases.some((c) => c.followUp === from.card);
+  }
+  return facts.includes(reason as FactId);
+}
+
+/**
+ * Drops scrutiny effects whose reason does not hold. Facts recorded earlier in
+ * the same list count, so "Yes, I have both" can put the passport on file and
+ * then add scrutiny for it.
+ */
+export function activeEffects(s: RunState, effects: Effect[], from: ReasonSource): Effect[] {
+  const facts = [...s.facts];
+  const out: Effect[] = [];
+  for (const e of effects) {
+    if ('fact' in e && !facts.includes(e.fact)) facts.push(e.fact);
+    if ('scrutiny' in e && !scrutinyApplies(e.reason, facts, from)) continue;
+    out.push(e);
+  }
+  return out;
+}
+
+/** The effects a check result applies, with conditions and scrutiny reasons resolved. */
+export function checkEffects(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
+  return activeEffects(s, (result.effects ?? []).filter((e) => check(e.when, s)), { check: checkId });
 }
 
 // ── Applying things
@@ -207,11 +248,22 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (!s.seen.includes(id)) return show(s, id);
   }
   if (s.slot >= 2 && !(s.slot === 2 && quiet(s) && extraCard(s))) {
+    const challenge = pendingChallenge(s);
+    if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
     if (next >= CHECKPOINTS.length) return finish(s);
     return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
   }
   return deal(s, dealer);
+}
+
+/** A challenge card for this checkpoint that applies and has not been dealt yet. */
+function pendingChallenge(s: RunState): string | undefined {
+  const cp = CHECKPOINTS[s.checkpoint];
+  return CHALLENGES.find((id) => {
+    const e = ENCOUNTER_BY_ID.get(id);
+    return !!e && e.checkpoint === cp && eligible(s, e);
+  });
 }
 
 /**
@@ -322,7 +374,7 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
     result = { result: 'clear' };
   }
-  n = apply(n, result.effects ?? []);
+  n = apply(n, checkEffects(n, w.check, result));
   n = say(n, [{ key: `check.${w.check}.${result.result}` }]);
   if (result.followUp && !n.seen.includes(result.followUp)) n = { ...n, pending: [result.followUp, ...n.pending] };
   return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer);
@@ -344,6 +396,11 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
   n = say(n, [{ key: `${prefix}.${card.id}.${approachId}.reaction`, vars }]);
+  // The weakness hour is a real cost, so the reaction says what it is spent on.
+  const topic = topicOf(card);
+  if (opt.approach.kind === 'verify' && topic && CHARACTERS[s.character].weakTopics.includes(topic)) {
+    n = say(n, [{ key: `weak.${topic}.reaction` }]);
+  }
   if (opt.approach.kind === 'withdraw') return finish({ ...n, withdrew: true });
   if (s.screen.kind === 'inspection') n = { ...n, scrutiny: SCRUTINY_AFTER_INSPECTION };
   if (opt.approach.check) return startWait(n, opt.approach.check);

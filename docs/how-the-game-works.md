@@ -6,7 +6,7 @@ TL;DR: you hold a small hand of document cards and two people you can call on. T
 
 **Your resources (the "mana")**
 - Time: 8 points. Most answers that verify something cost 1-2. You win cleanly only if you finish with 2 or more.
-- Scrutiny: a 0-3 track. Lies and evasions add 1. At 3 you are pulled into a secondary inspection, and it drops back to 1 afterwards.
+- Scrutiny: a 0-3 track. It only rises for a reason you can see: something on file or a check result that catches a lie, or an honest answer that puts something awkward on file. At 3 you are pulled into a secondary inspection, and it drops back to 1 afterwards.
 - Your hand: 3 document cards (Mark packs 4), chosen from 6 before you leave. Each card can be played once.
 - Your people: 2 contacts (your mother, plus a cousin or a brother). Naming one solves a problem but exposes them for the rest of the run.
 - Medicine: your father's medicine. You can give it up to get out of trouble, and it costs you the clean ending.
@@ -41,7 +41,7 @@ Every question card offers 2-3 answers, and they are always built from the same 
 |---|---|---|
 | Show a document | A card from your hand, and its facts go on file | Show the employer letter, so "your employer" is now on file |
 | Let them check | Time (1-3), sometimes a waiting-room check | "Let them count it" -1 time |
-| Say something | Free now, but it adds a claim or +1 scrutiny | "Say you're a tourist" adds a claim |
+| Say something | Free now, but it adds a claim, or +1 scrutiny when something on file is the reason | "Say you're a tourist" adds a claim |
 | Name someone | Exposes a contact | "Ask your mother to vouch" |
 | Advantage | Your once-per-run ability | Lena explains her job plainly |
 
@@ -50,9 +50,11 @@ The rule that keeps it fair: every card has at least one answer that needs no do
 ## Claims and facts (the memory)
 
 - Claims are what you said: visiting family, tourism, a hotel stay, no other family.
+- An answer records only what its words say. Asked about relatives, you name your contact, say "I have no other relatives here." or ask why. Only the denial records "No other relatives", because leaving someone out is not a lie.
 - Facts are what the state now knows (shown as "On file"): the family address, your employer, your phone was searched, your brother abroad.
-- A contradiction card is dealt only when a claim and a fact disagree. Say "tourist", then let them find your family address, and the interview asks about it with priority 3. Lies are free when you tell them and cost you later.
-- Some cards block each other. Once you have claimed a family visit, the hotel booking can no longer be shown.
+- A lie has three tiers. Unchallenged: nothing on file speaks against it, so it is free and you saved what the truth would have cost. Inconsistency: a fact makes it look odd (say "tourist", then your family address goes on file), and the interview deals a cheap clarify card: clarify for free, show a document, or take +1 scrutiny. Disproof: a fact says the opposite (deny other relatives while your brother abroad is on file, or say your cash is under the limit and then the bag search counts it), and the interview deals an expensive card: 3 hours, +2 scrutiny or a contact.
+- Every scrutiny gain names its reason (a fact on file or a check result), and the reaction says it. A lie never adds scrutiny until something catches it.
+- Only claims that truly exclude each other block a document. Saying you stay with your mother blocks the hotel booking; visiting family does not.
 
 ## Waiting rooms (checks)
 
@@ -84,18 +86,19 @@ So there are two levels of winning. Getting through at all is the first level, a
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**
-A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-09) visited 11,681,978 states across 105 setups in about 60 s and checked, at every state and move:
+A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-09) visited 8,845,731 states across 105 setups in about 57 s and checked, at every state and move:
 - No dead ends and no loops: every run ends.
 - Time stays 0-8 and scrutiny 0-3; a spent document, an exposed contact or the used Advantage never comes back.
 - A double tap or a second resolution of the same check is refused; nothing is accepted after the ending.
 - The ending matches the final state, and no follow-up is left queued.
+- Scrutiny never rises without a reason that holds, the clarify and contradiction cards are only dealt when their claim and fact pair is on file, and the hotel is never shown after "Staying with family".
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
-- The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.9 minutes and the median 5.9 (eval rule 4 asks for 4-8 and a median of 5 or more).
+- The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.8 minutes and the median 5.7 (eval rule 4 asks for 4-8 and a median of 5 or more).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 
-Ending shares across all branches (share of branches, not of players): home in time 13.6%, at a cost 29.2%, too late 30.6%, turned back 26.5%.
+Ending shares across all branches (share of branches, not of players): home in time 19.6%, at a cost 33.7%, too late 26.4%, turned back 20.2%.
 
 **What is not balanced yet**
 The walk also works out the best ending a player can force in each setup whatever the dealer deals. Today it is "home in time" in all 105 setups, so for an informed player no packing is ever a real loss, and lying is too cheap (a tourism lie still got home with 6 of 8 hours left in playtesting). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost". Autoplay bots (67a.2) measure styles, and plj tunes the prices.

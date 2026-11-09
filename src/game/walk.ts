@@ -13,13 +13,14 @@
 // What this proves: rule and structural correctness for every reachable state.
 // What it does not: balance (bots) or whether the game feels right (people).
 
-import { currentCard, endingFor, legalActions, newRun } from './engine';
+import { checkEffects, currentCard, endingFor, legalActions, newRun, options } from './engine';
 import type { RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, CharacterId, EndingId, EvidenceId, RunState } from './types';
+import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, START_TIME,
 } from './content/world';
+import { CHECKS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
 import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
@@ -116,6 +117,18 @@ const key = (s: RunState) =>
   });
 
 const unique = <T>(list: T[]) => new Set(list).size === list.length;
+const holds = (pairs: readonly [ClaimId, FactId][], s: RunState) => pairs.some(([c, f]) => s.claims.includes(c) && s.facts.includes(f));
+
+/** Cards that challenge a claim, and the claim and fact pairs that let them be dealt. */
+const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: INCONSISTENCIES, i_contradiction: DISPROOFS };
+
+/** The effects a move applied, or null for a move that applies none of its own (ack, beat, an assisted check). */
+function moveEffects(s: RunState, action: Action): Effect[] | null {
+  if (action.type === 'choose') return options(s).find((o) => o.approach.id === action.approach)?.effects ?? null;
+  if (action.type === 'waitAction' && s.screen.kind === 'wait' && action.action !== 'assist')
+    return checkEffects(s, s.screen.check, s.screen.resolved);
+  return null;
+}
 const keeps = <T>(before: T[], after: T[]) => before.every((x) => after.includes(x));
 
 /** The rules every reachable state must keep. Returns what is broken. */
@@ -128,6 +141,9 @@ export function checkState(s: RunState): string[] {
   if (!s.exposed.every((c) => ch.contacts.includes(c)) || !unique(s.exposed)) bad.push(`exposed ${s.exposed} not a subset of contacts`);
   if (!unique(s.facts) || !unique(s.claims) || !unique(s.seen)) bad.push('facts, claims or seen repeat');
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !currentCard(s)) bad.push(`unknown card ${s.screen.id}`);
+  // A clarify card needs an inconsistency on file, a contradiction card a disproof.
+  const pairs = s.screen.kind === 'encounter' ? CHALLENGES[s.screen.id] : undefined;
+  if (pairs && !holds(pairs, s)) bad.push(`${(s.screen as { id: string }).id} dealt with claims [${s.claims}] and facts [${s.facts}]`);
   if (s.ending) {
     if (s.screen.kind !== 'ending') bad.push(`ending ${s.ending} on a ${s.screen.kind} screen`);
     if (s.ending !== endingFor(s)) bad.push(`ending ${s.ending} but the state says ${endingFor(s)}`);
@@ -155,6 +171,26 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   if (n.inspections - s.inspections > 1) bad.push('one move started two inspections');
   if (n.inspections > s.inspections && n.screen.kind !== 'inspection') bad.push('an inspection was counted but not shown');
   if (n.decisions - s.decisions > 1) bad.push('one move counted as two decisions');
+  // Only staying with family rules out the hotel.
+  if (!s.used.includes('hotel') && n.used.includes('hotel') && s.claims.includes('stayingWithFamily'))
+    bad.push('the hotel was shown after claiming to stay with family');
+  // Every scrutiny gain has a reason officials can point at: a fact on file, or
+  // the check whose result this is (or whose result dealt this card).
+  const effects = moveEffects(s, action) ?? [];
+  let reasoned = 0;
+  for (const e of effects) {
+    if (!('scrutiny' in e)) continue;
+    const r = e.reason;
+    const isCheck = r in CHECKS;
+    const ok = isCheck
+      ? (s.screen.kind === 'wait' && s.screen.check === r)
+        || (s.screen.kind === 'encounter' && CHECKS[r as keyof typeof CHECKS].cases.some((c) => c.followUp === (s.screen as { id: string }).id))
+      : n.facts.includes(r as FactId);
+    if (!ok) bad.push(`scrutiny ${e.scrutiny} with reason ${r}, which does not hold`);
+    else if (e.scrutiny > 0) reasoned += e.scrutiny;
+  }
+  if (n.scrutiny > s.scrutiny && !reasoned)
+    bad.push(`scrutiny rose from ${s.scrutiny} to ${n.scrutiny} with no reason`);
   // A double tap, or resolving the same check twice, must be refused.
   if ((action.type === 'choose' || action.type === 'waitAction') && tryStep(n, action).ok)
     bad.push(`${JSON.stringify(action)} could be played twice in a row`);

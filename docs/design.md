@@ -84,7 +84,7 @@ Rules:
 
 1. Every encounter has an option that needs no card and no contact.
 2. Randomness picks the problem, the chosen solution has a predictable result.
-3. Officials only challenge a contradiction they could plausibly discover: a contradiction encounter needs both your claim and an On file fact that conflicts with it.
+3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
 
 ## Truth, claims, official knowledge
@@ -94,6 +94,19 @@ Rules:
 - On file: what officials know ("Family address on file").
 
 The engine keeps these separate. Content can only key off claims and On file facts (and the character's background for which deck cards exist), never off truth officials couldn't know.
+
+A claim is in one of three tiers:
+
+1. Unchallenged: nothing on file speaks against it. The claim stands and you saved the time, card or contact a true answer would have cost. "It's under the limit" is free while nobody has counted the cash.
+2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said tourist, and your family's address or your father's condition is on file). The interview deals the cheap clarify card (`i_clarify`): clarify for free with a new claim, show a document, or accept +1 scrutiny.
+3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad is on file; said under the limit, and the cash count is on file). The interview deals the expensive card (`i_contradiction`): 3 hours for a formal review, +2 scrutiny, or a contact.
+
+The pairs live in `INCONSISTENCIES` and `DISPROOFS` in `src/game/content/encounters.ts`, and eval rule 3 and the walk both check a card is only dealt when its pair holds.
+
+Rules that keep it fair:
+- A document is blocked only by a claim that truly excludes it. The hotel booking is blocked by "Staying with family" (giving your mother's address as where you stay), not by "Visiting family", because you can visit family and sleep in a hotel.
+- Every scrutiny effect names its reason: a fact on file or a check whose result dealt the card. It only applies while that reason holds, so a lie adds scrutiny only once a fact or a check result catches it. An honest answer that adds scrutiny puts its reason on file first ("Yes, I have both" files the second passport). The walk checks every move: scrutiny never rises without a reason that holds.
+- Detection needs a fact on file, a check result or a document shown, never your background alone. The reaction text says what caused each time loss and scrutiny gain ("He writes 'refused search' on your file and makes you wait an hour for a supervisor.").
 
 ## Director
 

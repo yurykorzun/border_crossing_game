@@ -36,7 +36,8 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     id: 'hotel',
     topics: ['accommodation', 'stay'],
     onUse: [{ claim: 'hotelStay' }],
-    blockedBy: { claims: ['familyVisit'] },
+    // Only staying with family rules out a hotel; visiting family does not.
+    blockedBy: { claims: ['stayingWithFamily'] },
   },
   motherLetter: {
     id: 'motherLetter',

@@ -550,7 +550,7 @@ function optionLabel(prefix: string, id: string, o: Option): string {
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;
-  if (o.contact) vars.contact = o.contact;
+  if (o.contact) vars.contact = vars.contactMine = o.contact;
   return t(`${prefix}.${id}.${o.approach.id}.label`, vars);
 }
 

@@ -21,10 +21,18 @@ export type FactId =
   | 'urgency'
   | 'phoneSearched'
   | 'donationRecord'
-  | 'brotherAbroad';
+  | 'brotherAbroad'
+  | 'secondPassport'
+  | 'phoneRefused'
+  | 'cashCount';
+
+export const FACT_IDS: readonly FactId[] = [
+  'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
+  'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
+];
 
 /** What the player has said. Can be contradicted by facts. */
-export type ClaimId = 'familyVisit' | 'tourism' | 'hotelStay' | 'noOtherFamily' | 'neverDonated';
+export type ClaimId = 'familyVisit' | 'tourism' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -41,9 +49,17 @@ export interface Cond {
   any?: Cond[];
 }
 
+/**
+ * Why scrutiny goes up, so the player can see it: a fact on file, or the check
+ * whose result dealt this card. A scrutiny effect only applies while its reason
+ * holds (scrutinyApplies() in src/game/engine.ts), so nothing adds scrutiny
+ * because the engine knows your background.
+ */
+export type ScrutinyReason = FactId | CheckId;
+
 export type Effect =
   | { time: number; when?: Cond }
-  | { scrutiny: number; when?: Cond }
+  | { scrutiny: number; reason: ScrutinyReason; when?: Cond }
   | { fact: FactId; when?: Cond }
   | { claim: ClaimId; when?: Cond }
   | { loseMedicine: true; when?: Cond };
