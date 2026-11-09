@@ -35,11 +35,19 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
           ))}
         </ol>
         <span className="progress-label">
-          {t('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name: t(`checkpoint.${CHECKPOINTS[now]}`) })}
+          {/* In the queue the checkpoint is not named yet: it shows once you reach the officer. */}
+          {t('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name: progressName(s) })}
         </span>
       </div>
     </header>
   );
+}
+
+/** The name after "1/3 ·" in the strip. chromeLines() in src/game/transcript.ts mirrors it. */
+function progressName(s: RunState): string {
+  return s.screen.kind === 'between' && !s.reaction
+    ? t('ui.inQueue')
+    : t(`checkpoint.${CHECKPOINTS[Math.min(s.checkpoint, CHECKPOINTS.length - 1)]}`);
 }
 
 export function ScrutinyContent({ s }: { s: RunState }) {

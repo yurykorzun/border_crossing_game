@@ -303,12 +303,26 @@ p { margin: 0 0 var(--gap); }
 .waiting .beat { margin: 8px 0 0; color: var(--muted); }
 .skip { font-size: 0.8rem; margin: 10px 0 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .waiting .beat, .reaction p, .msg { animation: fade-in 400ms ease-out both; }
+  .waiting .beat, .reaction p, .msg, .caption { animation: fade-in 400ms ease-out both; }
 }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-.phone { background: var(--bg-2); border-radius: var(--radius); padding: 14px; }
-.checkpoint-name { font-size: 1.3rem; }
+/* Queue: the title sits on the scene, said and seen beats are a caption along its bottom,
+   phone messages stack in the phone panel under it. Any tap moves one beat on. */
+.queue-scene { cursor: pointer; align-items: stretch; flex-direction: column; justify-content: space-between; }
+.queue-title { position: relative; margin: 10px 12px 0; color: var(--paper); font-size: 0.85rem; }
+.caption-area { position: relative; }
+.caption {
+  margin: 0;
+  padding: 10px 14px;
+  background: rgba(20, 25, 23, 0.82);
+  color: var(--paper);
+  font-size: 1rem;
+}
+.caption.narration { font-style: italic; color: #dfe5e1; }
+.phone { background: var(--bg-2); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: opacity 300ms; }
+.phone.lowered { opacity: 0.6; }
+.msg-from { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
 .msg {
   background: var(--paper);
   color: var(--ink);

@@ -4,12 +4,13 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { has, t } from './i18n';
+import { t } from './i18n';
 import { endingFor, newRun, options, step, waitActions } from './game/engine';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
+import { queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
@@ -331,18 +332,26 @@ function Run({ s, dispatch, data, setData, onRestart }: {
 
   const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)];
   const close = () => setSheet(null);
+  const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
   return (
     <main className="run">
       <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
-      <div className={`scene scene-${CHECKPOINTS[Math.min(s.checkpoint, 2)]} ${data.settings.reduceMotion ? 'still' : ''}`} aria-hidden>
-        <div className="flicker" />
-        {s.screen.kind === 'wait' ? (
-          <div className="tray"><span className="mono">{t('ui.waiting')}</span></div>
-        ) : s.screen.kind !== 'between' ? (
-          <div className="officer"><span className="mono">{t(`officer.${officerKey}`)}</span></div>
-        ) : null}
-      </div>
-      <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
+      {queue !== null ? (
+        // Keyed by run and checkpoint, so each queue starts again from its first beat.
+        <Queue key={`${s.seed}.${queue}`} next={queue} character={s.character} still={data.settings.reduceMotion} onDone={() => dispatch({ type: 'ack' })} />
+      ) : (
+        <>
+          <div className={`scene scene-${CHECKPOINTS[Math.min(s.checkpoint, 2)]} ${data.settings.reduceMotion ? 'still' : ''}`} aria-hidden>
+            <div className="flicker" />
+            {s.screen.kind === 'wait' ? (
+              <div className="tray"><span className="mono">{t('ui.waiting')}</span></div>
+            ) : s.screen.kind !== 'between' ? (
+              <div className="officer"><span className="mono">{t(`officer.${officerKey}`)}</span></div>
+            ) : null}
+          </div>
+          <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
+        </>
+      )}
       {/* The tray stays on every run screen, so story, evidence and settings are always one tap away. */}
       <nav className="tools">
         <button aria-haspopup="dialog" onClick={() => setSheet('story')}>{t('ui.myStory')}</button>
@@ -374,24 +383,52 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
   );
 }
 
+/**
+ * The queue before a checkpoint, one beat per tap (on the scene, the phone or the button).
+ * Phone messages stack in the phone panel; said and seen beats are a caption over the scene.
+ * The last beat swaps Continue for the walk up to the officer, which is the engine's ack.
+ */
+function Queue({ next, character, still, onDone }: { next: number; character: CharacterId; still: boolean; onDone: () => void }) {
+  const beats = queueBeats(next, character);
+  const [shown, setShown] = useState(1);
+  const done = shown >= beats.length;
+  const seen = beats.slice(0, shown);
+  const current = seen[seen.length - 1];
+  const caption = seen.findLast((b) => b.kind !== 'phone');
+  const advance = () => { if (!done) setShown((n) => n + 1); };
+
+  return (
+    <>
+      <div className={`scene scene-${CHECKPOINTS[next]} queue-scene ${still ? 'still' : ''}`} onClick={advance}>
+        <div className="flicker" aria-hidden />
+        <h2 className="queue-title mono">{t('ui.inQueue')}</h2>
+        <div className="caption-area" aria-live="polite">
+          {caption && <p key={caption.key} className={`caption ${caption.kind}`}>{t(caption.key)}</p>}
+        </div>
+      </div>
+      <section className={`panel phone ${current.kind === 'phone' ? '' : 'lowered'}`} aria-live="polite" onClick={advance}>
+        {seen.filter((b) => b.kind === 'phone').map((b) => (
+          <p key={b.key} className="msg">
+            {b.from && <span className="msg-from">{t(`msg.from.${b.from}`)}</span>}
+            {t(b.key)}
+          </p>
+        ))}
+      </section>
+      <div className="controls">
+        <button className="primary" autoFocus onClick={done ? onDone : advance}>
+          {done ? t(`queue.${next}.go`) : t('ui.continue')}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean }) {
   if (s.reaction) return <Reaction s={s} dispatch={dispatch} />;
   const sc = s.screen;
 
-  if (sc.kind === 'between') {
-    const msgs = [0, 1, 2, 3].map((n) => `msg.${sc.next}.${n}`).filter(has);
-    return (
-      <>
-        <section className="panel phone" aria-live="polite">
-          <h2 className="checkpoint-name">{t(`checkpoint.${CHECKPOINTS[sc.next]}`)}</h2>
-          {msgs.map((k) => <p key={k} className="msg">{t(k)}</p>)}
-        </section>
-        <div className="controls">
-          <button className="primary" autoFocus onClick={() => dispatch({ type: 'ack' })}>{t('ui.continue')}</button>
-        </div>
-      </>
-    );
-  }
+  // Queue renders the between screen; Run only gets here with an officer line still showing.
+  if (sc.kind === 'between') return null;
 
   if (sc.kind === 'wait') return <Waiting s={s} dispatch={dispatch} reduceWait={reduceWait} />;
 

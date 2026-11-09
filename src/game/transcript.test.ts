@@ -39,8 +39,16 @@ describe('scenario evals', () => {
   it('rule 1: the picker shows both travelers without failing either', () => {
     const tr = run(MARK);
     expect(tr.lines.some((l) => l.who === 'lena')).toBe(true);
-    // Mark's real run fails only on the shared msg.0.1, the Ilya line.
-    expect(only(1, [tr]).fresh.map((f) => f.key)).toEqual(['msg.0.1']);
+    expect(only(1, [tr]).fresh).toEqual([]);
+  });
+
+  it('rule 1: each traveler\'s first queue names their own protected contact', () => {
+    const lena = run(LENA);
+    const mark = run(MARK);
+    expect(lena.lines.find((l) => l.key === 'msg.0.1.lena')?.text).toContain('Ilya');
+    expect(lena.lines.some((l) => l.key === 'msg.0.1.mark')).toBe(false);
+    expect(mark.lines.find((l) => l.key === 'msg.0.1.mark')?.text).toContain('Tom');
+    expect(mark.lines.some((l) => /Ilya/.test(l.text))).toBe(false);
   });
 
   it('rule 2: a follow-up nobody queued exits 1 with seed and step', () => {
@@ -134,7 +142,8 @@ describe('scenario evals', () => {
 
   it('a known entry covers its failures, and a stale one exits 1', () => {
     const mark = run(MARK);
-    const entry: KnownFailure = { rule: 1, key: 'msg.0.1', character: 'mark', bead: 'test' };
+    mark.lines.push({ step: 2, key: 'msg.test', text: 'Mother: Say hi to Ilya for me.' });
+    const entry: KnownFailure = { rule: 1, key: 'msg.test', character: 'mark', bead: 'test' };
     expect(only(1, [mark], [entry]).exitCode).toBe(0);
     // Lena's runs never show it, so the same entry is stale there.
     const lena = only(1, [run(LENA)], [entry]);

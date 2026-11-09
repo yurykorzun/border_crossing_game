@@ -78,6 +78,7 @@ export const en: Record<string, string> = {
   'ui.reduceWait': 'Shorter waits',
   'ui.waiting': 'Waiting',
   'ui.tapToSkip': 'Tap to skip',
+  'ui.inQueue': 'In the queue',
   'ui.endingsSeen': 'Endings seen: {n} of 4',
   'ui.yourCrossing': 'Your crossing',
   'ui.timeLeft': 'Hours left: {n}',
@@ -166,14 +167,25 @@ export const en: Record<string, string> = {
   'officer.followup': 'Officer',
   'officer.inspection': 'Supervisor',
 
-  // ── Messages between checkpoints
-  'msg.0.0': 'Mother: The doctor says he can hear us. Come straight to the hospital.',
-  'msg.0.1': "Mother: Don't mention Ilya to anyone. Please.",
-  'msg.0.2': 'A man in the queue: Six times I crossed this year. Nothing. Just be polite.',
-  'msg.1.0': "Work: Hope your dad's OK. Any chance you make Monday's call?",
-  'msg.1.1': 'A woman ahead of you writes a phone number on her wrist. "My lawyer," she says.',
-  'msg.2.0': 'Spouse: Text me when you are through. Anything at all.',
-  'msg.2.1': "The Wi-Fi drops. Your mother's last message is still sending.",
+  // ── The queue before each checkpoint (src/game/content/queues.ts says which beat
+  // is a phone message and which is said or seen). A .lena / .mark key is one traveler's.
+  'msg.from.mother': 'Mother',
+  'msg.from.work': 'Work',
+  'msg.0.0': 'The doctor says he can hear us. Come straight to the hospital.',
+  'msg.0.1.lena': "Don't mention Ilya to anyone. Please.",
+  'msg.0.1.mark': "Don't mention Tom to anyone. Please.",
+  'msg.0.2': 'You lower the phone. The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
+  'msg.0.3': 'The booth light changes. "Next."',
+  'queue.0.go': 'Approach the booth',
+  'msg.1.0': "Hope your dad's OK. Any chance you make Monday's call?",
+  'msg.1.1': 'A woman ahead of you writes a phone number on her wrist.',
+  'msg.1.2': '"My lawyer," she says, and pulls her sleeve down.',
+  'msg.1.3': 'The inspector taps the steel table. "Bags here."',
+  'queue.1.go': 'Put your bag on the table',
+  'msg.2.0': 'Text me when you are through. Anything at all.',
+  'msg.2.1': 'The Wi-Fi drops. Your reply to your mother is still sending.',
+  'msg.2.2': 'A door opens at the end of the corridor. "This way, please."',
+  'queue.2.go': 'Follow the officer',
 
   // ── Passport control
   'enc.p_purpose.q': '"Purpose of your visit?"',
