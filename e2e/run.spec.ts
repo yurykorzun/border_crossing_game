@@ -180,6 +180,27 @@ test('after an answer: the reaction, what changed, and the next action', async (
   expect(errors).toEqual([]);
 });
 
+test('a contact who vouches: the story beat, then separate result rows for what was verified and what went on file', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  // A tourist carrying a pensioner's prescription: customs asks, and Lena's mother can confirm the visit.
+  await openAt(page, { ...lenaRun(), claims: ['tourism'], screen: { kind: 'encounter', id: 'c_tourist' }, checkpoint: 1, slot: 1 });
+  await page.getByRole('button', { name: /Ask him to call your mother/ }).click();
+  const reaction = page.locator('main.run .panel.reaction');
+  const beat = reaction.locator('.story-beat');
+  const rows = reaction.locator('.changes li');
+  await expect(beat).toHaveText('Your mother answers on the second ring.');
+  await expect(rows).toHaveText(['Visit verified.', "On file at Customs: your mother's number."]);
+  // Separate elements: the beat holds no result text, and the rows sit under it.
+  await expect(beat).not.toContainText('verified');
+  const beatBox = (await beat.boundingBox())!;
+  const firstRow = (await rows.first().boundingBox())!;
+  expect(firstRow.y, 'first result row below the beat').toBeGreaterThanOrEqual(beatBox.y + beatBox.height);
+  await noHorizontalScroll(page, 'contact reaction');
+  expect(errors).toEqual([]);
+});
+
 test('My story shows which desk knows each fact', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
@@ -203,10 +224,10 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   await expect(row.locator('.tag.desk')).toHaveText(['Passport', 'Customs']);
   await noHorizontalScroll(page, 'My story with desks');
 
-  // Records first, the biography below, every section one full-width column (2026-11-09 review).
-  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'People', 'Background']);
+  // Records first, then the messages so far, the biography below, every section one full-width column (2026-11-09 review).
+  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'Messages', 'People', 'Background']);
   const widths = await sheet.locator('.story-section').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
-  expect(widths).toHaveLength(4);
+  expect(widths).toHaveLength(5);
   for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
   // Each contact's abilities, from the table in src/game/content/world.ts.
   await expect(sheet.locator('.people .can')).toHaveText([

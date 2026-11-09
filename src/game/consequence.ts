@@ -150,15 +150,20 @@ export function packDetail(id: EvidenceId): string[][] {
 export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged'] as const;
 
 /**
- * What a step changed, one plain line each, built from its events: "Your mother's
- * address is now on file.", "1 hour lost.", "Scrutiny 2/3.". Reaction in src/App.tsx
+ * What a step changed, one plain line each, built from its events: "Address verified.",
+ * "On file at Customs: your mother's number.", "1 hour lost.", "Scrutiny 2/3.". Reaction in src/App.tsx
  * shows them under the officer's line and screenLines() in src/game/transcript.ts
  * writes them down.
  */
 export function changeLines(events: GameEvent[], protectedContact: ContactId): ChangeLine[] {
   const out: ChangeLine[] = [];
+  // A contact's result says only what happened: "Address verified." when the vouch
+  // settled the question, then what went on file and where.
   for (const e of events)
-    if (e.type === 'contactExposed') out.push({ key: 'change.contact', vars: { contact: e.id }, tone: e.id === protectedContact ? 'red' : 'amber' });
+    if (e.type === 'contactExposed') {
+      if (e.vouch?.passed) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
+      out.push({ key: `change.contact.${e.shares}`, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
+    }
   for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.fact.${e.id}`, tone: 'plain' });
   for (const e of events)
     if (e.type === 'factSent')

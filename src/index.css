@@ -417,32 +417,32 @@ p { margin: 0 0 var(--gap); }
 .controls .wait-go { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 .skip { font-size: 0.8rem; margin: 10px 0 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .waiting .beat, .reaction p, .change, .msg, .caption { animation: fade-in 400ms ease-out both; }
+  .waiting .beat, .reaction p, .change, .queue-beat .msg { animation: fade-in 400ms ease-out both; }
 }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* Queue: the strip names it, said and seen beats are a caption along the scene's bottom,
-   phone messages stack in the phone panel joined to its lower edge. Any tap moves one beat on. */
-/* The queue scene still takes the spare height: the phone panel under it changes length beat by beat. */
-.queue-scene { flex: 1 1 0; cursor: pointer; align-items: stretch; flex-direction: column; justify-content: flex-end; border-radius: var(--radius) var(--radius) 0 0; }
+/* Queue: the strip names it, the scene is cropped around the booth at one height (220 px),
+   and the current beat sits alone right under it, the thing to read. Any tap moves one beat on.
+   The space left over goes below the beat, not to an empty wall. */
+.queue-scene { flex: 0 0 220px; height: 220px; cursor: pointer; border-radius: var(--radius) var(--radius) 0 0; }
 .queue-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-/* The drawn queue sits at the bottom; above it the wall just continues. */
 .queue-scene.scene-passport { background: var(--wall); }
 .queue-scene.scene-customs { background: #5a6357; }
 .queue-scene.scene-interview { background: #4f5a62; }
-.caption-area { position: relative; }
-.caption {
-  margin: 0;
-  padding: 10px 14px;
-  background: rgba(20, 25, 23, 0.82);
-  color: var(--paper);
-  font-size: 1rem;
+/* No band between the scene and the beat: cancel the run gap and square the joined corners. */
+.queue-beat {
+  margin-top: -10px;
+  padding: 10px 16px 20px;
+  background: var(--bg-2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  cursor: pointer;
 }
-.caption.narration { font-style: italic; color: #dfe5e1; }
-.phone { background: var(--bg-2); border-radius: var(--radius); padding: 14px; cursor: pointer; transition: opacity 300ms; }
-.phone.lowered { opacity: 0.6; }
-/* No band between the scene and the phone: cancel the run gap and square the joined corners. */
-.queue-scene + .phone { margin-top: -10px; padding-top: 8px; border-radius: 0 0 var(--radius) var(--radius); }
+.queue-beat .msg { margin: 0; font-size: 1.125rem; line-height: 1.625rem; }
+/* Said and seen beats read as text in the room, not as a phone bubble. */
+.queue-beat .msg[data-kind='speech'], .queue-beat .msg[data-kind='narration'] { background: none; color: var(--paper); padding: 0; max-width: none; }
+.queue-beat .msg[data-kind='narration'] { font-style: italic; color: #dfe5e1; }
+/* My story keeps every message so far, oldest first. */
+.messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .msg-from { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
 .msg {
   background: var(--paper);

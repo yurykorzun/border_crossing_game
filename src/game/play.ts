@@ -2,13 +2,14 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { deskOf, factIds, legalActions, newRun, step, travelOf } from './engine';
+import { deskOf, factIds, legalActions, newRun, options, step, travelOf } from './engine';
 import { changeLines } from './consequence';
+import { CHECKS } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, RunState } from './types';
+import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, RunState, Topic } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
@@ -20,7 +21,12 @@ export type GameEvent =
   | { type: 'timeSpent'; hours: number }
   | { type: 'scrutinyChanged'; from: number; to: number }
   | { type: 'documentUsed'; id: EvidenceId }
-  | { type: 'contactExposed'; id: ContactId }
+  /**
+   * A contact went on file at `desk`: their number, or only their name on an answer
+   * that just names them. `vouch` is set when they were asked to confirm `topic`, and
+   * `passed` says whether that settled it, so the reaction reports only what happened.
+   */
+  | { type: 'contactExposed'; id: ContactId; desk: Checkpoint; shares: 'number' | 'name'; vouch?: { topic: Topic; passed: boolean } }
   | { type: 'factRecorded'; id: FactId }
   /** A desk ahead learned the fact: through the shared records (records bulletin) or a call or printout from this desk. */
   | { type: 'factSent'; id: FactId; desks: Checkpoint[]; via: 'records' | 'desk' }
@@ -76,7 +82,7 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   if (action.type === 'waitAction' && s.screen.kind === 'wait')
     ev.push({ type: 'checkResolved', id: s.screen.check, result: action.action === 'assist' ? 'clear' : s.screen.resolved.result });
   for (const id of added(s.used, n.used)) ev.push({ type: 'documentUsed', id });
-  for (const id of added(s.exposed, n.exposed)) ev.push({ type: 'contactExposed', id });
+  for (const id of added(s.exposed, n.exposed)) ev.push(exposedEvent(s, n, action, id));
   if (!s.perkUsed && n.perkUsed) ev.push({ type: 'perkUsed' });
   if (n.time < s.time) ev.push({ type: 'timeSpent', hours: s.time - n.time });
   if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
@@ -96,6 +102,24 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
     ev.push({ type: 'cardDealt', id: n.screen.id });
   if (n.ending && !s.ending) ev.push({ type: 'runEnded', ending: n.ending });
   return ev;
+}
+
+/**
+ * The contactExposed event for `id`, named by `action` in `s`. An answer that asks
+ * them to confirm the card's topic is a vouch: it passes unless it led into a check
+ * that came back unclear. A vouch in the waiting room clears the check.
+ */
+function exposedEvent(s: RunState, n: RunState, action: Action, id: ContactId): GameEvent {
+  const desk = deskOf(s);
+  if (action.type === 'waitAction' && s.screen.kind === 'wait') {
+    const topic = CHECKS[s.screen.check].topic;
+    return { type: 'contactExposed', id, desk, shares: 'number', ...(topic ? { vouch: { topic, passed: true } } : {}) };
+  }
+  const o = action.type === 'choose' ? options(s).find((x) => x.approach.id === action.approach) : undefined;
+  const shares = o?.approach.namesOnly ? 'name' : 'number';
+  if (!o?.vouches) return { type: 'contactExposed', id, desk, shares };
+  const passed = n.screen.kind !== 'wait' || n.screen.resolved.result === 'clear';
+  return { type: 'contactExposed', id, desk, shares, vouch: { topic: o.vouches, passed } };
 }
 
 /** One move in a replay: the action, plus the dealer's picks when they were scripted. */

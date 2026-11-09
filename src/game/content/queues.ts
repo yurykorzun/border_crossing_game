@@ -3,9 +3,9 @@
 // is msg.<checkpoint>.<i> in src/i18n/en.ts (msg.<checkpoint>.<i>.<character>
 // for a beat only one traveler sees), and the button is queue.<checkpoint>.go.
 
-import type { CharacterId } from '../types';
+import type { CharacterId, RunState } from '../types';
 
-/** phone: a message in the phone panel. speech and narration: a caption over the scene. */
+/** phone: a message from someone, with the sender. speech and narration: what you hear or see in the queue. */
 export type QueueKind = 'phone' | 'speech' | 'narration';
 
 /** Who a phone message is from (msg.from.<id>). */
@@ -53,4 +53,18 @@ export const QUEUES: readonly (readonly QueueBeat[])[] = [
 /** The beats this traveler sees in the queue before checkpoint `next`. */
 export function queueBeats(next: number, character: CharacterId): QueueBeat[] {
   return (QUEUES[next] ?? []).filter((b) => !b.character || b.character === character);
+}
+
+/**
+ * The phone messages this traveler has seen so far, oldest first, for My story.
+ * In a queue, `shown` is how many of its beats are up; queues already passed count in full.
+ */
+export function messagesSoFar(s: Pick<RunState, 'character' | 'checkpoint' | 'screen' | 'reaction'>, shown = Infinity): QueueBeat[] {
+  const sc = s.screen;
+  // The last reaction before a queue shows with that queue already set, but not started yet.
+  const passed = sc.kind === 'between' ? sc.next : Math.min(s.checkpoint, QUEUES.length - 1) + 1;
+  const beats: QueueBeat[] = [];
+  for (let q = 0; q < passed; q++) beats.push(...queueBeats(q, s.character));
+  if (sc.kind === 'between' && !s.reaction) beats.push(...queueBeats(sc.next, s.character).slice(0, shown));
+  return beats.filter((b) => b.kind === 'phone');
 }

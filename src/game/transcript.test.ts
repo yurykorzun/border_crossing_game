@@ -139,7 +139,7 @@ describe('scenario evals', () => {
     const below = only(4, [at(4.6), at(4.8), at(5.5)]);
     expect(below.fresh).toEqual([]);
     expect(below.exitCode).toBe(1);
-    expect(below.summaries.map(formatSummary)).toEqual(['rule 4: median full run 4.8 min, target 5 (3 runs)']);
+    expect(below.summaries.map(formatSummary)).toEqual(['rule 4: median full run 4.8 min, target 5, longest 5.50 of 8 (3 runs)']);
     const atTarget = only(4, [at(4.6), at(5), at(5.5)]);
     expect(atTarget.summaries[0].ok).toBe(true);
     expect(atTarget.exitCode).toBe(0);
@@ -148,7 +148,7 @@ describe('scenario evals', () => {
     // A run you withdraw from does not count toward the median.
     const withdrawn = only(4, [at(4.6), at(5.5), at(1, 'turnedBack'), at(1, 'turnedBack')]);
     expect(withdrawn.exitCode).toBe(0);
-    expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min, target 5 (2 runs)']);
+    expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min, target 5, longest 5.50 of 8 (2 runs)']);
     // With only withdrawn runs there is no median to check.
     expect(only(4, [at(1, 'turnedBack')]).summaries).toEqual([]);
   });

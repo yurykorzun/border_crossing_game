@@ -12,7 +12,7 @@
 import { own, t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
-import { queueBeats } from './content/queues';
+import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, consequences, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
 import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
@@ -203,6 +203,14 @@ function storyLines(s: RunState, p: Page): void {
     p.add(`contact.${c}.note`, {}, CHROME);
     p.add(`contact.${c}.can`, {}, CHROME);
   }
+  // Messages: every phone message of the queues reached so far (in a queue, the UI shows only those already up).
+  p.add('ui.messages', {}, CHROME);
+  const messages = messagesSoFar(s);
+  for (const b of messages) {
+    if (b.from) p.add(`msg.from.${b.from}`, {}, CHROME);
+    p.add(b.key, {}, CHROME);
+  }
+  if (!messages.length) p.add('ui.nothingYet', {}, CHROME);
   p.add('ui.claims', {}, CHROME);
   for (const c of s.claims) {
     p.add(own(`claim.${c}`, s.character), {}, CHROME);
@@ -494,9 +502,11 @@ export function playTimeRule(range: PlayTimeRange): Rule {
     summary: (trs) => {
       const { runs, median } = medianFullMinutes(trs);
       if (median === undefined) return undefined;
+      // The longest full run, so the room left under the ceiling shows (pfi.11).
+      const longest = Math.max(...trs.filter((tr) => tr.ending !== 'turnedBack').map(playMinutes));
       return {
         ok: median >= range.target,
-        text: `median full run ${median.toFixed(1)} min, target ${range.target} (${runs} runs)`,
+        text: `median full run ${median.toFixed(1)} min, target ${range.target}, longest ${longest.toFixed(2)} of ${range.max} (${runs} runs)`,
       };
     },
   };

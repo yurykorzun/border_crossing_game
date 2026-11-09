@@ -99,7 +99,7 @@ describe('relatives question (i_family)', () => {
     if (!r.ok) return;
     expect(r.state.claims).toContain('familyVisit');
     expect(r.state.exposed).toEqual(['cousin']);
-    expect(r.events).toContainEqual({ type: 'contactExposed', id: 'cousin' });
+    expect(r.events).toContainEqual({ type: 'contactExposed', id: 'cousin', desk: 'interview', shares: 'name' });
   });
 
   it('asking why costs an hour and records nothing', () => {

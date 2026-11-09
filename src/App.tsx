@@ -11,7 +11,7 @@ import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
-import { queueBeats } from './game/content/queues';
+import { messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
@@ -377,6 +377,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   onRestart: () => void;
 }) {
   const [sheet, setSheet] = useState<'story' | 'evidence' | 'scrutiny' | 'settings' | null>(null);
+  const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
@@ -386,6 +387,10 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[sceneAt];
   const close = () => setSheet(null);
   const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
+  // How many beats of this queue are up. It lives here so My story lists the messages seen
+  // so far; a new run or checkpoint starts again from the first beat.
+  const queueAt = `${s.seed}.${queue}`;
+  const queueShown = beats.at === queueAt ? beats.n : 1;
   const sceneState: SceneState = {
     handedOver: s.used.length > (usedBefore[sceneAt] ?? s.used.length),
     writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
@@ -398,7 +403,8 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
       {queue !== null ? (
         // Keyed by run and checkpoint, so each queue starts again from its first beat.
-        <Queue key={`${s.seed}.${queue}`} next={queue} character={s.character} still={data.settings.reduceMotion} onDone={() => dispatch({ type: 'ack' })} />
+        <Queue key={queueAt} next={queue} character={s.character} still={data.settings.reduceMotion}
+          shown={queueShown} setShown={(n) => setBeats({ at: queueAt, n })} onDone={() => dispatch({ type: 'ack' })} />
       ) : (
         <>
           <div className={`scene scene-${CHECKPOINTS[sceneAt]} ${data.settings.reduceMotion ? 'still' : ''}`}>
@@ -426,7 +432,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
           <Icon name="gear" />
         </button>
       </nav>
-      <Sheet open={sheet === 'story'} onClose={close} title={t('ui.myStory')}><StoryContent s={s} /></Sheet>
+      <Sheet open={sheet === 'story'} onClose={close} title={t('ui.myStory')}><StoryContent s={s} messages={messagesSoFar(s, queueShown)} /></Sheet>
       <Sheet open={sheet === 'evidence'} onClose={close} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
       <Sheet open={sheet === 'scrutiny'} onClose={close} title={t('ui.scrutiny')}><ScrutinyContent s={s} /></Sheet>
       <Sheet open={sheet === 'settings'} onClose={close} title={t('ui.settings')}>
@@ -451,12 +457,19 @@ function useUsedBefore(s: RunState): Record<number, number> {
   return now.at;
 }
 
-/** The officer's line, then one line per change, then a button that says what comes next. */
+/**
+ * The story beat ("Your mother answers on the second ring."), then the result rows under
+ * it, one per change ("Visit verified.", "On file at Customs: your mother's number."),
+ * then a button that says what comes next. The beat and the rows are separate blocks, so
+ * what happened in the scene never reads as one paragraph with what it changed.
+ */
 function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void }) {
   return (
     <>
       <section className="panel paper reaction" aria-live="polite">
-        {s.reaction!.map((r, i) => <p key={i} className="said">{t(r.key, r.vars)}</p>)}
+        <div className="story-beat">
+          {s.reaction!.map((r, i) => <p key={i} className="said">{t(r.key, r.vars)}</p>)}
+        </div>
         <ChangeLines changes={s.changes ?? []} />
       </section>
       <div className="controls">
@@ -467,19 +480,20 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
 }
 
 /**
- * The queue before a checkpoint, one beat per tap (on the scene, the phone or the button).
- * Phone messages stack in the phone panel joined to the scene's lower edge; said and seen
- * beats are a caption over the scene. The strip already says "In the queue", so the scene does not.
- * The last beat swaps Continue for the walk up to the officer, which is the engine's ack.
+ * The queue before a checkpoint, one beat per tap (on the scene, the message or the button).
+ * A short scene cropped around the booth, then the current beat alone under it: a phone
+ * message with its sender, or what is said or seen. Earlier messages stay in My story.
+ * The strip already says "In the queue", so the scene does not.
+ * The last beat (the clerk's "Next.") swaps Continue for the walk up to the officer, which is the engine's ack.
  */
-function Queue({ next, character, still, onDone }: { next: number; character: CharacterId; still: boolean; onDone: () => void }) {
+function Queue({ next, character, still, shown, setShown, onDone }: {
+  next: number; character: CharacterId; still: boolean; shown: number; setShown: (n: number) => void; onDone: () => void;
+}) {
   const beats = queueBeats(next, character);
-  const [shown, setShown] = useState(1);
   const done = shown >= beats.length;
   const seen = beats.slice(0, shown);
   const current = seen[seen.length - 1];
-  const caption = seen.findLast((b) => b.kind !== 'phone');
-  const advance = () => { if (!done) setShown((n) => n + 1); };
+  const advance = () => { if (!done) setShown(shown + 1); };
   // In the passport queue the booth light turns green on the clerk's "Next.".
   const art = next === 0 ? <QueueScene light={seen.some((b) => b.light === 'green') ? 'green' : 'red'} character={character} />
     : next === 1 ? <CustomsQueueScene character={character} />
@@ -490,17 +504,12 @@ function Queue({ next, character, still, onDone }: { next: number; character: Ch
       <div className={`scene scene-${CHECKPOINTS[next]} queue-scene ${still ? 'still' : ''}`} onClick={advance}>
         {art}
         <div className="flicker" aria-hidden />
-        <div className="caption-area" aria-live="polite">
-          {caption && <p key={caption.key} className={`caption ${caption.kind}`}>{t(caption.key)}</p>}
-        </div>
       </div>
-      <section className={`panel phone ${current.kind === 'phone' ? '' : 'lowered'}`} aria-live="polite" onClick={advance}>
-        {seen.filter((b) => b.kind === 'phone').map((b) => (
-          <p key={b.key} className="msg">
-            {b.from && <span className="msg-from">{t(`msg.from.${b.from}`)}</span>}
-            {t(b.key)}
-          </p>
-        ))}
+      <section className={`panel queue-beat ${current.kind}`} aria-live="polite" onClick={advance}>
+        <p key={current.key} className="msg" data-kind={current.kind}>
+          {current.from && <span className="msg-from">{t(`msg.from.${current.from}`)}</span>}
+          {t(current.key)}
+        </p>
       </section>
       <div className="controls">
         <button className="primary" autoFocus onClick={done ? onDone : advance}>
