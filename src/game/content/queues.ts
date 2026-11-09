@@ -34,12 +34,17 @@ export const QUEUES: readonly (readonly QueueBeat[])[] = [
     beat('msg.1.0', 'phone', { from: 'work' }),
     beat('msg.1.1', 'narration'),
     beat('msg.1.2', 'speech'),
-    beat('msg.1.3', 'speech'),
+    beat('msg.1.3', 'narration'),
+    beat('msg.1.4', 'speech'),
+    beat('msg.1.5', 'speech'),
   ],
   [
     beat('msg.2.0', 'phone', { from: 'mother' }),
     beat('msg.2.1', 'narration'),
-    beat('msg.2.2', 'speech'),
+    beat('msg.2.2', 'narration'),
+    beat('msg.2.3', 'speech'),
+    beat('msg.2.4', 'narration'),
+    beat('msg.2.5', 'speech'),
   ],
 ];
 
