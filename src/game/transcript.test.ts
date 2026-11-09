@@ -53,7 +53,7 @@ describe('scenario evals', () => {
 
   it('rule 2: a follow-up nobody queued exits 1 with seed and step', () => {
     const tr = run(LENA);
-    tr.happenings.push({ step: 9, type: 'cardDealt', id: 'f_lab', claims: [], facts: [] });
+    tr.happenings.push({ step: 9, type: 'cardDealt', id: 'f_lab', claims: [], facts: [], routinesLeft: [] });
     const r = only(2, [tr]);
     expect(r.exitCode).toBe(1);
     expect(formatFailure(r.fresh[0])).toMatch(new RegExp(`^rule 2: honest seed ${LENA + 1} step 9 \\(lena, f_lab\\)`));
@@ -64,19 +64,42 @@ describe('scenario evals', () => {
     tr.happenings.push(
       { step: 3, type: 'checkStarted', id: 'medicineLab' },
       { step: 4, type: 'checkResolved', id: 'medicineLab', result: 'lab' },
-      { step: 5, type: 'cardDealt', id: 'f_lab', claims: [], facts: [] },
+      { step: 5, type: 'cardDealt', id: 'f_lab', claims: [], facts: [], routinesLeft: [] },
     );
     expect(only(2, [tr]).exitCode).toBe(0);
   });
 
   it('rule 3: a contradiction card with nothing to contradict exits 1 with seed and step', () => {
     const tr = run(LENA);
-    tr.happenings.push({ step: 12, type: 'cardDealt', id: 'i_contradiction', claims: ['tourism'], facts: ['employer'] });
+    tr.happenings.push({ step: 12, type: 'cardDealt', id: 'i_contradiction', claims: ['tourism'], facts: ['employer'], routinesLeft: [] });
     const r = only(3, [tr]);
     expect(r.exitCode).toBe(1);
     expect(formatFailure(r.fresh[0])).toBe(
       `rule 3: honest seed ${LENA + 1} step 12 (lena, i_contradiction): dealt with claims [tourism] and facts [employer]`,
     );
+  });
+
+  it('rule 6: a third escalating card in a row while a routine card is left exits 1 with seed and step', () => {
+    const tr = run(LENA);
+    const dealt = (step: number, id: string, routinesLeft: string[]) =>
+      ({ step, type: 'cardDealt' as const, id, claims: [], facts: [], routinesLeft });
+    tr.happenings = [dealt(1, 'c_medicine', ['c_cash']), dealt(2, 'f_lab', ['c_cash']), dealt(3, 's_bag', ['c_cash']), dealt(4, 'c_host', ['c_cash'])];
+    const r = only(6, [tr]);
+    expect(r.exitCode).toBe(1);
+    expect(r.fresh.map(formatFailure)).toEqual([
+      `rule 6: honest seed ${LENA + 1} step 4 (lena, c_host): escalating card 3 in a row with c_cash still to ask`,
+    ]);
+    // With no routine card left at the desk, the same run of cards passes, and a routine card breaks the row.
+    tr.happenings[3] = dealt(4, 'c_host', []);
+    expect(only(6, [tr]).exitCode).toBe(0);
+    tr.happenings = [dealt(1, 'f_lab', ['c_cash']), dealt(2, 's_bag', ['c_cash']), dealt(3, 'c_cash', []), dealt(4, 'c_host', ['c_pen'])];
+    expect(only(6, [tr]).exitCode).toBe(0);
+  });
+
+  it('rule 6: real runs keep the pacing rule', () => {
+    const trs = [];
+    for (let i = 0; i < 105; i++) trs.push(run(i), run(i, 'liar'));
+    expect(only(6, trs).fresh).toEqual([]);
   });
 
   it('rule 4: a run far over 8 minutes exits 1 with seed and step', () => {

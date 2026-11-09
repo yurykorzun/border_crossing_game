@@ -40,6 +40,13 @@ describe('autoplay bots', () => {
     }
   });
 
+  it('the honest bot gets at least 1 no-cost answer per run on average', () => {
+    // Preparation and luck: a document that settles the question, a calm card, the perk.
+    let free = 0;
+    for (let i = 0; i < SETUP_COUNT; i++) free += playRun('honest', setupFor(i)).noCost;
+    expect(free / SETUP_COUNT).toBeGreaterThanOrEqual(1);
+  });
+
   it('the liar hides the family visit and the honest bot never claims tourism', () => {
     const liar = playRun('liar', setupFor(0));
     expect(liar.choices[0]).toEqual({ card: 'p_purpose', pick: 'tourism' });

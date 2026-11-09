@@ -14,8 +14,8 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, currentCard, deskOf, doomed, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
-  travelOf,
+  callInsDue, check, checkEffects, checkFindings, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
+  options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
 import type { Option, RunSetup } from './engine';
@@ -25,7 +25,7 @@ import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm,
 } from './content/world';
-import { CHECKS, DISPROOFS, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
+import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { t, tn } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
@@ -196,6 +196,10 @@ export function checkState(s: RunState): string[] {
   const insp = s.screen.kind === 'inspection' && !s.reaction ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
   if (insp && insp.kind !== 'search' && !options(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
     bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
+  // A calm card has one answer, and it costs nothing.
+  const calm = s.screen.kind === 'encounter' && !s.reaction && ENCOUNTER_BY_ID.get(s.screen.id)?.calm;
+  if (calm && !(options(s).length === 1 && options(s).every((o) => !o.blocked && noCost(s, o))))
+    bad.push(`calm card ${(s.screen as { id: string }).id} does not have one answer that costs nothing`);
   // A clarify card needs an inconsistency on file, a contradiction card a disproof.
   const pairs = s.screen.kind === 'encounter' ? CHALLENGES[s.screen.id] : undefined;
   if (pairs && !holds(pairs, s))
@@ -247,6 +251,10 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     if (n.time !== s.time || n.decisions !== s.decisions || n.used.length !== s.used.length || n.exposed.length !== s.exposed.length || n.medicine !== s.medicine)
       bad.push('finishing quickly spent something');
   }
+  // The pacing rule: a third escalating card in a row only once the desk has no routine card left.
+  const dealt = (n.screen.kind === 'encounter' || n.screen.kind === 'inspection') && JSON.stringify(n.screen) !== JSON.stringify(s.screen);
+  if (dealt && (n.screen.kind === 'inspection' || escalates((n.screen as { id: string }).id)) && (n.streak ?? 0) > 2 && routinesLeft(n).length)
+    bad.push(`${(n.screen as { id: string }).id} is escalating card ${n.streak} in a row with ${routinesLeft(n).map((e) => e.id)} still to ask`);
   if (n.inspections - s.inspections > 1) bad.push('one move started two inspections');
   if (n.inspections > s.inspections && n.screen.kind !== 'inspection') bad.push('an inspection was counted but not shown');
   if (n.decisions - s.decisions > 1) bad.push('one move counted as two decisions');

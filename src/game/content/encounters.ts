@@ -3,6 +3,8 @@
 // Text lives in src/i18n/en.ts: enc.<id>.q, enc.<id>.<approach>.label/.reaction.
 //
 // Rule: every encounter has an approach that needs no card and no contact.
+// Most answers cost something. A calm card (a quick stamp, a helpful
+// inspector) costs nothing, so the escalation around it lands harder.
 //
 // Facts stay at the desk where they came out (docs/design.md "What each
 // official knows"). They travel on only through a channel: the records
@@ -60,6 +62,11 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
+    // Calm: a quick stamp. Nothing is asked, so there is one answer and it costs nothing.
+    id: 'p_stamp', checkpoint: 'passport', kind: 'routine', calm: true,
+    approaches: [{ id: 'thanks', kind: 'say', effects: [] }],
+  },
+  {
     id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'identity',
     when: { background: 'secondPassport' },
     approaches: [
@@ -98,6 +105,11 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'count', kind: 'verify', effects: [{ time: -1 }, { fact: 'cashCount' }] },
       { id: 'under', kind: 'say', effects: [{ claim: 'cashUnderLimit' }] },
     ],
+  },
+  {
+    // Calm: a helpful inspector. One answer, and it costs nothing.
+    id: 'c_pen', checkpoint: 'customs', kind: 'routine', calm: true,
+    approaches: [{ id: 'yes', kind: 'say', effects: [] }],
   },
   {
     // The bag shows it: a tourist carrying a pensioner's prescription.

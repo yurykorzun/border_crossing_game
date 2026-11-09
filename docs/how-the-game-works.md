@@ -1,6 +1,6 @@
 # Purpose of Visit - how the game works, as a card game
 
-TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints, and up to 3 more while your run stays quiet. Every question has 2-3 answers, and every answer has a price in time, suspicion, a card from your hand, or a person you expose. Nothing is free, so the game is about which price you can afford to pay right now.
+TL;DR: you hold a small hand of document cards and two people you can call on. The border deals you 6 question cards across 3 checkpoints, and up to 3 more while your run stays quiet. Most questions have 2-3 answers, and most answers have a price in time, suspicion, a card from your hand, or a person you expose. Most things cost; preparation and luck sometimes earn a no-cost answer. So the game is about which price you can afford to pay right now.
 
 ## The pieces
 
@@ -31,6 +31,11 @@ Each checkpoint (passport, customs, interview) has its own deck. At each one the
 2. A related card, which is the highest-priority card whose condition matches what you have done so far. If none match, you get another routine card.
 3. Only while the run is quiet: a third card. Quiet means every decision so far was a checkpoint card, with no follow-up, no inspection and no question asked in a waiting room. The third card is the routine question you have not had yet, else the best related card that fits, else nothing. It is existing content, so it adds a decision and very little reading. It exists because a quick, clean run was too short (eval rule 4), while a run full of checks and inspections is long enough already.
 
+Two more rules give the run some relief, so escalation lands harder:
+
+- A few routine cards are calm: a quick stamp at passport control, an inspector lending you a pen at customs. They have one answer, it costs nothing, and the tap is not counted as a decision.
+- Pacing: after 2 escalating cards in a row (related, follow-up, inspection), a routine card still left at that desk comes first, a calm one if there is one. Whatever was next still comes after it. `npm run eval` rule 6 checks this on every transcript.
+
 This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, customs deals "We'll call your host" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
 
 Some answers also queue a follow-up card that is dealt next. For example, a phone search that finds the protest photo queues "Were you at this rally?".
@@ -41,11 +46,13 @@ Every question card offers 2-3 answers, and they are always built from the same 
 
 | Kind | What you pay | Example |
 |---|---|---|
-| Show a document | A card from your hand, and its facts go on file | Show the employer letter, so "your employer" is now on file |
+| Show a document | A card from your hand, and its facts go on file. A document that settles the question keeps a harmless fact off file, so it costs only the card | Show the employer letter, so "your employer" is now on file. Show the deed for your photo, and nothing goes on file |
 | Let them check | Time (1-3), sometimes a waiting-room check | "Let them count it" -1 time |
 | Say something | Free now, but it adds a claim, or +1 scrutiny when something on file is the reason | "Say you're a tourist" adds a claim |
 | Name someone | Exposes a contact | "Ask your mother to vouch" |
 | Advantage | Your once-per-run ability | Lena explains her job plainly |
+
+A no-cost answer spends no time, no scrutiny and no contact, and puts no new fact on file (it may still use a document card). Preparation earns one (the deed for your photo, the return ticket for your cash), and so does luck (a calm card, a lie nobody catches yet). `npm run autoplay` prints how many each bot style gets per run.
 
 The rule that keeps it fair: every card has at least one answer that needs no document and no person, so you are never stuck. Missing options still show as greyed out ("Show a document - none packed"), so you can see what your packing cost you.
 

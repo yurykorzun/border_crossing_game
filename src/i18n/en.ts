@@ -194,9 +194,9 @@ export const en: Record<string, string> = {
   'ev.hospitalNote.name': 'Hospital note',
   'ev.hospitalNote.desc': "Your father's admission, with his prescriptions. Answers medicine and purpose. Puts his condition on file.",
   'ev.returnTicket.name': 'Return ticket',
-  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Puts your departure date on file.',
+  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Shown for money, nothing goes on file.',
   'ev.deed.name': 'Apartment deed',
-  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Puts your property on file.',
+  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Shown for identity, nothing goes on file.',
   // Handed over: "Show your mother's letter". Used up: "Uses letter".
   // The packing screen's rows: a short name and what it helps with ("Reveals ..." comes from fact.<id>.reveal).
   'ev.hotel.label': 'Hotel booking',
@@ -341,6 +341,10 @@ export const en: Record<string, string> = {
   'enc.p_photo.scan.label': 'Offer a face scan',
   'enc.p_photo.scan.reaction': 'Matching the scan takes an hour.',
 
+  'enc.p_stamp.q': '"Look at the camera, please." The stamp comes down.',
+  'enc.p_stamp.thanks.label': '"Thank you."',
+  'enc.p_stamp.thanks.reaction': '"Have a good visit."',
+
   'enc.p_secondPassport.q': '"You hold another passport. Which country do you consider yours?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
   'enc.p_secondPassport.both.reaction': 'She writes "dual national" on your file and flags it.',
@@ -373,6 +377,10 @@ export const en: Record<string, string> = {
   'enc.c_cash.count.reaction': 'He counts it twice and writes the total on a form. Counting takes an hour.',
   'enc.c_cash.under.label': '"It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes down what you said and does not count it.',
+
+  'enc.c_pen.q': '"Long queue today. Need a pen for the form?"',
+  'enc.c_pen.yes.label': '"Yes, thanks."',
+  'enc.c_pen.yes.reaction': 'He lends you his and shows you where to sign.',
 
   'enc.c_tourist.q': '"Tourists don\'t usually carry a pensioner\'s prescriptions."',
   'enc.c_tourist.admit.label': '"I\'m visiting my father."',

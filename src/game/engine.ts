@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm, writesDown,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm, writesDown,
 } from './content/world';
 import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
@@ -45,6 +45,7 @@ export function newRun(setup: RunSetup): RunState {
     checkpoint: 0,
     slot: 0,
     seen: [],
+    streak: 0,
     pending: [],
     screen: { kind: 'between', next: 0 },
     reaction: null,
@@ -223,9 +224,38 @@ export function options(s: RunState): Option[] {
   return out;
 }
 
+/**
+ * A no-cost answer: it spends no time, adds no scrutiny, names nobody and puts
+ * no new fact on file here or at the next desk. Spending a document is allowed,
+ * because the document is the preparation that earned it. Walking away is not
+ * an answer, and losing the medicine or the bus connection is a cost.
+ */
+export function noCost(s: RunState, o: Option): boolean {
+  if (o.contact || o.approach.kind === 'withdraw') return false;
+  const to = nextDesk(deskOf(s));
+  return !o.effects.some((e) =>
+    ('time' in e && e.time < 0)
+    || ('scrutiny' in e && e.scrutiny > 0)
+    || ('fact' in e && !knows(s, e.fact))
+    || 'loseMedicine' in e
+    || ('travel' in e && e.travel > 0)
+    || ('send' in e && !!to && sentFacts(s, e).some((f) => !knows(s, f, to))));
+}
+
+/**
+ * What showing document `ev` does on a card about `topic`. A document that
+ * settles the question keeps its harmless facts off file: the officer reads it
+ * and hands it back.
+ */
+export function documentEffects(ev: EvidenceId, topic: Topic | undefined): Effect[] {
+  const card = EVIDENCE[ev];
+  if (!topic || !card.settles?.includes(topic)) return card.onUse;
+  return card.onUse.filter((e) => !('fact' in e && HARMLESS_FACTS.includes(e.fact)));
+}
+
 function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev: EvidenceId | undefined): Effect[] {
   const list: Effect[] = [];
-  if (ev) list.push(...EVIDENCE[ev].onUse);
+  if (ev) list.push(...documentEffects(ev, topic));
   list.push(...a.effects);
   const weak = topic && CHARACTERS[s.character].weakTopics.includes(topic);
   if (a.kind === 'verify' && weak) list.push({ time: -1 });
@@ -398,13 +428,56 @@ function eligible(s: RunState, e: Encounter): boolean {
   return !s.seen.includes(e.id) && check(e.when, s);
 }
 
+/** A calm card has one answer, so tapping it is not a decision. */
+export const isCalm = (id: string): boolean => !!ENCOUNTER_BY_ID.get(id)?.calm;
+
+/** Related cards, follow-ups and inspections escalate; a routine card is a breather. */
+export const escalates = (id: string): boolean => ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
+
 function show(s: RunState, id: string): RunState {
-  return { ...s, seen: [...s.seen, id], screen: { kind: 'encounter', id } };
+  return { ...s, seen: [...s.seen, id], streak: escalates(id) ? (s.streak ?? 0) + 1 : 0, screen: { kind: 'encounter', id } };
+}
+
+/** The routine cards still to be asked at this desk. */
+export function routinesLeft(s: RunState): Encounter[] {
+  const cp = CHECKPOINTS[Math.min(s.checkpoint, CHECKPOINTS.length - 1)];
+  return ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && eligible(s, e));
+}
+
+/** The best related card left at this desk: the one slot 1 deals. */
+function relatedCard(s: RunState): Encounter | undefined {
+  const cp = CHECKPOINTS[s.checkpoint];
+  const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && eligible(s, e));
+  return related.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
+}
+
+/** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
+function escalatesNext(s: RunState): boolean {
+  if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id))) return true;
+  if (s.slot === 2 && quiet(s)) {
+    const extra = extraCard(s);
+    if (extra) return extra.kind !== 'routine';
+  }
+  if (s.slot >= 2) return !!pendingChallenge(s);
+  return s.slot === 1 && !!relatedCard(s);
+}
+
+/**
+ * The pacing rule: after 2 escalating cards in a row, a routine card still left
+ * at this desk comes first, a calm one if there is one. It is one more card, and
+ * whatever was next still comes after it.
+ */
+function breather(s: RunState): Encounter | undefined {
+  if ((s.streak ?? 0) < 2 || !escalatesNext(s)) return undefined;
+  const left = routinesLeft(s);
+  return left.find((e) => e.calm) ?? left[0];
 }
 
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
 function advance(s: RunState, dealer: Dealer): RunState {
   if (s.withdrew) return finish(s);
+  const rest = breather(s);
+  if (rest) return show(s, rest.id);
   if (s.scrutiny >= MAX_SCRUTINY) return inspect(s, dealer);
   while (s.pending.length) {
     const [id, ...rest] = s.pending;
@@ -436,7 +509,7 @@ function pendingChallenge(s: RunState): string | undefined {
  * run gets a third card, so a short run grows and a long one does not.
  */
 function quiet(s: RunState): boolean {
-  if (s.inspections || s.decisions !== s.seen.length) return false;
+  if (s.inspections || s.decisions !== s.seen.filter((id) => !isCalm(id)).length) return false;
   return s.seen.every((id) => {
     const kind = ENCOUNTER_BY_ID.get(id)?.kind;
     return kind === 'routine' || kind === 'related';
@@ -462,11 +535,7 @@ function deal(s: RunState, dealer: Dealer): RunState {
   let rng = s.rng;
   if (s.slot === 2) return show({ ...s, slot: 3 }, extraCard(s)!.id);
   if (s.slot === 0) chosen = routine.find((e) => e.opening);
-  if (s.slot === 1) {
-    const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && eligible(s, e));
-    related.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-    chosen = related[0];
-  }
+  if (s.slot === 1) chosen = relatedCard(s);
   if (!chosen) {
     if (!routine.length) throw new Error(`no card left for ${cp} slot ${s.slot}`);
     const r = dealer(rng, routine.length);
@@ -487,6 +556,7 @@ function inspect(s: RunState, dealer: Dealer): RunState {
     ...s,
     rng: r.rng,
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
+    streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
     screen: { kind: 'inspection', id },
   };
@@ -566,7 +636,8 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
-  let n: RunState = { ...s, reaction: null, decisions: s.decisions + 1, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
+  const decided = s.screen.kind === 'encounter' && isCalm(s.screen.id) ? 0 : 1;
+  let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };

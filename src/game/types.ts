@@ -105,6 +105,12 @@ export interface Encounter {
   opening?: boolean;
   /** Drives the character's perk and weakness. */
   topic?: Topic;
+  /**
+   * routine cards only: a kind or uneventful moment (a quick stamp, a helpful
+   * inspector). One answer that costs nothing, so it is not counted as a
+   * decision, and the dealer's breather deals one first.
+   */
+  calm?: true;
   /** related cards: higher wins. Consequences of answers beat background. */
   priority?: number;
   when?: Cond;
@@ -221,6 +227,12 @@ export interface EvidenceCard {
   id: EvidenceId;
   topics: Topic[];
   onUse: Effect[];
+  /**
+   * The questions this document answers outright. Shown for one of these, the
+   * officer reads it and hands it back, so its facts stay off file. Only for
+   * harmless facts (HARMLESS_FACTS in src/game/content/world.ts).
+   */
+  settles?: Topic[];
   /** The card can't back an answer while this holds. */
   blockedBy?: Cond;
 }
@@ -295,6 +307,12 @@ export interface RunState {
   checkpoint: number;
   slot: number;
   seen: string[];
+  /**
+   * Escalating cards (related, follow-up, inspection) dealt in a row since the
+   * last routine card. At 2, the dealer deals a routine card first if one is left
+   * (breather() in src/game/engine.ts). Unset in saves from before it existed.
+   */
+  streak?: number;
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;

@@ -86,6 +86,7 @@ Rules:
 2. Randomness picks the problem, the chosen solution has a predictable result.
 3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
+5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for cash; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). Luck: a calm routine card (a quick stamp, a helpful inspector) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
 
 ## Truth, claims, official knowledge
 
@@ -123,6 +124,8 @@ Claims stay one shared list for now.
 ## Director
 
 For each checkpoint: draw one routine card from that checkpoint's deck (seeded random, unseen first), then pick the highest-priority eligible related card. If nothing fits, deal another routine card. The seed is saved, so a run replays the same way and the branch checker can walk it.
+
+Pacing: no more than 2 escalating cards (related, follow-up, inspection) in a row while a routine card is still left at the desk. After 2, the dealer deals that routine card first, a calm one if there is one, and whatever was next comes after it (`breather()` in `src/game/engine.ts`, eval rule 6, and the walk checks every path).
 
 ## Waiting room
 

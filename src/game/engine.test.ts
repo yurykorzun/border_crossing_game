@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { endingText, factIds, legalActions, loggedAt, newRun, step, travelOf } from './engine';
+import { endingText, factIds, legalActions, loggedAt, newRun, noCost, options, step, travelOf } from './engine';
 import { playRun, setupFor } from './bots';
 import { StoryContent } from '../ui/parts';
 import { t } from '../i18n';
@@ -15,7 +15,8 @@ import type { Move } from './play';
 import { load, save, freshSave } from './save';
 import { nextRandom } from './rng';
 import { allSetups } from './walk';
-import { MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION } from './content/world';
+import { EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION } from './content/world';
+import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
 import type { Action, FactId, FactMap, RunState } from './types';
 
 /** Facts the interview officer knows: the desk most fixtures here are at. */
@@ -24,6 +25,59 @@ const known = (...f: FactId[]): FactMap => Object.fromEntries(f.map((x) => [x, [
 const lena: RunSetup = { character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin: 'records', seed: 7 };
 const at = (s: RunState, id: string, extra: Partial<RunState> = {}): RunState => ({
   ...s, reaction: null, screen: { kind: 'encounter', id }, seen: [...s.seen, id], ...extra,
+});
+
+const mark: RunSetup = { character: 'mark', loadout: ['deed', 'returnTicket', 'hotel', 'hospitalNote'], bulletin: 'customs', seed: 3 };
+
+describe('relief and pacing', () => {
+  it('a document that settles the question keeps its harmless fact off file and costs nothing', () => {
+    const s = at(newRun(mark), 'p_photo', { slot: 2 });
+    const o = options(s).find((x) => x.approach.id === 'evidence')!;
+    expect(o.card).toBe('deed');
+    expect(noCost(s, o)).toBe(true);
+    const r = tryStep(s, { type: 'choose', approach: 'evidence' });
+    if (!r.ok) throw new Error('the deed answers the photo question');
+    expect(r.state.used).toEqual(['deed']);
+    expect(factIds(r.state)).not.toContain('property');
+  });
+
+  it('the same document on another question still puts its fact on file', () => {
+    const s = at(newRun(mark), 'i_stay', { checkpoint: 2, slot: 1, loadout: ['deed', 'returnTicket', 'hotel', 'hospitalNote'], used: ['hotel'] });
+    const o = options(s).find((x) => x.approach.id === 'evidence')!;
+    expect(o.card).toBe('deed');
+    expect(noCost(s, o)).toBe(false);
+  });
+
+  it('only harmless facts stay off file, and nothing on the crossing reacts to them', () => {
+    for (const card of Object.values(EVIDENCE))
+      if (card.settles) for (const e of card.onUse) if ('fact' in e) expect(HARMLESS_FACTS, card.id).toContain(e.fact);
+    const rules = JSON.stringify([ENCOUNTERS, INSPECTIONS, CHECKS, OFFICERS, INCONSISTENCIES, DISPROOFS]);
+    for (const f of HARMLESS_FACTS) expect(rules, f).not.toContain(`"${f}"`);
+  });
+
+  it('a calm card is one free tap, not a decision', () => {
+    const s = at(newRun(lena), 'p_stamp', { slot: 2 });
+    const [o, ...rest] = options(s);
+    expect(rest).toEqual([]);
+    expect(noCost(s, o)).toBe(true);
+    const r = tryStep(s, { type: 'choose', approach: o.approach.id });
+    if (!r.ok) throw new Error('the stamp card has one answer');
+    expect(r.state.decisions).toBe(s.decisions);
+  });
+
+  it('after 2 escalating cards in a row, a routine card left at the desk comes first', () => {
+    // Customs: the medicine card, its lab follow-up, then the phone. Refusing the
+    // search takes scrutiny to 3, but the calm card comes before the inspection.
+    const s = at(newRun(mark), 'c_phone', { checkpoint: 1, slot: 2, seen: ['p_purpose', 'p_secondPassport', 'c_medicine', 'f_lab'], streak: 2, scrutiny: 2 });
+    const r = tryStep(s, { type: 'choose', approach: 'refuse' });
+    if (!r.ok) throw new Error('refusing is an answer on the phone card');
+    expect(r.state.scrutiny).toBe(MAX_SCRUTINY);
+    expect(r.state.screen).toEqual({ kind: 'encounter', id: 'c_pen' });
+    expect(r.state.streak).toBe(0);
+    const next = tryStep({ ...r.state, reaction: null }, { type: 'choose', approach: 'yes' });
+    if (!next.ok) throw new Error('the calm card has one answer');
+    expect(next.state.screen.kind).toBe('inspection');
+  });
 });
 
 describe('rules', () => {

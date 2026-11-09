@@ -81,6 +81,12 @@ export const writesDown = (desk: Checkpoint, claim: ClaimId): boolean => OFFICER
 
 export const canConfirm = (c: ContactId, topic: Topic | undefined): boolean => !!topic && CONTACTS[c].abilities.includes(topic);
 
+/**
+ * Facts nothing on the crossing reacts to: no card, check or officer asks about
+ * them. Only these may stay off file when a document settles a question (settles).
+ */
+export const HARMLESS_FACTS: readonly FactId[] = ['departureDate', 'property'];
+
 export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
   hotel: {
     id: 'hotel',
@@ -108,11 +114,15 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     id: 'returnTicket',
     topics: ['stay', 'money'],
     onUse: [{ fact: 'departureDate' }],
+    // Asked about cash, a paid flight out is the whole answer.
+    settles: ['money'],
   },
   deed: {
     id: 'deed',
     topics: ['identity', 'accommodation'],
     onUse: [{ fact: 'property' }],
+    // Asked who you are, the registered owner's name is the whole answer.
+    settles: ['identity'],
   },
 };
 

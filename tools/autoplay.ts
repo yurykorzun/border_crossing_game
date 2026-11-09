@@ -54,13 +54,15 @@ function shares(counts: number[], total: number): string[] {
 console.log(`autoplay: ${RUNS} runs per style, setups ${SEED}..${SEED + RUNS - 1}`);
 
 // ── 1. One row per style
+// no-cost/run: answers that spent no time, scrutiny or contact and put no new fact on file (noCost() in src/game/engine.ts).
 console.log('\nEndings (% of runs) and run stats per style');
-console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run'], 12)}`);
+console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'no-cost/run'], 12)}`);
 for (const [style, list] of runs) {
   const counts = ENDINGS.map((e) => list.filter((r) => r.final.ending === e).length);
   const times = list.map((r) => r.final.time);
   console.log(`  ${style.padEnd(12)}${cells(shares(counts, list.length), 11)}${cells([
     mean(times), Math.min(...times), mean(list.map((r) => r.final.decisions)), mean(list.map((r) => r.final.inspections)),
+    mean(list.map((r) => r.noCost)),
   ], 12)}`);
 }
 

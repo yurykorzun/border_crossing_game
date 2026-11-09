@@ -11,11 +11,11 @@
 
 import { t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
-import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/encounters';
+import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
-import { canFinish, deskIntro, deskOf, endingText, factIds, knownAt, loggedAt, newRun, options, shownCheckpoint, waitActions } from './engine';
+import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -39,7 +39,8 @@ export interface Line {
 export type Happening =
   | { step: number; type: 'checkStarted'; id: CheckId }
   | { step: number; type: 'checkResolved'; id: CheckId; result: string }
-  | { step: number; type: 'cardDealt'; id: string; claims: ClaimId[]; facts: FactId[] };
+  /** An encounter card or an inspection. routinesLeft: the routine cards the desk could still have asked. */
+  | { step: number; type: 'cardDealt'; id: string; claims: ClaimId[]; facts: FactId[]; routinesLeft: string[] };
 
 export interface Transcript {
   style: BotStyle;
@@ -360,7 +361,8 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
     const picked = page.lines.find((l) => l.key === pickedKey) ?? page.lines.find((l) => l.key === 'ui.continue');
     if (picked && action.type !== 'beat') picked.picked = true;
     lines.push(...page.lines);
-    if (action.type === 'choose') decisions++;
+    // A calm card's one answer is a tap, not a decision (isCalm() in src/game/engine.ts).
+    if (action.type === 'choose' && !(sc.kind === 'encounter' && isCalm(sc.id))) decisions++;
     // Every check offers at least waiting or asking, so each pick there is a decision.
     if (action.type === 'waitAction') decisions++;
     if (action.type === 'beat' && s.screen.kind === 'wait') beatMs += beatDelayMs(s.screen.beats[s.screen.shown] ?? 0);
@@ -368,9 +370,11 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
     for (const e of eventsBetween(s, n, action)) {
       if (e.type === 'checkStarted') happenings.push({ step: i, type: 'checkStarted', id: e.id });
       if (e.type === 'checkResolved') happenings.push({ step: i, type: 'checkResolved', id: e.id, result: e.result });
-      if (e.type === 'cardDealt')
+      if (e.type === 'cardDealt' || e.type === 'inspectionStarted')
         // What the official dealing the card knows, not every fact on the crossing.
-        happenings.push({ step: i + 1, type: 'cardDealt', id: e.id, claims: [...n.claims], facts: knownAt(n) });
+        happenings.push({
+          step: i + 1, type: 'cardDealt', id: e.id, claims: [...n.claims], facts: knownAt(n), routinesLeft: routinesLeft(n).map((x) => x.id),
+        });
     }
     s = n;
   });
@@ -486,6 +490,12 @@ export function playTimeRule(range: PlayTimeRange): Rule {
   };
 }
 
+/** Rule 6: the dealer's pacing rule (breather() in src/game/engine.ts). */
+export const MAX_ESCALATIONS = 2;
+
+/** An inspection, or an encounter card that is not routine. */
+const escalating = (id: string) => INSPECTION_BY_ID.has(id) || ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
+
 export const RULES: Rule[] = [
   {
     id: 1,
@@ -543,6 +553,22 @@ export const RULES: Rule[] = [
     id: 5,
     name: 'every string resolves through t() with no missing key or unfilled {var}',
     check: (tr) => tr.lines.filter((l) => l.problem).map((l) => ({ step: l.step, key: l.key, detail: l.problem! })),
+  },
+  {
+    id: 6,
+    name: `no more than ${MAX_ESCALATIONS} escalating cards (related, follow-up, inspection) in a row while a routine card was left`,
+    check: (tr) => {
+      const out: ReturnType<Rule['check']> = [];
+      let row = 0;
+      for (const h of tr.happenings) {
+        if (h.type !== 'cardDealt') continue;
+        if (!escalating(h.id)) { row = 0; continue; }
+        row++;
+        if (row > MAX_ESCALATIONS && h.routinesLeft.length)
+          out.push({ step: h.step, key: h.id, detail: `escalating card ${row} in a row with ${h.routinesLeft.join(', ')} still to ask` });
+      }
+      return out;
+    },
   },
 ];
 

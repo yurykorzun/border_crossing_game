@@ -6,7 +6,7 @@
 // random style never moves the dealer's picks.
 
 import { CHARACTERS } from './content/world';
-import { legalActions, newRun, options, step, travelOf } from './engine';
+import { legalActions, newRun, noCost, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, RunState } from './types';
@@ -172,6 +172,8 @@ export interface BotRun {
   actions: Action[];
   /** Card or inspection id and the approach or wait action picked there, in order. */
   choices: { card: string; pick: string }[];
+  /** Answers picked that cost nothing (noCost() in src/game/engine.ts). */
+  noCost: number;
 }
 
 export function playRun(style: BotStyle, setup: RunSetup): BotRun {
@@ -179,17 +181,22 @@ export function playRun(style: BotStyle, setup: RunSetup): BotRun {
   let botRng = botSeed(setup.seed);
   const actions: Action[] = [];
   const choices: BotRun['choices'] = [];
+  let free = 0;
   while (!s.ending) {
     if (actions.length >= MAX_RUN_STEPS) throw new Error(`${style} run did not end in ${MAX_RUN_STEPS} steps`);
     const pick = botAction(style, s, botRng);
     if (!pick) break;
     const sc = s.screen;
-    if (pick.action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection'))
-      choices.push({ card: sc.id, pick: pick.action.approach });
+    if (pick.action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) {
+      const id = pick.action.approach;
+      choices.push({ card: sc.id, pick: id });
+      const o = options(s).find((x) => x.approach.id === id);
+      if (o && noCost(s, o)) free++;
+    }
     if (pick.action.type === 'waitAction' && sc.kind === 'wait') choices.push({ card: sc.check, pick: pick.action.action });
     s = step(s, pick.action);
     botRng = pick.botRng;
     actions.push(pick.action);
   }
-  return { style, final: s, actions, choices };
+  return { style, final: s, actions, choices, noCost: free };
 }
