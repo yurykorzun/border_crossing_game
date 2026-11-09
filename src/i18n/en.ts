@@ -532,7 +532,7 @@ export const en: Record<string, string> = {
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
   'insp.s_bag.contact.reaction': 'They make the call, and the search stops early.',
   'insp.s_bag.withdraw.label': 'Withdraw your entry request',
-  'insp.s_bag.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_bag.withdraw.reaction': 'They pack your things back into the suitcase. The officer hands back your passport.',
 
   'insp.s_medicine.q': 'They are holding the medicine for testing.',
   'insp.s_medicine.surrender.label': 'Leave without it',
@@ -540,7 +540,7 @@ export const en: Record<string, string> = {
   'insp.s_medicine.wait.label': 'Wait to get it back',
   'insp.s_medicine.wait.reaction': 'They test the medicine, then the bag comes back.',
   'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
-  'insp.s_medicine.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport.',
 
   'insp.s_connection.q': 'While they keep you here, the shuttle to the station leaves without you. The next one is an hour later.',
   'insp.s_connection.later.label': 'Take the later shuttle',
@@ -548,7 +548,7 @@ export const en: Record<string, string> = {
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
   'insp.s_connection.drive.reaction': 'A short call. Someone will be waiting past the gate.',
   'insp.s_connection.withdraw.label': 'Withdraw your entry request',
-  'insp.s_connection.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_connection.withdraw.reaction': 'The officer hands back your passport and points you to departures.',
 
   'insp.s_supervisor.q': 'A supervisor opens your file. "Why are you here?"',
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
@@ -556,7 +556,7 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.accept.label': 'Let her phone the hospital',
   'insp.s_supervisor.accept.reaction': 'The hospital confirms your father is a patient. She writes it down.',
   'insp.s_supervisor.withdraw.label': 'Withdraw your entry request',
-  'insp.s_supervisor.withdraw.reaction': 'Your passport is handed back with a red stamp.',
+  'insp.s_supervisor.withdraw.reaction': 'She closes your file and hands back your passport.',
 
   // ── Checks and the waiting room
   'check.hostCall.title': "They're calling your mother.",
