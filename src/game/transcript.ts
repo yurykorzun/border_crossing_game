@@ -15,7 +15,7 @@ import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/e
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
-import { canFinish, deskIntro, deskOf, factIds, knownAt, loggedAt, newRun, options, shownCheckpoint, waitActions } from './engine';
+import { canFinish, deskIntro, deskOf, endingText, factIds, knownAt, loggedAt, newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -305,12 +305,13 @@ function screenLines(s: RunState, p: Page): void {
  */
 function endingLines(s: RunState, p: Page): void {
   const ending = s.ending!;
+  const text = endingText(s);
   const ch = CHARACTERS[s.character];
   p.add('ui.title', {}, CHROME);
   p.add(ending === 'turnedBack' ? 'scene.turnedBack' : s.medicine ? 'scene.bus' : 'scene.busEmpty', {}, CHROME);
   p.add(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete');
-  p.add(`ending.${ending}.title`);
-  p.add(`ending.${ending}.summary`);
+  p.add(`ending.${text}.title`);
+  p.add(`ending.${text}.summary`);
   // resultRows(): hours left, the medicine, the protected contact.
   p.add('ui.hoursLeftRow');
   p.add('ui.medicineRow');
@@ -322,7 +323,7 @@ function endingLines(s: RunState, p: Page): void {
   // The sheet behind "See what's on file".
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.close', {}, CHROME);
-  p.add(`ending.${ending}.body`, {}, CHROME);
+  p.add(`ending.${text}.body`, {}, CHROME);
   // What it cost: one scored line per consequence, from the engine.
   const cost = consequences(s);
   if (cost.length) p.add('ui.whatItCost', {}, CHROME);

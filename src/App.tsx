@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t, tn } from './i18n';
-import { canFinish, deskIntro, endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -645,6 +645,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
+  const text = endingText(s);
   const cost = consequences(s);
   return (
     <main className={`ending ending-${ending}`}>
@@ -654,8 +655,8 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
       </div>
       <section className="paper ending-card">
         <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
-        <h1>{t(`ending.${ending}.title`)}</h1>
-        <p className="summary">{t(`ending.${ending}.summary`)}</p>
+        <h1>{t(`ending.${text}.title`)}</h1>
+        <p className="summary">{t(`ending.${text}.summary`)}</p>
         <dl className="result-rows">
           {resultRows(s).map((r) => (
             <div key={r.label} className="result-row">
@@ -671,7 +672,7 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
       </div>
       <Sheet open={story} onClose={() => setStory(false)} title={t('ui.myStory')}>
         <div className="ending-record">
-          <p>{t(`ending.${ending}.body`)}</p>
+          <p>{t(`ending.${text}.body`)}</p>
           {cost.length > 0 && (
             <>
               <h3 className="mono what-it-cost">{t('ui.whatItCost')}</h3>

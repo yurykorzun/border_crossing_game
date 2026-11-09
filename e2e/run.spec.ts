@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { newRun } from '../src/game/engine';
 import { SAVE_KEY, freshSave } from '../src/game/save';
+import { en } from '../src/i18n/en';
 import type { RunState, Screen } from '../src/game/types';
 
 // One full run on a phone-size screen: title → character → documents → begin → play by
@@ -252,6 +253,28 @@ test('once the bus is out of reach, the card says so and finishes the crossing q
   await expect(page.locator('.ending-card h1')).toHaveText('Too late');
   expect(errors).toEqual([]);
 });
+
+// No hours left at all: the bus left during the checks. Some hours but fewer than the trip:
+// through, but after visiting hours. Each shows its own title, sentence and longer text.
+for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
+  test(`a Too late run with ${time} hours left shows the ${text} text on the ending card`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.goto('./');
+    const run: RunState = { ...lenaRun(), time, checkpoint: 2, screen: { kind: 'ending' }, reaction: null, ending: 'tooLate' };
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['tooLate'] })] as const);
+    await page.reload();
+
+    const card = page.locator('.ending-card');
+    await expect(card.locator('h1')).toHaveText(en[`ending.${text}.title`]);
+    await expect(card.locator('.summary')).toHaveText(en[`ending.${text}.summary`]);
+    await expect(card).toBeInViewport();
+    await noHorizontalScroll(page, `${text} ending`);
+    await page.getByRole('button', { name: "See what's on file" }).click();
+    await expect(page.locator('dialog.sheet[open] .ending-record > p').first()).toHaveText(en[`ending.${text}.body`]);
+    expect(errors).toEqual([]);
+  });
+}
 
 test('a Too late ending still lists the exposed mother, scored', async ({ page }) => {
   const errors: string[] = [];

@@ -376,6 +376,18 @@ export function endingFor(s: RunState): EndingId {
   return 'homeInTime';
 }
 
+/**
+ * Which text the ending shows, as the part after `ending.` in the key. Too late
+ * splits on what the engine knows: no hours left at all means the bus left while
+ * you were still at the desks; some hours but fewer than the trip means you got
+ * through and arrive after visiting hours. Time never comes back, so 0 at the end
+ * means it ran out before the last checkpoint was done.
+ */
+export function endingText(s: RunState): string {
+  const ending = s.ending ?? endingFor(s);
+  return ending === 'tooLate' && s.time === 0 ? 'missedBus' : ending;
+}
+
 function finish(s: RunState): RunState {
   return { ...s, screen: { kind: 'ending' }, ending: endingFor(s) };
 }
