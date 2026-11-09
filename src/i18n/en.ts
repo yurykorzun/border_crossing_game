@@ -136,7 +136,7 @@ export const en: Record<string, string> = {
   'ui.kept': 'Kept',
   'ui.lost': 'Lost',
   'ui.notNamed': 'Not named',
-  'ui.seeOnFile': "See what's on file",
+  'ui.seeOnFile': 'See border records',
   'ui.borderRecords': 'Border records',
   'ui.playAgain': 'Play again',
   'ui.yourCrossing': 'Your crossing',

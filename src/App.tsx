@@ -641,7 +641,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * The ending as a result card (Yury's design review, 2026-11-09): the scene, the outcome
  * and the ending's name in amber, one line on what you kept, the worst consequence as a
  * heading and a line (then any others), the epilogue, and a run summary with hours left
- * and the other stats. Then "See what's on file", which opens the records alone, and
+ * and the other stats. Then "See border records", which opens the records alone, and
  * "Play again".
  */
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
