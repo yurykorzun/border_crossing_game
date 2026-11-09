@@ -1,6 +1,6 @@
 // t(key, vars): looks up the current locale, falls back to English, and throws
 // on a key English doesn't have, so a content hole fails loudly in dev and tests.
-// Vars named `contact`, `card`, `cardShort`, `cardThe`, `fact`, `claim` hold ids and are translated too.
+// Vars named `contact`, `contactMine`, `card`, `cardShort`, `cardThe`, `fact`, `claim` hold ids and are translated too.
 
 import { en } from './en';
 
@@ -13,6 +13,8 @@ export const getLocale = () => locale;
 
 const ID_VARS: Record<string, (id: string) => string> = {
   contact: (id) => `contact.${id}`,
+  /** "My cousin Ilya", to open a spoken answer: "My cousin Ilya lives here." */
+  contactMine: (id) => `contact.${id}.mine`,
   card: (id) => `ev.${id}.name`,
   /** "letter", for the line under an answer: "Uses letter". */
   cardShort: (id) => `ev.${id}.short`,

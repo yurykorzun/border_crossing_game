@@ -57,7 +57,7 @@ const ICON: Record<PartKind, IconKind> = {
 /**
  * The parts for one answer. `cardKey` is the answer's key without `.label`
  * (`enc.p_purpose.family`): a `<cardKey>.check` text, when there is one, names the
- * check ("Register check").
+ * check ("Register check"), and a `<cardKey>.contact` text replaces "Puts {contact} on file".
  */
 export function consequence(o: Option, cardKey: string, protectedContact: ContactId): Consequence {
   const a = o.approach;
@@ -65,8 +65,10 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
 
   const all: Part[] = [];
   if (o.card) all.push({ kind: 'card', key: 'ui.line.uses', vars: { cardShort: o.card }, tone: 'plain' });
+  // A `<cardKey>.contact` text, when there is one, says it in the answer's words ("His name goes on file").
+  const contactKey = `${cardKey}.contact`;
   if (o.contact)
-    all.push({ kind: 'contact', key: 'ui.line.contact', vars: { contact: o.contact }, tone: o.contact === protectedContact ? 'red' : 'amber' });
+    all.push({ kind: 'contact', key: has(contactKey) ? contactKey : 'ui.line.contact', vars: { contact: o.contact }, tone: o.contact === protectedContact ? 'red' : 'amber' });
   // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;

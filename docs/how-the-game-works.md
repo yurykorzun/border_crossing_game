@@ -50,6 +50,7 @@ The rule that keeps it fair: every card has at least one answer that needs no do
 ## Claims and facts (the memory)
 
 - Claims are what you said: visiting family, tourism, a hotel stay, no other family.
+- An answer records only what its words say. Asked about relatives, you name your contact, say "I have no other relatives here." or ask why. Only the denial records "No other relatives", because leaving someone out is not a lie.
 - Facts are what the state now knows (shown as "On file"): the family address, your employer, your phone was searched, your brother abroad.
 - A contradiction card is dealt only when a claim and a fact disagree. Say "tourist", then let them find your family address, and the interview asks about it with priority 3. Lies are free when you tell them and cost you later.
 - Some cards block each other. Once you have claimed a family visit, the hotel booking can no longer be shown.

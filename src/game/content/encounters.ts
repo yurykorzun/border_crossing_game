@@ -109,11 +109,13 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'i_family', checkpoint: 'interview', kind: 'routine', topic: 'history',
     approaches: [
+      // Each answer says what it is: name the relative, deny them, or ask why.
+      // Only the denial records noOtherFamily, because leaving someone out is not a lie.
       {
-        id: 'everyone', kind: 'contact', contacts: ['cousin', 'brother'],
+        id: 'name', kind: 'contact', contacts: ['cousin', 'brother'],
         effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
       },
-      { id: 'parents', kind: 'say', effects: [{ claim: 'noOtherFamily' }] },
+      { id: 'deny', kind: 'say', effects: [{ claim: 'noOtherFamily' }] },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
   },

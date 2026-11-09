@@ -153,6 +153,9 @@ export const en: Record<string, string> = {
   'contact.mother.note': 'At the hospital most of the day.',
   'contact.cousin.note': 'Your mother asked you not to mention him.',
   'contact.brother.note': 'Lives across the border. Calls every Sunday.',
+  // The contact as a sentence opener, for an answer in your own words: "My cousin Ilya lives here."
+  'contact.cousin.mine': 'My cousin Ilya',
+  'contact.brother.mine': 'My brother Tom',
 
   // ── Evidence
   'ev.hotel.name': 'Hotel booking',
@@ -213,7 +216,7 @@ export const en: Record<string, string> = {
   'claim.familyVisit.recorded': 'Recorded as your reason for visiting',
   'claim.tourism.recorded': 'Recorded as your reason for visiting',
   'claim.hotelStay.recorded': "Recorded as where you're staying",
-  'claim.noOtherFamily.recorded': 'Recorded as your whole family',
+  'claim.noOtherFamily.recorded': 'Recorded as a denial',
   'claim.neverDonated.recorded': 'Recorded as a denial',
   'fact.familyAddress.reveal': 'Reveals her address',
   'fact.employer.reveal': 'Reveals your employer',
@@ -356,12 +359,13 @@ export const en: Record<string, string> = {
   'enc.i_stay.undecided.label': '"I haven\'t decided yet."',
   'enc.i_stay.undecided.reaction': '"You came all this way without a place to sleep?"',
 
-  'enc.i_family.q': '"Any relatives we should know about?"',
-  'enc.i_family.everyone.label': 'List everyone, including {contact}',
-  'enc.i_family.everyone.reaction': 'The officer writes every name in capitals.',
-  'enc.i_family.parents.label': '"Just my parents."',
-  'enc.i_family.parents.reaction': 'The officer nods and turns the page.',
-  'enc.i_family.why.label': 'Ask why it matters',
+  'enc.i_family.q': '"Do you have any other relatives here?"',
+  'enc.i_family.name.label': '"{contactMine} lives here."',
+  'enc.i_family.name.contact': 'His name goes on file',
+  'enc.i_family.name.reaction': 'The officer writes his name in capitals.',
+  'enc.i_family.deny.label': '"I have no other relatives here."',
+  'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
+  'enc.i_family.why.label': '"Why do you need to know?"',
   'enc.i_family.why.reaction': '"Routine." The officer waits for an answer anyway.',
 
   'enc.i_contradiction.q': '"What you told us does not match your file."',

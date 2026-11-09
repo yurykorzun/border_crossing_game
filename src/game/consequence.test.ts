@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { t, tn } from '../i18n';
+import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
 import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, nextActionKey } from './consequence';
@@ -70,7 +70,9 @@ describe('consequence line', () => {
       const scrutiny = o.effects.reduce((n, e) => n + ('scrutiny' in e ? e.scrutiny : 0), 0);
       if (time) expect(line, name).toContain(tn('ui.line.time', Math.abs(time)));
       if (scrutiny) expect(line, name).toContain(t('ui.line.scrutiny', { n: scrutiny }));
-      if (o.contact) expect(line, name).toContain(t('ui.line.contact', { contact: o.contact }));
+      // A card can say it in its own words ("His name goes on file"); the part is still there.
+      const contactKey = has(`${cardKey}.contact`) ? `${cardKey}.contact` : 'ui.line.contact';
+      if (o.contact) expect(line, name).toContain(t(contactKey, { contact: o.contact }));
       if (o.effects.some((e) => 'loseMedicine' in e)) expect(line, name).toContain(t('ui.line.medicine'));
       for (const p of parts) expect(text(p), `${name}: ${p.key}`).not.toMatch(/\{\w+\}/);
     }

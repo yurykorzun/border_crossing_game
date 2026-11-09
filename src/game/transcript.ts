@@ -270,7 +270,7 @@ function screenLines(s: RunState, p: Page): void {
       else {
         const vars: Record<string, string> = {};
         if (o.card) vars.card = vars.cardThe = o.card;
-        if (o.contact) vars.contact = o.contact;
+        if (o.contact) vars.contact = vars.contactMine = o.contact;
         p.add(`${prefix}.${sc.id}.${o.approach.id}.label`, vars);
       }
       consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
