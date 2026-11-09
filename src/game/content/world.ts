@@ -71,3 +71,6 @@ export const CHARACTER_IDS = Object.keys(CHARACTERS) as CharacterId[];
 
 /** Ordinary procedural beats per checkpoint, keyed beat.<checkpoint>.<n> in i18n. */
 export const BEAT_COUNT = 6;
+
+/** How long a waiting-room beat stays before the next one: 2-5 s, or 0.6 s with shorter waits. */
+export const beatDelayMs = (beat: number, reduceWait = false) => (reduceWait ? 600 : 2000 + ((beat * 613) % 3000));

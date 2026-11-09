@@ -11,7 +11,8 @@
     "test": "vitest run",
     "walk": "tsx tools/walk.ts",
     "e2e": "playwright test",
-    "autoplay": "tsx tools/autoplay.ts"
+    "autoplay": "tsx tools/autoplay.ts",
+    "eval": "tsx tools/eval.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",

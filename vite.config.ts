@@ -51,5 +51,6 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/border_crossing_game/' : '/',
   plugins: [react(), serviceWorker()],
   // e2e/ holds Playwright specs, run by `npm run e2e`, not by vitest.
-  test: { include: ['src/**/*.test.ts'] },
+  // tools/ tests run the npm scripts themselves (tools/eval.test.ts).
+  test: { include: ['src/**/*.test.ts', 'tools/**/*.test.ts'] },
 }))
