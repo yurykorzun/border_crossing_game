@@ -34,6 +34,7 @@ export function newRun(setup: RunSetup): RunState {
     exposed: [],
     calledIn: [],
     time: START_TIME,
+    travel: MISSION_MIN_TIME,
     scrutiny: ch.startScrutiny,
     facts: {},
     claims: [],
@@ -349,9 +350,20 @@ function apply(s: RunState, effects: Effect[]): RunState {
     }
     else if ('claim' in e) n = claim(n, e.claim);
     else if ('loseMedicine' in e) n = { ...n, medicine: false };
+    else if ('travel' in e) n = { ...n, travel: travelOf(n) + Math.max(0, e.travel) };
   }
   return n;
 }
+
+/** Hours the trip from the border to the bus takes: the run needs at least this many left. */
+export const travelOf = (s: RunState): number => s.travel ?? MISSION_MIN_TIME;
+
+/**
+ * The bus is out of reach: fewer hours left than the trip takes. Time never
+ * comes back and the trip never gets shorter, so only Too late or walking away
+ * can follow (the walk checks it on every state), and the player may finish quickly.
+ */
+export const doomed = (s: RunState): boolean => !s.ending && !s.withdrew && s.time < travelOf(s);
 
 function say(s: RunState, lines: LogEntry[]): RunState {
   return { ...s, reaction: [...(s.reaction ?? []), ...lines], log: [...s.log, ...lines] };
@@ -359,9 +371,21 @@ function say(s: RunState, lines: LogEntry[]): RunState {
 
 export function endingFor(s: RunState): EndingId {
   if (s.withdrew) return 'turnedBack';
-  if (s.time < MISSION_MIN_TIME) return 'tooLate';
+  if (s.time < travelOf(s)) return 'tooLate';
   if (!s.medicine || s.exposed.includes(CHARACTERS[s.character].protectedContact)) return 'homeAtCost';
   return 'homeInTime';
+}
+
+/**
+ * Which text the ending shows, as the part after `ending.` in the key. Too late
+ * splits on what the engine knows: no hours left at all means the bus left while
+ * you were still at the desks; some hours but fewer than the trip means you got
+ * through and arrive after visiting hours. Time never comes back, so 0 at the end
+ * means it ran out before the last checkpoint was done.
+ */
+export function endingText(s: RunState): string {
+  const ending = s.ending ?? endingFor(s);
+  return ending === 'tooLate' && s.time === 0 ? 'missedBus' : ending;
 }
 
 function finish(s: RunState): RunState {
@@ -453,7 +477,7 @@ function deal(s: RunState, dealer: Dealer): RunState {
 }
 
 function inspect(s: RunState, dealer: Dealer): RunState {
-  const fits = INSPECTIONS.filter((i) => check(i.when, s) && (i.id !== 's_medicine' || s.medicine));
+  const fits = INSPECTIONS.filter((i) => check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
   const fresh = fits.filter((i) => !s.seen.includes(i.id));
   const pool = fresh.length ? fresh : fits;
   if (!pool.length) throw new Error('no inspection fits');
@@ -585,8 +609,16 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
       if (s.reaction) return { ...s, reaction: null };
       if (s.screen.kind === 'between') return deal(s, dealer);
       return s;
+    case 'finish':
+      if (!canFinish(s)) return s;
+      // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
+      return say(finish({ ...s, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
   }
 }
+
+/** The finish-quickly option shows on a card once the bus is out of reach. */
+export const canFinish = (s: RunState): boolean =>
+  doomed(s) && !s.reaction && (s.screen.kind === 'encounter' || s.screen.kind === 'inspection');
 
 /** Everything the player can do right now, for tests and the autoplay bot. */
 export function legalActions(s: RunState): Action[] {
@@ -598,5 +630,6 @@ export function legalActions(s: RunState): Action[] {
     if (sc.shown < sc.beats.length) return [{ type: 'beat' }];
     return waitActions(s).filter((w) => !w.blocked).map((w) => ({ type: 'waitAction', action: w.action }));
   }
-  return options(s).filter((o) => !o.blocked).map((o) => ({ type: 'choose', approach: o.approach.id }));
+  const answers: Action[] = options(s).filter((o) => !o.blocked).map((o) => ({ type: 'choose', approach: o.approach.id }));
+  return canFinish(s) ? [...answers, { type: 'finish' }] : answers;
 }

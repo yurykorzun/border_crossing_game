@@ -111,7 +111,8 @@ for (const [label, test] of contactRows) {
 }
 
 // ── 5. Inspections
-console.log('\nInspection recovery: homeInTime share by inspections in the run');
+// "any → home" is the inspection recovery rate: the share of runs with an inspection that still end homeInTime or homeAtCost.
+console.log('\nInspection recovery: homeInTime share by inspections in the run, and recovery rate (any → home: homeInTime or homeAtCost)');
 console.log(`  ${'style'.padEnd(12)}${cells(['0', '1', '2+', 'any → home'], 16)}`);
 const inspRow = (list: BotRun[]) => {
   const bucket = (test: (n: number) => boolean) => {

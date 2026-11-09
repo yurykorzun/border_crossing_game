@@ -14,17 +14,18 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, currentCard, deskOf, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
+  callInsDue, check, checkEffects, checkFindings, currentCard, deskOf, doomed, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
+  travelOf,
 } from './engine';
 import { consequences } from './consequence';
-import type { RunSetup } from './engine';
+import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
 import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, OFFICERS, START_TIME, canConfirm,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm,
 } from './content/world';
-import { CHECKS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
+import { CHECKS, DISPROOFS, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { t, tn } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
@@ -145,6 +146,13 @@ function moveEffects(s: RunState, action: Action): Effect[] | null {
 }
 const keeps = <T>(before: T[], after: T[]) => before.every((x) => after.includes(x));
 
+/** Whether an answer changes something besides time: the medicine, the trip, a new fact here, a document or a contact. */
+export function changesProblem(s: RunState, o: Option): boolean {
+  if (o.card || o.contact) return true;
+  return o.effects.some((e) =>
+    ('loseMedicine' in e && s.medicine) || ('travel' in e && e.travel > 0) || ('fact' in e && !knows(s, e.fact)));
+}
+
 /** The rules every reachable state must keep. Returns what is broken. */
 export function checkState(s: RunState): string[] {
   const bad: string[] = [];
@@ -178,6 +186,16 @@ export function checkState(s: RunState): string[] {
     if (!desks.length || desks.join() !== CHECKPOINTS.filter((d) => desks.includes(d)).join()) bad.push(`${f} known at [${desks}]`);
   }
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !currentCard(s)) bad.push(`unknown card ${s.screen.id}`);
+  if (travelOf(s) < MISSION_MIN_TIME || travelOf(s) > START_TIME) bad.push(`trip of ${travelOf(s)} hours outside ${MISSION_MIN_TIME}..${START_TIME}`);
+  // Once the bus is out of reach, every card offers to finish quickly instead of more clicking.
+  const finishing = legalActions(s).some((a) => a.type === 'finish');
+  const onCard = !s.reaction && (s.screen.kind === 'encounter' || s.screen.kind === 'inspection');
+  if (finishing !== (doomed(s) && onCard)) bad.push(`finish ${finishing ? 'offered' : 'missing'} with ${s.time} hours left and a ${travelOf(s)}-hour trip`);
+  // An inspection that changes the problem offers an answer that changes something
+  // besides time: the medicine, the trip, a fact on file, a document or a contact.
+  const insp = s.screen.kind === 'inspection' && !s.reaction ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
+  if (insp && insp.kind !== 'search' && !options(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
+    bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
   // A clarify card needs an inconsistency on file, a contradiction card a disproof.
   const pairs = s.screen.kind === 'encounter' ? CHALLENGES[s.screen.id] : undefined;
   if (pairs && !holds(pairs, s))
@@ -222,6 +240,13 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   if (s.perkUsed && !n.perkUsed) bad.push('the once-per-run advantage came back');
   if (!s.medicine && n.medicine) bad.push('lost medicine came back');
   if (n.time > s.time) bad.push(`time went up from ${s.time} to ${n.time}`);
+  if (travelOf(n) < travelOf(s)) bad.push(`the trip got shorter, from ${travelOf(s)} to ${travelOf(n)} hours`);
+  // Finishing quickly ends the run Too late and spends nothing more.
+  if (action.type === 'finish') {
+    if (n.ending !== 'tooLate') bad.push(`finishing quickly ended ${n.ending}`);
+    if (n.time !== s.time || n.decisions !== s.decisions || n.used.length !== s.used.length || n.exposed.length !== s.exposed.length || n.medicine !== s.medicine)
+      bad.push('finishing quickly spent something');
+  }
   if (n.inspections - s.inspections > 1) bad.push('one move started two inspections');
   if (n.inspections > s.inspections && n.screen.kind !== 'inspection') bad.push('an inspection was counted but not shown');
   if (n.decisions - s.decisions > 1) bad.push('one move counted as two decisions');
@@ -385,6 +410,9 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
           if (best >= 0) value = [Math.max(value[0], worst), Math.max(value[1], best)];
         }
         if (value[1] < 0) value = [0, 0];
+        // Finishing quickly is only fair if nothing better was left: from a doomed state no deal reaches the bus.
+        if (doomed(s) && value[1] > ENDING_RANK.indexOf('tooLate'))
+          problem('doomed runs stay doomed', `${ENDING_RANK[value[1]]} reachable with ${s.time} hours left and a ${travelOf(s)}-hour trip`);
       }
       memo.set(k, value);
       return value;

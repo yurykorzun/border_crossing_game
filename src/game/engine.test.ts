@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { factIds, legalActions, loggedAt, newRun, step } from './engine';
+import { endingText, factIds, legalActions, loggedAt, newRun, step, travelOf } from './engine';
+import { playRun, setupFor } from './bots';
 import { StoryContent } from '../ui/parts';
 import { t } from '../i18n';
 import type { RunSetup } from './engine';
@@ -195,6 +196,46 @@ describe('replay and save', () => {
       let s = load({ get: (k) => store.get(k) ?? null, set: () => {} }).run!;
       for (const m of p.moves.slice(mid)) s = step(s, m.action);
       expect(s).toEqual(p.states[p.states.length - 1]);
+    }
+  });
+});
+
+describe('too late endings', () => {
+  /** An honest bot run from setupFor(i), with every state on the way. */
+  const honest = (i: number) => {
+    const run = playRun('honest', setupFor(i));
+    let s = newRun(setupFor(i));
+    const states = [s];
+    for (const a of run.actions) states.push((s = step(s, a)));
+    return { final: run.final, states };
+  };
+
+  it('missing the bus: the hours run out before the last checkpoint is done', () => {
+    const { final, states } = honest(18);
+    expect(final.ending).toBe('tooLate');
+    expect(final.time).toBe(0);
+    // The first state with no hours left is still at a desk, not at the ending.
+    const out = states.find((x) => x.time === 0)!;
+    expect(out.ending).toBeNull();
+    expect(endingText(final)).toBe('missedBus');
+  });
+
+  it('arriving too late: through the border with hours left, but fewer than the trip', () => {
+    const { final } = honest(2);
+    expect(final.ending).toBe('tooLate');
+    expect(final.time).toBeGreaterThan(0);
+    expect(final.time).toBeLessThan(travelOf(final));
+    expect(endingText(final)).toBe('tooLate');
+  });
+
+  it('gives the two runs different ending text', () => {
+    const a = honest(18).final;
+    const b = honest(2).final;
+    for (const part of ['title', 'summary', 'body']) {
+      const ka = `ending.${endingText(a)}.${part}`;
+      const kb = `ending.${endingText(b)}.${part}`;
+      expect(ka).not.toBe(kb);
+      expect(t(ka)).not.toBe(t(kb));
     }
   });
 });

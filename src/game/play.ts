@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { deskOf, factIds, legalActions, newRun, step } from './engine';
+import { deskOf, factIds, legalActions, newRun, step, travelOf } from './engine';
 import { changeLines } from './consequence';
 import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
@@ -14,7 +14,7 @@ import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, Evidenc
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 6;
+export const CONTENT_VERSION = 7;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
@@ -26,6 +26,8 @@ export type GameEvent =
   | { type: 'factSent'; id: FactId; desks: Checkpoint[]; via: 'records' | 'desk' }
   | { type: 'claimRecorded'; id: ClaimId }
   | { type: 'medicineLost' }
+  /** The trip to the bus now takes `hours` (a missed connection). */
+  | { type: 'travelChanged'; hours: number }
   | { type: 'perkUsed' }
   | { type: 'checkStarted'; id: CheckId }
   | { type: 'checkResolved'; id: CheckId; result: string }
@@ -86,6 +88,7 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
     if (desks.length) ev.push({ type: 'factSent', id, desks, via: s.bulletin === 'records' ? 'records' : 'desk' });
   }
   if (s.medicine && !n.medicine) ev.push({ type: 'medicineLost' });
+  if (travelOf(n) !== travelOf(s)) ev.push({ type: 'travelChanged', hours: travelOf(n) });
   if (n.checkpoint !== s.checkpoint) ev.push({ type: 'checkpointReached', index: n.checkpoint });
   if (n.screen.kind === 'wait' && s.screen.kind !== 'wait') ev.push({ type: 'checkStarted', id: n.screen.check });
   if (n.inspections > s.inspections && n.screen.kind === 'inspection') ev.push({ type: 'inspectionStarted', id: n.screen.id });
