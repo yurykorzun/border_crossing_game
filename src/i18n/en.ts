@@ -75,6 +75,10 @@ export const en: Record<string, string> = {
   'ui.line.withdraw': 'Ends the crossing',
   'ui.line.travel.one': 'Reach the station {n} hour later',
   'ui.line.travel.other': 'Reach the station {n} hours later',
+  // With the run's clock: the hours a later connection then needs, or that the bus is lost.
+  'ui.line.need.one': 'Bus needs {n} hour left',
+  'ui.line.need.other': 'Bus needs {n} hours left',
+  'ui.line.miss': 'Misses the last bus',
   // What changed, one line each under the officer's reaction (changeLines() in src/game/consequence.ts).
   'change.contact': 'You named {contact}.',
   'change.time.one': '{n} hour lost.',
@@ -114,6 +118,7 @@ export const en: Record<string, string> = {
   'ui.waiting': 'Waiting',
   'ui.tapToSkip': 'Tap to skip',
   'ui.inQueue': 'In the queue',
+  'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
   'ui.endingsSeen': 'Endings seen: {n} of 4',
   // Ending card (Ending in src/App.tsx)

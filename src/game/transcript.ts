@@ -82,7 +82,12 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
   const now = shownCheckpoint(s);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
-  const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
+  const cpName = t(`checkpoint.${CHECKPOINTS[now]}`);
+  let name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : cpName;
+  if (s.screen.kind === 'inspection') {
+    p.add('ui.inInspection', { name: cpName }, CHROME);
+    name = t('ui.inInspection', { name: cpName });
+  }
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
   p.add('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length }, CHROME);
   p.add('ui.progress', { count, name }, CHROME);
@@ -225,7 +230,7 @@ function storyLines(s: RunState, p: Page): void {
 
 /** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */
 function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void {
-  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s)).parts.map((x) =>
+  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s), s).parts.map((x) =>
     render(() => (x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)), x.key),
   );
   const problem = parts.find((x) => x.problem)?.problem;

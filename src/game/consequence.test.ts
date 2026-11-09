@@ -4,13 +4,13 @@ import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
 import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, nextActionKey, packDetail } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
-import { newRun } from './engine';
+import { deskOf, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { GameEvent } from './play';
 import { en } from '../i18n/en';
 import type { Part } from './consequence';
 import type { Option } from './engine';
-import type { CharacterId, ContactId, Effect, EvidenceId, Topic } from './types';
+import type { CharacterId, ContactId, Effect, EvidenceId, RunState, Topic } from './types';
 
 const text = (p: Part) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars));
 
@@ -119,6 +119,56 @@ describe('consequence line', () => {
     const a = ENCOUNTERS[0].approaches[0];
     const c = consequence({ approach: a, blocked: 'noCard', effects: [] }, 'enc.x.y', 'cousin');
     expect(c.parts.map(text)).toEqual([t('ui.blocked.noCard')]);
+  });
+});
+
+describe('the last bus, on the answer line', () => {
+  // A real inspection state, so the options carry the engine's own effects.
+  const at = (id: string, time: number, travel?: number): RunState => ({
+    ...newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 }),
+    screen: { kind: 'inspection', id },
+    time,
+    ...(travel === undefined ? {} : { travel }),
+  });
+  const line = (s: RunState, approach: string) => {
+    const o = options(s).find((x) => x.approach.id === approach)!;
+    return consequence(o, `insp.${s.screen.kind === 'inspection' ? s.screen.id : ''}.${approach}`, 'cousin', deskOf(s), s).parts;
+  };
+
+  it('says the bus is missed when the cost leaves fewer hours than the trip', () => {
+    const s = at('s_bag', 3);
+    expect(travelOf(s)).toBe(2);
+    const parts = line(s, 'wait');
+    expect(parts.map(text)).toContain('Misses the last bus');
+    expect(parts.find((p) => p.kind === 'miss')?.tone).toBe('red');
+    expect(parts.some((p) => p.kind === 'time')).toBe(false);
+  });
+
+  it('says how many hours a later connection will need', () => {
+    const parts = line(at('s_connection', 6), 'later');
+    expect(parts.map(text)).toContain('Bus needs 3 hours left');
+    expect(line(at('s_connection', 6, 4), 'later').map(text)).toContain('Bus needs 5 hours left');
+    expect(parts.some((p) => p.kind === 'miss')).toBe(false);
+  });
+
+  it('a later connection with too few hours left misses the bus', () => {
+    expect(line(at('s_connection', 2), 'later').map(text)).toEqual(expect.arrayContaining(['Misses the last bus']));
+  });
+
+  it('a run already short of the trip still says a costly answer misses the bus, and a free one does not', () => {
+    const s = at('s_bag', 1);
+    expect(travelOf(s)).toBe(2);
+    expect(line(s, 'wait').map(text)).toContain('Misses the last bus');
+    expect(line(s, 'wait').some((p) => p.kind === 'time')).toBe(false);
+    // An answer with no time or travel cost changes nothing about the bus, so it says nothing about it.
+    expect(line(at('s_medicine', 1), 'surrender').some((p) => p.kind === 'miss')).toBe(false);
+  });
+
+  it('an answer that keeps the bus possible shows neither line', () => {
+    const parts = line(at('s_bag', 8), 'wait');
+    expect(parts.map(text)).toContain('Costs 3 hours');
+    expect(parts.some((p) => p.kind === 'miss' || p.key === 'ui.line.need')).toBe(false);
+    expect(line(at('s_bag', 3), 'withdraw').some((p) => p.kind === 'miss')).toBe(false);
   });
 });
 

@@ -1,9 +1,13 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { newRun } from '../src/game/engine';
+import { newRun, options } from '../src/game/engine';
+import { ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
+import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 import { SAVE_KEY, freshSave } from '../src/game/save';
+import { own, t } from '../src/i18n';
 import { en } from '../src/i18n/en';
 import type { RunState, Screen } from '../src/game/types';
+import { CHECKPOINTS } from '../src/game/types';
 
 // One full run on a phone-size screen: title → character → documents → begin → play by
 // always taking the first enabled option → ending card.
@@ -297,5 +301,94 @@ test('a Too late ending still lists the exposed mother, scored', async ({ page }
   await expect(lines).toHaveCount(2);
   await expect(lines.nth(0)).toHaveText(/^Minor Your mother gets a call from the border/);
   await expect(lines.nth(1)).toHaveText('Minor 1 thing about you is on file now.');
+  expect(errors).toEqual([]);
+});
+
+// The counter scene keeps one box on the run screen: answering does not let the officer
+// grow into the space the buttons freed (2026-11-09 screenshot review). The box gives
+// way first when the answers need the room.
+const sceneBox = (page: Page) => page.locator('main.run .scene').evaluate((el) => {
+  const r = el.getBoundingClientRect();
+  return { top: Math.round(r.top), height: Math.round(r.height) };
+});
+
+test('the interview scene keeps its top and height through question, reaction and next question', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'encounter', id: 'i_water' }, checkpoint: 2, slot: 0, seen: ['i_water'] });
+  const question = page.locator('main.run .panel.ask .question');
+  const first = (await question.innerText()).trim();
+  const asked = await sceneBox(page);
+  expect(asked.height, 'scene height on the question').toBeGreaterThanOrEqual(180);
+  expect(asked.height, 'scene height on the question').toBeLessThanOrEqual(220);
+
+  await page.locator('main.run .controls button.choice:enabled').first().click();
+  await expect(page.locator('main.run .panel.reaction')).toBeVisible();
+  expect(await sceneBox(page), 'scene on the reaction').toEqual(asked);
+
+  await page.locator('main.run .controls button.primary').click();
+  await expect(question).toBeVisible();
+  expect((await question.innerText()).trim(), 'a new question').not.toBe(first);
+  expect(await sceneBox(page), 'scene on the next question').toEqual(asked);
+  expect(errors).toEqual([]);
+});
+
+test('with the longest question and three answers, the scene shrinks before an answer leaves the screen', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  // The longest question with three answers, of every card and traveler.
+  let worst: { run: RunState; length: number } | null = null;
+  for (const id of CHARACTER_IDS) {
+    const base = newRun({ character: id, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[id].evidenceSlots), bulletin: 'records', seed: 7 });
+    const cards: [Screen, number][] = [
+      ...ENCOUNTERS.map((e): [Screen, number] => [{ kind: 'encounter', id: e.id }, e.checkpoint === 'followup' ? 2 : CHECKPOINTS.indexOf(e.checkpoint)]),
+      ...INSPECTIONS.map((i): [Screen, number] => [{ kind: 'inspection', id: i.id }, 2]),
+    ];
+    for (const [screen, checkpoint] of cards) {
+      const run: RunState = { ...base, reaction: null, screen, checkpoint, slot: 1 };
+      if (options(run).length !== 3) continue;
+      const prefix = screen.kind === 'inspection' ? 'insp' : 'enc';
+      const length = t(own(`${prefix}.${(screen as { id: string }).id}.q`, id)).length;
+      if (!worst || length > worst.length) worst = { run, length };
+    }
+  }
+  expect(worst, 'a card with three answers').not.toBeNull();
+
+  // At the default text size, and at a larger one where the answers wrap more.
+  for (const fontSize of ['16px', '20px']) {
+    await openAt(page, worst!.run);
+    await page.addStyleTag({ content: `html { font-size: ${fontSize}; }` });
+    const scene = await sceneBox(page);
+    const lowest = await page.locator('main.run .controls button').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().bottom)));
+    const viewport = page.viewportSize()!.height;
+    expect(lowest, `an answer below the screen at ${fontSize}`).toBeLessThanOrEqual(viewport);
+    expect(scene.height, `scene height at ${fontSize}`).toBeLessThanOrEqual(220);
+    if (fontSize === '20px') expect(scene.height, 'the scene gave up height at 20px').toBeLessThan(180);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('the bag search scene has an open suitcase, and the supervisor comes in for an inspection', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'inspection', id: 's_bag' }, checkpoint: 1, slot: 1 });
+  const scene = page.locator('main.run .scene svg[data-scene="customs"]');
+  await expect(scene.locator('[data-name="open suitcase"]')).toHaveCount(1);
+  await expect(scene.locator('[data-name="supervisor"]')).toHaveCount(1);
+  // The bag search can be dealt at any checkpoint, so every scene opens the suitcase.
+  for (const [checkpoint, name] of [[0, 'passport'], [2, 'interview']] as const) {
+    await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'inspection', id: 's_bag' }, checkpoint, slot: 1 });
+    await expect(page.locator(`main.run .scene svg[data-scene="${name}"] [data-name="open suitcase"]`), name).toHaveCount(1);
+  }
+  // An ordinary customs card has neither.
+  await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'encounter', id: 'c_medicine' }, checkpoint: 1, slot: 1 });
+  await expect(scene.locator('[data-name="open suitcase"]')).toHaveCount(0);
+  await expect(scene.locator('[data-name="supervisor"]')).toHaveCount(0);
+  // At passport control the clerk holds your passport behind the glass.
+  await openAt(page, { ...lenaRun(), reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
+  await expect(page.locator('main.run .scene svg[data-scene="passport"] [data-name="passport behind the glass"]')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
