@@ -177,10 +177,12 @@ p { margin: 0 0 var(--gap); }
 .back:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
 /* Packing (DocumentsStep): scene slot, stage, title and count, bulletin, six one-line rows. */
 .pack-scene {
+  position: relative;
   flex: none;
   height: 72px;
   border-radius: var(--radius);
-  background: linear-gradient(#56645d, #46534c 70%, #3a4640 70%);
+  overflow: hidden;
+  background: var(--wall);
 }
 .step-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .stage-label { margin: 0; font-family: var(--mono); font-size: 0.9rem; letter-spacing: 0.06em; font-variant-caps: all-small-caps; color: #c5cec9; }
@@ -232,11 +234,15 @@ p { margin: 0 0 var(--gap); }
   color: var(--paper);
 }
 .traveler-scene {
+  position: relative;
   flex: none;
   height: 120px;
   border-radius: var(--radius);
-  background: linear-gradient(#4f5a62, #46534c 62%, #dfe6e8 62%);
+  overflow: hidden;
+  background: #3d4a55;
 }
+/* A journey scene fills its slot (traveler, packing, ending). */
+.journey-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 .premise { margin: 0; font-size: 1.45rem; line-height: 1.25; }
 .travelers { display: grid; gap: var(--gap); }
 .traveler {
@@ -337,28 +343,26 @@ p { margin: 0 0 var(--gap); }
 .scene-customs { background: linear-gradient(#5a6357, #4a5249 62%, #6b5f4b 62%); }
 .scene-interview { background: linear-gradient(#4f5a62, #434d55 65%, #3a3f44 65%); }
 /* The booth fills the lower scene; the officer's role sits on the counter panel. */
-.officer {
-  position: relative;
-  width: 78%;
-  height: 92%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  color: #c5cec9;
+/* The counter view (CheckpointScene) fills the scene; who you face, or "Waiting", is a chip in its corner. */
+.officer { position: absolute; inset: 0; }
+.checkpoint-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.officer-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(20, 25, 23, 0.72);
+  color: #dfe5e1;
 }
-.booth { width: 100%; height: 100%; display: block; }
-.officer-label { position: absolute; bottom: 12%; left: 0; right: 0; text-align: center; }
-.tray {
-  width: 60%;
-  height: 22%;
-  margin-bottom: 8%;
-  border: 2px dashed #9aa59f;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #c5cec9;
+/* What just changed at the counter: your document slides under the glass, the pen moves.
+   With Reduce motion (the setting or the system) only the end state shows. */
+@media (prefers-reduced-motion: no-preference) {
+  .scene:not(.still) .scene-doc { animation: slide-under 700ms ease-out both; }
+  .scene:not(.still) .scene-pen { animation: pen 900ms steps(2) 3; }
 }
+@keyframes slide-under { from { transform: translate(6px, 12px); } to { transform: none; } }
+@keyframes pen { 50% { transform: translateX(-2px); } }
 /* Fluorescent flicker: opacity of a faint tint only, at most ~2 dips a second,
    under 5% change, never red (WCAG 2.3.1). Off with reduced motion. */
 .flicker { position: absolute; inset: 0; background: #f6f8e8; opacity: 0.04; pointer-events: none; }
@@ -409,6 +413,8 @@ p { margin: 0 0 var(--gap); }
 .queue-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* The drawn queue sits at the bottom; above it the wall just continues. */
 .queue-scene.scene-passport { background: var(--wall); }
+.queue-scene.scene-customs { background: #5a6357; }
+.queue-scene.scene-interview { background: #4f5a62; }
 .caption-area { position: relative; }
 .caption {
   margin: 0;
@@ -541,10 +547,58 @@ p { margin: 0 0 var(--gap); }
 .art-passport { fill: var(--passport); }
 .art-passport-edge { fill: var(--paper-2); }
 .art-emblem { fill: var(--amber-dark); }
+/* Scenes (CheckpointScene, JourneyScenes, the later queues): same muted greens and greys, amber for lamps and lit windows. */
+.art-lamp { fill: var(--amber-dark); }
+.art-lamp-wash { fill: var(--amber-dark); opacity: 0.14; }
+.art-window-lit { fill: var(--amber-dark); }
+.art-desk { fill: #4a554f; }
+.art-wall-customs { fill: #5a6357; }
+.art-wall-interview { fill: #4f5a62; }
+.art-door { fill: #3b4641; }
+.art-steel { fill: #9aa59f; }
+.art-steel-edge { fill: #6f7a74; }
+.art-steel-leg { fill: #6f7a74; }
+.art-bag-open { fill: var(--amber-paper); }
+.art-bag-lining { fill: #2a2420; }
+.art-box { fill: var(--paper); }
+.art-box-band { fill: #5f8a6a; }
+.art-paper { fill: var(--paper); }
+.art-paper-shade { fill: var(--paper-2); }
+.art-table { fill: #5b4a3a; }
+.art-table-edge { fill: #3f342a; }
+.art-night { fill: #1f2a30; }
+.art-night-low { fill: #2a363a; }
+.art-dusk-1 { fill: #3d4a55; }
+.art-dusk-2 { fill: #586570; }
+.art-dusk-3 { fill: #8a7a62; }
+.art-hill { fill: #33403b; }
+.art-snow { fill: #dfe6e8; }
+.art-snow-shade { fill: #b9c4c4; }
+.art-barrier { fill: var(--paper); }
+.art-barrier-band { fill: var(--danger-paper); }
+.art-car { fill: #2b302d; }
+.art-glass-solid { fill: var(--glass); }
+.art-mug { fill: #6f8a7a; }
+.art-steam { fill: #c5cec9; opacity: 0.6; }
+.art-cabinet { fill: #6b7670; }
+.art-hospital { fill: #3a4640; }
+.art-rain { fill: var(--glass); opacity: 0.55; }
+.art-seat { fill: #34403a; }
+.art-seat-edge { fill: #4a5650; }
 
 /* ── Ending */
-.ending { justify-content: space-between; }
-.ending-card { margin-top: 8svh; }
+.ending { overflow-y: auto; }
+.ending .controls { margin-top: auto; }
+/* The ending scene takes the spare height above the card and gives it up first. */
+.ending-scene {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 96px;
+  max-height: 300px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--booth);
+}
 .ending-card h1 { font-size: 1.6rem; }
 .ending-turnedBack .ending-card { border-top: 6px solid var(--danger-paper); }
 .ending-tooLate .ending-card, .ending-homeAtCost .ending-card { border-top: 6px solid var(--amber-paper); }

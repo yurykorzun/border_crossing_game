@@ -124,7 +124,11 @@ test('a whole Mark run never shows Ilya, and each queue ends in its own button',
     const option = page.locator('main.run .controls button:enabled').first();
     await expect(option).toBeVisible();
     const label = (await option.innerText()).trim();
-    if (queueGo.includes(label)) seenGo.push(label);
+    if (queueGo.includes(label)) {
+      seenGo.push(label);
+      // Every queue is a drawn scene, not a blank panel.
+      await expect(page.locator('main.run .queue-scene svg.queue-art'), label).toBeVisible();
+    }
     await option.click();
   }
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
