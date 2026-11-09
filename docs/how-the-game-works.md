@@ -88,7 +88,7 @@ A script (`npm run walk`) plays every possible choice and every card the dealer 
 - The ending matches the final state, and no follow-up is left queued.
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
-- The longest run is 11 decisions (the limit is 14), which keeps a run at 5-8 minutes.
+- The longest run is 11 decisions (the limit is 14), which keeps a full run at 4.5-8 minutes with the median at 5 or more (eval rule 4).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 

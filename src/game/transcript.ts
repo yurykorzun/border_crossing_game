@@ -328,7 +328,13 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
 
 export const WORDS_PER_MINUTE = 200;
 export const SECONDS_PER_DECISION = 3;
-export const PLAY_MINUTES = { min: 5, max: 8 } as const;
+/**
+ * Rule 4. Every full run is floor-max minutes, and across the eval the median
+ * full run reaches target. A run you withdraw from (turnedBack) only has the
+ * ceiling. Yury's call on 2026-11-09, after the short packing screen (67a.16)
+ * put some runs just under 5 minutes.
+ */
+export const PLAY_MINUTES = { floor: 4.5, target: 5, max: 8 } as const;
 
 export const words = (tr: Transcript) =>
   tr.lines.reduce((n, l) => (l.chrome ? n : n + l.text.split(/\s+/).filter(Boolean).length), 0);
@@ -365,25 +371,53 @@ export interface Failure {
   minutes?: number;
 }
 
-export type Rule = { id: number; name: string; check: (tr: Transcript) => Omit<Failure, 'rule' | 'style' | 'seed' | 'character'>[] };
+/** A check over all transcripts together. `ok: false` fails the command like a fresh failure. */
+export interface Summary { rule: number; ok: boolean; text: string }
+
+export type Rule = {
+  id: number;
+  name: string;
+  check: (tr: Transcript) => Omit<Failure, 'rule' | 'style' | 'seed' | 'character'>[];
+  /** Optional check over the whole eval, after every run is checked. */
+  summary?: (trs: Transcript[]) => Omit<Summary, 'rule'> | undefined;
+};
+
+export type PlayTimeRange = { floor: number; target: number; max: number };
+
+/** Median estimate of the full runs (not turnedBack), or undefined when there are none. */
+export function medianFullMinutes(trs: Transcript[]): { runs: number; median: number | undefined } {
+  const ms = trs.filter((tr) => tr.ending !== 'turnedBack').map(playMinutes).sort((a, b) => a - b);
+  if (!ms.length) return { runs: 0, median: undefined };
+  const mid = ms.length >> 1;
+  return { runs: ms.length, median: ms.length % 2 ? ms[mid] : (ms[mid - 1] + ms[mid]) / 2 };
+}
 
 /**
- * Rule 4 for a target range. The floor is for a run that goes the whole way. A run
- * you withdraw from (turnedBack) only has the ceiling, because you chose to stop early
- * and the game should not make you read more for it.
+ * Rule 4 for a range. The floor is for a run that goes the whole way. A run you
+ * withdraw from (turnedBack) only has the ceiling, because you chose to stop early
+ * and the game should not make you read more for it. The summary asks that the
+ * median full run reaches the target, so the floor is a margin and not the aim.
  */
-export function playTimeRule(range: { min: number; max: number }): Rule {
+export function playTimeRule(range: PlayTimeRange): Rule {
   return {
     id: 4,
-    name: `estimated play time is ${range.min}-${range.max} minutes (a run you withdraw from can be shorter)`,
+    name: `estimated play time is ${range.floor}-${range.max} minutes and the median full run reaches ${range.target} (a run you withdraw from can be shorter)`,
     check: (tr) => {
       const m = playMinutes(tr);
-      if (m <= range.max && (m >= range.min || tr.ending === 'turnedBack')) return [];
+      if (m <= range.max && (m >= range.floor || tr.ending === 'turnedBack')) return [];
       const last = tr.lines.length ? tr.lines[tr.lines.length - 1].step : 0;
       return [{
-        step: last, key: m < range.min ? 'tooShort' : 'tooLong', minutes: m,
+        step: last, key: m < range.floor ? 'tooShort' : 'tooLong', minutes: m,
         detail: `${m.toFixed(1)} min (${words(tr)} words, ${tr.beatSeconds.toFixed(0)} s of beats, ${tr.decisions} decisions)`,
       }];
+    },
+    summary: (trs) => {
+      const { runs, median } = medianFullMinutes(trs);
+      if (median === undefined) return undefined;
+      return {
+        ok: median >= range.target,
+        text: `median full run ${median.toFixed(1)} min, target ${range.target} (${runs} runs)`,
+      };
     },
   };
 }
@@ -472,6 +506,8 @@ export interface EvalResult {
   fresh: Failure[];
   /** Known entries with how many failures each covered. One that covered none is stale and fails too. */
   known: { entry: KnownFailure; count: number }[];
+  /** Whole-eval checks (rule 4's median full run). One that is not ok fails the command. */
+  summaries: Summary[];
   exitCode: 0 | 1;
 }
 
@@ -489,14 +525,22 @@ export function evaluate(transcripts: Transcript[], known: KnownFailure[] = KNOW
         else counts[k]++;
       }
   const stale = counts.some((n) => n === 0);
+  const summaries: Summary[] = [];
+  for (const r of rules) {
+    const sum = r.summary?.(transcripts);
+    if (sum) summaries.push({ rule: r.id, ...sum });
+  }
   return {
     runs: transcripts.length,
     byRule,
     fresh,
     known: known.map((entry, i) => ({ entry, count: counts[i] })),
-    exitCode: fresh.length || stale ? 1 : 0,
+    summaries,
+    exitCode: fresh.length || stale || summaries.some((x) => !x.ok) ? 1 : 0,
   };
 }
+
+export const formatSummary = (x: Summary) => `rule ${x.rule}: ${x.text}`;
 
 export const formatFailure = (f: Failure) =>
   `rule ${f.rule}: ${f.style} seed ${f.seed} step ${f.step} (${f.character}, ${f.key}): ${f.detail}`;
