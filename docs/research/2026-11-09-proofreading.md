@@ -2,7 +2,7 @@
 
 2026-11-09, bead border_crossing_game-67a.9. One read of every English string after the copy changes in 67a.6 and 67a.8.
 
-TL;DR: 18 keys changed. Most are person fixes (the player is always "you"), one rendered a sentence starting lowercase, and the two 3/3 lines now say "Scrutiny 3/3". The rules are locked in `src/i18n/terms.test.ts`.
+TL;DR: 18 keys changed by the proofreading, plus 11 keys of new run-length content from 67a.12, listed separately below. Most are person fixes (the player is always "you"), one rendered a sentence starting lowercase, and the two 3/3 lines now say "Scrutiny 3/3". The rules are locked in `src/i18n/terms.test.ts`.
 
 ## Changed keys
 
@@ -26,6 +26,24 @@ TL;DR: 18 keys changed. Most are person fixes (the player is always "you"), one 
 | `ending.homeAtCost.body` | You make it in time. Not everything you carried made it with you. | You make it in time. Not everything you carried comes with you. | Present tense |
 | `ending.line.medicineLost` | The medicine stayed at the border. | The medicine stays at the border. | Present tense |
 | `ending.line.exposed` | {contact} has been told to come in for a conversation. | The officers call {contact} in for a conversation. | Rendered as "your mother has been told...", a sentence starting lowercase |
+
+## Changed for run length (67a.12), not proofreading
+
+These shipped in the same PR, because 67a.12 made runs longer to reach the 5-8 minute target. They were proofread against the same rules, but the change is new content, not a wording fix.
+
+| Key | Change |
+|---|---|
+| `msg.1.3` | Was "The inspector taps the steel table. "Bags here."", now a new line about the honey jar. The old line moved to `msg.1.5` |
+| `msg.1.4` | New: the man behind you says to answer only what they ask |
+| `msg.1.5` | New key, holds the old `msg.1.3` line |
+| `msg.2.2` | Was "A door opens at the end of the corridor. "This way, please."", now the bench and the man waiting since morning. The old line moved to `msg.2.5` |
+| `msg.2.3` | New: "They ask the same thing three different ways" |
+| `msg.2.4` | New: a phone rings down the corridor |
+| `msg.2.5` | New key, holds the old `msg.2.2` line |
+| `ending.homeInTime.body` | Two sentences added after "Your father squeezes your hand." |
+| `ending.homeAtCost.body` | Three sentences added after the tense fix above |
+| `ending.tooLate.body` | Three sentences added after "Your mother is asleep in the corridor." |
+| `ending.turnedBack.body` | Two sentences added after "You let it ring." |
 
 e2e/setup.spec.ts asserts `ui.explainScrutiny` and `ui.missionRule` word for word, so it changed with them.
 

@@ -36,6 +36,8 @@ const TIME_AS_UNIT = [
   /\b(more|extra|less|lose|loses|lost|cost|costs|take|takes|spend|spends|no) time\b/i,
   /\{\w+\} minutes?\b/i,
   /\bminutes? (left|remaining)\b/i,
+  // A label like "Time: {n}" or "Minutes: 3", where the word is the counter's unit.
+  /\b(time|minutes?)\s*:/i,
 ];
 
 /** The value with each {var} filled, so "{contact} has..." is checked as the player reads it. */
@@ -96,6 +98,8 @@ describe('English terms', () => {
     ['time used as a unit', 'ui.x', '{n} time remaining'],
     ['time used as a unit', 'ui.x', 'Every check costs time.'],
     ['time used as a unit', 'ui.x', 'Time left: 3'],
+    ['time used as a unit', 'ui.x', 'Time: {n}'],
+    ['time used as a unit', 'ui.x', 'Minutes: 3'],
     ['old scrutiny word', 'ui.x', 'Noticed'],
     ['old scrutiny word', 'ui.x', 'The officers are watchful.'],
     ['Scrutiny', 'ui.x', 'At 3/3 you are taken aside.'],
