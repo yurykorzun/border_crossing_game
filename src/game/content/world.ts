@@ -114,7 +114,7 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     id: 'returnTicket',
     topics: ['stay', 'money'],
     onUse: [{ fact: 'departureDate' }],
-    // Asked about cash, a paid flight out is the whole answer.
+    // Asked how you are paying for the trip, a paid flight out is the whole answer.
     settles: ['money'],
   },
   deed: {

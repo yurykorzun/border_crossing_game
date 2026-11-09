@@ -157,14 +157,16 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add(`bulletin.${setup.bulletin}`);
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.label`);
-    const parts = packDetail(id).map((k) => render(() => t(k), k));
-    const problem = parts.find((x) => x.problem)?.problem;
-    p.lines.push({
-      step: p.step,
-      key: parts.map((x) => x.key).join(SEPARATOR),
-      text: parts.map((x) => x.text).join(SEPARATOR),
-      ...(problem ? { problem } : {}),
-    });
+    for (const line of packDetail(id)) {
+      const parts = line.map((k) => render(() => t(k), k));
+      const problem = parts.find((x) => x.problem)?.problem;
+      p.lines.push({
+        step: p.step,
+        key: parts.map((x) => x.key).join(SEPARATOR),
+        text: parts.map((x) => x.text).join(SEPARATOR),
+        ...(problem ? { problem } : {}),
+      });
+    }
   }
   p.add('ui.moreBelow');
   p.add('ui.continue');

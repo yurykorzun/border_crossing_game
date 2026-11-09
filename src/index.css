@@ -175,7 +175,7 @@ p { margin: 0 0 var(--gap); }
   cursor: pointer;
 }
 .back:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
-/* Packing (DocumentsStep): scene slot, stage, title and count, bulletin, six one-line rows. */
+/* Packing (DocumentsStep): scene slot, stage, title and count, bulletin, six rows (topics, then Reveals), each line unwrapped. */
 .pack-scene {
   position: relative;
   flex: none;

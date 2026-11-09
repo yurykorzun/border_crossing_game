@@ -198,19 +198,22 @@ export const en: Record<string, string> = {
   'ev.deed.name': 'Apartment deed',
   'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Shown for identity, nothing goes on file.',
   // Handed over: "Show your mother's letter". Used up: "Uses letter".
-  // The packing screen's rows: a short name and what it helps with ("Reveals ..." comes from fact.<id>.reveal).
+  // The packing screen's rows: a short name, then every topic it answers (topic.<t>.helps) and "Reveals ..." (fact.<id>.reveal).
   'ev.hotel.label': 'Hotel booking',
   'ev.motherLetter.label': "Mother's letter",
   'ev.employerLetter.label': 'Employer letter',
   'ev.hospitalNote.label': 'Hospital note',
   'ev.returnTicket.label': 'Return ticket',
   'ev.deed.label': 'Apartment deed',
-  'ev.hotel.helps': 'Accommodation',
-  'ev.motherLetter.helps': 'Visit purpose',
-  'ev.employerLetter.helps': 'Work and money',
-  'ev.hospitalNote.helps': 'Medicine',
-  'ev.returnTicket.helps': 'Length of stay',
-  'ev.deed.helps': 'Identity',
+  // Each topic a document answers, joined in the packing row: "Medicine · Visit purpose".
+  'topic.purpose.helps': 'Visit purpose',
+  'topic.accommodation.helps': 'Accommodation',
+  'topic.stay.helps': 'Length of stay',
+  'topic.work.helps': 'Work',
+  'topic.money.helps': 'Money',
+  'topic.medicine.helps': 'Medicine',
+  'topic.identity.helps': 'Identity',
+  'topic.history.helps': 'History',
   'ev.hotel.the': 'your hotel booking',
   'ev.motherLetter.the': "your mother's letter",
   'ev.employerLetter.the': "your employer's letter",
@@ -367,12 +370,13 @@ export const en: Record<string, string> = {
   'enc.c_medicine.leave.label': 'Leave it behind',
   'enc.c_medicine.leave.reaction': 'The bag goes into a bin marked SURRENDERED.',
 
-  'enc.c_cash.q': '"How much cash are you carrying?"',
+  // Asked how you pay, not how much: a paid return ticket answers it (EVIDENCE.returnTicket settles money).
+  'enc.c_cash.q': '"How are you paying for this trip?"',
   'enc.c_cash.evidence.label': 'Show {cardThe}',
   'enc.c_cash.evidence.reaction': 'He glances at it and waves the question away.',
-  'enc.c_cash.count.label': 'Let him count it',
+  'enc.c_cash.count.label': 'Let him count your cash',
   'enc.c_cash.count.reaction': 'He counts it twice and writes the total on a form.',
-  'enc.c_cash.under.label': '"It\'s under the limit."',
+  'enc.c_cash.under.label': '"In cash. It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes down what you said and does not count it.',
 
   'enc.c_pen.q': '"Long queue today. Need a pen for the form?"',

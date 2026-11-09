@@ -213,7 +213,9 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
                 <span className="checkbox" aria-hidden>{picked.includes(id) && <Icon name="check" />}</span>
                 <span className="doc-text">
                   <strong>{t(`ev.${id}.label`)}</strong>
-                  <span className="doc-detail">{packDetail(id).map((k) => t(k)).join(SEPARATOR)}</span>
+                  {packDetail(id).map((line, n) => (
+                    <span key={n} className={n ? 'doc-detail doc-reveals' : 'doc-detail doc-topics'}>{line.map((k) => t(k)).join(SEPARATOR)}</span>
+                  ))}
                 </span>
               </button>
             </li>

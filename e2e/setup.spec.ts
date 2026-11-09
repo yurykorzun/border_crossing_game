@@ -145,7 +145,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
 
-  // Screen 2: stage, title and count, the bulletin bar, six one-line rows.
+  // Screen 2: stage, title and count, the bulletin bar, six rows whose lines do not wrap.
   const docsScreen = page.locator('main.documents-step');
   await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
   await expect(docsScreen.locator('.stage-label')).toHaveText('2 / 3 · Preparation');
@@ -159,18 +159,27 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   expect(sentence.match(/[.!?]/g), sentence).toHaveLength(1);
   expect(sentence, sentence).toMatch(/[.!?]$/);
 
-  // Every row: a short name and one detail line.
+  // Every row: a short name, a topics line, and a Reveals line for a document that
+  // puts something on file. No line of label text wraps at 390x844.
   const rows = docsScreen.locator('.doc');
   await expect(rows).toHaveCount(EVIDENCE_IDS.length);
   for (const [i, id] of EVIDENCE_IDS.entries()) {
     await expect(rows.nth(i).locator('strong')).toHaveText(en[`ev.${id}.label`]);
-    const detail = rows.nth(i).locator('.doc-detail');
-    await expect(detail).toHaveCount(1);
-    const box = await detail.boundingBox();
-    const lineHeight = await detail.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
-    expect(box!.height, `${id} detail is one line`).toBeLessThan(lineHeight * 1.5);
+    await expect(rows.nth(i).locator('.doc-topics')).toHaveCount(1);
+    for (const el of [rows.nth(i).locator('strong'), ...(await rows.nth(i).locator('.doc-detail').all())]) {
+      const box = await el.boundingBox();
+      const lineHeight = await el.evaluate((e) => parseFloat(getComputedStyle(e).lineHeight));
+      expect(box!.height, `${id}: "${await el.innerText()}" is one line`).toBeLessThan(lineHeight * 1.5);
+    }
   }
-  await expect(docsScreen.locator('.doc', { hasText: "Mother's letter" }).locator('.doc-detail')).toHaveText('Visit purpose · Reveals her address');
+  // Every topic a document answers is in its row, not only the first.
+  const hospital = docsScreen.locator('.doc', { hasText: 'Hospital note' });
+  await expect(hospital.locator('.doc-topics')).toHaveText('Medicine · Visit purpose');
+  await expect(hospital.locator('.doc-reveals')).toHaveText("Reveals your father's condition");
+  const letter = docsScreen.locator('.doc', { hasText: "Mother's letter" });
+  await expect(letter.locator('.doc-topics')).toHaveText('Visit purpose · Accommodation');
+  await expect(letter.locator('.doc-reveals')).toHaveText('Reveals her address');
+  await expect(docsScreen.locator('.doc', { hasText: 'Hotel booking' }).locator('.doc-reveals')).toHaveCount(0);
 
   // All six rows and Continue are on screen with no scroll, and no "more below" cue.
   const inView = await page.evaluate(() => {
