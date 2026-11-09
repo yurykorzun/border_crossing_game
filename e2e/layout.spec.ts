@@ -392,3 +392,65 @@ for (const reduceMotion of [false, true]) {
     expect(errors).toEqual([]);
   });
 }
+
+// The setup screens' Continue: under the cards on a wide window, pinned in view on a phone.
+const MAX_CONTINUE_GAP = 48;
+
+/** Pixels from the bottom of the last `card` to the top of the screen's Continue. */
+async function continueGap(page: Page, step: string, card: string) {
+  const button = await page.locator(`.${step} .controls button.primary`).boundingBox();
+  const last = await page.locator(`.${step} ${card}`).last().boundingBox();
+  return button!.y - (last!.y + last!.height);
+}
+
+test.describe('on a 1280x800 desktop window', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false });
+
+  test('Continue sits within 48 px under the last card on every setup screen', async ({ page }) => {
+    await page.goto('./');
+    await page.locator('.title-screen button.primary').click();
+
+    const gaps: Record<string, number> = {};
+    gaps.traveler = await continueGap(page, 'traveler-step', '.traveler');
+    await page.getByRole('radio').first().click();
+    // With a pick, the history link joins the cards and Continue stays right under it.
+    gaps.travelerPicked = await continueGap(page, 'traveler-step', '.history');
+    await page.locator('.traveler-step .controls button.primary').click();
+
+    gaps.packing = await continueGap(page, 'documents-step', '.doc');
+    const cont = page.locator('.documents-step .controls button.primary');
+    const docs = page.locator('.documents-step .doc');
+    for (let i = 0; !(await cont.isEnabled()); i++) await docs.nth(i).click();
+    await cont.click();
+
+    gaps.begin = await continueGap(page, 'begin-step', '.packed-list');
+    for (const [where, gap] of Object.entries(gaps)) {
+      expect(gap, `Continue under the cards on ${where}`).toBeGreaterThanOrEqual(0);
+      expect(gap, `Continue under the cards on ${where}`).toBeLessThanOrEqual(MAX_CONTINUE_GAP);
+    }
+  });
+});
+
+test('at 390x844 Continue stays pinned in view while the packing list scrolls', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('.title-screen button.primary').click();
+  await page.getByRole('radio').first().click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  // Large text, so the list is sure to be longer than the screen.
+  await page.evaluate(() => { document.documentElement.style.fontSize = '24px'; });
+
+  const body = page.locator('.documents-step .setup-body');
+  const cont = page.locator('.documents-step .controls button.primary');
+  expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight), 'the packing list scrolls').toBe(true);
+  const inView = async () => {
+    const b = (await cont.boundingBox())!;
+    return b.y >= 0 && b.y + b.height <= 844;
+  };
+  expect(await inView(), 'Continue in view at the top of the list').toBe(true);
+  const before = (await cont.boundingBox())!.y;
+  await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  expect(await inView(), 'Continue in view at the end of the list').toBe(true);
+  expect((await cont.boundingBox())!.y).toBe(before);
+  const pageScroll = await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight);
+  expect(pageScroll, 'page scroll').toBeLessThanOrEqual(0);
+});

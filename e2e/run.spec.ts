@@ -307,8 +307,8 @@ test('a Home in time ending is a short result card that fits the screen', async 
   expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
   await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport();
 
-  // See what's on file opens Border records alone: no epilogue, no costs, no biography.
-  await page.getByRole('button', { name: "See what's on file" }).click();
+  // See border records opens Border records alone: no epilogue, no costs, no biography.
+  await page.getByRole('button', { name: 'See border records' }).click();
   const sheet = page.locator('dialog.sheet[open]');
   await expect(sheet.locator('h2')).toHaveText('Border records');
   await expect(sheet.locator('h3')).toHaveText(['Your answers', 'Information recorded']);
@@ -450,6 +450,10 @@ for (const c of endingCases) {
     expect(scrolled).toEqual({ doc: 0, main: 0 });
     await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport({ ratio: 1 });
     await noHorizontalScroll(page, `${c.name} ending`);
+    // The sheet button names the sheet it opens (pfi.18).
+    await expect(page.getByRole('button', { name: "See what's on file" })).toHaveCount(0);
+    await page.getByRole('button', { name: 'See border records' }).click();
+    await expect(page.locator('dialog.sheet[open] h2')).toHaveText('Border records');
     expect(errors).toEqual([]);
   });
 }
