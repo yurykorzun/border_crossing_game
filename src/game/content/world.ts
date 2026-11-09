@@ -128,6 +128,24 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
 
 export const EVIDENCE_IDS = Object.keys(EVIDENCE) as EvidenceId[];
 export const BULLETINS: BulletinId[] = ['customs', 'accommodation', 'records'];
+
+/**
+ * The topic each bulletin's warning (bulletin.<id> in i18n) points at, without
+ * naming a document. A packing covers it with any document on that topic, and
+ * the walk checks those packings get home in time more often (warningShares).
+ */
+export const BULLETIN_TOPICS: Record<BulletinId, Topic> = {
+  // The medicine lab: a medical note saves the wait.
+  customs: 'medicine',
+  // Every host is phoned at customs (c_host): a paper that says where you stay answers it.
+  accommodation: 'accommodation',
+  // The records scan takes longer: a paper that proves who you are skips it.
+  records: 'identity',
+};
+
+/** Whether a packing has a document on the topic the bulletin warns about. */
+export const coversWarning = (loadout: readonly EvidenceId[], bulletin: BulletinId): boolean =>
+  loadout.some((id) => EVIDENCE[id].topics.includes(BULLETIN_TOPICS[bulletin]));
 export const CHARACTER_IDS = Object.keys(CHARACTERS) as CharacterId[];
 
 /** Ordinary procedural beats per checkpoint, keyed beat.<checkpoint>.<n> in i18n. */

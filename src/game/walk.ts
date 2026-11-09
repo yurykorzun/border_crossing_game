@@ -20,10 +20,10 @@ import {
 import { consequences } from './consequence';
 import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
+import type { Action, BulletinId, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { t, tn } from '../i18n';
@@ -95,6 +95,11 @@ export interface SetupResult {
   guaranteed: EndingId;
   /** Best ending with the luckiest deal. */
   best: EndingId;
+  /**
+   * Chance of homeInTime for a player who picks every answer at random, against
+   * a dealer who deals at random. Unlike the two above it can tell packings apart.
+   */
+  homeChance: number;
 }
 
 export interface WalkReport {
@@ -330,6 +335,27 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   return bad;
 }
 
+export interface WarningShare {
+  bulletin: BulletinId;
+  /** Mean homeChance of packings with a document on the warned topic, and how many there are. */
+  covered: number;
+  coveredCount: number;
+  /** The same for packings without one. */
+  ignored: number;
+  ignoredCount: number;
+}
+
+/** Per bulletin: do packings that heed its warning get home in time more often? */
+export function warningShares(setups: SetupResult[]): WarningShare[] {
+  const mean = (list: SetupResult[]) => list.reduce((a, s) => a + s.homeChance, 0) / (list.length || 1);
+  return BULLETINS.map((bulletin) => {
+    const today = setups.filter((s) => s.setup.bulletin === bulletin);
+    const covered = today.filter((s) => coversWarning(s.setup.loadout, bulletin));
+    const ignored = today.filter((s) => !coversWarning(s.setup.loadout, bulletin));
+    return { bulletin, covered: mean(covered), coveredCount: covered.length, ignored: mean(ignored), ignoredCount: ignored.length };
+  });
+}
+
 export function walk(setups: RunSetup[] = allSetups()): WalkReport {
   const report: WalkReport = {
     states: 0,
@@ -344,8 +370,8 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
   };
 
   for (const setup of setups) {
-    // key -> [guaranteed rank, best rank]; null while that state is being explored
-    const memo = new Map<string, [number, number] | null>();
+    // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored
+    const memo = new Map<string, [number, number, number] | null>();
     const path: Move[] = [];
     const problem = (rule: string, detail: string, extra?: Move) => {
       if (report.problems.length >= 50) return;
@@ -353,34 +379,35 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
       report.problems.push({ rule, detail, repro: { contentVersion: CONTENT_VERSION, setup, moves } });
     };
 
-    const visit = (s: RunState): [number, number] => {
+    const visit = (s: RunState): [number, number, number] => {
       const k = key(s);
       const known = memo.get(k);
       if (known) return known;
       if (known === null) {
         problem('every run ends', `state repeats on its own path at ${JSON.stringify(s.screen)}`);
-        return [0, 0];
+        return [0, 0, 0];
       }
       memo.set(k, null);
       report.states++;
       for (const d of checkState(s)) problem('state rules', d);
       if (s.screen.kind === 'encounter' || s.screen.kind === 'inspection') report.seenCards.add(s.screen.id);
 
-      let value: [number, number];
+      let value: [number, number, number];
       const actions = legalActions(s);
       if (s.ending) {
         report.endings[s.ending]++;
         report.maxDecisions = Math.max(report.maxDecisions, s.decisions);
         report.maxInspections = Math.max(report.maxInspections, s.inspections);
         const rank = ENDING_RANK.indexOf(s.ending);
-        value = [rank, rank];
+        value = [rank, rank, s.ending === 'homeInTime' ? 1 : 0];
         for (const a of [{ type: 'ack' }, { type: 'beat' }] as Action[])
           if (tryStep(s, a).ok) problem('the end is final', `${JSON.stringify(a)} accepted after the ending`);
       } else if (!actions.length) {
         problem('no dead ends', `nothing to do on ${JSON.stringify(s.screen)}`);
-        value = [0, 0];
+        value = [0, 0, 0];
       } else {
-        value = [-1, -1];
+        value = [-1, -1, 0];
+        let tried = 0;
         for (const a of actions) {
           if (a.type === 'choose' && !s.reaction) {
             const id = (s.screen as { id: string }).id;
@@ -390,6 +417,8 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
           }
           let worst = Infinity;
           let best = -1;
+          let chance = 0;
+          let dealt = 0;
           let next: Outcome[];
           try {
             next = outcomes(s, a);
@@ -410,14 +439,20 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
             }
             for (const d of checkMove(s, o.state, a)) problem('move rules', d, move);
             path.push(move);
-            const [g, b] = visit(o.state);
+            const [g, b, c] = visit(o.state);
             path.pop();
             worst = Math.min(worst, g);
             best = Math.max(best, b);
+            chance += c;
+            dealt++;
           }
-          if (best >= 0) value = [Math.max(value[0], worst), Math.max(value[1], best)];
+          if (best >= 0) {
+            value = [Math.max(value[0], worst), Math.max(value[1], best), value[2] + chance / dealt];
+            tried++;
+          }
         }
-        if (value[1] < 0) value = [0, 0];
+        if (value[1] < 0) value = [0, 0, 0];
+        else value[2] /= tried;
         // Finishing quickly is only fair if nothing better was left: from a doomed state no deal reaches the bus.
         if (doomed(s) && value[1] > ENDING_RANK.indexOf('tooLate'))
           problem('doomed runs stay doomed', `${ENDING_RANK[value[1]]} reachable with ${s.time} hours left and a ${travelOf(s)}-hour trip`);
@@ -434,7 +469,7 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
       continue;
     }
     const value = visit(start);
-    report.setups.push({ setup, guaranteed: ENDING_RANK[value[0]], best: ENDING_RANK[value[1]] });
+    report.setups.push({ setup, guaranteed: ENDING_RANK[value[0]], best: ENDING_RANK[value[1]], homeChance: value[2] });
   }
   return report;
 }

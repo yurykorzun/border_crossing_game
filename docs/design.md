@@ -69,7 +69,15 @@ Background facts come from ordinary life and are the "My story" panel. Encounter
 | Return ticket | Length of stay, money | A fixed departure date |
 | Apartment deed | Identity, accommodation | Your property inside |
 
-Each card covers two topics, so a "wrong" pick is never useless. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin hints at today's risk.
+Each card covers two topics, so a "wrong" pick is never useless. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
+
+| Bulletin | Warning | Topic it points at | What it changes |
+|---|---|---|---|
+| Customs | "Medicines are lab-tested today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file |
+| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call |
+| Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once |
+
+`npm run walk` checks the warning means something: for every bulletin, packings with a document on the warned topic get home in time more often (with random answers and deals) than packings without one.
 
 ## Encounters
 

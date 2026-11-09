@@ -3,7 +3,8 @@
 // "lucky" is the best ending with the kindest deal. Ending shares count
 // branches, not players, so they are a smell, not a balance verdict.
 import { writeFileSync } from 'node:fs';
-import { ENDING_RANK, walk } from '../src/game/walk';
+import { ENDING_RANK, walk, warningShares } from '../src/game/walk';
+import { BULLETIN_TOPICS } from '../src/game/content/world';
 import type { SetupResult } from '../src/game/walk';
 import type { EndingId } from '../src/game/types';
 
@@ -45,5 +46,13 @@ for (const [title, pickEnding] of [
 }
 
 console.log(`\nSetups where homeInTime is reachable at all: ${r.setups.filter((s) => s.best === 'homeInTime').length} of ${r.setups.length}`);
+
+// Random answers against a random dealer, so a packing's documents show in the number.
+console.log('\nBulletin warnings: homeInTime chance with random answers and deals, packings that cover the warned topic vs ignore it');
+for (const w of warningShares(r.setups)) {
+  const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+  const verdict = w.covered > w.ignored ? 'ok' : 'WARNING MEANS NOTHING';
+  console.log(`  ${w.bulletin.padEnd(14)} ${BULLETIN_TOPICS[w.bulletin].padEnd(14)} covered ${pct(w.covered)} (${w.coveredCount})   ignored ${pct(w.ignored)} (${w.ignoredCount})   ${verdict}`);
+}
 console.log(`\nEnd states by ending (share of branches, not of players), ${total} total:`);
 for (const [e, n] of Object.entries(r.endings)) console.log(`  ${e.padEnd(12)} ${n} (${((n / total) * 100).toFixed(1)}%)`);

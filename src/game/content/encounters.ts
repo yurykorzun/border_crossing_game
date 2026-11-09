@@ -60,7 +60,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'p_photo', checkpoint: 'passport', kind: 'routine', topic: 'identity',
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
-      { id: 'scan', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' },
+      { id: 'scan', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
     ],
   },
   {
@@ -70,7 +70,7 @@ export const ENCOUNTERS: Encounter[] = [
       // Honest, and the second passport goes on file: that entry is the reason for the scrutiny.
       { id: 'both', kind: 'say', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
-      { id: 'handOver', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' },
+      { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
     ],
   },
   {
@@ -121,7 +121,8 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'c_host', checkpoint: 'customs', kind: 'related', priority: 2, topic: 'accommodation',
-    when: { facts: ['familyAddress'] },
+    // An address on file, or a day when every host is phoned.
+    when: { any: [{ facts: ['familyAddress'] }, { bulletin: 'accommodation' }] },
     approaches: [
       { id: 'call', kind: 'verify', effects: [{ time: -1 }], check: 'hostCall' },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },

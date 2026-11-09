@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { ENDING_RANK, allSetups, checkState, outcomes, walk } from './walk';
+import { ENDING_RANK, allSetups, checkState, outcomes, walk, warningShares } from './walk';
 import { legalActions, newRun, step } from './engine';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
+import { BULLETINS, BULLETIN_TOPICS } from './content/world';
+import { t } from '../i18n';
 
 // One walk shared by every assertion: every character, packing and bulletin,
 // every player choice and every card the dealer could deal (about 11 s).
@@ -47,6 +49,22 @@ describe('every possible run', () => {
     const atLeast = ENDING_RANK.indexOf('tooLate');
     const bad = report.setups.filter((s) => ENDING_RANK.indexOf(s.guaranteed) < atLeast);
     expect(bad.map((s) => s.setup)).toEqual([]);
+  });
+
+  it('makes every bulletin warning worth heeding: covering packings reach homeInTime more often', () => {
+    const shares = warningShares(report.setups);
+    expect(shares.map((w) => w.bulletin)).toEqual(BULLETINS);
+    for (const w of shares) {
+      expect(w.coveredCount * w.ignoredCount, w.bulletin).toBeGreaterThan(0);
+      expect(w.covered, `${w.bulletin}: covered ${w.covered} vs ignored ${w.ignored}`).toBeGreaterThan(w.ignored);
+    }
+  });
+
+  it('gives every bulletin a warning string and a warned topic', () => {
+    for (const b of BULLETINS) {
+      expect(t(`bulletin.${b}`).trim(), b).not.toBe('');
+      expect(BULLETIN_TOPICS[b], b).toBeDefined();
+    }
   });
 
   it('never rates the guaranteed ending above the lucky one', () => {

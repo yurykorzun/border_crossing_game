@@ -267,10 +267,10 @@ export const en: Record<string, string> = {
   'fact.phoneRefused.reveal': 'Your refusal goes on file',
   'fact.cashCount.reveal': 'Puts your cash total on file',
 
-  // ── Bulletins
-  'bulletin.customs': 'Medicines may be sent for testing today.',
-  'bulletin.accommodation': 'Accommodation records may be verified by phone.',
-  'bulletin.records': 'Older records are being cross-checked.',
+  // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
+  'bulletin.customs': 'Medicines are lab-tested today.',
+  'bulletin.accommodation': 'Hosts are being phoned today.',
+  'bulletin.records': 'IDs are checked against old records.',
 
   // ── Checkpoints
   'checkpoint.passport': 'Passport control',
@@ -339,7 +339,7 @@ export const en: Record<string, string> = {
   'enc.p_photo.evidence.label': 'Show {cardThe}',
   'enc.p_photo.evidence.reaction': 'She compares the addresses and seems satisfied.',
   'enc.p_photo.scan.label': 'Offer a face scan',
-  'enc.p_photo.scan.reaction': 'Matching the scan takes an hour.',
+  'enc.p_photo.scan.reaction': 'Matching the scan takes an hour, two on records days.',
 
   'enc.p_secondPassport.q': '"You hold another passport. Which country do you consider yours?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
@@ -347,7 +347,7 @@ export const en: Record<string, string> = {
   'enc.p_secondPassport.evidence.label': 'Show {cardThe}',
   'enc.p_secondPassport.evidence.reaction': '"So you still own property here." She hands it back.',
   'enc.p_secondPassport.handOver.label': 'Hand over both passports',
-  'enc.p_secondPassport.handOver.reaction': 'Checking both passports takes an hour.',
+  'enc.p_secondPassport.handOver.reaction': 'Checking both passports takes an hour, two on records days.',
 
   'enc.p_employer.q': '"A tourist with a foreign salary. Who pays you?"',
   'enc.p_employer.perk.label': 'Explain your job plainly',
@@ -386,7 +386,7 @@ export const en: Record<string, string> = {
   'enc.c_tourist.mother.label': 'Ask him to call {contact}',
   'enc.c_tourist.mother.reaction': 'Your mother answers on the second ring.',
 
-  'enc.c_host.q': '"We need to confirm the address on your mother\'s letter."',
+  'enc.c_host.q': '"We need to confirm where you will stay."',
   'enc.c_host.call.label': 'Wait while they call',
   'enc.c_host.call.reaction': 'Reaching your mother takes an hour.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
@@ -529,7 +529,7 @@ export const en: Record<string, string> = {
   'check.hostCall.title': 'Your mother\'s address is being checked.',
   'check.hostCall.clear': 'Your mother answers. The officer hangs up and nods.',
   'check.hostCall.noAnswer': 'The officer puts the phone down without speaking.',
-  'check.hostCall.hint.clear': '"They are calling the number on the letter."',
+  'check.hostCall.hint.clear': '"They are calling your host."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',
   'check.medicineLab.name': 'Medicine check',
   'check.medicineLab.title': 'The medicine has gone for testing.',
