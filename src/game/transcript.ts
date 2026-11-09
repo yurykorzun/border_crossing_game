@@ -146,6 +146,9 @@ function setupLines(setup: RunSetup, p: Page): void {
     p.add('ui.complication');
     p.add(`char.${id}.complication`, {}, { who: id });
   }
+  // Before a pick the screen shows the hint, after it the chosen history.
+  p.add('ui.historyHint');
+  p.add('ui.continue');
   const name = t(`char.${setup.character}.name`);
   p.add('ui.historyOf', { name });
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character });
