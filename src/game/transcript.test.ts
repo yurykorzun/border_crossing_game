@@ -99,20 +99,20 @@ describe('scenario evals', () => {
     expect(KNOWN_FAILURES.filter((k) => k.rule === 4)).toEqual([]);
   });
 
-  it('rule 4: a run just under the 4.5-minute floor fails, one at the floor passes', () => {
+  it('rule 4: a run just under the 4-minute floor fails, one at the floor passes', () => {
     const tr = run(LENA);
     // Pad or trim with beats so the estimate lands exactly where we want it.
     const at = (minutes: number) => ({ ...tr, beatSeconds: tr.beatSeconds + (minutes - playMinutes(tr)) * 60 });
-    expect(playMinutes(at(4.4))).toBeCloseTo(4.4);
-    expect(only(4, [at(4.4)]).fresh[0]).toMatchObject({ rule: 4, key: 'tooShort' });
-    expect(only(4, [at(4.5)]).fresh).toEqual([]);
+    expect(playMinutes(at(3.9))).toBeCloseTo(3.9);
+    expect(only(4, [at(3.9)]).fresh[0]).toMatchObject({ rule: 4, key: 'tooShort' });
+    expect(only(4, [at(4)]).fresh).toEqual([]);
   });
 
   it('rule 4: the median full run must reach 5 minutes', () => {
     const tr = run(LENA);
     const at = (minutes: number, ending = tr.ending) =>
       ({ ...tr, ending, beatSeconds: tr.beatSeconds + (minutes - playMinutes(tr)) * 60 });
-    // Every run is within 4.5-8, so only the median decides.
+    // Every run is within 4-8, so only the median decides.
     const below = only(4, [at(4.6), at(4.8), at(5.5)]);
     expect(below.fresh).toEqual([]);
     expect(below.exitCode).toBe(1);
@@ -130,8 +130,8 @@ describe('scenario evals', () => {
     expect(only(4, [at(1, 'turnedBack')]).summaries).toEqual([]);
   });
 
-  it('rule 4: the default range is a 4.5 floor, 5-minute median and 8 ceiling', () => {
-    expect(PLAY_MINUTES).toEqual({ floor: 4.5, target: 5, max: 8 });
+  it('rule 4: the default range is a 4 floor, 5-minute median and 8 ceiling', () => {
+    expect(PLAY_MINUTES).toEqual({ floor: 4, target: 5, max: 8 });
     expect(RULES.find((r) => r.id === 4)!.name).toBe(playTimeRule(PLAY_MINUTES).name);
   });
 
