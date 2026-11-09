@@ -91,10 +91,12 @@ describe('scenarios', () => {
     });
 
   it('a quiet run gets a third card: the routine question not asked yet', () => {
-    const s = step(quietPassport(), { type: 'choose', approach: 'perk' });
+    const s = step(quietPassport({ bulletin: 'customs' }), { type: 'choose', approach: 'perk' });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'p_photo' });
     expect(s.checkpoint).toBe(0);
-    const after = step(step(s, { type: 'choose', approach: 'mother' }), { type: 'ack' });
+    let after = step(s, { type: 'choose', approach: 'scan' });
+    while (after.screen.kind === 'wait' && after.screen.shown < after.screen.beats.length) after = step(after, { type: 'beat' });
+    after = step(step(after, { type: 'waitAction', action: 'wait' }), { type: 'ack' });
     expect(after.screen).toEqual({ kind: 'between', next: 1 });
   });
 

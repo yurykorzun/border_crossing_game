@@ -200,6 +200,11 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(sheet.locator('h2')).toHaveText('My story');
   await expect(sheet).toContainText('visiting hours end');
   await expect(sheet).toContainText('Background');
+  // Each contact's abilities, from the table in src/game/content/world.ts.
+  await expect(sheet.locator('.people .can')).toHaveText([
+    'Can confirm: address, visit, prescription',
+    /^Can confirm: (a place to stay|a job offer abroad)$/,
+  ]);
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toHaveCount(0);
 

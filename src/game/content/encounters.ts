@@ -45,7 +45,6 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'scan', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' },
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [] },
     ],
   },
   {
@@ -143,7 +142,7 @@ export const ENCOUNTERS: Encounter[] = [
       // Each answer says what it is: name the relative, deny them, or ask why.
       // Only the denial records noOtherFamily, because leaving someone out is not a lie.
       {
-        id: 'name', kind: 'contact', contacts: ['cousin', 'brother'],
+        id: 'name', kind: 'contact', contacts: ['cousin', 'brother'], namesOnly: true,
         effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
       },
       { id: 'deny', kind: 'say', effects: [{ claim: 'noOtherFamily' }] },
@@ -182,7 +181,6 @@ export const ENCOUNTERS: Encounter[] = [
         ],
       },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [] },
     ],
   },
   {
@@ -192,6 +190,7 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'perk', kind: 'perk', effects: [] },
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       { id: 'contract', kind: 'verify', effects: [{ time: -2 }] },
+      { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],
   },
   {
@@ -199,7 +198,6 @@ export const ENCOUNTERS: Encounter[] = [
     when: { facts: ['brotherAbroad'] },
     approaches: [
       { id: 'honest', kind: 'say', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
-      { id: 'number', kind: 'contact', contacts: ['brother'], effects: [] },
       { id: 'calls', kind: 'verify', effects: [{ time: -2 }, { fact: 'brotherAbroad' }] },
     ],
   },
@@ -280,11 +278,12 @@ export const CHECKS: Record<CheckId, Check> = {
 /** Drawn when scrutiny reaches 3. Every one has a time option and a way out. */
 export const INSPECTIONS: Inspection[] = [
   {
-    id: 's_bag',
+    // The prescription is in the bag, and your mother can confirm it.
+    id: 's_bag', topic: 'medicine',
     approaches: [
       // A full search counts the cash, so the total goes on file.
       { id: 'wait', kind: 'verify', effects: [{ time: -3 }, { fact: 'cashCount' }] },
-      { id: 'contact', kind: 'contact', contacts: ['mother', 'cousin', 'brother'], effects: [{ time: -1 }] },
+      { id: 'contact', kind: 'contact', contacts: ['mother'], effects: [{ time: -1 }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
@@ -304,7 +303,8 @@ export const INSPECTIONS: Inspection[] = [
     ],
   },
   {
-    id: 's_supervisor',
+    // The supervisor wants to know why you travel, and your mother can confirm the visit.
+    id: 's_supervisor', topic: 'purpose',
     approaches: [
       { id: 'wait', kind: 'verify', effects: [{ time: -3 }] },
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ time: -1 }] },

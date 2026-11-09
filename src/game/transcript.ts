@@ -191,6 +191,7 @@ function storyLines(s: RunState, p: Page): void {
     if (c === ch.protectedContact) p.add('ui.protected', {}, CHROME);
     if (s.exposed.includes(c)) p.add('ui.exposed', {}, CHROME);
     p.add(`contact.${c}.note`, {}, CHROME);
+    p.add(`contact.${c}.can`, {}, CHROME);
   }
   p.add('ui.claims', {}, CHROME);
   for (const c of s.claims) p.add(`claim.${c}`, {}, CHROME);

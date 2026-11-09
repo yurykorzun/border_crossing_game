@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { en } from './en';
 import { ENCOUNTERS, INSPECTIONS, CHECKS } from '../game/content/encounters';
-import { BEAT_COUNT, BULLETINS, CHARACTERS, EVIDENCE_IDS } from '../game/content/world';
+import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, EVIDENCE_IDS } from '../game/content/world';
 import { QUEUES } from '../game/content/queues';
 import { CHECKPOINTS } from '../game/types';
 
@@ -25,6 +25,10 @@ function contentKeys(): string[] {
     keys.push(`char.${ch.id}.name`, `char.${ch.id}.blurb`, `char.${ch.id}.role`, `char.${ch.id}.advantage`, `char.${ch.id}.complication`);
     for (const b of ch.background) keys.push(`bg.${b}`, `bg.${b}.short`);
     for (const c of ch.contacts) keys.push(`contact.${c}`, `contact.${c}.note`);
+  }
+  for (const c of Object.values(CONTACTS)) {
+    keys.push(`contact.${c.id}.can`);
+    for (const topic of c.abilities) keys.push(`contact.${c.id}.can.${topic}`);
   }
   for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`, `ev.${id}.label`, `ev.${id}.helps`);
   for (const b of BULLETINS) keys.push(`bulletin.${b}`);

@@ -10,7 +10,7 @@ import type { ChangeLine, ContactId, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { EVIDENCE, MAX_SCRUTINY } from './content/world';
 
-export type PartKind = 'medicine' | 'contact' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
+export type PartKind = 'medicine' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
 export type Tone = 'plain' | 'amber' | 'red';
 export type IconKind = 'document' | 'clock' | 'check' | 'shield' | 'flag';
@@ -33,15 +33,16 @@ export const MAX_PARTS = 3;
 export const SEPARATOR = ' · ';
 
 /** Most serious first. Picks the icon and decides what goes when there are more than 3 parts. */
-const SEVERITY: PartKind[] = ['medicine', 'contact', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
+const SEVERITY: PartKind[] = ['medicine', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
 /** Never dropped from the line. */
 const KEEP: PartKind[] = ['medicine', 'contact', 'scrutiny', 'time'];
 /** Reading order on the line: what you hand over, then what happens, then what it costs. */
-const ORDER: PartKind[] = ['card', 'contact', 'fact', 'claim', 'check', 'time', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
+const ORDER: PartKind[] = ['card', 'contact', 'vouch', 'fact', 'claim', 'check', 'time', 'scrutiny', 'medicine', 'withdraw', 'perk', 'free', 'blocked'];
 
 const ICON: Record<PartKind, IconKind> = {
   medicine: 'shield',
   contact: 'document',
+  vouch: 'check',
   withdraw: 'flag',
   scrutiny: 'shield',
   check: 'shield',
@@ -69,6 +70,8 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   const contactKey = `${cardKey}.contact`;
   if (o.contact)
     all.push({ kind: 'contact', key: has(contactKey) ? contactKey : 'ui.line.contact', vars: { contact: o.contact }, tone: o.contact === protectedContact ? 'red' : 'amber' });
+  // After the guaranteed cost, the possible gain, from the contact's abilities: "May confirm the address".
+  if (o.contact && o.vouches) all.push({ kind: 'vouch', key: `contact.${o.contact}.can.${o.vouches}`, tone: 'plain' });
   // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;

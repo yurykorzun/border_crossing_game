@@ -160,6 +160,7 @@ export function StoryContent({ s }: { s: RunState }) {
             {c === ch.protectedContact && <span className="tag">{t('ui.protected')}</span>}
             {s.exposed.includes(c) && <span className="tag risk">{t('ui.exposed')}</span>}
             <small>{t(`contact.${c}.note`)}</small>
+            <small className="can">{t(`contact.${c}.can`)}</small>
           </li>
         ))}
       </ul>
