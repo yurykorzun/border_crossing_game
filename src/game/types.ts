@@ -24,11 +24,16 @@ export type FactId =
   | 'brotherAbroad'
   | 'secondPassport'
   | 'phoneRefused'
-  | 'cashCount';
+  | 'cashCount'
+  | 'noBooking'
+  | 'hostStatement'
+  | 'bankNotice'
+  | 'relativeContact';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
+  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact',
 ];
 
 /** What the player has said. Can be contradicted by facts. */

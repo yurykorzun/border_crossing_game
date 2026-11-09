@@ -178,6 +178,86 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
   });
 });
 
+describe('claim-versus-fact pairs from real procedure', () => {
+  const interview = (extra: Partial<RunState>, setup = lena): RunState =>
+    step({ ...newRun(setup), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra }, { type: 'ack' });
+  const challenge = (s: RunState) => (s.screen.kind === 'encounter' && ['i_clarify', 'i_contradiction'].includes(s.screen.id) ? s.screen.id : undefined);
+
+  // The pairs the balance review asked for (docs/research/2026-11-09-balance-and-levels.md), each with the card that catches it.
+  const pairs: [string, ClaimId, FactId, 'i_clarify' | 'i_contradiction', RunSetup][] = [
+    ['a tourist with no booking to show', 'tourism', 'noBooking', 'i_clarify', lena],
+    ['a hotel stay against the family address on file', 'hotelStay', 'familyAddress', 'i_clarify', lena],
+    ["a hotel stay against the host's account", 'hotelStay', 'hostStatement', 'i_contradiction', lena],
+    ['"I never donated" against the bank notice on the phone', 'neverDonated', 'bankNotice', 'i_contradiction', lena],
+    ['no other relatives against Ilya in the contacts', 'noOtherFamily', 'relativeContact', 'i_contradiction', lena],
+    ['no other relatives against Tom in the contacts', 'noOtherFamily', 'relativeContact', 'i_contradiction', mark],
+  ];
+
+  it.each(pairs)('%s: the claim and the fact deal the card, the claim alone does not', (_, claim, fact, card, setup) => {
+    expect(card === 'i_clarify' ? INCONSISTENCIES : DISPROOFS).toContainEqual([claim, fact]);
+    expect(challenge(interview({ claims: [claim], facts: known(fact) }, setup))).toBe(card);
+    expect(challenge(interview({ claims: [claim] }, setup))).toBeUndefined();
+    expect(challenge(interview({ facts: known(fact) }, setup))).toBeUndefined();
+  });
+
+  it.each(pairs)('%s: answering the card charges its own fact', (_, claim, fact, card, setup) => {
+    const s = interview({ claims: [claim], facts: known(fact) }, setup);
+    const o = options(s).find((x) => x.approach.id === (card === 'i_clarify' ? 'accept' : 'apologise'))!;
+    expect(o.effects.filter((e) => 'scrutiny' in e)).toEqual([{ scrutiny: card === 'i_clarify' ? 1 : 2, reason: fact, when: expect.anything() }]);
+  });
+
+  it('a tourist who has not decided where to stay puts "no booking" on file, a family visitor does not', () => {
+    const tourist = tryStep(at({ ...newRun(lena), claims: ['tourism'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
+    expect(tourist.ok && knows(tourist.state, 'noBooking', 'interview')).toBe(true);
+    const visitor = tryStep(at({ ...newRun(lena), claims: ['familyVisit'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
+    expect(visitor.ok && factIds(visitor.state)).not.toContain('noBooking');
+  });
+
+  it('the phone search finds the bank notice (donation only) and a relative in the contacts, and prints both', () => {
+    const unlock = ENCOUNTERS.find((e) => e.id === 'c_phone')!.approaches.find((a) => a.id === 'unlock')!;
+    expect(unlock.effects).toContainEqual({ fact: 'bankNotice', when: { background: 'donation' } });
+    expect(unlock.effects).toContainEqual({ fact: 'relativeContact' });
+    for (const c of CHECKS.phoneSearch.cases)
+      expect(c.effects).toContainEqual({ send: 'printout', facts: expect.arrayContaining(['bankNotice', 'relativeContact']) });
+  });
+
+  it("the host call puts your mother's account and the other relative on file, and prints them", () => {
+    const clear = CHECKS.hostCall.cases.find((c) => c.result === 'clear')!;
+    expect(clear.effects).toEqual(expect.arrayContaining([
+      { fact: 'hostStatement' },
+      { fact: 'relativeContact' },
+      { send: 'printout', facts: expect.arrayContaining(['familyAddress', 'hostStatement', 'relativeContact']) },
+    ]));
+  });
+
+  /** Plays from the start: `pick` answers where it has a preference, else the first answer, and waits out every check. */
+  function play(setup: RunSetup, pick: Record<string, string>): RunState {
+    let s = newRun(setup);
+    for (let n = 0; n < 200 && !s.ending; n++) {
+      const legal = legalActions(s);
+      const id = !s.reaction && (s.screen.kind === 'encounter' || s.screen.kind === 'inspection') ? s.screen.id : '';
+      const want = legal.find((a) => a.type === 'choose' && a.approach === pick[id]);
+      const wait = legal.find((a) => a.type === 'waitAction' && a.action === 'wait');
+      const answer = legal.find((a) => a.type === 'choose' && a.approach !== 'withdraw');
+      const a = want ?? wait ?? answer ?? legal[0];
+      s = step(s, a);
+      if (s.screen.kind === 'encounter' && s.screen.id === 'i_contradiction' && !s.reaction) return s;
+    }
+    return s;
+  }
+
+  it("Lena's denial on i_family is disproved in a real run: the phone search finds Ilya, and the interview deals the contradiction", () => {
+    const setup: RunSetup = { character: 'lena', loadout: ['employerLetter', 'returnTicket', 'deed'], bulletin: 'customs', seed: 7 };
+    const s = play(setup, { p_purpose: 'family', c_phone: 'unlock', i_family: 'deny' });
+    expect(s.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
+    expect(s.claims).toContain('noOtherFamily');
+    expect(knows(s, 'relativeContact', 'interview')).toBe(true);
+    expect(s.seen).toContain('c_phone');
+    const o = options(s).find((x) => x.approach.id === 'apologise')!;
+    expect(o.effects).toContainEqual(expect.objectContaining({ scrutiny: 2, reason: 'relativeContact' }));
+  });
+});
+
 describe('documents are blocked only by claims that truly exclude them', () => {
   const lenaHotel: RunSetup = { character: 'lena', loadout: ['hotel', 'employerLetter', 'hospitalNote'], bulletin: 'records', seed: 7 };
 

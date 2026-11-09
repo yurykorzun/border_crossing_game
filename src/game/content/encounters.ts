@@ -23,10 +23,21 @@ import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspecti
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   ['tourism', 'familyAddress'],
   ['tourism', 'fatherCondition'],
+  // A tourist with nowhere booked (i_stay).
+  ['tourism', 'noBooking'],
+  // A hotel booking, and the family address on file.
+  ['hotelStay', 'familyAddress'],
 ];
+/** In this order, which also picks the one an apology is charged for (firstCaught). */
 export const DISPROOFS: readonly [ClaimId, FactId][] = [
   ['noOtherFamily', 'brotherAbroad'],
   ['cashUnderLimit', 'cashCount'],
+  // The host call: your mother says you stay with her.
+  ['hotelStay', 'hostStatement'],
+  // The phone search: a bank notice for the donation.
+  ['neverDonated', 'bankNotice'],
+  // A relative synced on the phone, or named by your mother on the host call.
+  ['noOtherFamily', 'relativeContact'],
 ];
 
 /**
@@ -37,6 +48,18 @@ export const DISPROOFS: readonly [ClaimId, FactId][] = [
 export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
 
 const anyPair =(pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
+
+/** Holds when no pair has both its claim made and its fact known at this desk. */
+function noneOf(pairs: readonly [ClaimId, FactId][]): Cond {
+  if (!pairs.length) return {};
+  const [[c, f], ...rest] = pairs;
+  const tail = noneOf(rest);
+  return { any: [{ noClaims: [c], ...tail }, { noFacts: [f], ...tail }] };
+}
+
+/** `scrutiny` for the first pair that holds, with its fact as the reason, so one answer is charged once. */
+const firstCaught = (pairs: readonly [ClaimId, FactId][], scrutiny: number): Effect[] =>
+  pairs.map(([c, f], i) => ({ scrutiny, reason: f, when: { claims: [c], facts: [f], ...noneOf(pairs.slice(0, i)) } }));
 
 export const ENCOUNTERS: Encounter[] = [
   // ── Passport control: identity and purpose (the clerk wants complete paperwork)
@@ -140,6 +163,9 @@ export const ENCOUNTERS: Encounter[] = [
           { fact: 'phoneSearched' },
           { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } },
           { fact: 'donationRecord', when: { background: 'donation' } },
+          // The bank's notice for the donation, and a relative synced in the contacts.
+          { fact: 'bankNotice', when: { background: 'donation' } },
+          { fact: 'relativeContact' },
         ],
       },
       { id: 'refuse', kind: 'say', effects: [{ fact: 'phoneRefused' }, { scrutiny: 1, reason: 'phoneRefused' }, { time: -1 }] },
@@ -154,8 +180,12 @@ export const ENCOUNTERS: Encounter[] = [
       // Staying with her is what rules the hotel out, not visiting family.
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }, { claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
       // An evasion is free unless something on file makes it odd: her address is right there.
-      { id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] }, effects: [] },
-      { id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] }, effects: [{ scrutiny: 1, reason: 'familyAddress' }] },
+      // A tourist who has not decided has no booking to show.
+      { id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] }, effects: [{ fact: 'noBooking', when: { claims: ['tourism'] } }] },
+      {
+        id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] },
+        effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['tourism'] } }],
+      },
     ],
   },
   {
@@ -188,13 +218,7 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'clarify', kind: 'say', effects: [{ claim: 'familyVisit' }] },
       { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
-      {
-        id: 'accept', kind: 'say',
-        effects: [
-          { scrutiny: 1, reason: 'familyAddress', when: { facts: ['familyAddress'] } },
-          { scrutiny: 1, reason: 'fatherCondition', when: { facts: ['fatherCondition'], noFacts: ['familyAddress'] } },
-        ],
-      },
+      { id: 'accept', kind: 'say', effects: firstCaught(INCONSISTENCIES, 1) },
     ],
   },
   {
@@ -202,16 +226,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'i_contradiction', checkpoint: 'interview', kind: 'related', priority: 4, topic: 'history',
     when: anyPair(DISPROOFS),
     approaches: [
-      {
-        id: 'apologise', kind: 'say',
-        effects: [
-          { scrutiny: 2, reason: 'brotherAbroad', when: { claims: ['noOtherFamily'], facts: ['brotherAbroad'] } },
-          {
-            scrutiny: 2, reason: 'cashCount',
-            when: { claims: ['cashUnderLimit'], facts: ['cashCount'], any: [{ noClaims: ['noOtherFamily'] }, { noFacts: ['brotherAbroad'] }] },
-          },
-        ],
-      },
+      { id: 'apologise', kind: 'say', effects: firstCaught(DISPROOFS, 2) },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
@@ -272,7 +287,7 @@ export const ENCOUNTERS: Encounter[] = [
 ];
 
 /** What the phone search found, printed for the next desk. */
-const PHONE_REPORT: Effect = { send: 'printout', facts: ['phoneSearched', 'brotherAbroad', 'donationRecord'] };
+const PHONE_REPORT: Effect = { send: 'printout', facts: ['phoneSearched', 'brotherAbroad', 'donationRecord', 'bankNotice', 'relativeContact'] };
 
 /** Results are fixed when the check starts; the waiting room only reveals them. */
 export const CHECKS: Record<CheckId, Check> = {
@@ -282,7 +297,15 @@ export const CHECKS: Record<CheckId, Check> = {
     cases: [
       // The call note goes with your file to the interview, address and all.
       { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
-      { result: 'clear', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
+      // When she answers, her account goes with it: you stay with her, and who else is family here.
+      {
+        result: 'clear',
+        effects: [
+          { fact: 'hostStatement' },
+          { fact: 'relativeContact' },
+          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeContact'] },
+        ],
+      },
     ],
   },
   medicineLab: {

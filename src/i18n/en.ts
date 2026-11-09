@@ -107,6 +107,10 @@ export const en: Record<string, string> = {
   'change.fact.secondPassport': 'Your second passport is now on file.',
   'change.fact.phoneRefused': 'Your refusal is now on file.',
   'change.fact.cashCount': 'Your cash total is now on file.',
+  'change.fact.noBooking': 'That you have no booking is now on file.',
+  'change.fact.hostStatement': "Your mother's account of your stay is now on file.",
+  'change.fact.bankNotice': 'A bank notice about your donation is now on file.',
+  'change.fact.relativeContact': 'Another relative of yours is now on file.',
   'change.sent': 'Sent on to {desk}: {fact}.',
   'change.records': 'Into the shared records for the desks ahead: {fact}.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
@@ -264,6 +268,10 @@ export const en: Record<string, string> = {
   'fact.secondPassport': 'Your second passport',
   'fact.phoneRefused': 'You refused a phone search',
   'fact.cashCount': 'Your cash, counted',
+  'fact.noBooking': 'No booking to show',
+  'fact.hostStatement': 'Your mother says you stay with her',
+  'fact.bankNotice': 'A bank notice for your donation',
+  'fact.relativeContact': 'Another relative, in your contacts',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for visiting',
   'claim.tourism.recorded': 'Recorded as your reason for visiting',
@@ -286,6 +294,10 @@ export const en: Record<string, string> = {
   'fact.secondPassport.reveal': 'Puts your second passport on file',
   'fact.phoneRefused.reveal': 'Your refusal goes on file',
   'fact.cashCount.reveal': 'Cash total recorded',
+  'fact.noBooking.reveal': 'No booking to show',
+  'fact.hostStatement.reveal': 'Your mother says where you stay',
+  'fact.bankNotice.reveal': 'Reveals a bank notice',
+  'fact.relativeContact.reveal': 'Reveals another relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicines are lab-tested today.',
