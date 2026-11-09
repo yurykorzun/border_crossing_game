@@ -8,6 +8,7 @@ import { CHARACTERS, CONTACTS, EVIDENCE, MISSION_MIN_TIME, OFFICERS } from './co
 import { consequence, consequences, SEPARATOR } from './consequence';
 import { cardFor, deskIntro, endingFor, factIds, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
+import { hoursOf, unexplained } from './lint';
 import { tryStep } from './play';
 import { FACT_IDS } from './types';
 import type { Action, CheckId, ClaimId, ContactId, Effect, FactId, FactMap, RunState } from './types';
@@ -641,37 +642,13 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
 });
 
 describe('every time loss names its cause in the reaction (fsx.12)', () => {
-  const HOURS: Record<number, string> = { 1: 'an hour', 2: 'two hours', 3: 'three hours' };
-  const NUMBER: Record<number, string> = { 1: 'one', 2: 'two', 3: 'three' };
-
-  /**
-   * Why the reaction fails, or null. It must state the hours the answer always
-   * costs, inside a sentence that says what they are spent on: at least three
-   * words before the hours, not "It takes" or "That takes". An extra hour that depends on
-   * the day must be stated too.
-   */
-  const unexplained = (text: string, hours: number, most = hours): string | null => {
-    const phrase = HOURS[hours];
-    if (!phrase) return `no wording for ${hours} hours`;
-    const sentence = text.split(/(?<=[.!?"])\s+/).find((x) => x.toLowerCase().includes(phrase));
-    if (!sentence) return `does not say "${phrase}"`;
-    const before = sentence.slice(0, sentence.toLowerCase().indexOf(phrase)).trim();
-    if (before.split(/\s+/).filter(Boolean).length < 2 || /^\W*(it|that|this)\s+takes?\b/i.test(before)) return `"${sentence}" does not say what the time is spent on`;
-    if (most !== hours && !text.toLowerCase().includes(NUMBER[most])) return `does not say it can be ${most} hours`;
-    return null;
-  };
-
+  // unexplained() lives in src/game/lint.ts, so the content lint applies the same test.
   const vars = { contact: 'mother', contactMine: 'mother', cardThe: 'motherLetter' };
   const costly = [
     ...ENCOUNTERS.flatMap((c) => c.approaches.map((a) => ({ key: `enc.${c.id}.${a.id}.reaction`, effects: a.effects }))),
     ...INSPECTIONS.flatMap((c) => c.approaches.map((a) => ({ key: `insp.${c.id}.${a.id}.reaction`, effects: a.effects }))),
   ]
-    .map(({ key, effects }) => {
-      const time = effects.filter((e): e is Effect & { time: number } => 'time' in e);
-      const always = -time.filter((e) => !e.when).reduce((n, e) => n + e.time, 0);
-      const most = -time.reduce((n, e) => n + e.time, 0);
-      return { key, always, most };
-    })
+    .map(({ key, effects }) => ({ key, ...hoursOf(effects) }))
     .filter((x) => x.most > 0);
 
   it('finds the time-costing answers', () => {

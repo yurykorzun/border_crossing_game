@@ -96,6 +96,26 @@ Rules:
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
 5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for cash; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
 
+### Encounter checklist
+
+Every new encounter must answer these six questions before it goes in (from the second design review, 2026-11-08):
+
+1. Why does it appear now?
+2. Why might someone choose each option?
+3. What can the player anticipate?
+4. How could officials know this?
+5. What changes afterward?
+6. Why is it interesting on replay?
+
+The structural parts are machine-checked by the content lint (`lintContent()` in `src/game/lint.ts`, run by `src/game/content.test.ts`):
+
+- Why now: every related or follow-up card has a `when` or a check result that queues it.
+- Why each option: no two answers on a card have the same effect list (kind, effects and check).
+- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction that says what the hours are spent on.
+- What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card is the one exception, because its job is the pause.
+
+The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
+
 ## Truth, claims, official knowledge
 
 - Truth: fixed by your character ("My story" panel).
