@@ -224,10 +224,10 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   await expect(row.locator('.tag.desk')).toHaveText(['Passport', 'Customs']);
   await noHorizontalScroll(page, 'My story with desks');
 
-  // Records first, the biography below, every section one full-width column (2026-11-09 review).
-  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'People', 'Background']);
+  // Records first, then the messages so far, the biography below, every section one full-width column (2026-11-09 review).
+  await expect(sheet.locator('h3')).toHaveText(['What you said', 'On file', 'Messages', 'People', 'Background']);
   const widths = await sheet.locator('.story-section').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
-  expect(widths).toHaveLength(4);
+  expect(widths).toHaveLength(5);
   for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
   // Each contact's abilities, from the table in src/game/content/world.ts.
   await expect(sheet.locator('.people .can')).toHaveText([

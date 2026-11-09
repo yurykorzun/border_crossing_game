@@ -12,6 +12,8 @@ import type { ChangeLine, RunState } from '../game/types';
 import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
 import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, START_TIME } from '../game/content/world';
+import { messagesSoFar } from '../game/content/queues';
+import type { QueueBeat } from '../game/content/queues';
 import { Portrait } from './art/Portrait';
 import { Icon } from './art/icons';
 
@@ -156,11 +158,25 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
  * columns wrapped every line at 390 px (2026-11-09 screenshot review). Nothing is in a
  * carousel: Pope's phone port lost this overview that way.
  */
-export function StoryContent({ s }: { s: RunState }) {
+export function StoryContent({ s, messages = messagesSoFar(s) }: { s: RunState; messages?: readonly QueueBeat[] }) {
   const ch = CHARACTERS[s.character];
   return (
     <>
       <StoryRecords s={s} />
+      {/* The queue shows one message at a time, so the earlier ones (the warning about the protected contact) are kept here. */}
+      <section className="story-section">
+        <h3>{t('ui.messages')}</h3>
+        {messages.length ? (
+          <ul className="messages">
+            {messages.map((b) => (
+              <li key={b.key} className="msg" data-msg={b.key}>
+                {b.from && <span className="msg-from">{t(`msg.from.${b.from}`)}</span>}
+                {t(b.key)}
+              </li>
+            ))}
+          </ul>
+        ) : <p className="muted">{t('ui.nothingYet')}</p>}
+      </section>
       <section className="story-section">
         <h3>{t('ui.contacts')}</h3>
         <ul className="people">

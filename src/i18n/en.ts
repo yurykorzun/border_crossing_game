@@ -55,6 +55,8 @@ export const en: Record<string, string> = {
   'ui.protected': 'protect',
   'ui.background': 'Background',
   'ui.claims': 'What you said',
+  // My story: the phone messages so far, because the queue shows only the current one.
+  'ui.messages': 'Messages',
   // Tags beside a claim in My story: the desks that wrote it down, or that it was only said.
   'ui.writtenDown': 'On file',
   'ui.saidAloud': 'Said only',
@@ -323,9 +325,9 @@ export const en: Record<string, string> = {
 
   // ── The queue before each checkpoint (src/game/content/queues.ts says which beat
   // is a phone message and which is said or seen). A .lena / .mark key is one traveler's.
-  'msg.from.mother': 'Mother',
+  'msg.from.mother': 'Mom',
   'msg.from.work': 'Work',
-  'msg.0.0': 'The doctor says he can hear us. Come straight to the hospital.',
+  'msg.0.0': "The doctor says Dad can hear me. He hasn't said anything yet. Come straight to the hospital.",
   'msg.0.1.lena': "Don't mention Ilya to anyone. Please.",
   'msg.0.1.mark': "Don't mention Tom to anyone. Please.",
   'msg.0.2': 'The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
