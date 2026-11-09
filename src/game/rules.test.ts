@@ -639,3 +639,61 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     expect(legalActions(next)).toContainEqual({ type: 'finish' });
   });
 });
+
+describe('every time loss names its cause in the reaction (fsx.12)', () => {
+  const HOURS: Record<number, string> = { 1: 'an hour', 2: 'two hours', 3: 'three hours' };
+  const NUMBER: Record<number, string> = { 1: 'one', 2: 'two', 3: 'three' };
+
+  /**
+   * Why the reaction fails, or null. It must state the hours the answer always
+   * costs, inside a sentence that says what they are spent on: at least three
+   * words before the hours, not "It takes" or "That takes". An extra hour that depends on
+   * the day must be stated too.
+   */
+  const unexplained = (text: string, hours: number, most = hours): string | null => {
+    const phrase = HOURS[hours];
+    if (!phrase) return `no wording for ${hours} hours`;
+    const sentence = text.split(/(?<=[.!?"])\s+/).find((x) => x.toLowerCase().includes(phrase));
+    if (!sentence) return `does not say "${phrase}"`;
+    const before = sentence.slice(0, sentence.toLowerCase().indexOf(phrase)).trim();
+    if (before.split(/\s+/).filter(Boolean).length < 2 || /^\W*(it|that|this)\s+takes?\b/i.test(before)) return `"${sentence}" does not say what the time is spent on`;
+    if (most !== hours && !text.toLowerCase().includes(NUMBER[most])) return `does not say it can be ${most} hours`;
+    return null;
+  };
+
+  const vars = { contact: 'mother', contactMine: 'mother', cardThe: 'motherLetter' };
+  const costly = [
+    ...ENCOUNTERS.flatMap((c) => c.approaches.map((a) => ({ key: `enc.${c.id}.${a.id}.reaction`, effects: a.effects }))),
+    ...INSPECTIONS.flatMap((c) => c.approaches.map((a) => ({ key: `insp.${c.id}.${a.id}.reaction`, effects: a.effects }))),
+  ]
+    .map(({ key, effects }) => {
+      const time = effects.filter((e): e is Effect & { time: number } => 'time' in e);
+      const always = -time.filter((e) => !e.when).reduce((n, e) => n + e.time, 0);
+      const most = -time.reduce((n, e) => n + e.time, 0);
+      return { key, always, most };
+    })
+    .filter((x) => x.most > 0);
+
+  it('finds the time-costing answers', () => {
+    expect(costly.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it.each(costly)('$key says what its hours are spent on', ({ key, always, most }) => {
+    expect(unexplained(t(key, vars), always, most)).toBeNull();
+  });
+
+  it('the extra hours added on top say what they are spent on', () => {
+    const weak = [...new Set(Object.values(CHARACTERS).flatMap((c) => c.weakTopics))];
+    expect(weak.length).toBeGreaterThan(0);
+    for (const topic of weak) expect(t(`weak.${topic}.reaction`)).toMatch(/\w+ \w+ takes another hour/);
+    expect(unexplained(t('calledIn.reaction', vars), 1)).toBeNull();
+  });
+
+  it('a reaction that only describes the process fails the check', () => {
+    expect(unexplained('Hours later, the bag comes back.', 3)).not.toBeNull();
+    expect(unexplained('They search everything. Three hours.', 3)).not.toBeNull();
+    expect(unexplained('He takes the bag away. That takes an hour.', 1)).not.toBeNull();
+    expect(unexplained('Checking the medicine takes an hour.', 1, 2)).not.toBeNull();
+    expect(unexplained('Counting the cash takes an hour.', 1)).toBeNull();
+  });
+});

@@ -247,7 +247,7 @@ test('once the bus is out of reach, the card says so and finishes the crossing q
   await openAt(page, { ...lenaRun(), time: 1, screen: { kind: 'encounter', id: 'c_cash' }, checkpoint: 1, slot: 1, seen: ['c_cash'] });
   await expect(page.locator('main.run .panel.ask')).toContainText('You will not make the bus now.');
   await page.getByRole('button', { name: 'Finish the crossing quickly' }).click();
-  await expect(page.locator('main.run .panel.reaction')).toContainText('Nobody asks you anything more.');
+  await expect(page.locator('main.run .panel.reaction')).toContainText('Nobody asks anything more.');
   await page.getByRole('button', { name: 'See how it ends' }).click();
   await expect(page.locator('.ending-card h1')).toHaveText('Too late');
   expect(errors).toEqual([]);

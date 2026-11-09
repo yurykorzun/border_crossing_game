@@ -105,7 +105,7 @@ export const en: Record<string, string> = {
   // Once the bus is out of reach (doomed() in src/game/engine.ts), the card offers to finish quickly.
   'ui.doomed': 'You will not make the bus now.',
   'ui.finishQuickly': 'Finish the crossing quickly',
-  'finish.reaction': 'The rest of the crossing is stamps and corridors. Nobody asks you anything more.',
+  'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
   'ui.blocked.noCard': 'No matching document',
   'ui.blocked.noContact': 'Nobody left to name',
   'ui.showDocument': 'Show a document',
@@ -331,7 +331,7 @@ export const en: Record<string, string> = {
   'enc.p_purpose.evidence.reaction': 'She reads it twice and types for a long time.',
   'enc.p_purpose.family.label': '"I\'m visiting family."',
   'enc.p_purpose.family.check': 'Register check',
-  'enc.p_purpose.family.reaction': 'She calls up a list and scrolls through names.',
+  'enc.p_purpose.family.reaction': 'The family register check takes an hour.',
   'enc.p_purpose.tourism.label': '"I\'m here as a tourist."',
   'enc.p_purpose.tourism.reaction': 'She stamps nothing. She just nods.',
 
@@ -339,7 +339,7 @@ export const en: Record<string, string> = {
   'enc.p_photo.evidence.label': 'Show {cardThe}',
   'enc.p_photo.evidence.reaction': 'She compares the addresses and seems satisfied.',
   'enc.p_photo.scan.label': 'Offer a face scan',
-  'enc.p_photo.scan.reaction': 'A camera on a stalk turns towards you.',
+  'enc.p_photo.scan.reaction': 'Matching the scan takes an hour.',
 
   'enc.p_secondPassport.q': '"You hold another passport. Which country do you consider yours?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
@@ -347,7 +347,7 @@ export const en: Record<string, string> = {
   'enc.p_secondPassport.evidence.label': 'Show {cardThe}',
   'enc.p_secondPassport.evidence.reaction': '"So you still own property here." She hands it back.',
   'enc.p_secondPassport.handOver.label': 'Hand over both passports',
-  'enc.p_secondPassport.handOver.reaction': 'Both passports go into a grey tray.',
+  'enc.p_secondPassport.handOver.reaction': 'Checking both passports takes an hour.',
 
   'enc.p_employer.q': '"A tourist with a foreign salary. Who pays you?"',
   'enc.p_employer.perk.label': 'Explain your job plainly',
@@ -355,14 +355,14 @@ export const en: Record<string, string> = {
   'enc.p_employer.evidence.label': 'Show {cardThe}',
   'enc.p_employer.evidence.reaction': 'She copies the company name into a form.',
   'enc.p_employer.check.label': 'Let them look up the company',
-  'enc.p_employer.check.reaction': 'She types the name slowly, letter by letter.',
+  'enc.p_employer.check.reaction': 'Looking up the company takes an hour.',
 
   // ── Customs
   'enc.c_medicine.q': '"What is in the cool bag?"',
   'enc.c_medicine.evidence.label': 'Show {cardThe}',
   'enc.c_medicine.evidence.reaction': 'He matches each box against the list.',
   'enc.c_medicine.declare.label': 'Declare it and wait',
-  'enc.c_medicine.declare.reaction': 'He takes the bag to a back room.',
+  'enc.c_medicine.declare.reaction': 'The medicine check takes an hour, two on testing days.',
   'enc.c_medicine.leave.label': 'Leave it behind',
   'enc.c_medicine.leave.reaction': 'The bag goes into a bin marked SURRENDERED.',
 
@@ -384,7 +384,7 @@ export const en: Record<string, string> = {
 
   'enc.c_host.q': '"We need to confirm the address on your mother\'s letter."',
   'enc.c_host.call.label': 'Wait while they call',
-  'enc.c_host.call.reaction': 'He dials and listens.',
+  'enc.c_host.call.reaction': 'Reaching your mother takes an hour.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
@@ -392,7 +392,7 @@ export const en: Record<string, string> = {
 
   'enc.c_phone.q': '"Unlock your phone, please."',
   'enc.c_phone.unlock.label': 'Unlock it',
-  'enc.c_phone.unlock.reaction': 'He plugs it into a grey box under the desk.',
+  'enc.c_phone.unlock.reaction': 'Copying your phone in a grey box takes an hour.',
   'enc.c_phone.refuse.label': '"No. It\'s private."',
   'enc.c_phone.refuse.reaction': 'He writes "refused search" on your file and makes you wait an hour for a supervisor.',
 
@@ -414,7 +414,7 @@ export const en: Record<string, string> = {
   'enc.i_family.deny.label': '"I have no other relatives here."',
   'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
   'enc.i_family.why.label': '"Why do you need to know?"',
-  'enc.i_family.why.reaction': '"Routine." The officer waits for an answer anyway.',
+  'enc.i_family.why.reaction': '"Routine." The officer waits an hour for your answer.',
 
   'enc.i_clarify.q': '"You said you came as a tourist, but your family\'s details are in your file."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
@@ -436,7 +436,7 @@ export const en: Record<string, string> = {
   'enc.i_employer.evidence.label': 'Show {cardThe}',
   'enc.i_employer.evidence.reaction': 'The officer photographs the letterhead.',
   'enc.i_employer.contract.label': 'Let them check your contract',
-  'enc.i_employer.contract.reaction': 'The officer leaves with your phone for the contract.',
+  'enc.i_employer.contract.reaction': 'Finding the contract takes two hours.',
   'enc.i_employer.brother.label': 'Let them call {contact}',
   'enc.i_employer.brother.reaction': 'Tom explains the job offer. The officer writes his name down.',
 
@@ -444,12 +444,12 @@ export const en: Record<string, string> = {
   'enc.i_brother.honest.label': '"Last Sunday. He\'s fine."',
   'enc.i_brother.honest.reaction': 'Your brother across the border goes on file, and the officer flags it.',
   'enc.i_brother.calls.label': 'Let them check your call history',
-  'enc.i_brother.calls.reaction': 'Your phone goes back into the grey box.',
+  'enc.i_brother.calls.reaction': 'Going through your calls in the grey box takes two hours.',
 
   // ── Follow-ups
   'enc.f_host.q': '"Your mother isn\'t answering."',
   'enc.f_host.again.label': 'Wait for another call',
-  'enc.f_host.again.reaction': 'The phone rings out again. Then she picks up.',
+  'enc.f_host.again.reaction': 'The phone rings out for an hour. Then she picks up.',
   'enc.f_host.evidence.label': 'Show {cardThe}',
   'enc.f_host.evidence.reaction': 'He accepts it without looking up.',
   'enc.f_host.cousin.label': 'Give {contact}\'s number',
@@ -459,7 +459,7 @@ export const en: Record<string, string> = {
   'enc.f_lab.evidence.label': 'Show {cardThe}',
   'enc.f_lab.evidence.reaction': 'The bag comes back sealed with tape.',
   'enc.f_lab.wait.label': 'Wait for the lab',
-  'enc.f_lab.wait.reaction': 'Someone in a white coat walks past twice.',
+  'enc.f_lab.wait.reaction': 'The lab takes two hours.',
   'enc.f_lab.surrender.label': 'Let them keep it',
   'enc.f_lab.surrender.reaction': 'You sign a form you cannot read.',
 
@@ -469,7 +469,7 @@ export const en: Record<string, string> = {
   'enc.f_donation.deny.label': '"I never donated."',
   'enc.f_donation.deny.reaction': 'A printout of the payment appears with your card number on it.',
   'enc.f_donation.lawyer.label': 'Ask for a lawyer',
-  'enc.f_donation.lawyer.reaction': 'You are moved to a bench along the wall.',
+  'enc.f_donation.lawyer.reaction': 'You wait three hours on a bench for the lawyer.',
 
   'enc.f_photo.q': '"This photo. Were you at this rally?"',
   'enc.f_photo.honest.label': '"Yes, once. Years ago."',
@@ -477,14 +477,14 @@ export const en: Record<string, string> = {
   'enc.f_photo.deny.label': '"That isn\'t me."',
   'enc.f_photo.deny.reaction': 'The officer zooms in on your face in the photo from your phone.',
   'enc.f_photo.law.label': 'Ask what law it breaks',
-  'enc.f_photo.law.reaction': 'Nobody answers. A door opens and closes.',
+  'enc.f_photo.law.reaction': 'Nobody answers. Finding someone who knows takes two hours.',
 
   // ── Secondary inspections
   'insp.s_bag.q': 'Secondary room. They empty your suitcase onto a steel table.',
   'insp.s_bag.wait.label': 'Wait while they search',
-  'insp.s_bag.wait.reaction': 'They count your cash, search every pocket and fold everything back badly. Three hours.',
+  'insp.s_bag.wait.reaction': 'They count your cash and search every pocket. The search takes three hours.',
   'insp.s_bag.contact.label': 'Ask them to call {contact}',
-  'insp.s_bag.contact.reaction': 'One call, and the search stops early.',
+  'insp.s_bag.contact.reaction': 'The call takes an hour, and the search stops early.',
   'insp.s_bag.withdraw.label': 'Withdraw your entry request',
   'insp.s_bag.withdraw.reaction': 'Your passport is handed back with a red stamp.',
 
@@ -492,7 +492,7 @@ export const en: Record<string, string> = {
   'insp.s_medicine.surrender.label': 'Leave without it',
   'insp.s_medicine.surrender.reaction': 'You watch the cool bag go behind a door.',
   'insp.s_medicine.wait.label': 'Wait to get it back',
-  'insp.s_medicine.wait.reaction': 'Hours later, the bag comes back.',
+  'insp.s_medicine.wait.reaction': 'The test takes three hours, then the bag comes back.',
   'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
   'insp.s_medicine.withdraw.reaction': 'Your passport is handed back with a red stamp.',
 
