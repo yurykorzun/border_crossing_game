@@ -41,7 +41,7 @@ export function load(store: Store): SaveData {
     const base = freshSave();
     return {
       v: SAVE_VERSION,
-      run: data.run && data.run.v === 1 ? data.run : null,
+      run: data.run && data.run.v === 2 ? data.run : null,
       endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen : [],
       settings: { ...base.settings, ...(data.settings ?? {}) },
     };

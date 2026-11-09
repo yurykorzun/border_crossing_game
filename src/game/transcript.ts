@@ -15,7 +15,7 @@ import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/e
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
-import { newRun, options, shownCheckpoint, waitActions } from './engine';
+import { factIds, knownAt, newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -197,8 +197,12 @@ function storyLines(s: RunState, p: Page): void {
   for (const c of s.claims) p.add(`claim.${c}`, {}, CHROME);
   if (!s.claims.length) p.add('ui.nothingYet', {}, CHROME);
   p.add('ui.onFile', {}, CHROME);
-  for (const f of s.facts) p.add(`fact.${f}`, {}, CHROME);
-  if (!s.facts.length) p.add('ui.nothingYet', {}, CHROME);
+  p.add('ui.onFileHelp', {}, CHROME);
+  for (const f of factIds(s)) {
+    p.add(`fact.${f}`, {}, CHROME);
+    for (const d of s.facts[f] ?? []) p.add(`desk.${d}`, {}, CHROME);
+  }
+  if (!factIds(s).length) p.add('ui.nothingYet', {}, CHROME);
   // EvidenceContent
   for (const id of s.loadout) {
     p.add(`ev.${id}.name`, {}, CHROME);
@@ -344,7 +348,8 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
       if (e.type === 'checkStarted') happenings.push({ step: i, type: 'checkStarted', id: e.id });
       if (e.type === 'checkResolved') happenings.push({ step: i, type: 'checkResolved', id: e.id, result: e.result });
       if (e.type === 'cardDealt')
-        happenings.push({ step: i + 1, type: 'cardDealt', id: e.id, claims: [...n.claims], facts: [...n.facts] });
+        // What the official dealing the card knows, not every fact on the crossing.
+        happenings.push({ step: i + 1, type: 'cardDealt', id: e.id, claims: [...n.claims], facts: knownAt(n) });
     }
     s = n;
   });

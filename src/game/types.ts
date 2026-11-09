@@ -39,6 +39,7 @@ export interface Cond {
   character?: CharacterId;
   background?: BackgroundId;
   bulletin?: BulletinId;
+  /** Known at the current desk (not anywhere on the crossing). */
   facts?: FactId[];
   noFacts?: FactId[];
   claims?: ClaimId[];
@@ -57,12 +58,22 @@ export interface Cond {
  */
 export type ScrutinyReason = FactId | CheckId;
 
+/**
+ * How a fact reaches another desk (docs/design.md "What each official knows").
+ * call: one desk phones the next. printout: a check's report goes with your
+ * file to the next desk. The shared records system is not an effect: with the
+ * records bulletin every fact reaches the later desks at once.
+ */
+export type Channel = 'call' | 'printout';
+
 export type Effect =
   | { time: number; when?: Cond }
   | { scrutiny: number; reason: ScrutinyReason; when?: Cond }
   | { fact: FactId; when?: Cond }
   | { claim: ClaimId; when?: Cond }
-  | { loseMedicine: true; when?: Cond };
+  | { loseMedicine: true; when?: Cond }
+  /** Sends these facts (all this desk knows when unset) that this desk knows on to the next desk. */
+  | { send: Channel; facts?: FactId[]; when?: Cond };
 
 export type ApproachKind = 'evidence' | 'verify' | 'contact' | 'say' | 'perk' | 'withdraw';
 
@@ -186,8 +197,15 @@ export interface ChangeLine {
   tone: 'plain' | 'amber' | 'red';
 }
 
+/**
+ * What each official knows: every fact that came out, and the desks that know
+ * it, in CHECKPOINTS order. A fact is known where it came out and travels on
+ * only through a channel (Channel, or the records bulletin).
+ */
+export type FactMap = Partial<Record<FactId, Checkpoint[]>>;
+
 export interface RunState {
-  v: 1;
+  v: 2;
   seed: number;
   rng: number;
   character: CharacterId;
@@ -197,7 +215,7 @@ export interface RunState {
   exposed: ContactId[];
   time: number;
   scrutiny: number;
-  facts: FactId[];
+  facts: FactMap;
   claims: ClaimId[];
   medicine: boolean;
   perkUsed: boolean;

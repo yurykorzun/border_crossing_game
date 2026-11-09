@@ -9,7 +9,8 @@ import { CHARACTERS } from './content/world';
 import { legalActions, newRun, options, step } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
-import type { Action, ClaimId, EndingId, RunState } from './types';
+import type { Action, ClaimId, EndingId, FactId, RunState } from './types';
+import { CHECKPOINTS } from './types';
 import { allSetups, outcomes } from './walk';
 
 export type BotStyle = 'honest' | 'liar' | 'cautious' | 'random' | 'situational';
@@ -97,10 +98,12 @@ export function stateValue(s: RunState): number {
   if (!s.medicine) v -= 45;
   if (s.exposed.includes(ch.protectedContact)) v -= 45;
   v += 3 * (ch.contacts.length - s.exposed.length) + 2 * (s.loadout.length - s.used.length);
-  const familyOnFile = s.facts.includes('familyAddress') || s.facts.includes('fatherCondition');
+  // A fact counts while a desk still ahead (or this one) knows it: only they can catch a claim with it.
+  const ahead = (f: FactId) => (s.facts[f] ?? []).some((d) => CHECKPOINTS.indexOf(d) >= s.checkpoint);
+  const familyOnFile = ahead('familyAddress') || ahead('fatherCondition');
   if (s.claims.includes('tourism') && familyOnFile) v -= 20;
-  if (s.claims.includes('noOtherFamily') && s.facts.includes('brotherAbroad')) v -= 20;
-  if (s.claims.includes('cashUnderLimit') && s.facts.includes('cashCount')) v -= 20;
+  if (s.claims.includes('noOtherFamily') && ahead('brotherAbroad')) v -= 20;
+  if (s.claims.includes('cashUnderLimit') && ahead('cashCount')) v -= 20;
   if (s.screen.kind === 'encounter' && s.screen.id.startsWith('f_')) v -= 8;
   return v;
 }

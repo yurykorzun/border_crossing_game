@@ -3,7 +3,7 @@
 // down with hand-built states so a failure names the rule that broke.
 
 import { describe, expect, it } from 'vitest';
-import { legalActions, newRun, step } from './engine';
+import { factIds, legalActions, newRun, step } from './engine';
 import type { RunSetup } from './engine';
 import { CONTENT_VERSION, replay, tryStep } from './play';
 import type { Move } from './play';
@@ -11,7 +11,10 @@ import { load, save, freshSave } from './save';
 import { nextRandom } from './rng';
 import { allSetups } from './walk';
 import { MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION } from './content/world';
-import type { Action, RunState } from './types';
+import type { Action, FactId, FactMap, RunState } from './types';
+
+/** Facts the interview officer knows: the desk most fixtures here are at. */
+const known = (...f: FactId[]): FactMap => Object.fromEntries(f.map((x) => [x, ['interview']]));
 
 const lena: RunSetup = { character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin: 'records', seed: 7 };
 const at = (s: RunState, id: string, extra: Partial<RunState> = {}): RunState => ({
@@ -25,7 +28,7 @@ describe('rules', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.used).toEqual(['motherLetter']);
-    expect(r.state.facts).toContain('familyAddress');
+    expect(factIds(r.state)).toContain('familyAddress');
     expect(r.state.claims).toContain('familyVisit');
     expect(r.events).toContainEqual({ type: 'documentUsed', id: 'motherLetter' });
     expect(r.events).toContainEqual({ type: 'factRecorded', id: 'familyAddress' });
@@ -63,7 +66,7 @@ describe('boundaries', () => {
   });
 
   it('scrutiny overflow does not carry over: +2 at 2 stops at the max', () => {
-    const s = at(newRun(lena), 'i_contradiction', { checkpoint: 2, slot: 2, scrutiny: 2, claims: ['cashUnderLimit'], facts: ['cashCount'] });
+    const s = at(newRun(lena), 'i_contradiction', { checkpoint: 2, slot: 2, scrutiny: 2, claims: ['cashUnderLimit'], facts: known('cashCount') });
     const r = tryStep(s, { type: 'choose', approach: 'apologise' });
     expect(r.ok && r.events).toContainEqual({ type: 'scrutinyChanged', from: 2, to: MAX_SCRUTINY });
   });
@@ -74,12 +77,12 @@ describe('scenarios', () => {
     ({ ...newRun(lena), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra });
 
   it('a tourism claim plus the family address on file deals the clarify card', () => {
-    const s = step(interviewSlot2({ claims: ['tourism'], facts: ['familyAddress'] }), { type: 'ack' });
+    const s = step(interviewSlot2({ claims: ['tourism'], facts: known('familyAddress') }), { type: 'ack' });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
   it('a family-visit claim with the same address deals neither', () => {
-    const s = step(interviewSlot2({ claims: ['familyVisit'], facts: ['familyAddress'] }), { type: 'ack' });
+    const s = step(interviewSlot2({ claims: ['familyVisit'], facts: known('familyAddress') }), { type: 'ack' });
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_contradiction' });
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
   });

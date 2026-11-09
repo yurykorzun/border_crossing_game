@@ -2,19 +2,19 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { legalActions, newRun, step } from './engine';
+import { deskOf, factIds, legalActions, newRun, step } from './engine';
 import { changeLines } from './consequence';
 import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, CheckId, ClaimId, ContactId, EndingId, EvidenceId, FactId, RunState } from './types';
+import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, RunState } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 3;
+export const CONTENT_VERSION = 4;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
@@ -22,6 +22,8 @@ export type GameEvent =
   | { type: 'documentUsed'; id: EvidenceId }
   | { type: 'contactExposed'; id: ContactId }
   | { type: 'factRecorded'; id: FactId }
+  /** A desk ahead learned the fact: through the shared records (records bulletin) or a call or printout from this desk. */
+  | { type: 'factSent'; id: FactId; desks: Checkpoint[]; via: 'records' | 'desk' }
   | { type: 'claimRecorded'; id: ClaimId }
   | { type: 'medicineLost' }
   | { type: 'perkUsed' }
@@ -77,7 +79,12 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   if (n.time < s.time) ev.push({ type: 'timeSpent', hours: s.time - n.time });
   if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
   for (const id of added(s.claims, n.claims)) ev.push({ type: 'claimRecorded', id });
-  for (const id of added(s.facts, n.facts)) ev.push({ type: 'factRecorded', id });
+  for (const id of added(factIds(s), factIds(n))) ev.push({ type: 'factRecorded', id });
+  const here = deskOf(s);
+  for (const id of factIds(n)) {
+    const desks = added(s.facts[id] ?? [], n.facts[id] ?? []).filter((d) => d !== here);
+    if (desks.length) ev.push({ type: 'factSent', id, desks, via: s.bulletin === 'records' ? 'records' : 'desk' });
+  }
   if (s.medicine && !n.medicine) ev.push({ type: 'medicineLost' });
   if (n.checkpoint !== s.checkpoint) ev.push({ type: 'checkpointReached', index: n.checkpoint });
   if (n.screen.kind === 'wait' && s.screen.kind !== 'wait') ev.push({ type: 'checkStarted', id: n.screen.check });

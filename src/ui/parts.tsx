@@ -4,7 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { t, tn } from '../i18n';
-import { shownCheckpoint } from '../game/engine';
+import { factIds, shownCheckpoint } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -172,7 +172,20 @@ export function StoryContent({ s }: { s: RunState }) {
         </section>
         <section>
           <h3>{t('ui.onFile')}</h3>
-          {s.facts.length ? <ul className="record">{s.facts.map((f) => <li key={f}>{t(`fact.${f}`)}</li>)}</ul> : <p className="muted">{t('ui.nothingYet')}</p>}
+          <p className="muted small">{t('ui.onFileHelp')}</p>
+          {/* Each fact with the desks that know it: officials share only through a channel. */}
+          {factIds(s).length ? (
+            <ul className="record">
+              {factIds(s).map((f) => (
+                <li key={f} data-fact={f}>
+                  <span>{t(`fact.${f}`)}</span>
+                  <span className="desks">
+                    {(s.facts[f] ?? []).map((d) => <span key={d} className="tag desk" data-desk={d}>{t(`desk.${d}`)}</span>)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="muted">{t('ui.nothingYet')}</p>}
         </section>
       </div>
     </>

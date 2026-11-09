@@ -13,10 +13,13 @@
 // What this proves: rule and structural correctness for every reachable state.
 // What it does not: balance (bots) or whether the game feels right (people).
 
-import { checkEffects, checkFindings, currentCard, endingFor, legalActions, newRun, options, topicOf } from './engine';
+import {
+  checkEffects, checkFindings, currentCard, deskOf, endingFor, factIds, knows, legalActions, newRun, nextDesk, options, topicOf,
+} from './engine';
 import type { RunSetup } from './engine';
 import type { Dealer } from './rng';
 import type { Action, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
+import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, START_TIME, canConfirm,
 } from './content/world';
@@ -106,9 +109,18 @@ export interface WalkReport {
   chanceNodes: number;
 }
 
+/**
+ * Facts for the merge key: which came out, and which desks from here on know
+ * them. A desk already passed never reads its facts again, so runs that differ
+ * only there play the same from now on.
+ */
+const factsKey = (s: RunState) =>
+  factIds(s).sort().map((f) => `${f}:${(s.facts[f] ?? []).filter((d) => CHECKPOINTS.indexOf(d) >= s.checkpoint)}`).join();
+
 const key = (s: RunState) =>
   JSON.stringify({
     ...s,
+    facts: factsKey(s),
     seed: 0,
     rng: 0,
     log: 0,
@@ -117,16 +129,17 @@ const key = (s: RunState) =>
   });
 
 const unique = <T>(list: T[]) => new Set(list).size === list.length;
-const holds = (pairs: readonly [ClaimId, FactId][], s: RunState) => pairs.some(([c, f]) => s.claims.includes(c) && s.facts.includes(f));
+/** A claim and a fact that catches it, the fact known by the official at this desk. */
+const holds = (pairs: readonly [ClaimId, FactId][], s: RunState) => pairs.some(([c, f]) => s.claims.includes(c) && knows(s, f));
 
 /** Cards that challenge a claim, and the claim and fact pairs that let them be dealt. */
 const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: INCONSISTENCIES, i_contradiction: DISPROOFS };
 
-/** The effects a move applied, or null for a move that applies none of its own (ack, beat, an assisted check). */
+/** The effects a move applied, or null for a move that applies none of its own (ack, beat). An assisted check applies only its findings. */
 function moveEffects(s: RunState, action: Action): Effect[] | null {
   if (action.type === 'choose') return options(s).find((o) => o.approach.id === action.approach)?.effects ?? null;
-  if (action.type === 'waitAction' && s.screen.kind === 'wait' && action.action !== 'assist')
-    return checkEffects(s, s.screen.check, s.screen.resolved);
+  if (action.type === 'waitAction' && s.screen.kind === 'wait')
+    return action.action === 'assist' ? checkFindings(s, s.screen.check, s.screen.resolved) : checkEffects(s, s.screen.check, s.screen.resolved);
   return null;
 }
 const keeps = <T>(before: T[], after: T[]) => before.every((x) => after.includes(x));
@@ -139,11 +152,17 @@ export function checkState(s: RunState): string[] {
   if (s.scrutiny < 0 || s.scrutiny > MAX_SCRUTINY) bad.push(`scrutiny ${s.scrutiny} outside 0..${MAX_SCRUTINY}`);
   if (!s.used.every((id) => s.loadout.includes(id)) || !unique(s.used)) bad.push(`used ${s.used} not a subset of loadout`);
   if (!s.exposed.every((c) => ch.contacts.includes(c)) || !unique(s.exposed)) bad.push(`exposed ${s.exposed} not a subset of contacts`);
-  if (!unique(s.facts) || !unique(s.claims) || !unique(s.seen)) bad.push('facts, claims or seen repeat');
+  if (!unique(s.claims) || !unique(s.seen)) bad.push('claims or seen repeat');
+  // Every fact is known somewhere, each desk once, in crossing order.
+  for (const f of factIds(s)) {
+    const desks = s.facts[f] ?? [];
+    if (!desks.length || desks.join() !== CHECKPOINTS.filter((d) => desks.includes(d)).join()) bad.push(`${f} known at [${desks}]`);
+  }
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !currentCard(s)) bad.push(`unknown card ${s.screen.id}`);
   // A clarify card needs an inconsistency on file, a contradiction card a disproof.
   const pairs = s.screen.kind === 'encounter' ? CHALLENGES[s.screen.id] : undefined;
-  if (pairs && !holds(pairs, s)) bad.push(`${(s.screen as { id: string }).id} dealt with claims [${s.claims}] and facts [${s.facts}]`);
+  if (pairs && !holds(pairs, s))
+    bad.push(`${(s.screen as { id: string }).id} dealt with claims [${s.claims}] and ${deskOf(s)} knowing [${factIds(s).filter((f) => knows(s, f))}]`);
   if (s.ending) {
     if (s.screen.kind !== 'ending') bad.push(`ending ${s.ending} on a ${s.screen.kind} screen`);
     if (s.ending !== endingFor(s)) bad.push(`ending ${s.ending} but the state says ${endingFor(s)}`);
@@ -164,7 +183,8 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   const bad: string[] = [];
   if (!keeps(s.used, n.used)) bad.push('a spent document came back');
   if (!keeps(s.exposed, n.exposed)) bad.push('a contact exposure disappeared');
-  if (!keeps(s.facts, n.facts) || !keeps(s.claims, n.claims) || !keeps(s.seen, n.seen)) bad.push('a fact, claim or seen card disappeared');
+  if (!factIds(s).every((f) => keeps(s.facts[f] ?? [], n.facts[f] ?? [])) || !keeps(s.claims, n.claims) || !keeps(s.seen, n.seen))
+    bad.push('a fact, claim or seen card disappeared');
   if (s.perkUsed && !n.perkUsed) bad.push('the once-per-run advantage came back');
   if (!s.medicine && n.medicine) bad.push('lost medicine came back');
   if (n.time > s.time) bad.push(`time went up from ${s.time} to ${n.time}`);
@@ -185,12 +205,26 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     const ok = isCheck
       ? (s.screen.kind === 'wait' && s.screen.check === r)
         || (s.screen.kind === 'encounter' && CHECKS[r as keyof typeof CHECKS].cases.some((c) => c.followUp === (s.screen as { id: string }).id))
-      : n.facts.includes(r as FactId);
+      : knows(n, r as FactId, deskOf(s));
     if (!ok) bad.push(`scrutiny ${e.scrutiny} with reason ${r}, which does not hold`);
     else if (e.scrutiny > 0) reasoned += e.scrutiny;
   }
   if (n.scrutiny > s.scrutiny && !reasoned)
     bad.push(`scrutiny rose from ${s.scrutiny} to ${n.scrutiny} with no reason`);
+  // A desk learns a fact only where it came out, or through a channel: the
+  // records system with the records bulletin (every later desk at once), or a
+  // call or printout this move sent on to the next desk.
+  const here = deskOf(s);
+  const sent = effects.filter((e): e is Extract<Effect, { send: unknown }> => 'send' in e);
+  for (const f of factIds(n)) {
+    for (const d of (n.facts[f] ?? []).filter((x) => !(s.facts[f] ?? []).includes(x))) {
+      if (d === here) continue;
+      const later = CHECKPOINTS.indexOf(d) > CHECKPOINTS.indexOf(here);
+      if (s.bulletin === 'records' && later && knows(n, f, here)) continue;
+      if (d === nextDesk(here) && knows(n, f, here) && sent.some((e) => !e.facts || e.facts.includes(f))) continue;
+      bad.push(`${f} reached ${d} from ${here} through no channel`);
+    }
+  }
   // A contact is only named for what they can confirm: the card's topic, or the
   // check's in the waiting room. Naming a relative (namesOnly) confirms nothing.
   const named = n.exposed.filter((c) => !s.exposed.includes(c));
@@ -204,7 +238,7 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     const topic = CHECKS[s.screen.check].topic;
     if (!named.every((c) => canConfirm(c, topic))) bad.push(`${named} vouched on ${s.screen.check}, which asks about ${topic ?? 'data nobody can vouch away'}`);
     // A contact explains what a check found; the finding stays on file.
-    const lost = checkFindings(s, s.screen.check, s.screen.resolved).flatMap((e) => ('fact' in e && !n.facts.includes(e.fact) ? [e.fact] : []));
+    const lost = checkFindings(s, s.screen.check, s.screen.resolved).flatMap((e) => ('fact' in e && !knows(n, e.fact, deskOf(s)) ? [e.fact] : []));
     if (lost.length) bad.push(`${lost} found by ${s.screen.check} is not on file after a contact vouched`);
   }
   // A double tap, or resolving the same check twice, must be refused.

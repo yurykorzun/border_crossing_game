@@ -110,7 +110,7 @@ export function packDetail(id: EvidenceId): string[] {
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */
-export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'timeSpent', 'scrutinyChanged', 'medicineLost'] as const;
+export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost'] as const;
 
 /**
  * What a step changed, one plain line each, built from its events: "Your mother's
@@ -123,6 +123,11 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
   for (const e of events)
     if (e.type === 'contactExposed') out.push({ key: 'change.contact', vars: { contact: e.id }, tone: e.id === protectedContact ? 'red' : 'amber' });
   for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.fact.${e.id}`, tone: 'plain' });
+  for (const e of events)
+    if (e.type === 'factSent')
+      out.push(e.via === 'records'
+        ? { key: 'change.records', vars: { fact: e.id }, tone: 'plain' }
+        : { key: 'change.sent', vars: { fact: e.id, desk: e.desks[0] }, tone: 'plain' });
   for (const e of events) if (e.type === 'timeSpent') out.push({ key: 'change.time', n: e.hours, tone: 'plain' });
   for (const e of events)
     if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });

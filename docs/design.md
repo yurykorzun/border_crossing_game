@@ -91,7 +91,7 @@ Rules:
 
 - Truth: fixed by your character ("My story" panel).
 - Claims: what you said ("Visiting as a tourist").
-- On file: what officials know ("Family address on file").
+- On file: what officials know ("Family address on file"), and which desk knows it.
 
 The engine keeps these separate. Content can only key off claims and On file facts (and the character's background for which deck cards exist), never off truth officials couldn't know.
 
@@ -107,6 +107,18 @@ Rules that keep it fair:
 - A document is blocked only by a claim that truly excludes it. The hotel booking is blocked by "Staying with family" (giving your mother's address as where you stay), not by "Visiting family", because you can visit family and sleep in a hotel.
 - Every scrutiny effect names its reason: a fact on file or a check whose result dealt the card. It only applies while that reason holds, so a lie adds scrutiny only once a fact or a check result catches it. An honest answer that adds scrutiny puts its reason on file first ("Yes, I have both" files the second passport). The walk checks every move: scrutiny never rises without a reason that holds.
 - Detection needs a fact on file, a check result or a document shown, never your background alone. The reaction text says what caused each time loss and scrutiny gain ("He writes 'refused search' on your file and makes you wait an hour for a supervisor.").
+
+### What each official knows
+
+Each desk knows only its own facts (`RunState.facts` maps each fact to the desks that know it). A fact is known at the desk where it came out. It travels on only through a named channel:
+
+1. The shared records system: with the records bulletin, a fact reaches every later desk at once.
+2. A phone call between desks: a `{ send: 'call' }` effect passes facts this desk knows to the next desk. Today the passport clerk phones customs about your mother's address on the accommodation bulletin, and about your father's condition on the customs bulletin.
+3. A printout handed over after a check: `{ send: 'printout' }` on a check result or inspection. The address check note, the phone search report and the bag search report go on to the next desk.
+
+A call or printout reaches only the next desk, so a fact from passport control needs two hops to reach the interview without the records bulletin. Every condition on facts (cards, effects, scrutiny reasons, the clarify and contradiction cards) reads what the current desk knows, never the whole crossing. My story's On file column tags each fact with the desks that know it, and the reaction says when a fact is sent on ("Sent on to Customs: Family address."). The walk checks every move: a desk learns a fact only where it came out or through one of these channels.
+
+Claims stay one shared list for now.
 
 ## Director
 

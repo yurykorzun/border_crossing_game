@@ -56,6 +56,7 @@ export const en: Record<string, string> = {
   'ui.background': 'Background',
   'ui.claims': 'What you said',
   'ui.onFile': 'On file',
+  'ui.onFileHelp': 'Each desk knows only what came out there or was sent on.',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
   // The one line under each answer (src/game/consequence.ts), parts joined by " · ".
@@ -87,6 +88,8 @@ export const en: Record<string, string> = {
   'change.fact.secondPassport': 'Your second passport is now on file.',
   'change.fact.phoneRefused': 'Your refusal is now on file.',
   'change.fact.cashCount': 'Your cash total is now on file.',
+  'change.sent': 'Sent on to {desk}: {fact}.',
+  'change.records': 'Into the shared records for the desks ahead: {fact}.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
   'ui.proceed.customs': 'Proceed to customs',
   'ui.proceed.interview': 'Proceed to the interview',
@@ -260,6 +263,9 @@ export const en: Record<string, string> = {
   'checkpoint.passport': 'Passport control',
   'checkpoint.customs': 'Customs',
   'checkpoint.interview': 'Security interview',
+  'desk.passport': 'Passport',
+  'desk.customs': 'Customs',
+  'desk.interview': 'Interview',
   'officer.passport': 'Clerk',
   'officer.customs': 'Inspector',
   'officer.interview': 'Officer',

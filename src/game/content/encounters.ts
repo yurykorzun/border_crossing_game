@@ -3,8 +3,12 @@
 // Text lives in src/i18n/en.ts: enc.<id>.q, enc.<id>.<approach>.label/.reaction.
 //
 // Rule: every encounter has an approach that needs no card and no contact.
+//
+// Facts stay at the desk where they came out (docs/design.md "What each
+// official knows"). They travel on only through a channel: the records
+// bulletin, or a `send` effect here (a call between desks, a printout after a check).
 
-import type { Check, CheckId, ClaimId, Cond, Encounter, FactId, Inspection } from '../types';
+import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspection } from '../types';
 
 /**
  * Three tiers for a claim (docs/design.md "Truth, claims, official knowledge").
@@ -35,7 +39,15 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'p_purpose', checkpoint: 'passport', kind: 'routine', opening: true, topic: 'purpose',
     approaches: [
-      { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
+      {
+        id: 'evidence', kind: 'evidence', topic: 'purpose',
+        // Today's bulletin tells the clerk which desk to phone: addresses go to
+        // customs on accommodation checks, medical notes on medicine checks.
+        effects: [
+          { send: 'call', facts: ['familyAddress'], when: { bulletin: 'accommodation' } },
+          { send: 'call', facts: ['fatherCondition'], when: { bulletin: 'customs' } },
+        ],
+      },
       { id: 'family', kind: 'verify', effects: [{ claim: 'familyVisit' }, { time: -1 }] },
       { id: 'tourism', kind: 'say', effects: [{ claim: 'tourism' }] },
     ],
@@ -239,14 +251,18 @@ export const ENCOUNTERS: Encounter[] = [
   },
 ];
 
+/** What the phone search found, printed for the next desk. */
+const PHONE_REPORT: Effect = { send: 'printout', facts: ['phoneSearched', 'brotherAbroad', 'donationRecord'] };
+
 /** Results are fixed when the check starts; the waiting room only reveals them. */
 export const CHECKS: Record<CheckId, Check> = {
   // Your host can be vouched for: whoever can confirm the address.
   hostCall: {
     id: 'hostCall', topic: 'accommodation', beats: 3,
     cases: [
-      { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer' },
-      { result: 'clear' },
+      // The call note goes with your file to the interview, address and all.
+      { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
+      { result: 'clear', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
     ],
   },
   medicineLab: {
@@ -257,12 +273,13 @@ export const CHECKS: Record<CheckId, Check> = {
     ],
   },
   // Data: nobody can vouch away what is on the phone or in the records.
+  // The search report prints and goes with you to the interview.
   phoneSearch: {
     id: 'phoneSearch', beats: 3,
     cases: [
-      { when: { background: 'protestPhoto' }, followUp: 'f_photo', result: 'photo' },
-      { when: { background: 'donation' }, followUp: 'f_donation', result: 'donation' },
-      { result: 'clear' },
+      { when: { background: 'protestPhoto' }, followUp: 'f_photo', result: 'photo', effects: [PHONE_REPORT] },
+      { when: { background: 'donation' }, followUp: 'f_donation', result: 'donation', effects: [PHONE_REPORT] },
+      { result: 'clear', effects: [PHONE_REPORT] },
     ],
   },
   recordsCheck: {
@@ -282,7 +299,8 @@ export const INSPECTIONS: Inspection[] = [
     id: 's_bag', topic: 'medicine',
     approaches: [
       // A full search counts the cash, so the total goes on file.
-      { id: 'wait', kind: 'verify', effects: [{ time: -3 }, { fact: 'cashCount' }] },
+      // The search report, cash total included, goes with you to the next desk.
+      { id: 'wait', kind: 'verify', effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }] },
       { id: 'contact', kind: 'contact', contacts: ['mother'], effects: [{ time: -1 }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
