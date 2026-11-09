@@ -297,10 +297,10 @@ describe('what changed, under the reaction', () => {
 
   it('marks the protected contact and the medicine red, and a scrutiny drop plain', () => {
     const lines = changeLines(
-      [{ type: 'contactExposed', id: 'cousin' }, { type: 'medicineLost' }, { type: 'scrutinyChanged', from: 3, to: 1 }],
+      [{ type: 'contactExposed', id: 'cousin', desk: 'interview', shares: 'name' }, { type: 'medicineLost' }, { type: 'scrutinyChanged', from: 3, to: 1 }],
       'cousin',
     );
-    expect(lines.map((c) => [c.key, c.tone])).toEqual([['change.contact', 'red'], ['change.scrutiny', 'plain'], ['change.medicine', 'red']]);
+    expect(lines.map((c) => [c.key, c.tone])).toEqual([['change.contact.name', 'red'], ['change.scrutiny', 'plain'], ['change.medicine', 'red']]);
   });
 
   it('playStep keeps the lines only while the reaction shows', () => {

@@ -8,9 +8,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { endingText, factIds, legalActions, loggedAt, newRun, noCost, options, step, travelOf } from './engine';
 import { playRun, setupFor } from './bots';
 import { StoryContent } from '../ui/parts';
-import { t } from '../i18n';
+import { t, tn } from '../i18n';
+import { changeLines } from './consequence';
 import type { RunSetup } from './engine';
-import { CONTENT_VERSION, replay, tryStep } from './play';
+import { CONTENT_VERSION, playStep, replay, tryStep } from './play';
 import type { Move } from './play';
 import { load, save, freshSave } from './save';
 import { nextRandom } from './rng';
@@ -291,6 +292,36 @@ describe('too late endings', () => {
       expect(ka).not.toBe(kb);
       expect(t(ka)).not.toBe(t(kb));
     }
+  });
+});
+
+describe('contact results', () => {
+  const rows = (s: RunState) => (s.changes ?? []).map((c) => (c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)));
+
+  it('a vouch that passes: the beat alone, then a verified row and an on-file row naming the desk', () => {
+    const s = at(newRun(lena), 'c_tourist', { checkpoint: 1, claims: ['tourism'] });
+    const n = playStep(s, { type: 'choose', approach: 'mother' });
+    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring.']);
+    expect(rows(n)).toEqual(['Visit verified.', "On file at Customs: your mother's number."]);
+  });
+
+  it('a vouch in the waiting room clears the check and reports the same two rows', () => {
+    let s = playStep(at(newRun(lena), 'c_host', { checkpoint: 1 }), { type: 'choose', approach: 'call' });
+    s = playStep(s, { type: 'ack' });
+    while (s.screen.kind === 'wait' && s.screen.shown < s.screen.beats.length) s = playStep(s, { type: 'beat' });
+    const n = playStep(s, { type: 'waitAction', action: 'assist' });
+    expect(rows(n).slice(0, 2)).toEqual(['Address verified.', "On file at Customs: your mother's number."]);
+  });
+
+  it('a vouch that fails: only the on-file row, no verified row', () => {
+    const lines = changeLines([{ type: 'contactExposed', id: 'mother', desk: 'customs', shares: 'number', vouch: { topic: 'accommodation', passed: false } }], 'cousin');
+    expect(lines.map((c) => t(c.key, c.vars))).toEqual(["On file at Customs: your mother's number."]);
+  });
+
+  it('naming someone who confirms nothing reports only that they were named', () => {
+    const n = playStep(at(newRun(lena), 'i_family', { checkpoint: 2 }), { type: 'choose', approach: 'name' });
+    expect(rows(n)).toContain('You named your cousin Ilya.');
+    expect(rows(n).some((r) => r.includes('verified'))).toBe(false);
   });
 });
 

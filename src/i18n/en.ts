@@ -79,7 +79,12 @@ export const en: Record<string, string> = {
   'ui.line.need.other': 'Bus needs {n} hours left',
   'ui.line.miss': 'Misses the last bus',
   // What changed, one line each under the officer's reaction (changeLines() in src/game/consequence.ts).
-  'change.contact': 'You named {contact}.',
+  'change.contact.number': "On file at {desk}: {contact}'s number.",
+  'change.contact.name': 'You named {contact}.',
+  'change.verified.accommodation': 'Address verified.',
+  'change.verified.purpose': 'Visit verified.',
+  'change.verified.medicine': 'Prescription verified.',
+  'change.verified.work': 'Job offer verified.',
   'change.time.one': '{n} hour lost.',
   'change.time.other': '{n} hours lost.',
   'change.scrutiny': 'Scrutiny {n}/{max}.',

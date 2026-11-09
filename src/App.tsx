@@ -451,12 +451,19 @@ function useUsedBefore(s: RunState): Record<number, number> {
   return now.at;
 }
 
-/** The officer's line, then one line per change, then a button that says what comes next. */
+/**
+ * The story beat ("Your mother answers on the second ring."), then the result rows under
+ * it, one per change ("Visit verified.", "On file at Customs: your mother's number."),
+ * then a button that says what comes next. The beat and the rows are separate blocks, so
+ * what happened in the scene never reads as one paragraph with what it changed.
+ */
 function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void }) {
   return (
     <>
       <section className="panel paper reaction" aria-live="polite">
-        {s.reaction!.map((r, i) => <p key={i} className="said">{t(r.key, r.vars)}</p>)}
+        <div className="story-beat">
+          {s.reaction!.map((r, i) => <p key={i} className="said">{t(r.key, r.vars)}</p>)}
+        </div>
         <ChangeLines changes={s.changes ?? []} />
       </section>
       <div className="controls">
