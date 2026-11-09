@@ -71,6 +71,16 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
 
 // ── What is on screen
 
+/**
+ * The checkpoint the screen is at, as an index into CHECKPOINTS. The last
+ * reaction at a checkpoint shows with the next queue already set, so until it
+ * is acknowledged the strip, scene and officer stay on the one just finished.
+ */
+export function shownCheckpoint(s: RunState): number {
+  if (s.screen.kind === 'between') return Math.max(0, s.screen.next - (s.reaction ? 1 : 0));
+  return Math.min(s.checkpoint, CHECKPOINTS.length - 1);
+}
+
 export function currentCard(s: RunState): Encounter | Inspection | null {
   if (s.screen.kind === 'encounter') return ENCOUNTER_BY_ID.get(s.screen.id) ?? null;
   if (s.screen.kind === 'inspection') return INSPECTION_BY_ID.get(s.screen.id) ?? null;

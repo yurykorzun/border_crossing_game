@@ -15,7 +15,7 @@ import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
-import { newRun, options, waitActions } from './engine';
+import { newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -79,7 +79,7 @@ function chromeLines(s: RunState, p: Page): void {
   p.plural('ui.hours', s.time, CHROME);
   p.add('ui.hoursLeft', { hours: tn('ui.hours', s.time) }, CHROME);
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
-  const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
+  const now = shownCheckpoint(s);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
   const name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : t(`checkpoint.${CHECKPOINTS[now]}`);
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
@@ -87,12 +87,12 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.progress', { count, name }, CHROME);
   // The counter scene's name for screen readers (CheckpointScene): on every run screen but the queue.
   if (!(s.screen.kind === 'between' && !s.reaction)) {
-    const at = s.screen.kind === 'between' ? Math.max(0, s.screen.next - 1) : Math.min(s.checkpoint, 2);
-    p.add(`scene.${CHECKPOINTS[at]}`, {}, CHROME);
+    p.add(`scene.${CHECKPOINTS[now]}`, {}, CHROME);
   }
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
-  else if (s.screen.kind !== 'between')
-    p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
+  // The officer's label stays up with the last reaction, before the queue.
+  else if (!(s.screen.kind === 'between' && !s.reaction))
+    p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[now]}`, {}, CHROME);
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.evidence', {}, CHROME);
   p.add('ui.settings', {}, CHROME);

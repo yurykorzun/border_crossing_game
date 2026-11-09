@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
-import { endingFor, newRun, options, waitActions } from './game/engine';
+import { endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -375,11 +375,11 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
 
-  const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)];
+  // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
+  const sceneAt = shownCheckpoint(s);
+  const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[sceneAt];
   const close = () => setSheet(null);
   const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
-  // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
-  const sceneAt = s.screen.kind === 'between' ? Math.max(0, s.screen.next - 1) : Math.min(s.checkpoint, 2);
   const sceneState: SceneState = {
     handedOver: s.used.length > (usedBefore[sceneAt] ?? s.used.length),
     writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
@@ -399,9 +399,9 @@ function Run({ s, dispatch, data, setData, onRestart }: {
               <CheckpointScene checkpoint={CHECKPOINTS[sceneAt]} character={s.character} state={sceneState} />
               {s.screen.kind === 'wait' ? (
                 <span className="mono officer-label" aria-hidden>{t('ui.waiting')}</span>
-              ) : s.screen.kind !== 'between' ? (
+              ) : (
                 <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
-              ) : null}
+              )}
             </div>
             <div className="flicker" aria-hidden />
           </div>
