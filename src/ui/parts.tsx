@@ -1,4 +1,4 @@
-// Shared pieces: top strip, cost chips, the two bottom sheets.
+// Shared pieces: top strip, cost chips, the bottom sheets (story, evidence, scrutiny, settings).
 // Everything reads RunState; nothing here changes it.
 
 import { useEffect, useRef } from 'react';
@@ -6,11 +6,13 @@ import type { ReactNode } from 'react';
 import { t, tn } from '../i18n';
 import type { Option } from '../game/engine';
 import type { RunState } from '../game/types';
+import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
-import { CHARACTERS, MAX_SCRUTINY, START_TIME } from '../game/content/world';
+import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, START_TIME } from '../game/content/world';
 
-export function TopStrip({ s }: { s: RunState }) {
+export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => void }) {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
+  const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
   return (
     <header className="strip" aria-label={t('ui.yourCrossing')}>
       <div className="stat time">
@@ -19,19 +21,51 @@ export function TopStrip({ s }: { s: RunState }) {
           {Array.from({ length: START_TIME }, (_, i) => <i key={i} className={i < s.time ? 'on' : ''} />)}
         </span>
       </div>
-      <div className={`stat scrutiny lvl-${level}`} aria-label={`${t('ui.scrutiny')}: ${t(`ui.scrutiny.${level}`)}`}>
-        <span className="stat-label">{t('ui.scrutiny')}</span>
+      {/* A button, not a readout: the word "Noticed" never said what scrutiny does, the sheet does. */}
+      <button className={`scrutiny lvl-${level}`} aria-haspopup="dialog" onClick={onScrutiny}>
+        <span className="scrutiny-text">{t('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY })}</span>
         <span className="boxes" aria-hidden>
-          {Array.from({ length: MAX_SCRUTINY }, (_, i) => <i key={i} className={i < s.scrutiny ? 'on' : ''} />)}
+          {Array.from({ length: MAX_SCRUTINY }, (_, i) => <i key={i} className={i < level ? 'on' : ''} />)}
         </span>
-        <span className="stat-word">{t(`ui.scrutiny.${level}`)}</span>
+      </button>
+      <div className="progress-row">
+        <ol className="progress" aria-hidden>
+          {CHECKPOINTS.map((cp, i) => (
+            <li key={cp} className={i < s.checkpoint ? 'done' : i === s.checkpoint ? 'now' : ''} />
+          ))}
+        </ol>
+        <span className="progress-label">
+          {t('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name: t(`checkpoint.${CHECKPOINTS[now]}`) })}
+        </span>
       </div>
-      <ol className="progress" aria-label={t('ui.checkpoints')}>
-        {CHECKPOINTS.map((cp, i) => (
-          <li key={cp} className={i < s.checkpoint ? 'done' : i === s.checkpoint ? 'now' : ''} title={t(`checkpoint.${cp}`)} />
-        ))}
-      </ol>
     </header>
+  );
+}
+
+export function ScrutinyContent({ s }: { s: RunState }) {
+  return (
+    <>
+      <p className="sheet-lead">{t('ui.scrutinyCount', { n: Math.min(s.scrutiny, MAX_SCRUTINY), max: MAX_SCRUTINY })}</p>
+      <p>{t('ui.scrutinyHelp.what')}</p>
+      <p>{t('ui.scrutinyHelp.rise')}</p>
+      <p>{t('ui.scrutinyHelp.max', { max: MAX_SCRUTINY, after: SCRUTINY_AFTER_INSPECTION })}</p>
+    </>
+  );
+}
+
+export function SettingsContent({ settings, onChange }: { settings: Settings; onChange: (next: Settings) => void }) {
+  const row = (key: keyof Settings, label: string) => (
+    <label className="setting">
+      <input type="checkbox" checked={settings[key]} onChange={(e) => onChange({ ...settings, [key]: e.target.checked })} />
+      <span>{label}</span>
+    </label>
+  );
+  return (
+    <div className="settings">
+      {row('reduceWait', t('ui.reduceWait'))}
+      {row('sound', t('ui.sound'))}
+      {row('reduceMotion', t('ui.reduceMotion'))}
+    </div>
   );
 }
 

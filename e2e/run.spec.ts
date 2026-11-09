@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-// One full run on a phone-size screen: title → character → documents → play by
+// One full run on a phone-size screen: title → character → documents → begin → play by
 // always taking the first enabled option → ending card.
 
 const MAX_STEPS = 400;
@@ -26,25 +26,28 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   await noHorizontalScroll(page, 'title');
   await page.locator('.title-screen button.primary').click();
 
-  // Mission card sets up the one clock: the last bus in 8 hours.
-  const mission = page.locator('.setup .paper');
-  await expect(mission).toContainText('The last bus to the hospital leaves in 8 hours');
-  await expect(mission).not.toContainText('days of leave');
-
-  // Character
-  await expect(page.locator('.setup .choice').first()).toBeVisible();
+  // Character: a tap selects, Continue moves on.
+  await expect(page.getByRole('radio').first()).toBeVisible();
   await noHorizontalScroll(page, 'character pick');
-  await page.locator('.setup .choice').first().click();
+  await page.getByRole('radio').first().click();
+  await page.locator('.traveler-step .controls button.primary').click();
 
   // Documents: pack until Continue enables
-  const cont = page.locator('.setup .controls button.primary');
-  const docs = page.locator('.setup .doc');
+  const cont = page.locator('.documents-step .controls button.primary');
+  const docs = page.locator('.documents-step .doc');
   await expect(docs.first()).toBeVisible();
   await noHorizontalScroll(page, 'document pick');
   const docCount = await docs.count();
   for (let i = 0; i < docCount && !(await cont.isEnabled()); i++) await docs.nth(i).click();
   await expect(cont).toBeEnabled();
   await cont.click();
+
+  // Mission card sets up the one clock: the last bus in 8 hours.
+  const mission = page.locator('.begin-step .mission');
+  await expect(mission).toContainText('The last bus to the hospital leaves in 8 hours');
+  await expect(mission).not.toContainText('days of leave');
+  await noHorizontalScroll(page, 'begin');
+  await page.locator('.begin-step .controls button.primary').click();
 
   // Play
   const ending = page.locator('.ending-card');

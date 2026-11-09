@@ -12,7 +12,7 @@
 import { has, t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
 import { CHECKS, ENCOUNTER_BY_ID } from './content/encounters';
-import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './content/world';
+import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { newRun, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween } from './play';
@@ -74,17 +74,23 @@ function chromeLines(s: RunState, p: Page): void {
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
   p.add('ui.yourCrossing', {}, CHROME);
   p.plural('ui.hoursRemaining', s.time, CHROME);
-  p.add('ui.scrutiny', {}, CHROME);
-  p.add(`ui.scrutiny.${level}`, {}, CHROME);
-  p.add('ui.checkpoints', {}, CHROME);
-  for (const cp of CHECKPOINTS) p.add(`checkpoint.${cp}`, {}, CHROME);
+  p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
+  const now = Math.min(s.checkpoint, CHECKPOINTS.length - 1);
+  p.add('ui.progress', { n: now + 1, total: CHECKPOINTS.length, name: t(`checkpoint.${CHECKPOINTS[now]}`) }, CHROME);
   if (s.screen.kind === 'wait') p.add('ui.waiting', {}, CHROME);
   else if (s.screen.kind !== 'between')
     p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)]}`, {}, CHROME);
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.evidence', {}, CHROME);
-  p.add('ui.reduceWait', {}, CHROME);
+  p.add('ui.settings', {}, CHROME);
   p.add('ui.close', {}, CHROME);
+  // SettingsContent
+  for (const k of ['ui.reduceWait', 'ui.sound', 'ui.reduceMotion']) p.add(k, {}, CHROME);
+  // ScrutinyContent
+  p.add('ui.scrutiny', {}, CHROME);
+  p.add('ui.scrutinyHelp.what', {}, CHROME);
+  p.add('ui.scrutinyHelp.rise', {}, CHROME);
+  p.add('ui.scrutinyHelp.max', { max: MAX_SCRUTINY, after: SCRUTINY_AFTER_INSPECTION }, CHROME);
   // StoryContent
   const ch = CHARACTERS[s.character];
   p.add(`char.${ch.id}.name`, {}, CHROME);
@@ -128,16 +134,30 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.title');
   p.add('ui.tagline');
   p.add('ui.start');
-  p.add('ui.mission');
-  p.add('mission.title');
-  p.add('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME });
-  p.add('ui.missionRule', { n: MISSION_MIN_TIME });
+  // Setup 1: Choose your traveler
+  p.add('ui.premise');
   p.add('ui.pickCharacter');
-  for (const id of CHARACTER_IDS)
-    for (const part of ['name', 'blurb', 'strength', 'weakness']) p.add(`char.${id}.${part}`, {}, { who: id });
+  for (const id of CHARACTER_IDS) {
+    p.add(`char.${id}.name`, {}, { who: id });
+    p.add(`char.${id}.role`, {}, { who: id });
+    for (const b of CHARACTERS[id].background) p.add(`bg.${b}.short`, {}, { who: id });
+    p.add('ui.advantage');
+    p.add(`char.${id}.advantage`, {}, { who: id });
+    p.add('ui.complication');
+    p.add(`char.${id}.complication`, {}, { who: id });
+  }
+  const name = t(`char.${setup.character}.name`);
+  p.add('ui.historyOf', { name });
+  for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character });
+  p.add('ui.continueAs', { name });
+  // Setup 2: Prepare your documents
   const slots = CHARACTERS[setup.character].evidenceSlots;
+  p.add('ui.back');
+  p.add('ui.prepareDocuments');
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
+  p.add('ui.explainHours', { hours: START_TIME, travel: MISSION_MIN_TIME });
+  p.add('ui.explainScrutiny', { max: MAX_SCRUTINY });
   p.add('ui.pickEvidence', { count: slots });
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.name`);
@@ -146,6 +166,14 @@ function setupLines(setup: RunSetup, p: Page): void {
   }
   p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.continue');
+  // Setup 3: Begin the crossing
+  p.add('ui.beginCrossing');
+  p.add('ui.mission');
+  p.add('mission.title');
+  p.add('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME });
+  p.add('ui.missionRule', { n: MISSION_MIN_TIME });
+  p.add('ui.yourDocuments');
+  for (const id of setup.loadout) p.add(`ev.${id}.name`);
 }
 
 function chips(o: Option, p: Page): void {

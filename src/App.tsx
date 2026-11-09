@@ -3,19 +3,19 @@
 // ?autoplay=<style> (honest, liar, cautious, random, situational) instead plays
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t } from './i18n';
 import { endingFor, newRun, options, step, waitActions } from './game/engine';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { CHECKS } from './game/content/encounters';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { CostChips, EvidenceContent, Sheet, StoryContent, TopStrip } from './ui/parts';
+import { CostChips, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip } from './ui/parts';
 import * as sound from './ui/sound';
 
 const store = browserStore();
@@ -127,61 +127,191 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
   );
 }
 
+// Setup screens, in order. They are presentation state here, not engine phases.
+// Back and Continue walk this list, so a new screen (the destination briefing, 70r.3,
+// goes between traveler and documents) is one more entry and one more case below.
+const SETUP_STEPS = ['traveler', 'documents', 'begin'] as const;
+type SetupStep = (typeof SETUP_STEPS)[number];
+
 function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
+  const [at, setAt] = useState<SetupStep>('traveler');
   const [character, setCharacter] = useState<CharacterId | null>(null);
   const [picked, setPicked] = useState<EvidenceId[]>([]);
-  const slots = character ? CHARACTERS[character].evidenceSlots : 0;
+  const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
 
-  if (!character) {
+  if (at === 'traveler' || !character) {
     return (
-      <main className="setup">
-        <section className="paper">
-          <p className="mono">{t('ui.mission')}</p>
-          <h2>{t('mission.title')}</h2>
-          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
-          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
-        </section>
-        <h2 className="on-dark">{t('ui.pickCharacter')}</h2>
-        <div className="controls stack">
-          {CHARACTER_IDS.map((id) => (
-            <button key={id} className="choice" onClick={() => setCharacter(id)}>
-              <span className="choice-label">{t(`char.${id}.name`)}</span>
-              <span className="choice-sub">{t(`char.${id}.blurb`)}</span>
-              <span className="chips">
-                <span className="chip info">+ {t(`char.${id}.strength`)}</span>
-                <span className="chip risk">- {t(`char.${id}.weakness`)}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </main>
+      <TravelerStep
+        initial={character}
+        onContinue={(c) => {
+          // A traveler with fewer slots keeps only the first picks that still fit.
+          setPicked((p) => p.slice(0, CHARACTERS[c].evidenceSlots));
+          setCharacter(c);
+          move(1);
+        }}
+      />
     );
   }
+  if (at === 'documents') {
+    return <DocumentsStep character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
+  }
+  return <BeginStep picked={picked} onBack={() => move(-1)} onBegin={() => onStart(character, picked)} />;
+}
 
+/** Back on setup screens: a quiet control, so only the forward action reads as primary. */
+function BackButton({ onBack }: { onBack: () => void }) {
+  return (
+    <button type="button" className="back" onClick={onBack}>
+      <span aria-hidden>‹ </span>{t('ui.back')}
+    </button>
+  );
+}
+
+/** Setup 2. Packing is where hours and scrutiny first matter, so both are explained here. */
+function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onContinue }: {
+  character: CharacterId;
+  bulletin: BulletinId;
+  picked: EvidenceId[];
+  setPicked: React.Dispatch<React.SetStateAction<EvidenceId[]>>;
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const slots = CHARACTERS[character].evidenceSlots;
   const toggle = (id: EvidenceId) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < slots ? [...p, id] : p));
 
   return (
-    <main className="setup">
-      <section className="bulletin mono" role="note">
-        <strong>{t('ui.bulletin')}:</strong> {t(`bulletin.${bulletin}`)}
-      </section>
-      <h2 className="on-dark">{t('ui.pickEvidence', { count: slots })}</h2>
-      <ul className="cards pick">
-        {EVIDENCE_IDS.map((id) => (
-          <li key={id}>
-            <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
-              <strong>{t(`ev.${id}.name`)}</strong>
-              {picked.includes(id) && <span className="tag packed">{t('ui.packed')}</span>}
-              <p>{t(`ev.${id}.desc`)}</p>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="controls sticky">
-        <p className="muted-dark">{t('ui.picked', { picked: picked.length, count: slots })}</p>
-        <button className="primary" disabled={picked.length !== slots} onClick={() => onStart(character, picked)}>
+    <main className="setup setup-step documents-step">
+      <div className="setup-body">
+        <header className="step-head">
+          <BackButton onBack={onBack} />
+          <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
+        </header>
+        <section className="bulletin mono" role="note">
+          <strong>{t('ui.bulletin')}:</strong> {t(`bulletin.${bulletin}`)}
+        </section>
+        <ul className="rules-explained">
+          <li className="explain-hours">{t('ui.explainHours', { hours: START_TIME, travel: MISSION_MIN_TIME })}</li>
+          <li className="explain-scrutiny">{t('ui.explainScrutiny', { max: MAX_SCRUTINY })}</li>
+        </ul>
+        <h3 id="pack-heading" className="on-dark">{t('ui.pickEvidence', { count: slots })}</h3>
+        <ul className="cards pick" aria-labelledby="pack-heading">
+          {EVIDENCE_IDS.map((id) => (
+            <li key={id}>
+              <button className={`doc ${picked.includes(id) ? 'picked' : ''}`} aria-pressed={picked.includes(id)} onClick={() => toggle(id)}>
+                <strong>{t(`ev.${id}.name`)}</strong>
+                {picked.includes(id) && <span className="tag packed">{t('ui.packed')}</span>}
+                <p>{t(`ev.${id}.desc`)}</p>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="controls">
+        <p className="muted-dark" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
+        <button className="primary" disabled={picked.length !== slots} onClick={onContinue}>
           {t('ui.continue')}
+        </button>
+      </div>
+    </main>
+  );
+}
+
+/** Setup 3. The mission, the rest of the premise and what you packed, then the one strong button. */
+function BeginStep({ picked, onBack, onBegin }: { picked: EvidenceId[]; onBack: () => void; onBegin: () => void }) {
+  const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
+  return (
+    <main className="setup setup-step begin-step">
+      <div className="setup-body">
+        <header className="step-head">
+          <BackButton onBack={onBack} />
+          <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
+        </header>
+        <section className="paper mission">
+          <p className="mono">{t('ui.mission')}</p>
+          {/* The title says whose care it is, so "his care" in the body reads right. */}
+          <h3>{t('mission.title')}</h3>
+          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
+          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
+        </section>
+        <section className="packed-list">
+          <h3 className="mono">{t('ui.yourDocuments')}</h3>
+          <ul>{packed.map((id) => <li key={id}>{t(`ev.${id}.name`)}</li>)}</ul>
+        </section>
+      </div>
+      <div className="controls">
+        <button className="primary" onClick={onBegin}>{t('ui.beginCrossing')}</button>
+      </div>
+    </main>
+  );
+}
+
+/** Setup 1. The cards are a radio group: a tap selects, and only the button moves on. */
+function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; onContinue: (c: CharacterId) => void }) {
+  const [chosen, setChosen] = useState<CharacterId | null>(initial);
+  const cards = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Arrow keys move the selection, as in a native radio group.
+  const onKey = (e: React.KeyboardEvent, i: number) => {
+    const delta = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    const next = (i + delta + CHARACTER_IDS.length) % CHARACTER_IDS.length;
+    setChosen(CHARACTER_IDS[next]);
+    cards.current[next]?.focus();
+  };
+  const focusable = chosen ?? CHARACTER_IDS[0];
+
+  return (
+    <main className="setup traveler-step">
+      <div className="setup-body">
+        <header className="setup-head">
+          <p className="mono setup-title">{t('ui.title')}</p>
+          <p className="premise">{t('ui.premise')}</p>
+        </header>
+        <h2 id="traveler-heading" className="on-dark">{t('ui.pickCharacter')}</h2>
+        <div className="travelers" role="radiogroup" aria-labelledby="traveler-heading">
+          {CHARACTER_IDS.map((id, i) => (
+            <button
+              key={id}
+              ref={(el) => { cards.current[i] = el; }}
+              type="button"
+              role="radio"
+              aria-checked={chosen === id}
+              tabIndex={id === focusable ? 0 : -1}
+              className="traveler"
+              onClick={() => setChosen(id)}
+              onKeyDown={(e) => onKey(e, i)}
+            >
+              <span className="radio" aria-hidden />
+              {/* Portrait slot: the art bead (67a.10) fills it. */}
+              <span className="portrait" aria-hidden data-portrait={id}>{t(`char.${id}.name`).charAt(0)}</span>
+              <span className="traveler-text">
+                <span className="traveler-name"><strong>{t(`char.${id}.name`)}</strong> · {t(`char.${id}.role`)}</span>
+                <span className="traveler-history">
+                  {CHARACTERS[id].background.map((b) => <span key={b} className="trait">{t(`bg.${b}.short`)}</span>)}
+                </span>
+                <span className="traveler-row"><span className="row-label">{t('ui.advantage')}</span> {t(`char.${id}.advantage`)}</span>
+                <span className="traveler-row"><span className="row-label">{t('ui.complication')}</span> {t(`char.${id}.complication`)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        {/* One shared detail area: only the selected traveler's history is spelled out. */}
+        <section className="history-detail" aria-live="polite">
+          {chosen ? (
+            <>
+              <h3 className="mono">{t('ui.historyOf', { name: t(`char.${chosen}.name`) })}</h3>
+              <ul>{CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}</ul>
+            </>
+          ) : (
+            <p className="muted-dark">{t('ui.historyHint')}</p>
+          )}
+        </section>
+      </div>
+      <div className="controls">
+        <button className="primary" disabled={!chosen} onClick={() => chosen && onContinue(chosen)}>
+          {chosen ? t('ui.continueAs', { name: t(`char.${chosen}.name`) }) : t('ui.continue')}
         </button>
       </div>
     </main>
@@ -195,14 +325,15 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   setData: React.Dispatch<React.SetStateAction<SaveData>>;
   onRestart: () => void;
 }) {
-  const [sheet, setSheet] = useState<'story' | 'evidence' | null>(null);
+  const [sheet, setSheet] = useState<'story' | 'evidence' | 'scrutiny' | 'settings' | null>(null);
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
 
   const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[Math.min(s.checkpoint, 2)];
+  const close = () => setSheet(null);
   return (
     <main className="run">
-      <TopStrip s={s} />
+      <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
       <div className={`scene scene-${CHECKPOINTS[Math.min(s.checkpoint, 2)]} ${data.settings.reduceMotion ? 'still' : ''}`} aria-hidden>
         <div className="flicker" />
         {s.screen.kind === 'wait' ? (
@@ -212,22 +343,20 @@ function Run({ s, dispatch, data, setData, onRestart }: {
         ) : null}
       </div>
       <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
+      {/* The tray stays on every run screen, so story, evidence and settings are always one tap away. */}
       <nav className="tools">
-        <button onClick={() => setSheet('story')}>{t('ui.myStory')}</button>
-        <button onClick={() => setSheet('evidence')}>
+        <button aria-haspopup="dialog" onClick={() => setSheet('story')}>{t('ui.myStory')}</button>
+        <button aria-haspopup="dialog" onClick={() => setSheet('evidence')}>
           {t('ui.evidence')} · {s.loadout.length - s.used.length}
         </button>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={data.settings.reduceWait}
-            onChange={(e) => setData((d) => ({ ...d, settings: { ...d.settings, reduceWait: e.target.checked } }))}
-          />
-          {t('ui.reduceWait')}
-        </label>
+        <button aria-haspopup="dialog" onClick={() => setSheet('settings')}>{t('ui.settings')}</button>
       </nav>
-      <Sheet open={sheet === 'story'} onClose={() => setSheet(null)} title={t('ui.myStory')}><StoryContent s={s} /></Sheet>
-      <Sheet open={sheet === 'evidence'} onClose={() => setSheet(null)} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
+      <Sheet open={sheet === 'story'} onClose={close} title={t('ui.myStory')}><StoryContent s={s} /></Sheet>
+      <Sheet open={sheet === 'evidence'} onClose={close} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
+      <Sheet open={sheet === 'scrutiny'} onClose={close} title={t('ui.scrutiny')}><ScrutinyContent s={s} /></Sheet>
+      <Sheet open={sheet === 'settings'} onClose={close} title={t('ui.settings')}>
+        <SettingsContent settings={data.settings} onChange={(settings) => setData((d) => ({ ...d, settings }))} />
+      </Sheet>
     </main>
   );
 }
