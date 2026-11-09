@@ -5,7 +5,7 @@ import { CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/wor
 import { MAX_PARTS, SEPARATOR, consequence } from './consequence';
 import type { Part } from './consequence';
 import type { Option } from './engine';
-import type { CharacterId, ContactId, Effect, EvidenceId } from './types';
+import type { CharacterId, ContactId, Effect, EvidenceId, Topic } from './types';
 
 const text = (p: Part) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars));
 
@@ -28,7 +28,7 @@ function cases(): Case[] {
     for (const a of c.approaches)
       for (const character of CHARACTER_IDS) {
         const ch = CHARACTERS[character];
-        const topic = 'topic' in c ? c.topic : undefined;
+        const topic = (c as { topic?: Topic }).topic;
         const weak = !!topic && ch.weakTopics.includes(topic) && a.kind === 'verify';
         const evs: (EvidenceId | undefined)[] = a.kind === 'evidence' ? EVIDENCE_IDS.filter((e) => EVIDENCE[e].topics.includes(a.topic!)) : [undefined];
         const contacts: (ContactId | undefined)[] = a.kind === 'contact' ? (a.contacts ?? ch.contacts).filter((x) => ch.contacts.includes(x)) : [undefined];
