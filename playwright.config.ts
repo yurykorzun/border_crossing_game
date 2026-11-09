@@ -15,6 +15,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}${BASE}`,
     trace: 'retain-on-failure',
+    // Tests play whole runs, so without this the game's sounds play through the speakers.
+    launchOptions: { args: ['--mute-audio'] },
   },
   projects: [
     {
