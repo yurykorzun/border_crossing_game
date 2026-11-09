@@ -14,7 +14,7 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, consequences, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
+import { SEPARATOR, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, relevantToday } from './consequence';
 import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -162,7 +162,7 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add(`bulletin.${setup.bulletin}`);
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.label`);
-    // A muted tag that restates the bulletin, so chrome, like the severity tags on the ending.
+    // A muted tag that restates the bulletin, so chrome, like the endings seen count.
     if (relevantToday(id, setup.bulletin)) p.add('ui.relevantToday', {}, CHROME);
     for (const line of packDetail(id)) {
       const parts = line.map((k) => render(() => t(k), k));
@@ -318,8 +318,8 @@ function screenLines(s: RunState, p: Page): void {
 }
 
 /**
- * Ending in src/App.tsx: the result card is the story; what sits behind "See what's on
- * file" (the longer text, who was called in, My story) is chrome, read only if opened.
+ * Ending in src/App.tsx: the title, what you kept and the worst consequence are the story;
+ * the other consequences, the epilogue and the sheet behind "See what's on file" are chrome.
  */
 function endingLines(s: RunState, p: Page): void {
   const ending = s.ending!;
@@ -332,29 +332,29 @@ function endingLines(s: RunState, p: Page): void {
   p.add(scene, {}, CHROME);
   p.add(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete');
   p.add(`ending.${text}.title`);
-  p.add(`ending.${text}.summary`);
-  // resultRows(): hours left, the medicine, the protected contact.
+  // keptLines(): what you kept, under the title.
+  for (const k of keptLines(s)) p.add(k.key, k.vars);
+  // consequences(), worst first: the worst is read, as a heading and a line; the rest,
+  // like the epilogue, are counted as chrome, as the card's longer text always was.
+  consequences(s).forEach((l, i) => {
+    p.add(`${l.key}.title`, l.vars, i === 0 ? {} : CHROME);
+    p.add(l.key, l.vars, i === 0 ? {} : CHROME);
+  });
+  p.add(`ending.${text}.body`, {}, CHROME);
+  // The run summary, resultRows(): hours left, the medicine, the protected contact.
+  p.add('ui.runSummary', {}, CHROME);
   p.add('ui.hoursLeftRow');
   p.add('ui.medicineRow');
   p.add(s.medicine ? 'ui.kept' : 'ui.lost');
   p.add(`contact.${ch.protectedContact}`);
   p.add(protectedRow(s).key);
+  // The count includes this ending; a first run shows 1.
+  p.add('ui.endingsSeen', { n: 1 }, CHROME);
   p.add('ui.seeOnFile');
   p.add('ui.playAgain');
   // The sheet behind "See what's on file".
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.close', {}, CHROME);
-  p.add(`ending.${text}.body`, {}, CHROME);
-  // What it cost: one scored line per consequence, from the engine.
-  const cost = consequences(s);
-  if (cost.length) p.add('ui.whatItCost', {}, CHROME);
-  for (const l of cost) {
-    p.add(`ending.severity.${l.severity}`, {}, CHROME);
-    if (l.n === undefined) p.add(l.key, l.vars, CHROME);
-    else p.plural(l.key, l.n, CHROME);
-  }
-  // The count includes this ending; a first run shows 1.
-  p.add('ui.endingsSeen', { n: 1 }, CHROME);
   storyLines(s, p);
 }
 

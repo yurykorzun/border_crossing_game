@@ -286,7 +286,7 @@ describe('too late endings', () => {
   it('gives the two runs different ending text', () => {
     const a = honest(18).final;
     const b = honest(2).final;
-    for (const part of ['title', 'summary', 'body']) {
+    for (const part of ['title', 'body']) {
       const ka = `ending.${endingText(a)}.${part}`;
       const kb = `ending.${endingText(b)}.${part}`;
       expect(ka).not.toBe(kb);

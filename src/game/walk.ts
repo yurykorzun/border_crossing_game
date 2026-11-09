@@ -26,7 +26,7 @@ import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
-import { t, tn } from '../i18n';
+import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
 
@@ -171,16 +171,17 @@ export function checkState(s: RunState): string[] {
   const calledIn = s.calledIn ?? [];
   if (!calledIn.every((c) => s.exposed.includes(c) && c !== ch.protectedContact) || !unique(calledIn))
     bad.push(`called in [${calledIn}] with exposed [${s.exposed}]`);
-  // Every exposure and loss has its own scored line, whatever the ending, and the text exists.
+  // Every exposure and loss has its own line, worst first, whatever the ending, and its heading and text exist.
   const cost = consequences(s);
   if (cost.filter((l) => l.kind === 'contact').length !== s.exposed.length) bad.push(`exposed [${s.exposed}] but ${cost.length} lines on the ending list`);
   if (cost.some((l) => l.kind === 'medicine') === s.medicine) bad.push('medicine line does not match the state');
+  if (cost.some((l, i) => i > 0 && l.severity > cost[i - 1].severity)) bad.push('ending list is not worst first');
   for (const l of cost) {
     if (l.kind === 'contact' && (l.vars?.contact === ch.protectedContact) !== (l.severity === 3))
       bad.push(`${l.vars?.contact} exposed with severity ${l.severity}`);
     try {
-      if (l.n === undefined) t(l.key, l.vars);
-      else tn(l.key, l.n, l.vars);
+      t(`${l.key}.title`, l.vars);
+      t(l.key, l.vars);
     } catch (e) {
       bad.push((e as Error).message);
     }
