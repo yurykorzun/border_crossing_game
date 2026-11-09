@@ -332,11 +332,12 @@ p { margin: 0 0 var(--gap); }
 .icon { width: 16px; height: 16px; flex: none; display: block; }
 .icon-ink { fill: currentColor; }
 
-/* Scene: placeholder rectangles until generated art (docs/design.md).
-   It takes the spare height, and it is the first thing to shrink. */
+/* Scene: the counter view at one height (200 px) on every card and reaction, so the
+   officer stays put and the question stays close to the answers. It never grows into
+   space the answers free; it is the first thing to shrink when they need the room. */
 .scene {
   position: relative;
-  flex: 1 1 0;
+  flex: 0 1 200px;
   min-height: 90px;
   background: linear-gradient(#56645d, #46534c 60%, #3a4640 60%);
   border-radius: var(--radius);
@@ -417,7 +418,8 @@ p { margin: 0 0 var(--gap); }
 
 /* Queue: the strip names it, said and seen beats are a caption along the scene's bottom,
    phone messages stack in the phone panel joined to its lower edge. Any tap moves one beat on. */
-.queue-scene { cursor: pointer; align-items: stretch; flex-direction: column; justify-content: flex-end; border-radius: var(--radius) var(--radius) 0 0; }
+/* The queue scene still takes the spare height: the phone panel under it changes length beat by beat. */
+.queue-scene { flex: 1 1 0; cursor: pointer; align-items: stretch; flex-direction: column; justify-content: flex-end; border-radius: var(--radius) var(--radius) 0 0; }
 .queue-art { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* The drawn queue sits at the bottom; above it the wall just continues. */
 .queue-scene.scene-passport { background: var(--wall); }
@@ -447,7 +449,7 @@ p { margin: 0 0 var(--gap); }
 }
 
 /* Bottom tray, on every run screen: My story and Evidence share the width, Settings is a gear on the end. */
-.tools { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--gap); flex: none; }
+.tools { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--gap); flex: none; margin-top: auto; }
 .tools .tool-settings { width: 44px; padding: 0; }
 .tools .tool-settings .icon { width: 20px; height: 20px; }
 .tools button {

@@ -10,6 +10,7 @@ import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
+import { INSPECTION_BY_ID } from './game/content/encounters';
 import { queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
@@ -387,6 +388,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
     writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
     away: s.screen.kind === 'wait',
     medicine: s.medicine,
+    inspection: s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.kind ?? null : null,
   };
   return (
     <main className="run">

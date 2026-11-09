@@ -3,9 +3,12 @@
 // light. The scene changes with what just happened (SceneState): a document you
 // handed over lies on the officer's side, the officer writes while a fact goes on
 // file, and during a check your passport or the medicine box is gone from the counter.
+// The box keeps one size on every card (src/index.css), so states show as details, not
+// as a bigger officer: the clerk holds your passport behind the glass, a supervisor
+// comes in with your file for a secondary inspection, and a bag search opens the suitcase.
 
 import { t } from '../../i18n';
-import type { CharacterId, Checkpoint } from '../../game/types';
+import type { CharacterId, Checkpoint, InspectionKind } from '../../game/types';
 import { OFFICER } from './officer';
 import { Pixels } from './pixels';
 
@@ -18,6 +21,8 @@ export interface SceneState {
   away: boolean;
   /** You still have the medicine. */
   medicine: boolean;
+  /** A secondary inspection is open, and which kind; null otherwise. */
+  inspection: InspectionKind | null;
 }
 
 // The top of your coat: shoulder and upper arm, bottom left, close to the eye.
@@ -88,7 +93,54 @@ const WALKER = [
   'oo...o',
 ];
 
+// The supervisor standing, your file under her arm (p): narrower than the seated
+// officer, so she fits a doorway. o: uniform, a: amber badge.
+const SUPERVISOR = [
+  '..oooo..',
+  '.oooooo.',
+  '..oooo..',
+  '..oooo..',
+  '..oooo..',
+  '...oo...',
+  '.oooooo.',
+  'oooooooo',
+  'oaoooppp',
+  'oooooppp',
+  'oooooppp',
+  'oooooooo',
+  'oooooooo',
+  '.oooooo.',
+  '.oo..oo.',
+  '.oo..oo.',
+  '.oo..oo.',
+  '.oo..oo.',
+];
+
 const OFFICER_PALETTE = { o: 'art-officer', a: 'art-amber' };
+
+/** A secondary inspection: the supervisor comes in with your file. */
+function Supervisor({ x, y }: { x: number; y: number }) {
+  return (
+    <g data-name="supervisor">
+      <Pixels rows={SUPERVISOR} palette={{ ...OFFICER_PALETTE, p: 'art-paper' }} x={x} y={y} />
+    </g>
+  );
+}
+
+/** The bag search: your suitcase open on the steel table, lid up, clothes spilling out. */
+function OpenSuitcase() {
+  return (
+    <g data-name="open suitcase">
+      <rect className="art-bag-open" x="1" y="19" width="10" height="6" />
+      <rect className="art-bag-lining" x="2" y="20" width="8" height="4" />
+      <rect className="art-bag-open" x="0" y="25" width="12" height="5" />
+      <rect className="art-bag-lining" x="1" y="25" width="10" height="2" />
+      <rect className="art-paper" x="2" y="24" width="4" height="2" />
+      <rect className="art-paper-shade" x="6" y="25" width="3" height="1" />
+      <rect className="art-paper" x="12" y="29" width="3" height="1" />
+    </g>
+  );
+}
 
 /** A sheet and a moving pen: a fact going on file. */
 function Writing({ x, y }: { x: number; y: number }) {
@@ -114,7 +166,7 @@ function Shoulder({ character }: { character: CharacterId }) {
   return <Pixels rows={SHOULDER} palette={{ c: `art-coat-${character}` }} x={-3} y={34} />;
 }
 
-/** Passport control: the clerk behind the glass, the queue behind him, your passport on the counter. */
+/** Passport control: the clerk behind the glass with your passport in his hands, the queue behind him. */
 function Passport({ s, character }: { s: SceneState; character: CharacterId }) {
   return (
     <>
@@ -122,6 +174,12 @@ function Passport({ s, character }: { s: SceneState; character: CharacterId }) {
       <rect className="art-floor" x="2" y="6" width="36" height="22" />
       <Pixels rows={CROWD} palette={{ q: 'art-crowd' }} x={5} y={22} />
       {!s.away && <g className="officer-art"><Pixels rows={OFFICER} palette={OFFICER_PALETTE} x={14} y={11} /></g>}
+      {!s.away && (
+        <g data-name="passport behind the glass">
+          <Pixels rows={PASSPORT} palette={{ r: 'art-passport', y: 'art-emblem' }} x={17} y={22} />
+        </g>
+      )}
+      {s.inspection && <Supervisor x={29} y={10} />}
       {s.writing && <Writing x={27} y={25} />}
       {s.handedOver && <HandedOver x={7} y={23} />}
       <rect className="art-glass" x="2" y="6" width="36" height="22" />
@@ -137,13 +195,13 @@ function Passport({ s, character }: { s: SceneState; character: CharacterId }) {
       <rect className="art-booth" x="8" y="28" width="10" height="1" />
       <rect className="art-desk" x="0" y="30" width="40" height="14" />
       <rect className="art-lamp-wash" x="6" y="30" width="28" height="2" />
-      {!s.away && <Pixels rows={PASSPORT} palette={{ r: 'art-passport', y: 'art-emblem' }} x={23} y={32} />}
       <Shoulder character={character} />
     </>
   );
 }
 
-/** Customs: the medicine box on the steel table, the inspector, the back door he takes it through. */
+/** Customs: the medicine box on the steel table, the inspector, the back door he takes it through
+ * (and the supervisor comes in by). */
 function Customs({ s, character }: { s: SceneState; character: CharacterId }) {
   return (
     <>
@@ -153,9 +211,10 @@ function Customs({ s, character }: { s: SceneState; character: CharacterId }) {
       <rect className="art-lamp-wash" x="8" y="1" width="24" height="2" />
       {/* The back door, ajar while the inspector takes your box through it. */}
       <rect className="art-booth" x="27" y="9" width="10" height="21" />
-      <rect className={s.away ? 'art-lamp' : 'art-door'} x="28" y="10" width="8" height="20" />
-      {s.away && <rect className="art-door" x="32" y="10" width="4" height="20" />}
-      <rect className="art-glass-solid" x="29" y="12" width="2" height="3" />
+      <rect className={s.away || s.inspection ? 'art-lamp' : 'art-door'} x="28" y="10" width="8" height="20" />
+      {(s.away || s.inspection) && <rect className="art-door" x="32" y="10" width="4" height="20" />}
+      {!s.inspection && <rect className="art-glass-solid" x="29" y="12" width="2" height="3" />}
+      {s.inspection && <Supervisor x={28} y={12} />}
       {s.away ? (
         <g className="officer-art">
           <Pixels rows={WALKER} palette={OFFICER_PALETTE} x={23} y={17} />
@@ -168,8 +227,12 @@ function Customs({ s, character }: { s: SceneState; character: CharacterId }) {
       <rect className="art-steel" x="0" y="30" width="40" height="3" />
       <rect className="art-steel-edge" x="0" y="33" width="40" height="1" />
       <rect className="art-lamp-wash" x="4" y="30" width="32" height="1" />
-      <rect className="art-bag-open" x="1" y="25" width="9" height="5" />
-      <rect className="art-bag-lining" x="2" y="25" width="7" height="1" />
+      {s.inspection === 'search' ? <OpenSuitcase /> : (
+        <>
+          <rect className="art-bag-open" x="1" y="25" width="9" height="5" />
+          <rect className="art-bag-lining" x="2" y="25" width="7" height="1" />
+        </>
+      )}
       {!s.away && s.medicine && <Pixels rows={BOX} palette={{ w: 'art-box', g: 'art-box-band' }} x={15} y={25} />}
       {s.writing && <Writing x={25} y={27} />}
       {s.handedOver && <HandedOver x={4} y={30} />}
@@ -192,6 +255,7 @@ function Interview({ s, character }: { s: SceneState; character: CharacterId }) 
       {/* The officer's chair, and the officer in it unless he went to check something. */}
       <rect className="art-booth" x="13" y="14" width="14" height="13" />
       {!s.away && <g className="officer-art"><Pixels rows={OFFICER.slice(0, 15)} palette={OFFICER_PALETTE} x={14} y={12} /></g>}
+      {s.inspection && <Supervisor x={30} y={10} />}
       {/* The table and the sheet of paper in front of him. */}
       <rect className="art-table" x="0" y="27" width="40" height="4" />
       <rect className="art-table-edge" x="0" y="31" width="40" height="1" />
@@ -208,9 +272,9 @@ function Interview({ s, character }: { s: SceneState; character: CharacterId }) 
 const DRAW = { passport: Passport, customs: Customs, interview: Interview } as const;
 
 /**
- * Fills the run's scene box with `slice`, centred: a tall box (a short question)
- * loses the edges, a short one (answers that wrap) loses the ceiling and the floor,
- * and the officer at the counter stays in view either way.
+ * Fills the run's scene box with `slice`, centred. The box is 200 px on a phone, so it
+ * shows the middle band (officer, counter, what lies on it) and loses the ceiling and
+ * the floor; a crowded card shrinks it further, and the officer stays in view either way.
  */
 export function CheckpointScene({ checkpoint, character, state }: { checkpoint: Checkpoint; character: CharacterId; state: SceneState }) {
   const Draw = DRAW[checkpoint];
