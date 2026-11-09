@@ -6,7 +6,8 @@
 //    check result that queues it.
 // 2. Every answer does something its siblings don't (its kind, effects, check).
 // 3. Every scrutiny or time effect is explained: scrutiny names a reason the
-//    card can point at, and the reaction text says what the hours are spent on.
+//    card can point at, and the reaction text (or a check result's outcome
+//    line) says what the hours are spent on.
 // 4. Every card changes something: a resource, a fact, a claim or an option.
 //    A calm card with its one answer is the only exception, because its job
 //    is the pause itself (fsx.6: the free answer the honest run counts on).
@@ -65,7 +66,21 @@ const factsIn = (c: Cond | undefined): FactId[] => c?.facts ?? [];
  */
 const spends = (a: Approach) => (a.kind === 'say' || a.kind === 'verify' ? 'nothing' : a.kind);
 const signature = (a: Approach) =>
-  JSON.stringify({ spends: spends(a), topic: a.topic, contacts: a.contacts, namesOnly: a.namesOnly, check: a.check, effects: a.effects });
+  canonical({ spends: spends(a), topic: a.topic, contacts: a.contacts, namesOnly: a.namesOnly, check: a.check, effects: a.effects });
+
+/**
+ * One string per value, whatever order its keys were written in, so two effects
+ * that say the same thing compare equal. Array order is kept, because it means
+ * something: effects apply in turn (a `send` sends what is on file by then) and
+ * a contact list is tried first to last.
+ */
+function canonical(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
+  if (v && typeof v === 'object')
+    return `{${Object.entries(v).filter(([, x]) => x !== undefined).sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([k, x]) => `${JSON.stringify(k)}:${canonical(x)}`).join(',')}}`;
+  return JSON.stringify(v);
+}
 
 /** The check results that queue this card. */
 const sources = (content: Content, id: string): { check: Check; index: number }[] =>
@@ -148,6 +163,14 @@ export function lintContent(content: Content, text: Text): string[] {
       for (const e of c.effects ?? []) {
         if ('scrutiny' in e && e.reason !== check.id && !factsIn(c.when).includes(e.reason as FactId))
           problems.push(`check ${check.id}.${c.result}: scrutiny for ${e.reason}, which this result does not establish`);
+      }
+      // A result that costs time says what the hours go on, in its outcome line.
+      const { always, most } = hoursOf(c.effects ?? []);
+      if (most > 0) {
+        const key = `check.${check.id}.${c.result}`;
+        const line = text(key);
+        const why = line === undefined ? 'has no outcome text' : unexplained(line, always, most);
+        if (why) problems.push(`check ${check.id}.${c.result}: costs time but ${key} ${why}`);
       }
     }
   }
