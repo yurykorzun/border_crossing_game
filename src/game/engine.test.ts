@@ -3,7 +3,11 @@
 // down with hand-built states so a failure names the rule that broke.
 
 import { describe, expect, it } from 'vitest';
-import { factIds, legalActions, newRun, step } from './engine';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { factIds, legalActions, loggedAt, newRun, step } from './engine';
+import { StoryContent } from '../ui/parts';
+import { t } from '../i18n';
 import type { RunSetup } from './engine';
 import { CONTENT_VERSION, replay, tryStep } from './play';
 import type { Move } from './play';
@@ -43,6 +47,41 @@ describe('rules', () => {
   it('an exposed contact cannot be used again', () => {
     const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, exposed: ['mother'] });
     expect(tryStep(s, { type: 'choose', approach: 'mother' }).ok).toBe(false);
+  });
+
+  it('a spoken claim the officer writes down is on file at that desk; one only said aloud is not', () => {
+    // The inspector writes down a cash declaration (goods), but not a reason for visiting.
+    const declared = tryStep(at(newRun(lena), 'c_cash', { checkpoint: 1, slot: 1 }), { type: 'choose', approach: 'under' });
+    const admitted = tryStep(at(newRun(lena), 'c_tourist', { checkpoint: 1, slot: 1 }), { type: 'choose', approach: 'admit' });
+    if (!declared.ok || !admitted.ok) throw new Error('both answers are legal here');
+    expect(declared.state.claims).toContain('cashUnderLimit');
+    expect(loggedAt(declared.state, 'cashUnderLimit')).toEqual(['customs']);
+    expect(admitted.state.claims).toContain('familyVisit');
+    expect(loggedAt(admitted.state, 'familyVisit')).toEqual([]);
+
+    // My story: the written-down claim carries "on file" and the desk name, the spoken one neither.
+    const story = (s: RunState) => {
+      const html = renderToStaticMarkup(createElement(StoryContent, { s }));
+      return (c: string) => html.match(new RegExp(`<li data-claim="${c}"[^>]*>.*?</li>`))?.[0] ?? '';
+    };
+    const logged = story(declared.state)('cashUnderLimit');
+    expect(logged).toContain(t('ui.writtenDown'));
+    expect(logged).toContain(`data-desk="customs">${t('desk.customs')}<`);
+    const said = story(admitted.state)('familyVisit');
+    expect(said).toContain(t('claim.familyVisit'));
+    expect(said).toContain(t('ui.saidAloud'));
+    expect(said).not.toContain(t('ui.writtenDown'));
+    expect(said).not.toContain('data-desk');
+  });
+
+  it('the same claim made again at a desk that writes it down goes on file there too', () => {
+    const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, claims: ['familyVisit'] });
+    const r = tryStep(s, { type: 'choose', approach: 'mother' });
+    if (!r.ok) throw new Error('naming the mother is legal here');
+    expect(loggedAt(r.state, 'stayingWithFamily')).toEqual(['interview']);
+    expect(loggedAt(r.state, 'familyVisit')).toEqual([]);
+    // An old save without the record reads as nothing written down.
+    expect(loggedAt({ ...s, logged: undefined }, 'familyVisit')).toEqual([]);
   });
 
   it('time never goes below zero', () => {

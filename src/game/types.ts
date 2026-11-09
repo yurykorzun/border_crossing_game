@@ -155,11 +155,53 @@ export interface Character {
   weakTopics: Topic[];
 }
 
+/**
+ * What an officer cares about. passport: complete, accurate paperwork. customs:
+ * goods declared by the rules. interview: political risk (history, contacts, the phone).
+ */
+export type OfficerPriority = 'paperwork' | 'goods' | 'politics';
+
+/**
+ * How an officer reacts to an answer at their desk: each listed fact the answer
+ * puts on file here for the first time adds `scrutiny`, with that fact as the
+ * reason, unless the answer already adds scrutiny for it. Only while `when` holds.
+ */
+export interface OfficerReaction {
+  reveals: FactId[];
+  scrutiny: number;
+  when?: Cond;
+}
+
+/** The official at a desk. Their priority is stated on screen (officer.<desk>.priority). */
+export interface Officer {
+  desk: Checkpoint;
+  priority: OfficerPriority;
+  /** The answers this officer reacts to. Empty: their priority is already in what their cards cost. */
+  reactions: OfficerReaction[];
+  /** The claims this officer writes down when you make them here. Any other claim is only said aloud. */
+  writesDown: ClaimId[];
+}
+
 /** A person the traveler can name, and what they can confirm. */
 export interface Contact {
   id: ContactId;
   /** Topics they can confirm. A contact answer shows only on a card or check with one of these. */
   abilities: Topic[];
+  /** The fact that puts their home on file. With it on file, a call-in becomes a visit (a worse exposure). */
+  home?: FactId;
+}
+
+/** How badly something on the ending's list hurts: 1 minor, 2 serious, 3 severe. */
+export type Severity = 1 | 2 | 3;
+
+/** One line of the ending's scored list (consequences() in src/game/consequence.ts). */
+export interface EndingLine {
+  kind: 'medicine' | 'contact' | 'facts';
+  key: string;
+  vars?: Record<string, string | number>;
+  /** Plural count: render with tn(key, n). */
+  n?: number;
+  severity: Severity;
 }
 
 export interface EvidenceCard {
@@ -213,10 +255,21 @@ export interface RunState {
   loadout: EvidenceId[];
   used: EvidenceId[];
   exposed: ContactId[];
+  /**
+   * Contacts called in whose statement is still to be checked: the next card that
+   * asks about something they can confirm costs 1 hour for each. Never the protected
+   * contact, whose cost is the ending. Unset in saves from before it existed.
+   */
+  calledIn?: ContactId[];
   time: number;
   scrutiny: number;
   facts: FactMap;
   claims: ClaimId[];
+  /**
+   * The desks that wrote each claim down (Officer.writesDown), in CHECKPOINTS order.
+   * A claim in `claims` with no desk here was only said aloud. Unset in saves from before it existed.
+   */
+  logged?: Partial<Record<ClaimId, Checkpoint[]>>;
   medicine: boolean;
   perkUsed: boolean;
   withdrew: boolean;

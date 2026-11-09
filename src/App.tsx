@@ -4,8 +4,8 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { t } from './i18n';
-import { endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { t, tn } from './i18n';
+import { deskIntro, endingFor, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -17,7 +17,7 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, nextActionKey, packDetail } from './game/consequence';
+import { SEPARATOR, consequences, nextActionKey, packDetail, severityTone } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -522,9 +522,12 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
   const short = question.length <= SHORT_QUESTION;
+  // On reaching a desk, one line says what this officer cares about.
+  const desk = deskIntro(s);
   return (
     <>
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
+        {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         <h2 className="question">{question}</h2>
       </section>
       <div className="controls stack">
@@ -636,7 +639,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
-  const record = endingRecord(s);
+  const cost = consequences(s);
   return (
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
@@ -663,7 +666,19 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
       <Sheet open={story} onClose={() => setStory(false)} title={t('ui.myStory')}>
         <div className="ending-record">
           <p>{t(`ending.${ending}.body`)}</p>
-          {record.length > 0 && <ul className="record">{record.map((l, i) => <li key={i}>{l}</li>)}</ul>}
+          {cost.length > 0 && (
+            <>
+              <h3 className="mono what-it-cost">{t('ui.whatItCost')}</h3>
+              <ul className="record costs">
+                {cost.map((l, i) => (
+                  <li key={i} className={`cost ${l.kind}`}>
+                    <span className={`tag severity ${severityTone(l)}`}>{t(`ending.severity.${l.severity}`)}</span>{' '}
+                    {l.n === undefined ? t(l.key, l.vars) : tn(l.key, l.n, l.vars)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           <p className="mono muted">{t('ui.endingsSeen', { n: seen })}</p>
         </div>
         <StoryContent s={s} />
@@ -687,18 +702,6 @@ function resultRows(s: RunState): { label: string; value: string; tone: 'plain' 
       tone: calledIn ? 'red' : 'plain',
     },
   ];
-}
-
-/** What the old ending page listed under its text: the medicine left behind, each contact called in. */
-function endingRecord(s: RunState): string[] {
-  const ch = CHARACTERS[s.character];
-  const lines: string[] = [];
-  if (!s.medicine) lines.push(t('ending.line.medicineLost'));
-  for (const c of s.exposed) {
-    lines.push(capitalize(t('ending.line.exposed', { contact: c })));
-    if (c === ch.protectedContact) lines.push(t('ending.line.protectedExposed', { contact: c }));
-  }
-  return lines;
 }
 
 /** Contact names start lowercase ("your brother Tom") so they read mid-sentence. */

@@ -17,6 +17,7 @@ TL;DR: you hold a small hand of document cards and two people you can call on. T
 - Lena: once per run she can answer a work question without a document. Checks on her employer cost 1 extra time. Her background has a foreign employer, an old donation and an apartment.
 - Mark: packs 4 documents instead of 3, and starts at Scrutiny 1. His background has a second passport, a brother across the border and a protest photo.
 - Each has one protected person. Exposing them costs you the clean ending.
+- Exposing anyone else costs time later: they are called in, so the next card that asks about something they can confirm takes 1 more hour. Every ending lists each person exposed with a severity (minor for a phone call, serious once their home is on file, severe for the protected person), plus the medicine and how much is on file.
 
 **The bulletin (the "modifier")**
 - One of 3 is dealt per run: customs is strict, accommodation calls are checked, or old records are being cross-checked.
@@ -56,6 +57,7 @@ The rule that keeps it fair: every card has at least one answer that needs no do
 - Each desk knows only what came out there, and My story tags each fact with the desks that know it. A fact travels on only through a channel: the shared records (with the records bulletin it reaches every later desk at once), a call from one desk to the next, or a printout handed over after a check. So the address you showed at passport control is not known at the interview unless something carried it there.
 - A lie has three tiers. Unchallenged: nothing on file speaks against it, so it is free and you saved what the truth would have cost. Inconsistency: a fact makes it look odd (say "tourist", then your family address goes on file), and the interview deals a cheap clarify card: clarify for free, show a document, or take +1 scrutiny. Disproof: a fact says the opposite (deny other relatives while your brother abroad is on file, or say your cash is under the limit and then the bag search counts it), and the interview deals an expensive card: 3 hours or +2 scrutiny. Nobody can vouch it away.
 - Every scrutiny gain names its reason (a fact on file or a check result), and the reaction says it. A lie never adds scrutiny until something catches it.
+- Each officer has one priority, stated in one line above the first question at their desk (`OFFICERS` in `src/game/content/world.ts`). The passport clerk wants accurate paperwork and the customs inspector wants goods declared, and their cards already price that in. The security officer cares about politics: an answer that brings a political fact out at the interview for the first time (the second passport, the brother across the border, the old donation) costs +1 scrutiny with that fact as the reason, where the same answer at the passport desk costs nothing extra. Officer mood is not shown yet, because no mechanic sits behind it.
 - Only claims that truly exclude each other block a document. Saying you stay with your mother blocks the hotel booking; visiting family does not.
 
 ## Waiting rooms (checks)

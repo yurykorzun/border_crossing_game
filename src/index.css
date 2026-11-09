@@ -383,6 +383,9 @@ p { margin: 0 0 var(--gap); }
 .ask-short { padding: 2px 2px 0; }
 .ask-short .question { font-size: 1.4rem; line-height: 1.25; }
 .ask-card { padding: 12px 14px; }
+/* What the officer at this desk cares about, once, above the first question there. */
+.priority { margin: 0 0 6px; font-size: 0.9rem; color: #c5cec9; }
+.ask-card .priority { color: var(--muted); }
 .ask-short.inspection { padding-inline-start: 10px; }
 .reaction .said { font-style: italic; }
 /* What changed: plain lines under the officer's words, amber for escalation, red only for a confirmed loss. */
@@ -510,6 +513,11 @@ p { margin: 0 0 var(--gap); }
 /* Which desks know a fact: one small tag each, on their own line under it. */
 .record .desks { display: flex; flex-wrap: wrap; gap: 3px; }
 .record .tag.desk { margin-inline-start: 0; font-size: 0.62rem; }
+/* A claim an officer wrote down reads firm; one only said aloud reads faint. */
+.record .tag.logged, .record .tag.said { margin-inline-start: 0; font-size: 0.62rem; }
+.record .tag.logged { color: var(--ink); border-color: var(--ink); }
+.record li.said > span:first-child { font-style: italic; color: var(--muted); }
+.record .tag.said { border-style: dashed; }
 .small { font-size: 0.78rem; margin: 0 0 4px; }
 .who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .who p { margin: 0; }
@@ -626,6 +634,11 @@ p { margin: 0 0 var(--gap); }
 .ending .controls .see-file { background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
 .ending .controls .play-again { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 .ending-record { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--paper-2); }
+/* What it cost: one scored line per consequence. Red only for severe (protected contact, medicine), amber for serious. */
+.what-it-cost { margin: 10px 0 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.costs .tag.severity { margin-inline-start: 0; font-size: 0.66rem; }
+.costs .tag.severity.amber { color: var(--amber-paper); border-color: var(--amber-paper); }
+.costs .tag.severity.red { color: var(--danger-paper); border-color: var(--danger-paper); }
 .ending-turnedBack .ending-card { border-top: 6px solid var(--danger-paper); }
 .ending-tooLate .ending-card, .ending-homeAtCost .ending-card { border-top: 6px solid var(--amber-paper); }
 .ending-homeInTime .ending-card { border-top: 6px solid var(--navy); }

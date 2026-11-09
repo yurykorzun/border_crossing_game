@@ -14,8 +14,8 @@ import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, nextActionKey, packDetail } from './consequence';
-import { factIds, knownAt, newRun, options, shownCheckpoint, waitActions } from './engine';
+import { SEPARATOR, consequence, consequences, nextActionKey, packDetail } from './consequence';
+import { deskIntro, deskOf, factIds, knownAt, loggedAt, newRun, options, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -194,7 +194,15 @@ function storyLines(s: RunState, p: Page): void {
     p.add(`contact.${c}.can`, {}, CHROME);
   }
   p.add('ui.claims', {}, CHROME);
-  for (const c of s.claims) p.add(`claim.${c}`, {}, CHROME);
+  for (const c of s.claims) {
+    p.add(`claim.${c}`, {}, CHROME);
+    const desks = loggedAt(s, c);
+    if (!desks.length) p.add('ui.saidAloud', {}, CHROME);
+    else {
+      p.add('ui.writtenDown', {}, CHROME);
+      for (const d of desks) p.add(`desk.${d}`, {}, CHROME);
+    }
+  }
   if (!s.claims.length) p.add('ui.nothingYet', {}, CHROME);
   p.add('ui.onFile', {}, CHROME);
   p.add('ui.onFileHelp', {}, CHROME);
@@ -214,7 +222,7 @@ function storyLines(s: RunState, p: Page): void {
 
 /** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */
 function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void {
-  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact).parts.map((x) =>
+  const parts = consequence(o, cardKey, CHARACTERS[s.character].protectedContact, deskOf(s)).parts.map((x) =>
     render(() => (x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)), x.key),
   );
   const problem = parts.find((x) => x.problem)?.problem;
@@ -269,6 +277,9 @@ function screenLines(s: RunState, p: Page): void {
   }
   if (sc.kind === 'encounter' || sc.kind === 'inspection') {
     const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
+    // Panel in src/App.tsx: the officer's priority line above the first question at a desk.
+    const desk = deskIntro(s);
+    if (desk) p.add(`officer.${desk}.priority`);
     p.add(`${prefix}.${sc.id}.q`);
     for (const o of options(s)) {
       if (o.blocked === 'noCard') p.add('ui.showDocument');
@@ -308,10 +319,13 @@ function endingLines(s: RunState, p: Page): void {
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.close', {}, CHROME);
   p.add(`ending.${ending}.body`, {}, CHROME);
-  if (!s.medicine) p.add('ending.line.medicineLost', {}, CHROME);
-  for (const c of s.exposed) {
-    p.add('ending.line.exposed', { contact: c }, CHROME);
-    if (c === ch.protectedContact) p.add('ending.line.protectedExposed', { contact: c }, CHROME);
+  // What it cost: one scored line per consequence, from the engine.
+  const cost = consequences(s);
+  if (cost.length) p.add('ui.whatItCost', {}, CHROME);
+  for (const l of cost) {
+    p.add(`ending.severity.${l.severity}`, {}, CHROME);
+    if (l.n === undefined) p.add(l.key, l.vars, CHROME);
+    else p.plural(l.key, l.n, CHROME);
   }
   // The count includes this ending; a first run shows 1.
   p.add('ui.endingsSeen', { n: 1 }, CHROME);

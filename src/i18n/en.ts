@@ -55,6 +55,9 @@ export const en: Record<string, string> = {
   'ui.protected': 'protect',
   'ui.background': 'Background',
   'ui.claims': 'What you said',
+  // Tags beside a claim in My story: the desks that wrote it down, or that it was only said.
+  'ui.writtenDown': 'On file',
+  'ui.saidAloud': 'Said only',
   'ui.onFile': 'On file',
   'ui.onFileHelp': 'Each desk knows only what came out there or was sent on.',
   'ui.nothingYet': 'Nothing yet.',
@@ -241,6 +244,8 @@ export const en: Record<string, string> = {
   'claim.neverDonated.recorded': 'Recorded as a denial',
   'claim.stayingWithFamily.recorded': "Recorded as where you're staying",
   'claim.cashUnderLimit.recorded': 'Recorded as your cash declaration',
+  // The same, where this officer does not write the claim down (OFFICERS writesDown).
+  'claim.said': 'Said aloud, not written down',
   'fact.familyAddress.reveal': 'Reveals her address',
   'fact.employer.reveal': 'Reveals your employer',
   'fact.fatherCondition.reveal': "Reveals your father's condition",
@@ -271,6 +276,12 @@ export const en: Record<string, string> = {
   'officer.interview': 'Officer',
   'officer.followup': 'Officer',
   'officer.inspection': 'Supervisor',
+  // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
+  'officer.passport.priority': 'The clerk checks every stamp and every date.',
+  'officer.customs.priority': 'The inspector cares what you carry, and whether you declare it.',
+  'officer.interview.priority': 'This officer cares who you know and where you have been, not your paperwork.',
+  // The security officer's reaction to a political fact coming out at the interview.
+  'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
   // Scene names for screen readers (src/ui/art): never shown, so not counted as read.
   'scene.passport': 'The passport booth: the clerk behind the glass',
   'scene.customs': 'The customs inspection table',
@@ -527,6 +538,7 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.detail': 'Exposes them',
   'wait.assist.reaction': "You give them {contact}'s number.",
+  'calledIn.reaction': 'Earlier you named {contact}. The officer checks that statement first, which takes an hour.',
   'weak.work.reaction': "Your employer's name comes up in an old investigation. Checking it takes another hour.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',
@@ -562,6 +574,15 @@ export const en: Record<string, string> = {
   'ending.turnedBack.summary': 'They stamp your passport red and send you back.',
   'ending.turnedBack.body': 'You sit in the departures hall with a red stamp in your passport. Your mother calls. You let it ring. The next bus back leaves in the morning. You write her a message three times and delete it three times.',
   'ending.line.medicineLost': 'The medicine stays at the border.',
-  'ending.line.exposed': 'The officers call {contact} in for a conversation.',
-  'ending.line.protectedExposed': 'Your mother asked you to keep {contact} out of it.',
+  'ending.line.facts.one': '{n} thing about you is on file now.',
+  'ending.line.facts.other': '{n} things about you are on file now.',
+  // What exposing each person costs them, worst for the one you were asked to protect.
+  'exposure.mother.call': "Your mother gets a call from the border and has to leave your father's bedside to answer questions.",
+  'exposure.mother.home': "Officers come to your mother's address to take a statement. She has to leave the hospital to meet them.",
+  'exposure.cousin.protected': 'Ilya is called in for an interview, and his name stays on file. Your mother asked you to keep him out of it.',
+  'exposure.brother.protected': 'Tom goes on a border watch list, so he cannot come home to visit. Your mother asked you to keep him out of it.',
+  'ui.whatItCost': 'What it cost',
+  'ending.severity.1': 'Minor',
+  'ending.severity.2': 'Serious',
+  'ending.severity.3': 'Severe',
 };

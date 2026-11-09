@@ -239,3 +239,27 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(page.getByRole('radio').first()).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('a Too late ending still lists the exposed mother, scored', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  const run: RunState = {
+    ...lenaRun(), time: 1, exposed: ['mother'], facts: { urgency: ['customs'] }, checkpoint: 3,
+    screen: { kind: 'ending' }, reaction: null, ending: 'tooLate',
+  };
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['tooLate'] })] as const);
+  await page.reload();
+
+  const card = page.locator('.ending-card');
+  await expect(card.locator('h1')).toHaveText('Too late');
+  // The headline stays the same; the cost of each exposure is behind "See what's on file".
+  await page.getByRole('button', { name: "See what's on file" }).click();
+  const sheet = page.locator('dialog.sheet[open]');
+  await expect(sheet.locator('.what-it-cost')).toHaveText('What it cost');
+  const lines = sheet.locator('.costs li');
+  await expect(lines).toHaveCount(2);
+  await expect(lines.nth(0)).toHaveText(/^Minor Your mother gets a call from the border/);
+  await expect(lines.nth(1)).toHaveText('Minor 1 thing about you is on file now.');
+  expect(errors).toEqual([]);
+});

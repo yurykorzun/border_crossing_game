@@ -6,9 +6,10 @@
 import { has } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
-import type { ChangeLine, ContactId, EvidenceId, RunState } from './types';
+import { factIds } from './engine';
+import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
-import { EVIDENCE, MAX_SCRUTINY } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
 
 export type PartKind = 'medicine' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -60,7 +61,7 @@ const ICON: Record<PartKind, IconKind> = {
  * (`enc.p_purpose.family`): a `<cardKey>.check` text, when there is one, names the
  * check ("Register check"), and a `<cardKey>.contact` text replaces "Puts {contact} on file".
  */
-export function consequence(o: Option, cardKey: string, protectedContact: ContactId): Consequence {
+export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint): Consequence {
   const a = o.approach;
   if (o.blocked) return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, tone: 'plain' }] };
 
@@ -75,7 +76,7 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;
-  const claims: string[] = [];
+  const claims: ClaimId[] = [];
   for (const e of o.effects) {
     if ('time' in e) time += e.time;
     else if ('scrutiny' in e) scrutiny += e.scrutiny;
@@ -88,8 +89,10 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });
   if (scrutiny) all.push({ kind: 'scrutiny', key: 'ui.line.scrutiny', vars: { n: scrutiny }, tone: 'amber' });
   if (a.kind === 'withdraw') all.push({ kind: 'withdraw', key: 'ui.line.withdraw', tone: 'plain' });
-  // A claim only shows when nothing else does: "Recorded as your reason for visiting".
-  if (!all.length && claims.length) all.push({ kind: 'claim', key: `claim.${claims[0]}.recorded`, tone: 'plain' });
+  // A claim only shows when nothing else does: "Recorded as your reason for visiting",
+  // or, where this officer does not write it down (writesDown), that it is only said.
+  if (!all.length && claims.length)
+    all.push({ kind: 'claim', key: !desk || writesDown(desk, claims[0]) ? `claim.${claims[0]}.recorded` : 'claim.said', tone: 'plain' });
   if (a.kind === 'perk') all.push({ kind: 'perk', key: 'ui.line.perk', tone: 'plain' });
   if (!all.length) all.push({ kind: 'free', key: 'ui.line.free', tone: 'plain' });
 
@@ -144,3 +147,32 @@ export function nextActionKey(s: RunState): string {
   if (s.screen.kind === 'between') return `ui.proceed.${CHECKPOINTS[s.screen.next]}`;
   return 'ui.continue';
 }
+
+/** From this many facts on file, the record itself counts as serious. */
+export const SERIOUS_FACTS = 4;
+
+/**
+ * What the run cost, scored, for any ending: the medicine left behind, each person
+ * exposed and how badly, and how much is on file. Each is reported on its own, so
+ * "Too late" still says you exposed your mother. Severity comes from the state:
+ * the protected contact is severe (it also rules out homeInTime), anyone else is
+ * serious once their home is on file and minor otherwise. Ending in src/App.tsx
+ * lists them and endingLines() in src/game/transcript.ts writes them down.
+ */
+export function consequences(s: RunState): EndingLine[] {
+  const out: EndingLine[] = [];
+  if (!s.medicine) out.push({ kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 });
+  const facts = factIds(s);
+  const protectedContact = CHARACTERS[s.character].protectedContact;
+  for (const c of s.exposed) {
+    const home = CONTACTS[c].home;
+    if (c === protectedContact) out.push({ kind: 'contact', key: `exposure.${c}.protected`, vars: { contact: c }, severity: 3 });
+    else if (home && facts.includes(home)) out.push({ kind: 'contact', key: `exposure.${c}.home`, vars: { contact: c }, severity: 2 });
+    else out.push({ kind: 'contact', key: `exposure.${c}.call`, vars: { contact: c }, severity: 1 });
+  }
+  if (facts.length) out.push({ kind: 'facts', key: 'ending.line.facts', n: facts.length, severity: facts.length >= SERIOUS_FACTS ? 2 : 1 });
+  return out;
+}
+
+/** Severe is red (a confirmed serious consequence), serious amber, minor plain (docs/plan.md "UI rules"). */
+export const severityTone = (l: EndingLine): ChangeLine['tone'] => (l.severity === 3 ? 'red' : l.severity === 2 ? 'amber' : 'plain');
