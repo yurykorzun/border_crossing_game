@@ -385,6 +385,11 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
   n = say(n, [{ key: `${prefix}.${card.id}.${approachId}.reaction`, vars }]);
+  // The weakness hour is a real cost, so the reaction says what it is spent on.
+  const topic = topicOf(card);
+  if (opt.approach.kind === 'verify' && topic && CHARACTERS[s.character].weakTopics.includes(topic)) {
+    n = say(n, [{ key: `weak.${topic}.reaction` }]);
+  }
   if (opt.approach.kind === 'withdraw') return finish({ ...n, withdrew: true });
   if (s.screen.kind === 'inspection') n = { ...n, scrutiny: SCRUTINY_AFTER_INSPECTION };
   if (opt.approach.check) return startWait(n, opt.approach.check);

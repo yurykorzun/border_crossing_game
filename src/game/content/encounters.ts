@@ -189,7 +189,7 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'i_brother', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'history',
-    when: { any: [{ facts: ['brotherAbroad'] }, { background: 'brotherAtWar' }] },
+    when: { facts: ['brotherAbroad'] },
     approaches: [
       { id: 'honest', kind: 'say', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
       { id: 'number', kind: 'contact', contacts: ['brother'], effects: [] },

@@ -515,6 +515,7 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.detail': 'Clears the check. Exposes them',
   'wait.assist.reaction': "You give them {contact}'s number.",
+  'weak.work.reaction': "Your employer's name comes up in an old investigation. Checking it takes another hour.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',
   'beat.passport.1': 'A printer starts behind the partition.',

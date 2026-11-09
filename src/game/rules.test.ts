@@ -219,3 +219,21 @@ describe('no scrutiny without a reason', () => {
     }
   });
 });
+
+describe('detection needs something on file', () => {
+  it('the brother question comes only once the brother is on file, not from the background alone', () => {
+    const card = ENCOUNTERS.find((e) => e.id === 'i_brother')!;
+    expect(card.when).toEqual({ facts: ['brotherAbroad'] });
+  });
+
+  it("Lena's extra verification hour says what it is spent on", () => {
+    const r = tryStep(at(newRun(lena), 'p_employer'), { type: 'choose', approach: 'check' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.reaction?.map((e) => e.key)).toContain('weak.work.reaction');
+    expect(t('weak.work.reaction')).toMatch(/another hour/);
+    const m = tryStep(at(newRun(mark), 'p_employer'), { type: 'choose', approach: 'check' });
+    expect(m.ok).toBe(true);
+    if (m.ok) expect(m.state.reaction?.map((e) => e.key)).not.toContain('weak.work.reaction');
+  });
+});
