@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
-import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, nextActionKey } from './consequence';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, nextActionKey, packDetail } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { newRun } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -119,6 +119,17 @@ describe('consequence line', () => {
     const a = ENCOUNTERS[0].approaches[0];
     const c = consequence({ approach: a, blocked: 'noCard', effects: [] }, 'enc.x.y', 'cousin');
     expect(c.parts.map(text)).toEqual([t('ui.blocked.noCard')]);
+  });
+});
+
+describe('packing rows', () => {
+  const rows = (id: EvidenceId) => packDetail(id).map((line) => line.map((k) => t(k)).join(SEPARATOR));
+
+  it('lists every topic a document answers, then what it reveals', () => {
+    expect(rows('hospitalNote')).toEqual(['Medicine · Visit purpose', "Reveals your father's condition"]);
+    expect(rows('motherLetter')).toEqual(['Visit purpose · Accommodation', 'Reveals her address']);
+    expect(rows('hotel')).toEqual(['Accommodation · Length of stay']);
+    for (const id of EVIDENCE_IDS) expect(packDetail(id)[0], id).toHaveLength(EVIDENCE[id].topics.length);
   });
 });
 

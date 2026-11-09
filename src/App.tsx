@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { t, tn } from './i18n';
+import { own, t, tn } from './i18n';
 import { canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -213,7 +213,9 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
                 <span className="checkbox" aria-hidden>{picked.includes(id) && <Icon name="check" />}</span>
                 <span className="doc-text">
                   <strong>{t(`ev.${id}.label`)}</strong>
-                  <span className="doc-detail">{packDetail(id).map((k) => t(k)).join(SEPARATOR)}</span>
+                  {packDetail(id).map((line, n) => (
+                    <span key={n} className={n ? 'doc-detail doc-reveals' : 'doc-detail doc-topics'}>{line.map((k) => t(k)).join(SEPARATOR)}</span>
+                  ))}
                 </span>
               </button>
             </li>
@@ -518,7 +520,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
   const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
   const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
-  const question = t(`${prefix}.${id}.q`);
+  const question = t(own(`${prefix}.${id}.q`, s.character));
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
   const short = question.length <= SHORT_QUESTION;
@@ -541,7 +543,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
             disabled={!!o.blocked}
             onClick={() => dispatch({ type: 'choose', approach: o.approach.id })}
           >
-            <span className="choice-label">{optionLabel(prefix, id, o)}</span>
+            <span className="choice-label">{optionLabel(prefix, id, o, s.character)}</span>
             <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
@@ -554,13 +556,13 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 }
 
 /** A blocked option has no card or person to name, so it gets a generic label. */
-function optionLabel(prefix: string, id: string, o: Option): string {
+function optionLabel(prefix: string, id: string, o: Option, traveler: CharacterId): string {
   if (o.blocked === 'noCard') return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;
   if (o.contact) vars.contact = vars.contactMine = o.contact;
-  return t(`${prefix}.${id}.${o.approach.id}.label`, vars);
+  return t(own(`${prefix}.${id}.${o.approach.id}.label`, traveler), vars);
 }
 
 /** How many dots "Verification in progress" shows; the current one is amber. */

@@ -1,6 +1,6 @@
 // The term rules from the proofreading pass (docs/research/2026-11-09-proofreading.md),
 // locked so new content cannot drift: hours not time, Scrutiny n/3, one spelling per
-// name, no em dashes, every sentence starts with a capital.
+// name, no em dashes, every sentence starts with a capital, US spelling outside quoted speech.
 import { describe, expect, it } from 'vitest';
 import { en } from './en';
 
@@ -75,6 +75,11 @@ function termProblems(key: string, value: string): string[] {
   if (value.includes('—')) out.push('em dash');
   if (value.includes('--')) out.push('"--"');
 
+  // US English in UI and narration. Quoted speech is a character's own voice, so it is left out.
+  const narration = value.replace(/["“][^"”]*["”]/g, '');
+  if (/\bgrey\b/i.test(narration)) out.push('"grey" in narration (US English: gray)');
+  if (/\bin hospital\b/i.test(narration)) out.push('"in hospital" in narration (US English: in the hospital)');
+
   const text = rendered(value);
   if (!isFragment(key) && /^["“]?[a-z]/.test(text)) out.push(`starts lowercase: "${text.slice(0, 20)}"`);
   const mid = text.match(/[.!?]["”]?\s+["“]?[a-z]\w*/);
@@ -110,6 +115,8 @@ describe('English terms', () => {
     ['"Halden" without', 'ui.x', 'Welcome to Halden.'],
     ['em dash', 'ui.x', 'Wait — then go.'],
     ['"--"', 'ui.x', 'Wait -- then go.'],
+    ['"grey" in narration', 'ui.x', 'He copies your phone in a grey box.'],
+    ['"in hospital" in narration', 'ui.x', 'Your father is in hospital.'],
     ['starts lowercase', 'ui.x', 'wait here.'],
     ['starts lowercase', 'ui.x', '{contact} is called in.'],
     ['sentence starts lowercase', 'ui.x', 'Wait. then go.'],
@@ -121,5 +128,7 @@ describe('English terms', () => {
     for (const v of ['{n} hours remaining', 'Scrutiny 1/3.', 'Your cousin Ilya calls.', 'HALDEN CENTRAL', 'Home in time', 'Six times this year.'])
       expect(termProblems('ui.x', v)).toEqual([]);
     expect(termProblems('contact.mother', 'your mother')).toEqual([]);
+    // A character may keep their own voice inside quoted speech.
+    expect(termProblems('ui.x', '"He is in hospital, in a grey room," she says.')).toEqual([]);
   });
 });

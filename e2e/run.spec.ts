@@ -152,7 +152,7 @@ test('My story shows which desk knows each fact', async ({ page }) => {
 
   await page.getByRole('button', { name: 'My story' }).click();
   const sheet = page.locator('dialog.sheet[open]');
-  await expect(sheet).toContainText('Each desk knows only what came out there or was sent on.');
+  await expect(sheet).toContainText('Each desk sees what it learns or receives from another desk.');
   const row = sheet.locator('.record li[data-fact="familyAddress"]');
   await expect(row).toContainText('Family address');
   // Passport control and customs know it; the interview does not.

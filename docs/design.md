@@ -111,7 +111,7 @@ The structural parts are machine-checked by the content lint (`lintContent()` in
 
 - Why now: every related or follow-up card has a `when` or a check result that queues it.
 - Why each option: no two answers on a card do the same thing (same effects, same check and same spend). Say and verify spend nothing of their own, so a say and a verify with the same effects count as twins.
-- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on.
+- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on and leaves the count to the "N hours lost" line.
 - What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card with exactly one answer is the one exception, because its job is the pause (the free answer from rule 5).
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
@@ -135,7 +135,7 @@ The pairs live in `INCONSISTENCIES` and `DISPROOFS` in `src/game/content/encount
 Rules that keep it fair:
 - A document is blocked only by a claim that truly excludes it. The hotel booking is blocked by "Staying with family" (giving your mother's address as where you stay), not by "Visiting family", because you can visit family and sleep in a hotel.
 - Every scrutiny effect names its reason: a fact on file or a check whose result dealt the card. It only applies while that reason holds, so a lie adds scrutiny only once a fact or a check result catches it. An honest answer that adds scrutiny puts its reason on file first ("Yes, I have both" files the second passport). The walk checks every move: scrutiny never rises without a reason that holds.
-- Detection needs a fact on file, a check result or a document shown, never your background alone. The reaction text says what caused each time loss and scrutiny gain ("He writes 'refused search' on your file and makes you wait an hour for a supervisor.").
+- Detection needs a fact on file, a check result or a document shown, never your background alone. The reaction text says what caused each time loss and scrutiny gain ("He writes 'refused search' on your file and makes you wait for a supervisor."), and the engine adds the hours.
 
 ### What each official knows
 

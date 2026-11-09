@@ -9,7 +9,7 @@
 // screen. When a screen there changes, change it here too, or the transcript
 // stops being what the player reads.
 
-import { t, tn } from '../i18n';
+import { own, t, tn } from '../i18n';
 import type { BotRun, BotStyle } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { queueBeats } from './content/queues';
@@ -157,14 +157,16 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add(`bulletin.${setup.bulletin}`);
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.label`);
-    const parts = packDetail(id).map((k) => render(() => t(k), k));
-    const problem = parts.find((x) => x.problem)?.problem;
-    p.lines.push({
-      step: p.step,
-      key: parts.map((x) => x.key).join(SEPARATOR),
-      text: parts.map((x) => x.text).join(SEPARATOR),
-      ...(problem ? { problem } : {}),
-    });
+    for (const line of packDetail(id)) {
+      const parts = line.map((k) => render(() => t(k), k));
+      const problem = parts.find((x) => x.problem)?.problem;
+      p.lines.push({
+        step: p.step,
+        key: parts.map((x) => x.key).join(SEPARATOR),
+        text: parts.map((x) => x.text).join(SEPARATOR),
+        ...(problem ? { problem } : {}),
+      });
+    }
   }
   p.add('ui.moreBelow');
   p.add('ui.continue');
@@ -196,7 +198,7 @@ function storyLines(s: RunState, p: Page): void {
   }
   p.add('ui.claims', {}, CHROME);
   for (const c of s.claims) {
-    p.add(`claim.${c}`, {}, CHROME);
+    p.add(own(`claim.${c}`, s.character), {}, CHROME);
     const desks = loggedAt(s, c);
     if (!desks.length) p.add('ui.saidAloud', {}, CHROME);
     else {
@@ -284,7 +286,7 @@ function screenLines(s: RunState, p: Page): void {
     // Once the bus is out of reach, the line saying so sits above the priority line.
     if (finishing) p.add('ui.doomed');
     if (desk) p.add(`officer.${desk}.priority`);
-    p.add(`${prefix}.${sc.id}.q`);
+    p.add(own(`${prefix}.${sc.id}.q`, s.character));
     for (const o of options(s)) {
       if (o.blocked === 'noCard') p.add('ui.showDocument');
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
@@ -292,7 +294,7 @@ function screenLines(s: RunState, p: Page): void {
         const vars: Record<string, string> = {};
         if (o.card) vars.card = vars.cardThe = o.card;
         if (o.contact) vars.contact = vars.contactMine = o.contact;
-        p.add(`${prefix}.${sc.id}.${o.approach.id}.label`, vars);
+        p.add(own(`${prefix}.${sc.id}.${o.approach.id}.label`, s.character), vars);
       }
       consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
     }
@@ -353,7 +355,7 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
     const sc = s.screen;
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
-        ? `${sc.kind === 'inspection' ? 'insp' : 'enc'}.${sc.id}.${action.approach}.label`
+        ? own(`${sc.kind === 'inspection' ? 'insp' : 'enc'}.${sc.id}.${action.approach}.label`, s.character)
         : action.type === 'waitAction' ? `wait.${action.action}.label`
         : action.type === 'finish' ? 'ui.finishQuickly'
         : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`

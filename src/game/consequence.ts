@@ -108,13 +108,16 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
 }
 
 /**
- * The one line under a document on the packing screen: what it helps with, then
- * " · Reveals <x>" for each fact it puts on file. The keys, so DocumentsStep in
+ * The lines under a document on the packing screen, as keys joined by SEPARATOR:
+ * every topic it answers ("Medicine · Visit purpose"), then, when it puts facts on
+ * file, a second line "Reveals <x>" for each. Two lines, so a document that answers
+ * two topics still fits each on one line at 390px. The keys, so DocumentsStep in
  * src/App.tsx and setupLines() in src/game/transcript.ts show the same words.
  */
-export function packDetail(id: EvidenceId): string[] {
+export function packDetail(id: EvidenceId): string[][] {
   const facts = EVIDENCE[id].onUse.flatMap((e) => ('fact' in e ? [e.fact] : []));
-  return [`ev.${id}.helps`, ...facts.map((f) => `fact.${f}.reveal`)];
+  const topics = EVIDENCE[id].topics.map((topic) => `topic.${topic}.helps`);
+  return facts.length ? [topics, facts.map((f) => `fact.${f}.reveal`)] : [topics];
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */

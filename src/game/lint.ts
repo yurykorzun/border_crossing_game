@@ -7,7 +7,7 @@
 // 2. Every answer does something its siblings don't (its kind, effects, check).
 // 3. Every scrutiny or time effect is explained: scrutiny names a reason the
 //    card can point at, and the reaction text (or a check result's outcome
-//    line) says what the hours are spent on.
+//    line) says what the hours are spent on, without a count of its own.
 // 4. Every card changes something: a resource, a fact, a claim or an option.
 //    A calm card with its one answer is the only exception, because its job
 //    is the pause itself (fsx.6: the free answer the honest run counts on).
@@ -23,23 +23,21 @@ export interface Content {
 /** Looks up player text by key (t() from src/i18n), or undefined when there is none. */
 export type Text = (key: string) => string | undefined;
 
-const HOURS: Record<number, string> = { 1: 'an hour', 2: 'two hours', 3: 'three hours' };
-const NUMBER: Record<number, string> = { 1: 'one', 2: 'two', 3: 'three' };
-
 /**
- * Why a reaction does not explain its hours, or null (fsx.12). It must state the
- * hours the answer always costs inside a sentence that says what they are spent
- * on: at least two words before the hours, not "It takes" or "That takes". An
- * extra hour that depends on the day must be stated too (`most`).
+ * Why a time-costing reaction does not explain its hours, or null (fsx.12,
+ * dhv.1). It says what the hours are spent on and leaves the count to the
+ * engine: the result already adds an "N hours lost" line, and a fixed count in
+ * the prose goes wrong on a records day or when a weakness or call-in adds an
+ * hour. So no "hour" or "minute" in it at all, at least three words, and no
+ * bare "It takes" or "That takes".
  */
-export function unexplained(text: string, hours: number, most = hours): string | null {
-  const phrase = HOURS[hours];
-  if (!phrase) return `no wording for ${hours} hours`;
-  const sentence = text.split(/(?<=[.!?"])\s+/).find((x) => x.toLowerCase().includes(phrase));
-  if (!sentence) return `does not say "${phrase}"`;
-  const before = sentence.slice(0, sentence.toLowerCase().indexOf(phrase)).trim();
-  if (before.split(/\s+/).filter(Boolean).length < 2 || /^\W*(it|that|this)\s+takes?\b/i.test(before)) return `"${sentence}" does not say what the time is spent on`;
-  if (most !== hours && !text.toLowerCase().includes(NUMBER[most])) return `does not say it can be ${most} hours`;
+export function unexplained(text: string): string | null {
+  const sentences = text.split(/(?<=[.!?"])\s+/).filter(Boolean);
+  const counted = sentences.find((x) => /\b(hours?|minutes?)\b/i.test(x));
+  if (counted) return `"${counted}" states the hours, which the result line already shows`;
+  if (text.split(/\s+/).filter(Boolean).length < 3) return `"${text}" does not say what the time is spent on`;
+  const vague = sentences.find((x) => /^\W*(it|that|this)\s+takes?\b/i.test(x));
+  if (vague) return `"${vague}" does not say what the time is spent on`;
   return null;
 }
 
@@ -150,11 +148,10 @@ export function lintContent(content: Content, text: Text): string[] {
         if ('scrutiny' in e && !reasonHolds(content, card, a, i, e.reason))
           problems.push(`${card.id}.${a.id}: scrutiny for ${e.reason}, which nothing on this card puts on file or checks`);
       });
-      const { always, most } = hoursOf(a.effects);
-      if (most > 0) {
+      if (hoursOf(a.effects).most > 0) {
         const key = `${prefix}.${card.id}.${a.id}.reaction`;
         const line = text(key);
-        const why = line === undefined ? 'has no reaction text' : unexplained(line, always, most);
+        const why = line === undefined ? 'has no reaction text' : unexplained(line);
         if (why) problems.push(`${card.id}.${a.id}: costs time but ${key} ${why}`);
       }
     }
@@ -173,11 +170,10 @@ export function lintContent(content: Content, text: Text): string[] {
           problems.push(`check ${check.id}.${c.result}: scrutiny for ${e.reason}, which this result does not establish`);
       }
       // A result that costs time says what the hours go on, in its outcome line.
-      const { always, most } = hoursOf(c.effects ?? []);
-      if (most > 0) {
+      if (hoursOf(c.effects ?? []).most > 0) {
         const key = `check.${check.id}.${c.result}`;
         const line = text(key);
-        const why = line === undefined ? 'has no outcome text' : unexplained(line, always, most);
+        const why = line === undefined ? 'has no outcome text' : unexplained(line);
         if (why) problems.push(`check ${check.id}.${c.result}: costs time but ${key} ${why}`);
       }
     }
