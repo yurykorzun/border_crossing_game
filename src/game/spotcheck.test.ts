@@ -153,6 +153,28 @@ describe('spot-checks', () => {
     },
   );
 
+  // 2op.9: the line names the claim in the traveler's own words, so Mark's denial
+  // reads claim.noOtherFamily.mark ("No family across the border"), not Lena's.
+  it.each((['lena', 'mark'] as const).flatMap((who) => CLAIMS.map((c) => [who, c] as const)))(
+    'for %s, a spot-check of "%s" shows that traveler\'s own claim wording',
+    (who, c) => {
+      const s = { ...leaving('customs', [c], fitting(c)), character: who };
+      const line = step(s, choose('customs'), picks(0)).reaction?.find((l) => l.key === 'spot.clear');
+      expect(line).toBeDefined();
+      const text = t(line!.key, line!.vars);
+      expect(text).toContain(`"${t(own(`claim.${c}`, who))}"`);
+    },
+  );
+
+  it('Mark hears his own denial, not Lena\'s', () => {
+    const s = { ...leaving('customs', ['noOtherFamily'], fitting('noOtherFamily')), character: 'mark' as const };
+    const line = step(s, choose('customs'), picks(0)).reaction?.find((l) => l.key.startsWith('spot.'));
+    expect(line?.vars?.claim).toBe('noOtherFamily.mark');
+    const text = t(line!.key, line!.vars);
+    expect(text).toContain(`"${t('claim.noOtherFamily.mark')}"`);
+    expect(text).not.toContain(t('claim.noOtherFamily'));
+  });
+
   it('every result has text, with no dash', () => {
     for (const r of ['clear', 'flaw', 'answered', 'explained']) {
       const line = t(`spot.${r}`, { claim: 'tourism', said: 'tourism', desk: 'passport', fact: 'familyAddress', hours: '2' });

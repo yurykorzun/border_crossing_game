@@ -856,12 +856,11 @@ describe('before admission, scrutiny is a risk', () => {
     }
   });
 
-  it('does not count the scrutiny a character starts with, unless a challenge caught you', () => {
+  it('counts the scrutiny a character starts with (2op.9)', () => {
     const start = CHARACTERS.mark.startScrutiny;
     expect(start).toBeGreaterThan(0);
-    expect(lastAnswer(start, 0, {}, mark).n.ending).toBe('homeInTime');
+    expect(lastAnswer(start, 0, {}, mark).n.screen.kind).toBe('inspection');
     expect(lastAnswer(start + 1, 0, {}, mark).n.screen.kind).toBe('inspection');
-    expect(lastAnswer(start, 0, { seen: ['i_stay', 'i_clarify', 'i_family'] }, mark).n.screen.kind).toBe('inspection');
   });
 
   it('lets a paper on the bulletin topic, shown on the way, settle her on one draw of 2', () => {
