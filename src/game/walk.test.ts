@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import designDoc from '../../docs/design.md?raw';
 import { ENDING_RANK, allSetups, checkState, neverPicked, outcomes, walk, warningShares } from './walk';
 import { pickedAnswers } from './bots';
 import { legalActions, newRun, step } from './engine';
@@ -94,7 +94,7 @@ describe('answers no style of play picks', () => {
   it('keeps only answers docs/design.md names with a reason', () => {
     // Each one left is named on a list line of the "Answers no style picks" section,
     // among the ids before the " - " that starts the reason.
-    const doc = readFileSync('docs/design.md', 'utf8');
+    const doc: string = designDoc;
     const at = doc.indexOf('\n## Answers no style picks\n');
     expect(at).toBeGreaterThanOrEqual(0);
     const end = doc.indexOf('\n## ', at + 1);
