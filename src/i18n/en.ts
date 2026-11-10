@@ -36,6 +36,8 @@ export const en: Record<string, string> = {
   'ui.level': 'Crossing',
   'ui.pickLevel': 'Choose a crossing',
   'ui.levelNumber': 'Level {n}',
+  'ui.levelOpensAt.one': 'Opens after {n} ending',
+  'ui.levelOpensAt.other': 'Opens after {n} different endings',
   'level.arrival.title': 'Arrival',
   'level.arrival.blurb': 'Home to your father in the hospital, before the last bus leaves.',
   'ui.traveler': 'Traveler',

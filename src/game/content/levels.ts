@@ -2,7 +2,8 @@
 // names and goals are in src/i18n/en.ts under the keys each level names.
 // Every level uses the same three desks and officers (epic border_crossing_game-rwf).
 
-import type { Level, LevelId } from '../types';
+import type { EndingId, Level, LevelId } from '../types';
+import { distinctEndings } from '../save';
 import { MISSION_MIN_TIME, START_TIME } from './world';
 import { ENCOUNTERS, INSPECTIONS } from './encounters';
 
@@ -19,6 +20,7 @@ export const LEVELS: Record<LevelId, Level> = {
     minTripTime: MISSION_MIN_TIME,
     cards: [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)],
     rules: [],
+    opensAt: 0,
   },
 };
 
@@ -36,3 +38,18 @@ const DEALS = new Map(LEVEL_IDS.map((id) => [id, new Set(LEVELS[id].cards)]));
 
 /** Whether this level can deal the encounter or inspection `card`. */
 export const dealsCard = (s: { level?: LevelId }, card: string): boolean => DEALS.get(s.level ?? DEFAULT_LEVEL)!.has(card);
+
+/** Whether `level` is open: the player has seen at least its opensAt different endings (distinctEndings() in src/game/save.ts). */
+export const levelOpen = (level: Pick<Level, 'opensAt'>, endingsSeen: readonly EndingId[]): boolean =>
+  distinctEndings(endingsSeen) >= level.opensAt;
+
+/** One row of the level list. A locked row says what opens it: `ui.levelOpensAt`, read with tn() and the endings count. */
+export interface LevelRow {
+  level: Level;
+  open: boolean;
+  opensAt?: { key: 'ui.levelOpensAt'; n: number };
+}
+
+/** The level list for a player who has seen `endingsSeen`, in list order. */
+export const levelRows = (endingsSeen: readonly EndingId[], levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): LevelRow[] =>
+  levels.map((level) => (levelOpen(level, endingsSeen) ? { level, open: true } : { level, open: false, opensAt: { key: 'ui.levelOpensAt', n: level.opensAt } }));

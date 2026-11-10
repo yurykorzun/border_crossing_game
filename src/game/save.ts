@@ -2,7 +2,7 @@
 // Pure helpers take a Store so tests use a Map (pattern from
 // alexis_adventure_game/src/core/save.ts). A broken or old save falls back to fresh.
 
-import type { EndingId, RunState } from './types';
+import type { CarriedFile, EndingId, RunState } from './types';
 
 export interface Settings {
   reduceWait: boolean;
@@ -14,6 +14,11 @@ export interface SaveData {
   v: typeof SAVE_VERSION;
   run: RunState | null;
   endingsSeen: EndingId[];
+  /**
+   * The file from the last finished crossing (src/game/carry.ts), for a later level
+   * to read. Null until a crossing ends; unset in saves from before it existed.
+   */
+  file: CarriedFile | null;
   settings: Settings;
 }
 
@@ -36,10 +41,26 @@ export const ENDINGS: readonly EndingId[] = ['homeInTime', 'homeAtCost', 'tooLat
 export const openQuestions = (data: Pick<SaveData, 'endingsSeen'>): string[] =>
   ENDINGS.filter((e) => !data.endingsSeen.includes(e)).map((e) => `question.${e}`);
 
+/** How many different endings the player has seen: what opens a level (levelOpen() in src/game/content/levels.ts). */
+export const distinctEndings = (endingsSeen: readonly EndingId[]): number =>
+  new Set(endingsSeen.filter((e) => ENDINGS.includes(e))).size;
+
+const isList = (x: unknown): x is string[] => Array.isArray(x) && x.every((v) => typeof v === 'string');
+
+/** A saved file, or null when it is missing or broken, so a bad file never costs the rest of the save. */
+function loadFile(x: unknown): CarriedFile | null {
+  if (!x || typeof x !== 'object') return null;
+  const f = x as Partial<CarriedFile>;
+  const ok = typeof f.level === 'string' && typeof f.character === 'string' && ENDINGS.includes(f.ending as EndingId)
+    && isList(f.claims) && isList(f.named) && isList(f.kept) && isList(f.spent) && typeof f.medicine === 'boolean';
+  return ok ? (f as CarriedFile) : null;
+}
+
 export const freshSave = (): SaveData => ({
   v: SAVE_VERSION,
   run: null,
   endingsSeen: [],
+  file: null,
   settings: { reduceWait: false, reduceMotion: false, sound: true },
 });
 
@@ -54,6 +75,7 @@ export function load(store: Store): SaveData {
       v: SAVE_VERSION,
       run: data.run && data.run.v === 2 ? data.run : null,
       endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e) => ENDINGS.includes(e)) : [],
+      file: loadFile(data.file),
       settings: { ...base.settings, ...(data.settings ?? {}) },
     };
   } catch {

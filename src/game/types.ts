@@ -281,6 +281,34 @@ export interface Level {
   cards: readonly string[];
   /** The rules this level adds. Level 1 adds none. */
   rules: readonly LevelRule[];
+  /**
+   * How many different endings the player must have seen before the level opens
+   * (levelOpen() in src/game/content/levels.ts). Seeing them opens it, not winning. 0: open from the start.
+   */
+  opensAt: number;
+}
+
+/**
+ * The file from your last finished crossing, which a later level can read
+ * (src/game/carry.ts). It is what the officials have on you next time: what you
+ * claimed, who you named, which documents you still hold and which you spent.
+ */
+export interface CarriedFile {
+  /** The crossing it came from. */
+  level: LevelId;
+  character: CharacterId;
+  ending: EndingId;
+  claims: ClaimId[];
+  /** Contacts you named to an official. */
+  named: ContactId[];
+  /** Documents you packed and did not show. */
+  kept: EvidenceId[];
+  /** Documents you showed at a desk, so they are on file and used up. */
+  spent: EvidenceId[];
+  /** Whether the medicine came through. */
+  medicine: boolean;
+  /** Set when no crossing was saved and the file was built from a seed (defaultFile()). */
+  seeded?: true;
 }
 
 export type WaitAction = 'wait' | 'ask' | 'assist';

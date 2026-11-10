@@ -6,8 +6,10 @@ import partsSource from '../ui/parts.tsx?raw';
 import { playRun, setupFor } from './bots';
 import type { BotStyle } from './bots';
 import { INSPECTIONS } from './content/encounters';
-import { BALANCE, KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, playMinutes, playTimeRule, transcriptOf } from './transcript';
+import { LEVELS } from './content/levels';
+import { BALANCE, KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, onceWords, playMinutes, playTimeRule, transcriptOf, words } from './transcript';
 import type { KnownFailure, Transcript } from './transcript';
+import type { Level, LevelId } from './types';
 
 // setupFor() cycles Lena's setups first, then Mark's; 60 is Mark's first.
 const LENA = 4;
@@ -122,6 +124,28 @@ describe('scenario evals', () => {
     const trs = [run(LENA), run(LENA, 'liar'), run(MARK), run(MARK, 'liar')];
     expect(only(4, trs).fresh).toEqual([]);
     expect(KNOWN_FAILURES.filter((k) => k.rule === 4)).toEqual([]);
+  });
+
+  it('rule 4: the level list counts once per session, so more levels do not lengthen a run (rwf.11)', () => {
+    const setup = setupFor(LENA);
+    const bot = playRun('honest', setup);
+    const one = transcriptOf(bot, setup);
+    // Arrival plus 8 stand-ins (the planned levels and a daily row), each with a long line.
+    const nine: Level[] = [LEVELS.arrival, ...Array.from({ length: 8 }, (_, i) => ({
+      ...LEVELS.arrival, id: `extra${i}` as LevelId, number: i + 2, blurb: 'ui.premise',
+    }))];
+    const many = transcriptOf(bot, setup, nine);
+    // Same words, same minutes: only the picked level's row is in the run.
+    expect(words(many)).toBe(words(one));
+    expect(playMinutes(many)).toBe(playMinutes(one));
+    // Every row is still in the transcript and still counted, once per session.
+    const read = (tr: Transcript) => tr.lines.filter((l) => l.key === 'ui.premise' && l.once).length;
+    expect(read(many)).toBe(8);
+    expect(onceWords(one)).toBe(0);
+    expect(onceWords(many)).toBeGreaterThan(8 * 3);
+    // The picked level's own row counts in the run.
+    expect(many.lines.find((l) => l.key === LEVELS.arrival.blurb)?.once).toBeUndefined();
+    expect(only(4, [many]).summaries.map(formatSummary)[0]).toContain(`plus ${onceWords(many)} words of the level list read once per session`);
   });
 
   it('rule 4: a run just under the 4-minute floor fails, one at the floor passes', () => {

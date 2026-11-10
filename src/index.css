@@ -249,6 +249,8 @@ p { margin: 0 0 var(--gap); }
   cursor: pointer;
 }
 .level:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
+/* A locked level: still listed, with what opens it in place of its blurb. */
+.level:disabled { cursor: default; border-style: dashed; }
 .level-number { color: var(--muted); }
 .level-name { color: var(--navy); font-size: 1.1rem; line-height: 1.25; }
 .level-line { font-size: 0.85rem; color: var(--muted); line-height: 1.3; }
