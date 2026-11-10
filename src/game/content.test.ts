@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import { has, t } from '../i18n';
 import { CHECKS, ENCOUNTERS, INSPECTIONS } from './content/encounters';
-import { EVIDENCE } from './content/world';
 import { lintContent } from './lint';
 import type { Content, Text } from './lint';
 import type { Approach, Encounter } from './types';
@@ -37,7 +36,7 @@ describe('content lint', () => {
   it('fails a related card with no reason to appear', () => {
     const card: Encounter = {
       id: 'x_why', checkpoint: 'customs', kind: 'related',
-      approaches: [{ id: 'yes', kind: 'say', effects: [{ claim: 'tourism' }] }],
+      approaches: [{ id: 'yes', kind: 'say', effects: [{ claim: 'shortTrip' }] }],
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_why: no reason to appear/)]);
   });
@@ -45,7 +44,7 @@ describe('content lint', () => {
   it('fails a follow-up that no check result queues', () => {
     const card: Encounter = {
       id: 'x_orphan', checkpoint: 'followup', kind: 'followup',
-      approaches: [{ id: 'yes', kind: 'say', effects: [{ claim: 'tourism' }] }],
+      approaches: [{ id: 'yes', kind: 'say', effects: [{ claim: 'shortTrip' }] }],
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_orphan: no reason to appear/)]);
   });
@@ -54,8 +53,8 @@ describe('content lint', () => {
     const card: Encounter = {
       id: 'x_twins', checkpoint: 'customs', kind: 'routine',
       approaches: [
-        { id: 'a', kind: 'say', effects: [{ claim: 'tourism' }] },
-        { id: 'b', kind: 'say', effects: [{ claim: 'tourism' }] },
+        { id: 'a', kind: 'say', effects: [{ claim: 'shortTrip' }] },
+        { id: 'b', kind: 'say', effects: [{ claim: 'shortTrip' }] },
       ],
     };
     expect(withCard(card)).toEqual(['x_twins: answers a and b do the same thing']);
@@ -65,11 +64,11 @@ describe('content lint', () => {
   // reviews named: twins whatever kind or key order, apart when they spend or do
   // something different.
   const pairs: [string, Approach, Approach, boolean][] = [
-    ['same say', { id: 'a', kind: 'say', effects: [{ claim: 'tourism' }] }, { id: 'b', kind: 'say', effects: [{ claim: 'tourism' }] }, true],
-    ['say and verify, same effects', { id: 'a', kind: 'say', effects: [{ claim: 'tourism' }] }, { id: 'b', kind: 'verify', effects: [{ claim: 'tourism' }] }, true],
+    ['same say', { id: 'a', kind: 'say', effects: [{ claim: 'shortTrip' }] }, { id: 'b', kind: 'say', effects: [{ claim: 'shortTrip' }] }, true],
+    ['say and verify, same effects', { id: 'a', kind: 'say', effects: [{ claim: 'shortTrip' }] }, { id: 'b', kind: 'verify', effects: [{ claim: 'shortTrip' }] }, true],
     ['keys in another order', { id: 'a', kind: 'say', effects: [{ scrutiny: 1, reason: 'employer' }] }, { id: 'b', kind: 'say', effects: [{ reason: 'employer', scrutiny: 1 }] }, true],
-    ['only `requires` differs', { id: 'a', kind: 'say', effects: [{ claim: 'tourism' }] }, { id: 'b', kind: 'say', requires: { facts: ['employer'] }, effects: [{ claim: 'tourism' }] }, true],
-    ['different effects', { id: 'a', kind: 'say', effects: [{ claim: 'tourism' }] }, { id: 'b', kind: 'say', effects: [{ claim: 'hotelStay' }] }, false],
+    ['only `requires` differs', { id: 'a', kind: 'say', effects: [{ claim: 'shortTrip' }] }, { id: 'b', kind: 'say', requires: { facts: ['employer'] }, effects: [{ claim: 'shortTrip' }] }, true],
+    ['different effects', { id: 'a', kind: 'say', effects: [{ claim: 'shortTrip' }] }, { id: 'b', kind: 'say', effects: [{ claim: 'hotelStay' }] }, false],
     ['one opens a check', { id: 'a', kind: 'verify', effects: [{ time: -1 }] }, { id: 'b', kind: 'verify', effects: [{ time: -1 }], check: 'recordsCheck' }, false],
     ['evidence spends a document', { id: 'a', kind: 'say', effects: [] }, { id: 'b', kind: 'evidence', topic: 'identity', effects: [] }, false],
     ['a contact exposes someone', { id: 'a', kind: 'say', effects: [{ time: -1 }] }, { id: 'b', kind: 'contact', contacts: ['mother'], effects: [{ time: -1 }] }, false],
@@ -88,7 +87,7 @@ describe('content lint', () => {
       id: 'x_scrutiny', checkpoint: 'customs', kind: 'routine',
       approaches: [
         { id: 'a', kind: 'say', effects: [{ scrutiny: 1, reason: 'employer' }] },
-        { id: 'b', kind: 'say', effects: [{ claim: 'tourism' }] },
+        { id: 'b', kind: 'say', effects: [{ claim: 'shortTrip' }] },
       ],
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_scrutiny\.a: scrutiny for employer/)]);
@@ -99,7 +98,7 @@ describe('content lint', () => {
       id: 'x_check', checkpoint: 'customs', kind: 'routine',
       approaches: [
         { id: 'a', kind: 'say', effects: [{ scrutiny: 1, reason: 'phoneSearch' }] },
-        { id: 'b', kind: 'say', effects: [{ claim: 'tourism' }] },
+        { id: 'b', kind: 'say', effects: [{ claim: 'shortTrip' }] },
       ],
     };
     expect(withCard(card)).toEqual([expect.stringMatching(/^x_check\.a: scrutiny for phoneSearch/)]);
@@ -110,7 +109,7 @@ describe('content lint', () => {
       id: 'x_time', checkpoint: 'customs', kind: 'routine',
       approaches: [
         { id: 'wait', kind: 'verify', effects: [{ time: -2 }] },
-        { id: 'no', kind: 'say', effects: [{ claim: 'tourism' }] },
+        { id: 'no', kind: 'say', effects: [{ claim: 'shortTrip' }] },
       ],
     };
     expect(withCard(card, { 'enc.x_time.wait.reaction': 'Hours later, he waves you on.' }))
@@ -148,15 +147,4 @@ describe('content lint', () => {
   });
 });
 
-// The return ticket settles money, so the money card must be a question a paid
-// flight out can answer: how you pay for the trip, not how much cash you carry.
-describe('the cash question fits the return ticket', () => {
-  it('keeps money on the ticket and asks how you pay, not for an amount', () => {
-    expect(EVIDENCE.returnTicket.topics).toContain('money');
-    expect(EVIDENCE.returnTicket.settles).toContain('money');
-    expect(ENCOUNTERS.find((e) => e.id === 'c_cash')!.topic).toBe('money');
-    const q = t('enc.c_cash.q');
-    expect(q).not.toMatch(/how much cash/i);
-    expect(q).toMatch(/paying for this trip/);
-  });
-});
+// The return ticket now settles length of stay, not cash: src/game/copy.test.ts.

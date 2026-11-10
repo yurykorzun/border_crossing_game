@@ -18,6 +18,17 @@ Politics stay concrete and arrive through people and decisions: an outlet was ba
 
 Names used so far: the country is never named on screen in v0.1 (officers say "the Republic"), the capital crossing is Halden Central.
 
+Lena and Mark are citizens coming home after years abroad (Lena six, Mark four), not visitors. Nobody asks them for a visa or treats them as tourists. The officers ask about the absence and the ties abroad instead: "You haven't been back for six years. Why now?", a residence permit abroad, which passport they left on, a demonstration abroad. The state already holds part of their life (a registered address, an apartment in the land register, the record of each crossing), so some of what comes up is found, not told (see On file tiers under "Truth, claims, official knowledge").
+
+### Two pressures
+
+The Republic draws on two different present-day pressures. They stay distinct: each card, fact and line belongs to one of them, and no game text names a real country, a real person or a recognisable trip-plus-charge combination. Only the mechanisms are kept.
+
+1. The lists (the pressure on what you did before). Past support and protest become records long after the fact: a small donation to a fund that is now on an extremist list, an old photo from a demonstration, a phone that can be copied at the border. Family inside becomes leverage ("who else lives there"), and returning emigrants are questioned about what they did while away. In the game: `donation`, `protestPhoto`, `c_phone`, `f_donation`, `f_photo`, the bank notice, the protected cousin and the mother's call.
+2. The war (the pressure on where your loyalty lies). The Republic is at war with a neighbouring country. A second citizenship, a relative on the other side and money or work from abroad read as questions of loyalty, and the exit record shows which passport you left on. In the game: `secondPassport`, `brotherAtWar`, `foreignEmployer`, `p_secondPassport`, `i_brother`, `i_employer` and the protected brother.
+
+Lena carries mostly the first (the donation, her cousin) plus a foreign employer from the second. Mark carries mostly the second (two passports, his brother across the border) plus one photo from the first. The officers follow the same split: customs and the phone search look for the lists, the security interview asks about the war and ties abroad. When new content arrives, name which pressure it belongs to, and keep a mechanism from one out of the other (a donation is never a loyalty question about the war, a brother across the border is never on a fund's list).
+
 ## First mission: your father's stroke
 
 Your mother needs help arranging his care. The last bus to the hospital leaves in 8 hours, and the station is 2 hours past the border. You carry his medicine, some cash and your everyday phone.
@@ -55,6 +66,8 @@ At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny dr
 
 Background facts come from ordinary life and are the "My story" panel. Encounters key off them.
 
+Both are citizens returning after years abroad (see Setting).
+
 - Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
 - Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
 
@@ -66,14 +79,14 @@ Background facts come from ordinary life and are the "My story" panel. Encounter
 | Letter from mother | Purpose, accommodation | The family address |
 | Employer letter | Work, money | Your employer |
 | Hospital note | Medicine, purpose | Your father's condition |
-| Return ticket | Length of stay, money | A fixed departure date |
-| Apartment deed | Identity, accommodation | Your property inside |
+| Return ticket | Length of stay (not cash: a ticket says when you leave, not what you carry) | A fixed departure date |
+| Apartment deed | Identity (its registered address, not the photo), accommodation | Your property inside |
 
-Each card covers two topics, so a "wrong" pick is never useless. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
+Each card but the return ticket covers two topics, so a "wrong" pick is rarely useless. The ticket answers one question, how long you stay (the passport clerk's `p_stay`), and answers it outright. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
 
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
-| Customs | "Medicine and cash are checked today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
+| Customs | "Medicines require supporting paperwork today." followed in the same bar by "Cash is checked at customs today." (`bulletin.customs.also`) | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
 | Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
 | Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
 
@@ -98,7 +111,7 @@ Rules:
 2. Randomness picks the problem, the chosen solution has a predictable result.
 3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
-5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for cash; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
+5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for length of stay; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). The ticket used to settle the cash question (dhv.3); the realism review of 2026-11-10 (4qd.1) moved it to length of stay, because a flight out says nothing about the cash you carry, which the employer letter (income) or a declaration answers. Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
 
 ### Encounter checklist
 
@@ -115,7 +128,7 @@ The structural parts are machine-checked by the content lint (`lintContent()` in
 
 - Why now: every related or follow-up card has a `when` or a check result that queues it.
 - Why each option: no two answers on a card do the same thing (same effects, same check and same spend). Say and verify spend nothing of their own, so a say and a verify with the same effects count as twins.
-- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on and leaves the count to the "N hours lost" line.
+- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on and leaves the count to the "N hours lost" line. The answer line names the same event before you pick ("Lab test: 2 hours", `<card>.<answer>.event`).
 - What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card with exactly one answer is the one exception, because its job is the pause (the free answer from rule 5).
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
@@ -128,7 +141,7 @@ Cut on 2026-11-10: `c_medicine.leave` (nobody is short of time at the first cust
 
 Kept, because a person picks them even though the bots don't:
 
-- `p_photo.questions` - the safe slow answer on a records day for someone with something in the records. Making it as fast as the scan there let the memorised script win 89.5% (rule 10 caps it at 80%), so it stays an hour slower.
+- `p_photo.questions` - another photo ID, the safe slow answer on a records day for someone with something in the records. Making it as fast as the scan there let the memorised script win 89.5% (rule 10 caps it at 80%), so it stays an hour slower.
 - `c_phone.refuse` - keeps the phone's contents (a relative, the donation, the brother) off file for 1 scrutiny. The bots pay the hour to unlock because they don't count what the search will find.
 - `i_family.name`, `f_host.cousin`, `i_employer.brother` - the truthful answer that puts the protected person on file to save an hour. That is the central decision ("put someone else at risk"), and the bots never trade a person for time.
 - `f_lab.surrender` - the way out of a 2-hour lab wait when the hours are gone. The medicine for time, the same trade the confiscation inspection asks for.
@@ -162,15 +175,23 @@ What checks them so far:
 ## Truth, claims, official knowledge
 
 - Truth: fixed by your character ("My story" panel).
-- Claims: what you said ("Visiting as a tourist").
-- On file: what officials know ("Family address on file"), and which desk knows it.
+- Claims: what you said ("No reason, a short trip").
+- On file: what officials know ("Your registered family address"), which desk knows it, and how it sits on file.
+
+On file tiers (`FACT_TIERS` in `src/game/content/world.ts`, `factTier()` in `src/game/engine.ts`). Every fact is one of three kinds, and the card names which: My story tags each fact, the line under a reaction says it ("Found in the old records: Your registered family address."), and the line under a challenge card's question says it ("In the old records: ..." / "Confirmed on file: ..." / "Flagged on file: ...").
+
+1. Recorded: the state had it before you arrived, because you are a citizen. The registered family address, the apartment in the land register, and the exit record that shows which passport you left on. A desk that brings one up found it ("He finds your registered address and asks whether your mother still lives there.").
+2. Confirmed: it came out on this crossing, from a document, an answer, a call or a search (your employer, your father's condition, the cash count).
+3. Flagged: marked for attention. A donation to a listed fund and a refused search are flagged as soon as they are on file, and any fact becomes flagged once it is the reason scrutiny rises (`RunState.flagged`), so "Yes, I have both" turns the recorded second passport into a flagged one.
+
+The tier is a label: it changes what the card says, never what a card costs or which card is dealt.
 
 The engine keeps these separate. Content can only key off claims and On file facts (and the character's background for which deck cards exist), never off truth officials couldn't know.
 
 A claim is in one of three tiers:
 
 1. Unchallenged: nothing on file speaks against it. The claim stands and you saved the time, card or contact a true answer would have cost. "It's under the limit" is free while nobody has counted the cash.
-2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said tourist, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
+2. Inconsistency: a fact makes the claim look odd, but does not disprove it (gave no particular reason, just a short trip, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
 3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).

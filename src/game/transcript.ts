@@ -11,14 +11,14 @@
 // counted in onceWords(), not in the run's play time. When a screen there
 // changes, change it here too, or the transcript stops being what the player reads.
 
-import { andList, own, t, tn } from '../i18n';
+import { andList, has, own, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
-import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
-import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
+import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
+import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
@@ -187,6 +187,8 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
+  // A day with a second warning shows it on its own line (the packing screen in src/App.tsx).
+  if (has(`bulletin.${setup.bulletin}.also`)) p.add(`bulletin.${setup.bulletin}.also`);
   // The one cue above the list: what officers are doing today. It is read, so it counts.
   p.add(`bulletin.${setup.bulletin}.cue`);
   for (const id of EVIDENCE_IDS) {
@@ -251,6 +253,7 @@ function storyLines(s: RunState, p: Page): void {
   p.add('ui.onFile', {}, CHROME);
   for (const f of factIds(s)) {
     p.add(`fact.${f}`, {}, CHROME);
+    p.add(`ui.tier.${factTier(s, f)}`, {}, CHROME);
     const at = s.facts[f] ?? [];
     p.add(`ui.haveOnFile.${at.length === 1 ? 'one' : 'other'}`, { desks: desks(at), n: at.length }, CHROME);
   }
@@ -325,7 +328,7 @@ function screenLines(s: RunState, p: Page): void {
     // Once the bus is out of reach, the line saying so sits above the priority line.
     if (finishing) p.add('ui.doomed');
     if (desk) p.add(`officer.${desk}.priority`);
-    p.add(own(`${prefix}.${sc.id}.q`, s.character));
+    p.add(questionKey(s, prefix, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);

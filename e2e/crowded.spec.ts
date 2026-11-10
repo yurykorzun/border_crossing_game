@@ -39,6 +39,8 @@ function crowdedRun(): { run: RunState; question: string; key: string } {
       if (!e) continue;
       const cp = e.checkpoint === 'followup' ? 2 : CHECKPOINTS.indexOf(e.checkpoint);
       run = { ...base, reaction: null, screen: { kind: 'encounter', id: q.id }, checkpoint: cp, slot: 1 };
+      // The host card asks about the registered address only with it on file at the desk (questionKey()).
+      if (q.id === 'c_host') run = { ...run, facts: { familyAddress: [e.checkpoint] } };
     }
     if (options(run).length === 3) return { run, question: q.text, key: q.key };
   }

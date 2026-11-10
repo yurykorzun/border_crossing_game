@@ -90,7 +90,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
       const option = page.locator('main.run .controls button:enabled').first();
       // The waiting screen swaps its skip hint for buttons; give the screen a moment.
       await expect(option).toBeVisible();
-      timeChips.push(...(await page.locator('main.run .consequence .part', { hasText: /^Costs / }).allInnerTexts()));
+      timeChips.push(...(await page.locator('main.run .consequence .part', { hasText: /: \d+ hours?$/ }).allInnerTexts()));
       cards.push(...(await answerCards(page)).map((c) => ({ ...c, step: steps })));
       previous = 'option';
       await option.click();
@@ -99,7 +99,8 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
   expect(timeChips.length, 'time costs seen').toBeGreaterThan(0);
-  for (const chip of timeChips) expect(chip).toMatch(/^Costs \d+ hours?$/);
+  // Each time cost names its event: "Lab test: 2 hours".
+  for (const chip of timeChips) expect(chip).toMatch(/^\S.*: \d+ hours?$/);
   // Every answer card: the action row, then one consequence row, and no answer
   // outweighs another (colour marks the protected contact, never bold).
   expect(cards.length, 'answer cards seen').toBeGreaterThan(0);
@@ -169,13 +170,13 @@ test('after an answer: the reaction, what changed, and the next action', async (
   // Within the checkpoint: the letter puts the address on file, and Continue stays.
   await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText("Your mother's address is now on file.");
+  await expect(reaction).toContainText('Found in the old records: Your registered family address.');
   await expect(next).toHaveText('Continue');
 
   // The last passport card: the button walks on to customs.
   await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 2 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText("Your mother's address is now on file.");
+  await expect(reaction).toContainText('Found in the old records: Your registered family address.');
   await expect(next).toHaveText('Proceed to customs');
   await next.click();
   await expect(page.locator('main.run .queue-scene')).toBeVisible();
@@ -186,19 +187,19 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
-  // A tourist carrying a pensioner's prescription: customs asks, and Lena's mother can confirm the visit.
-  await openAt(page, { ...lenaRun(), claims: ['tourism'], screen: { kind: 'encounter', id: 'c_tourist' }, checkpoint: 1, slot: 1 });
+  // A short trip home with a pensioner's prescription: customs asks, and Lena's mother can confirm why she came.
+  await openAt(page, { ...lenaRun(), claims: ['shortTrip'], screen: { kind: 'encounter', id: 'c_shortTrip' }, checkpoint: 1, slot: 1 });
   await page.getByRole('button', { name: /Ask him to call your mother/ }).click();
   const reaction = page.locator('main.run .panel.reaction');
   const beat = reaction.locator('.story-beat');
   const rows = reaction.locator('.changes li');
-  await expect(beat).toHaveText('Your mother answers on the second ring. She gives her address and names the rest of the family.');
-  // She also gives her address and names the family; on a records day both reach the desks ahead.
+  await expect(beat).toHaveText('Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.');
+  // Her address and the family go on file too; on a records day both reach the desks ahead.
   await expect(rows).toHaveText([
-    'Visit verified.', "On file at Customs: your mother's number.",
-    "Your mother's address is now on file.", 'Another relative of yours is now on file.',
-    'Into the shared records for the desks ahead: Family address.',
-    'Into the shared records for the desks ahead: Another relative, on record.',
+    'Your reason verified.', "On file at Customs: your mother's number.",
+    'Found in the old records: Your registered family address.', 'Confirmed and on file: Another relative of yours.',
+    'Into the shared records for the desks ahead: Your registered family address.',
+    'Into the shared records for the desks ahead: Another relative of yours.',
   ]);
   // Separate elements: the beat holds no result text, and the rows sit under it.
   await expect(beat).not.toContainText('verified');
@@ -219,14 +220,16 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   const run = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'accommodation', seed: 7 });
   await openAt(page, { ...run, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText("Your mother's address is now on file.");
-  await expect(reaction).toContainText('Sent on to Customs: Family address.');
+  await expect(reaction).toContainText('Found in the old records: Your registered family address.');
+  await expect(reaction).toContainText('Sent on to Customs: Your registered family address.');
   await page.locator('main.run .controls button.primary').click();
 
   await page.getByRole('button', { name: 'My story' }).click();
   const sheet = page.locator('dialog.sheet[open]');
   const row = sheet.locator('.record li[data-fact="familyAddress"]');
-  await expect(row).toContainText('Family address');
+  await expect(row).toContainText('Your registered family address');
+  // Found in the old records, not something new she told them.
+  await expect(row.locator('.tier')).toHaveText('In the old records');
   // Passport control and customs know it; the interview does not.
   await expect(row.locator('.desks')).toHaveText('Passport control and Customs have this on file');
   await noHorizontalScroll(page, 'My story with desks');
@@ -238,7 +241,7 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
   // Each contact's abilities, from the table in src/game/content/world.ts.
   await expect(sheet.locator('.people .can')).toHaveText([
-    'Can confirm: address, visit, prescription',
+    'Can confirm: address, why you came, prescription',
     /^Can confirm: (a place to stay|a job offer abroad)$/,
   ]);
   expect(errors).toEqual([]);
@@ -272,7 +275,7 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
     if (check === 'medicineLab') {
       // Asking puts the urgency on file and gives the hint, and the reaction says both.
       await buttons.nth(1).click();
-      await expect(page.locator('main.run .panel.reaction')).toContainText('Your urgency is now on file.');
+      await expect(page.locator('main.run .panel.reaction')).toContainText('Confirmed and on file: You\'re in a hurry.');
       await expect(page.locator('main.run .panel.reaction')).toContainText(en['check.medicineLab.hint.clear']);
       // The hint comes before the decision: back in the waiting room, with the result still to come.
       await page.locator('main.run .controls button.primary').click();
@@ -328,7 +331,7 @@ test('a Home in time ending is a short result card that fits the screen', async 
   // Each item written out with the desks that have it, and no ON FILE badge or help paragraph.
   await expect(sheet.locator('li[data-claim="cashUnderLimit"] .desks')).toHaveText('Recorded at Customs');
   await expect(sheet.locator('li[data-claim="familyVisit"] .desks')).toHaveText('Said aloud, not recorded');
-  await expect(sheet.locator('li[data-fact="familyAddress"]')).toHaveText(/Family address\s*Customs and Security interview have this on file/);
+  await expect(sheet.locator('li[data-fact="familyAddress"]')).toHaveText(/Your registered family address\s*In the old records\s*Customs and Security interview have this on file/);
   await expect(sheet.locator('.tag')).toHaveCount(0);
   await expect(sheet).not.toContainText('Each desk sees');
   const sizes = await sheet.locator('.record li > *').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)));

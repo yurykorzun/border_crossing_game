@@ -47,7 +47,7 @@ function rendered(value: string): string {
     .replace(/\{contact\}/g, en['contact.mother'])
     .replace(/\{card\}/g, en['ev.hotel.name'])
     .replace(/\{fact\}/g, en['fact.employer'])
-    .replace(/\{claim\}/g, en['claim.tourism'])
+    .replace(/\{claim\}/g, en['claim.shortTrip'])
     .replace(/\{name\}/g, en['char.lena.name'])
     .replace(/\{\w+\}/g, '2');
 }

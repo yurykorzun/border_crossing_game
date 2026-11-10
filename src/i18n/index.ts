@@ -1,6 +1,6 @@
 // t(key, vars): looks up the current locale, falls back to English, and throws
 // on a key English doesn't have, so a content hole fails loudly in dev and tests.
-// Vars named `contact`, `contactMine`, `card`, `cardShort`, `cardThe`, `fact`, `claim`, `said`, `desk` hold ids and are translated too.
+// Vars named `contact`, `contactMine`, `card`, `cardShort`, `cardThe`, `fact`, `claim`, `said`, `desk`, `event` hold ids and are translated too.
 
 import { en } from './en';
 
@@ -22,10 +22,12 @@ const ID_VARS: Record<string, (id: string) => string> = {
   cardThe: (id) => `ev.${id}.the`,
   fact: (id) => `fact.${id}`,
   claim: (id) => `claim.${id}`,
-  /** A claim in your own words, "I'm here as a tourist". The id may carry a traveler: `noOtherFamily.mark`. */
+  /** A claim in your own words, "No reason, a short trip". The id may carry a traveler: `noOtherFamily.mark`. */
   said: (id) => `said.${id}`,
   /** A checkpoint id, by its name: "Customs". */
   desk: (id) => `checkpoint.${id}`,
+  /** The key of what an answer's hours are spent on, by its text: "Lab test". */
+  event: (key) => key,
 };
 
 export function has(key: string): boolean {

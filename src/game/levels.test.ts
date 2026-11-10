@@ -73,7 +73,7 @@ describe('level as a setup field', () => {
 
 describe('a bot that ignores a level rule', () => {
   // A made-up rule on Arrival: heeding it means telling the truth about the trip
-  // at the first desk. The liar style picks tourism there, so it ignores the rule
+  // at the first desk. The liar style picks shortTrip there, so it ignores the rule
   // already; the honest style shows evidence, which the rule's heeders do.
   const rule: LevelRule = { id: 'test', heeds: ['p_purpose.evidence', 'p_purpose.family'] };
   const level: Level = { ...LEVELS.arrival, rules: [rule] };
@@ -88,7 +88,7 @@ describe('a bot that ignores a level rule', () => {
     const heeding = playRun('honest', setup);
     const ignoring = playRun('honest', setup, rule);
     expect(heeding.choices[0]).toEqual({ card: 'p_purpose', pick: 'evidence' });
-    expect(ignoring.choices[0]).toEqual({ card: 'p_purpose', pick: 'tourism' });
+    expect(ignoring.choices[0]).toEqual({ card: 'p_purpose', pick: 'shortTrip' });
     for (const style of ['honest', 'cautious', 'random', 'situational'] as const)
       for (let i = 0; i < 20; i++)
         expect(playRun(style, setupFor(i), rule).choices.map((c) => `${c.card}.${c.pick}`).filter((k) => rule.heeds.includes(k))).toEqual([]);
@@ -96,7 +96,7 @@ describe('a bot that ignores a level rule', () => {
 
   it('names picks the way the walk does', () => {
     const s = newRun(setupFor(0));
-    expect(pickKey({ ...s, screen: { kind: 'encounter', id: 'p_purpose' } }, { type: 'choose', approach: 'tourism' })).toBe('p_purpose.tourism');
+    expect(pickKey({ ...s, screen: { kind: 'encounter', id: 'p_purpose' } }, { type: 'choose', approach: 'shortTrip' })).toBe('p_purpose.shortTrip');
     expect(pickKey(s, { type: 'ack' })).toBeUndefined();
   });
 

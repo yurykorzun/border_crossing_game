@@ -37,7 +37,7 @@ export const FACT_IDS: readonly FactId[] = [
 ];
 
 /** What the player has said. Can be contradicted by facts. */
-export type ClaimId = 'familyVisit' | 'tourism' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
+export type ClaimId = 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -68,6 +68,15 @@ export interface Cond {
  * because the engine knows your background.
  */
 export type ScrutinyReason = FactId | CheckId;
+
+/**
+ * How a fact sits on file, which the card names (docs/design.md "Truth, claims,
+ * official knowledge"). recorded: the state had it before you arrived (your
+ * registered address, your previous crossings) and a desk found it. confirmed:
+ * it came out on this crossing. flagged: it is marked for attention, because it
+ * is on a list or because it was the reason scrutiny rose.
+ */
+export type OnFileTier = 'recorded' | 'confirmed' | 'flagged';
 
 /**
  * How a fact reaches another desk (docs/design.md "What each official knows").
@@ -219,6 +228,11 @@ export interface Contact {
   abilities: Topic[];
   /** The fact that puts their home on file. With it on file, a call-in becomes a visit (a worse exposure). */
   home?: FactId;
+  /**
+   * The record that makes naming them worse: on file and flagged (factTier()), the ending
+   * reads `exposure.<id>.protected.record` (listed), else `exposure.<id>.protected`.
+   */
+  record?: FactId;
 }
 
 /** How badly something on the ending's list hurts: 1 minor, 2 serious, 3 severe. It orders the list, and no tag shows it. */
@@ -383,6 +397,11 @@ export interface RunState {
    * Unset in saves from before it existed.
    */
   saidAt?: Partial<Record<ClaimId, Checkpoint>>;
+  /**
+   * Facts that were the reason scrutiny rose, so they read as flagged on file
+   * (factTier() in src/game/engine.ts). Unset in saves from before it existed.
+   */
+  flagged?: FactId[];
   medicine: boolean;
   perkUsed: boolean;
   withdrew: boolean;

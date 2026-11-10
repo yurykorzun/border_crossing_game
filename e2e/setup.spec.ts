@@ -232,12 +232,15 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await expect(docsScreen.locator('.stage-label .amber')).toHaveText('3 / 4');
   await expect(docsScreen.locator('.pack-count')).toHaveText('0 of 3 packed');
 
-  // The bulletin is one sentence: exactly one terminal . ! or ?, at the end.
+  // One bar, one icon, and each line is one sentence: exactly one terminal . ! or ?, at the end.
+  // A customs day has a second line for cash.
   const bulletin = docsScreen.getByRole('note', { name: "Today's bulletin" });
   await expect(bulletin.locator('svg.icon')).toHaveCount(1);
-  const sentence = (await bulletin.innerText()).trim();
-  expect(sentence.match(/[.!?]/g), sentence).toHaveLength(1);
-  expect(sentence, sentence).toMatch(/[.!?]$/);
+  for (const line of await bulletin.locator('.bulletin-line').all()) {
+    const sentence = (await line.innerText()).trim();
+    expect(sentence.match(/[.!?]/g), sentence).toHaveLength(1);
+    expect(sentence, sentence).toMatch(/[.!?]$/);
+  }
 
   // Every row: a short name, a topics line, and a Reveals line for a document that
   // puts something on file. No line of label text wraps at 390x844.
@@ -254,10 +257,10 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   }
   // Every topic a document answers is in its row, not only the first.
   const hospital = docsScreen.locator('.doc', { hasText: 'Hospital note' });
-  await expect(hospital.locator('.doc-topics')).toHaveText('Medicine · Visit purpose');
+  await expect(hospital.locator('.doc-topics')).toHaveText('Medicine · Why you came back');
   await expect(hospital.locator('.doc-reveals')).toHaveText("Reveals your father's condition");
   const letter = docsScreen.locator('.doc', { hasText: "Mother's letter" });
-  await expect(letter.locator('.doc-topics')).toHaveText('Visit purpose · Accommodation');
+  await expect(letter.locator('.doc-topics')).toHaveText('Why you came back · Accommodation');
   await expect(letter.locator('.doc-reveals')).toHaveText('Reveals her address');
   await expect(docsScreen.locator('.doc', { hasText: 'Hotel booking' }).locator('.doc-reveals')).toHaveCount(0);
 
@@ -364,7 +367,9 @@ for (const [n, bulletin] of BULLETINS.entries()) {
     await page.locator('.traveler-step .controls button.primary').click();
 
     const docsScreen = page.locator('main.documents-step');
-    await expect(docsScreen.getByRole('note', { name: "Today's bulletin" })).toHaveText(en[`bulletin.${bulletin}`]);
+    // The day's warning, then on a customs day a second line for cash.
+    const also = (en as Record<string, string>)[`bulletin.${bulletin}.also`];
+    await expect(docsScreen.getByRole('note', { name: "Today's bulletin" }).locator('.bulletin-line')).toHaveText(also ? [en[`bulletin.${bulletin}`], also] : [en[`bulletin.${bulletin}`]]);
     // Exactly one cue, one sentence, and it sits between the bulletin and the list.
     const cue = docsScreen.locator('.pack-cue');
     await expect(cue).toHaveCount(1);

@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { own, t, tn } from './i18n';
+import { has, t, tn } from './i18n';
 import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -20,7 +20,7 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
+import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -262,7 +262,11 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
         </header>
         <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
           <Icon name="alert" />
-          <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
+          <span className="bulletin-text">
+            <span className="bulletin-line">{t(`bulletin.${bulletin}`)}</span>
+            {/* A day with a second warning (cash on a customs day) gives it its own line in the same bar. */}
+            {has(`bulletin.${bulletin}.also`) && <span className="bulletin-line">{t(`bulletin.${bulletin}.also`)}</span>}
+          </span>
         </p>
         {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
         <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
@@ -468,7 +472,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   const queueShown = beats.at === queueAt ? beats.n : 1;
   const sceneState: SceneState = {
     handedOver: s.used.length > (usedBefore[sceneAt] ?? s.used.length),
-    writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
+    writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.onFile.')),
     away: s.screen.kind === 'wait',
     medicine: s.medicine,
     inspection: s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.kind ?? null : null,
@@ -605,7 +609,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
   const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
   const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
-  const question = t(own(`${prefix}.${id}.q`, s.character));
+  const question = t(questionKey(s, prefix, id));
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
   // A challenge card quotes what you said and the fact that catches it, so it always gets the card.

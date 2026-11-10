@@ -75,11 +75,11 @@ describe('scenario evals', () => {
 
   it('rule 3: a contradiction card with nothing to contradict exits 1 with seed and step', () => {
     const tr = run(LENA);
-    tr.happenings.push({ step: 12, type: 'cardDealt', id: 'i_contradiction', claims: ['tourism'], facts: ['employer'], routinesLeft: [] });
+    tr.happenings.push({ step: 12, type: 'cardDealt', id: 'i_contradiction', claims: ['shortTrip'], facts: ['employer'], routinesLeft: [] });
     const r = only(3, [tr]);
     expect(r.exitCode).toBe(1);
     expect(formatFailure(r.fresh[0])).toBe(
-      `rule 3: honest seed ${LENA + 1} step 12 (lena, i_contradiction): dealt with claims [tourism] and facts [employer]`,
+      `rule 3: honest seed ${LENA + 1} step 12 (lena, i_contradiction): dealt with claims [shortTrip] and facts [employer]`,
     );
   });
 
@@ -154,7 +154,8 @@ describe('scenario evals', () => {
     const at = (minutes: number) => ({ ...tr, beatSeconds: tr.beatSeconds + (minutes - playMinutes(tr)) * 60 });
     expect(playMinutes(at(3.9))).toBeCloseTo(3.9);
     expect(only(4, [at(3.9)]).fresh[0]).toMatchObject({ rule: 4, key: 'tooShort' });
-    expect(only(4, [at(4)]).fresh).toEqual([]);
+    // 1e-9 only absorbs float rounding in the padding (4 can come out as 3.9999999999999996).
+    expect(only(4, [at(4 + 1e-9)]).fresh).toEqual([]);
   });
 
   it('rule 4: the median full run is reported, and a median under 5 minutes no longer fails', () => {

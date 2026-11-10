@@ -149,7 +149,7 @@ test('the run header, the tray and its pixel icons, at the first checkpoint', as
   for (const icon of await icons.all()) await expect(icon).toHaveAttribute('shape-rendering', 'crispEdges');
 
   // A 1-hour answer takes the header to 7 hours and shortens the time bar.
-  const oneHour = run.locator('.controls button.choice', { has: page.locator('.consequence .part', { hasText: /^Costs 1 hour$/ }) }).first();
+  const oneHour = run.locator('.controls button.choice', { has: page.locator('.consequence .part', { hasText: /: 1 hour$/ }) }).first();
   await oneHour.click();
   await expect(strip).toContainText('7 hours left');
   await expect(strip.locator('.time-bar i')).toHaveAttribute('style', /width: 87\.5%/);
@@ -254,20 +254,20 @@ test('the passport question: answers as speech or an action, one icon and one li
   await expect(answers).toHaveCount(3);
   await expect(answers.locator('.choice-label')).toHaveText([
     "Show your mother's letter",
-    '"I\'m visiting family."',
-    '"I\'m here as a tourist."',
+    '"My family needs me here."',
+    '"No reason, a short trip."',
   ]);
   await expect(answers.locator('.consequence-text')).toHaveText([
     'Uses letter · Reveals her address',
-    'Costs 1 hour · Register check',
-    'Recorded as your reason for visiting',
+    'Register check: 1 hour',
+    'Recorded as your reason for coming back',
   ]);
   for (const answer of await answers.all()) {
     await expect(answer.locator('svg')).toHaveCount(1);
     await expect(answer.locator('svg')).toHaveAttribute('shape-rendering', 'crispEdges');
   }
-  // Amber marks the check; nothing on this card is red.
-  await expect(answers.nth(1).locator('.part.amber')).toHaveText('Register check');
+  // The hour names what it is spent on; nothing on this card is red.
+  await expect(answers.nth(1).locator('.part')).toHaveText(['Register check: 1 hour']);
   await expect(page.locator('main.run .part.red')).toHaveCount(0);
   await expectFits(page, 'passport question', true);
   await expectLinesVisible(page, 'passport question');

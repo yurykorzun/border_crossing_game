@@ -4,7 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { andList, own, t, tn } from '../i18n';
-import { deskOf, factIds, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
+import { deskOf, factIds, factTier, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -238,8 +238,9 @@ export function StoryRecords({ s }: { s: RunState }) {
             {factIds(s).map((f) => {
               const at = s.facts[f] ?? [];
               return (
-                <li key={f} data-fact={f}>
+                <li key={f} data-fact={f} data-tier={factTier(s, f)}>
                   <span>{t(`fact.${f}`)}</span>
+                  <small className="tier">{t(`ui.tier.${factTier(s, f)}`)}</small>
                   <small className="desks">{tn('ui.haveOnFile', at.length, { desks: desks(at) })}</small>
                 </li>
               );
