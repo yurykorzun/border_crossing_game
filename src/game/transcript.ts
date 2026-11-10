@@ -11,7 +11,7 @@
 // counted in onceWords(), not in the run's play time. When a screen there
 // changes, change it here too, or the transcript stops being what the player reads.
 
-import { andList, own, t, tn } from '../i18n';
+import { andList, getStory, own, setStory, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
@@ -207,6 +207,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   // Setup 4: Begin the crossing, with the level's goal
   const level = levelOf(setup);
   p.add('ui.beginCrossing');
+  if (level.opening) p.add(level.opening);
   p.add('ui.mission');
   p.add(level.goalTitle);
   p.add(level.goalBody, { hours: level.startTime, travel: level.minTripTime });
@@ -294,7 +295,7 @@ function screenLines(s: RunState, p: Page): void {
   const sc = s.screen;
   if (sc.kind === 'between') {
     // Queue in src/App.tsx: every beat, tap by tap, then the walk up to the officer.
-    const beats = queueBeats(sc.next, s.character);
+    const beats = queueBeats(sc.next, s);
     for (const b of beats) {
       if (b.from) p.add(`msg.from.${b.from}`);
       p.add(b.key);
@@ -392,6 +393,17 @@ function endingLines(s: RunState, p: Page): void {
  * level list on the first setup screen: every level (LEVEL_IDS) unless a test passes its own.
  */
 export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): Transcript {
+  // In the level's own wording (setStory()), then back to whatever was shown before.
+  const before = getStory();
+  setStory(setup.level);
+  try {
+    return record(run, setup, levels);
+  } finally {
+    setStory(before);
+  }
+}
+
+function record(run: BotRun, setup: RunSetup, levels: readonly Level[]): Transcript {
   let s = newRun(setup);
   const first = new Page(0);
   setupLines(setup, first, levels);

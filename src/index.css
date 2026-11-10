@@ -129,6 +129,8 @@ p { margin: 0 0 var(--gap); }
 .setup { overflow-y: auto; }
 .on-dark { font-size: 1.1rem; margin-top: 4px; }
 .rule { font-weight: 600; }
+/* The level's one quiet line before the goal (Level.opening). */
+.level-opening { margin: 12px 0 0; font-style: italic; }
 /* Today's bulletin: one amber bar, one sentence. Amber marks attention (docs/plan.md "UI rules"). */
 .bulletin {
   display: flex;

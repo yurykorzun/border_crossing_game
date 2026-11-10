@@ -17,7 +17,8 @@ const MARK = 60;
 
 function run(i: number, style: 'honest' | 'liar' = 'honest'): Transcript {
   const setup = setupFor(i);
-  return transcriptOf(playRun(style, setup), setup);
+  // Arrival on its own, so the other levels' rows (read once per session) stay out of these numbers.
+  return transcriptOf(playRun(style, setup), setup, [LEVELS.arrival]);
 }
 
 /** Evaluates one rule only, so the other rules' findings don't decide the exit code. */
@@ -129,7 +130,7 @@ describe('scenario evals', () => {
   it('rule 4: the level list counts once per session, so more levels do not lengthen a run (rwf.11)', () => {
     const setup = setupFor(LENA);
     const bot = playRun('honest', setup);
-    const one = transcriptOf(bot, setup);
+    const one = transcriptOf(bot, setup, [LEVELS.arrival]);
     // Arrival plus 8 stand-ins (the planned levels and a daily row), each with a long line.
     const nine: Level[] = [LEVELS.arrival, ...Array.from({ length: 8 }, (_, i) => ({
       ...LEVELS.arrival, id: `extra${i}` as LevelId, number: i + 2, blurb: 'ui.premise',

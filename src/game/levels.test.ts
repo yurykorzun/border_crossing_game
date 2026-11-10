@@ -20,7 +20,10 @@ describe('levels as data', () => {
     expect([a.goalTitle, a.goalBody]).toEqual(['mission.title', 'mission.body']);
     expect([a.startTime, a.minTripTime]).toEqual([START_TIME, MISSION_MIN_TIME]);
     expect([START_TIME, MISSION_MIN_TIME]).toEqual([8, 2]);
-    expect([...a.cards].sort()).toEqual([...ALL_CARDS].sort());
+    // Every card but the ones only The funeral deals: its stay question and the discrepancy it can raise.
+    const later = ['p_days', 'p_statement'];
+    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((id) => !later.includes(id)).sort());
+    expect(LEVELS.funeral.cards.filter((id) => !a.cards.includes(id)).sort()).toEqual(later);
     expect(a.rules).toEqual([]);
   });
 

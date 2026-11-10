@@ -22,12 +22,26 @@ export interface RunSetup {
   loadout: EvidenceId[];
   bulletin: BulletinId;
   seed: number;
+  /**
+   * In a level with contact statements (Level.statements), the one your relative
+   * gave the border. Unset: drawn from the seed, the way the app draws the bulletin.
+   */
+  statement?: FactId;
+}
+
+/** The statement a run starts with, or undefined in a level that has none. */
+export function statementOf(setup: RunSetup): FactId | undefined {
+  const { statements } = levelOf(setup);
+  if (!statements?.length) return undefined;
+  if (setup.statement && !statements.includes(setup.statement)) throw new Error(`${setup.statement} is not a statement in ${levelOf(setup).id}`);
+  return setup.statement ?? statements[Math.abs(Math.floor(setup.seed / 3)) % statements.length];
 }
 
 export function newRun(setup: RunSetup): RunState {
   const ch = CHARACTERS[setup.character];
   if (setup.loadout.length !== ch.evidenceSlots) throw new Error(`${ch.id} takes ${ch.evidenceSlots} evidence cards`);
   const level = levelOf(setup);
+  const statement = statementOf(setup);
   return {
     v: 2,
     level: setup.level ?? DEFAULT_LEVEL,
@@ -42,7 +56,8 @@ export function newRun(setup: RunSetup): RunState {
     time: level.startTime,
     travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
-    facts: {},
+    // Your relative spoke to the border before you came, so every desk has it.
+    facts: statement ? { [statement]: [...CHECKPOINTS] } : {},
     claims: [],
     logged: {},
     saidAt: {},
@@ -53,7 +68,7 @@ export function newRun(setup: RunSetup): RunState {
     slot: 0,
     seen: [],
     streak: 0,
-    pending: [],
+    pending: [...(level.asks ?? [])],
     screen: { kind: 'between', next: 0 },
     reaction: null,
     log: [],
@@ -473,7 +488,7 @@ export function routinesLeft(s: RunState): Encounter[] {
 /** The best related card left at this desk: the one slot 1 deals. */
 function relatedCard(s: RunState): Encounter | undefined {
   const cp = CHECKPOINTS[s.checkpoint];
-  const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && eligible(s, e));
+  const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && !e.lastAtDesk && eligible(s, e));
   return related.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
 }
 

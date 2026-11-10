@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { own, t, tn } from './i18n';
+import { own, setStory, t, tn } from './i18n';
 import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -44,6 +44,8 @@ function Game() {
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
 
   const run = data.run;
+  // Text in the wording of the level on screen (setStory()); Setup sets the one being picked.
+  setStory(run?.level);
   const dispatch = (a: Action) => {
     if (!run) return;
     if (a.type === 'choose') sound.stamp();
@@ -167,6 +169,8 @@ function Setup({ bulletin, endingsSeen, onStart }: {
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
+  // Past the level list, the picked level's own wording (the premise, the goal).
+  setStory(at === 'level' && !firstRun ? undefined : level);
 
   if (firstRun && character) {
     return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => onStart(level, character, picked)} />;
@@ -332,6 +336,7 @@ function BeginStep({ level, picked, traveler, onBack, onBegin }: {
           {onBack && <BackButton onBack={onBack} />}
           <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
         </header>
+        {goal.opening && <p className="level-opening">{t(goal.opening)}</p>}
         {traveler && (
           <section className="packed-list begin-traveler">
             <h3 className="mono">{t('ui.yourTraveler')}</h3>
@@ -478,7 +483,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
       {queue !== null ? (
         // Keyed by run and checkpoint, so each queue starts again from its first beat.
-        <Queue key={queueAt} next={queue} character={s.character} still={data.settings.reduceMotion}
+        <Queue key={queueAt} next={queue} s={s} still={data.settings.reduceMotion}
           shown={queueShown} setShown={(n) => setBeats({ at: queueAt, n })} onDone={() => dispatch({ type: 'ack' })} />
       ) : (
         <>
@@ -557,10 +562,11 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
  * The strip already says "In the queue", so the scene does not.
  * The last beat (the clerk's "Next.") swaps Continue for the walk up to the officer, which is the engine's ack.
  */
-function Queue({ next, character, still, shown, setShown, onDone }: {
-  next: number; character: CharacterId; still: boolean; shown: number; setShown: (n: number) => void; onDone: () => void;
+function Queue({ next, s, still, shown, setShown, onDone }: {
+  next: number; s: RunState; still: boolean; shown: number; setShown: (n: number) => void; onDone: () => void;
 }) {
-  const beats = queueBeats(next, character);
+  const { character } = s;
+  const beats = queueBeats(next, s);
   const done = shown >= beats.length;
   const seen = beats.slice(0, shown);
   const current = seen[seen.length - 1];

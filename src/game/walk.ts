@@ -25,7 +25,7 @@ import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
 } from './content/world';
-import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
+import { CHALLENGE_PAIRS, CHECKS, ENCOUNTER_BY_ID, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
 import { DEFAULT_LEVEL, levelOf } from './content/levels';
 import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
@@ -38,12 +38,14 @@ export function combinations<T>(list: readonly T[], k: number): T[][] {
   return [...combinations(rest, k - 1).map((c) => [head, ...c]), ...combinations(rest, k)];
 }
 
-/** Every character x packing x bulletin in one level. The seed only moves cosmetic beats here. */
+/** Every character x packing x bulletin in one level, and every contact statement in a level that has them. The seed only moves cosmetic beats here. */
 export function allSetups(level: LevelId = DEFAULT_LEVEL): RunSetup[] {
   const out: RunSetup[] = [];
   for (const character of CHARACTER_IDS as CharacterId[])
     for (const loadout of combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots))
-      for (const bulletin of BULLETINS) out.push({ level, character, loadout, bulletin, seed: 1 });
+      for (const bulletin of BULLETINS)
+        for (const statement of levelOf({ level }).statements ?? [undefined])
+          out.push({ level, character, loadout, bulletin, seed: 1, ...(statement ? { statement } : {}) });
   return out;
 }
 
@@ -125,8 +127,32 @@ export interface WalkReport {
 const factsKey = (s: RunState) =>
   factIds(s).sort().map((f) => `${f}:${(s.facts[f] ?? []).filter((d) => CHECKPOINTS.indexOf(d) >= s.checkpoint)}`).join();
 
-const key = (s: RunState) =>
-  JSON.stringify({
+/** The claims a contact statement is about (STATEMENTS), and the statements themselves. */
+const STAY_CLAIMS: readonly ClaimId[] = STATEMENTS.flatMap((x) => [x.agrees, x.disproves]);
+const STATEMENT_FACTS: readonly FactId[] = STATEMENTS.map((x) => x.fact);
+
+/**
+ * Past the passport desk, a contact statement and the stay you claimed against it
+ * are spent: only p_statement reads them, no desk writes the stay down, so no
+ * spot-check picks it. Runs that differ only there play the same from now on.
+ */
+function spent(s: RunState): RunState {
+  if (s.checkpoint < 1 || !levelOf(s).statements?.length) return s;
+  const keep = <T>(o: Partial<Record<ClaimId, T>> | undefined) =>
+    o && Object.fromEntries(Object.entries(o).filter(([c]) => !STAY_CLAIMS.includes(c as ClaimId)));
+  return {
+    ...s,
+    facts: Object.fromEntries(Object.entries(s.facts).filter(([f]) => !STATEMENT_FACTS.includes(f as FactId))),
+    claims: s.claims.filter((c) => !STAY_CLAIMS.includes(c)),
+    logged: keep(s.logged),
+    saidAt: keep(s.saidAt),
+    seen: s.seen.filter((id) => id !== 'p_statement'),
+  };
+}
+
+const key = (state: RunState) => {
+  const s = spent(state);
+  return JSON.stringify({
     ...s,
     facts: factsKey(s),
     seed: 0,
@@ -135,13 +161,14 @@ const key = (s: RunState) =>
     reaction: s.reaction ? 1 : 0,
     screen: s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
   });
+};
 
 const unique = <T>(list: T[]) => new Set(list).size === list.length;
 /** A claim and a fact that catches it, the fact known by the official at this desk. */
 const holds = (pairs: readonly [ClaimId, FactId][], s: RunState) => pairs.some(([c, f]) => s.claims.includes(c) && knows(s, f));
 
 /** Cards that challenge a claim, and the claim and fact pairs that let them be dealt. */
-const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: INCONSISTENCIES, i_contradiction: DISPROOFS };
+const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = CHALLENGE_PAIRS;
 
 /** The effects a move applied, or null for a move that applies none of its own (ack, beat). An assisted check applies only its findings; an ask only the urgency. */
 function moveEffects(s: RunState, action: Action): Effect[] | null {
@@ -216,6 +243,11 @@ export function checkState(s: RunState): string[] {
     const desks = s.facts[f] ?? [];
     if (!desks.length || desks.join() !== CHECKPOINTS.filter((d) => desks.includes(d)).join()) bad.push(`${f} known at [${desks}]`);
   }
+  // A level with contact statements has exactly one on file at every desk, from the start.
+  const statements = levelOf(s).statements ?? [];
+  const onFile = statements.filter((f) => s.facts[f]);
+  if (statements.length && (onFile.length !== 1 || s.facts[onFile[0]]!.length !== CHECKPOINTS.length))
+    bad.push(`statements on file: [${onFile.map((f) => `${f} at ${s.facts[f]}`)}]`);
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !currentCard(s)) bad.push(`unknown card ${s.screen.id}`);
   if (travelOf(s) < minTripTime || travelOf(s) > startTime) bad.push(`trip of ${travelOf(s)} hours outside ${minTripTime}..${startTime}`);
   // Once the bus is out of reach, every card offers to finish quickly instead of more clicking.
@@ -431,9 +463,15 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     chanceNodes: 0,
   };
 
+  // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
+  // The key holds the whole setup, so setups that differ only in the contact
+  // statement share one map: past the passport desk their runs merge (spent()).
+  let memo = new Map<string, [number, number, number] | null>();
+  let group = '';
   for (const setup of setups) {
-    // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored
-    const memo = new Map<string, [number, number, number] | null>();
+    const same = JSON.stringify({ ...setup, statement: 0 });
+    if (same !== group) memo = new Map();
+    group = same;
     const path: Move[] = [];
     const problem = (rule: string, detail: string, extra?: Move) => {
       if (report.problems.length >= 50) return;

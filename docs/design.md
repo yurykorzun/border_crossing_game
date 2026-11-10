@@ -137,6 +137,7 @@ Kept, because a person picks them even though the bots don't:
 - `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
 - `s_bag.withdraw` - turning back is one of the four endings, and every inspection offers it as the way out.
 - `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
+- `p_statement.explain`, `p_statement.stand` - the funeral's discrepancy card, dealt only when your stay disagrees with what her sister told the border. Every style reads the statement and agrees with it, so no bot gets the card. A player who misses her message does, and the card is where the level's rule lands: explain for an hour, or stand by it and get caught with both lines quoted.
 
 ## Screen rules
 

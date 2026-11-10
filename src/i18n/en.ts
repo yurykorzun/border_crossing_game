@@ -40,6 +40,8 @@ export const en: Record<string, string> = {
   'ui.levelOpensAt.other': 'Opens after {n} different endings',
   'level.arrival.title': 'Arrival',
   'level.arrival.blurb': 'Home to your father in the hospital, before the last bus leaves.',
+  'level.funeral.title': 'The funeral',
+  'level.funeral.blurb': "An old friend's funeral. Her sister has spoken to the border.",
   'ui.traveler': 'Traveler',
   'ui.pickCharacter': 'Choose your traveler',
   'ui.continueAs': 'Continue as {name}',
@@ -120,6 +122,8 @@ export const en: Record<string, string> = {
   'change.fact.hostStatement': "Your mother's account of your stay is now on file.",
   'change.fact.bankNotice': 'A bank notice about your donation is now on file.',
   'change.fact.relativeContact': 'Another relative of yours is now on file.',
+  'change.fact.sisterSaysDays': 'Her sister said three days.',
+  'change.fact.sisterSaysWeeks': 'Her sister said two weeks.',
   'change.sent': 'Sent on to {desk}: {fact}.',
   'change.records': 'Into the shared records for the desks ahead: {fact}.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
@@ -164,6 +168,40 @@ export const en: Record<string, string> = {
   // ── Mission
   'mission.title': 'Your father has had a stroke',
   'mission.body': 'Your mother needs help with his care. The last bus to the hospital leaves in {hours} hours, and the station is {travel} hours past the border. You carry his medicine, some cash and your everyday phone.',
+  // Level 3 The funeral: an old friend's, while your father is still in care. The
+  // opening line comes first on the begin screen (Level.opening), then the goal,
+  // whose last sentence is the level's rule.
+  'funeral.opening': 'Her number is still in your phone.',
+  'funeral.title': "An old friend's funeral is tomorrow",
+  'funeral.body': 'Her family wants it quiet. The last bus leaves in {hours} hours, and the station is {travel} hours past the border. Her sister has spoken to the border.',
+  // The funeral's own wording of shared keys (setStory() in src/i18n/index.ts):
+  // you are going to a funeral, not to the hospital.
+  'funeral:ui.goal': 'Reach the funeral',
+  'funeral:ui.premise': "You're going home. An old friend has died.",
+  'funeral:ev.hotel.desc': 'Three nights near the hall. Answers accommodation and length of stay. Does not prove a family stay.',
+  'funeral:scene.bus': 'The medicine box in your hand on a night bus, the town through the rain',
+  'funeral:scene.busEmpty': 'Your empty hand on a night bus, the town through the rain',
+  'funeral:ending.homeInTime.body': 'You reach the hall before the service ends. Your old classmates make room on the bench. Her sister nods at you from the front. Afterwards you stand outside with the others, and nobody says much.',
+  'funeral:ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Her sister asks how the trip was. You tell her it was fine. Later you read your messages twice and think about who you can still call.',
+  'funeral:ending.tooLate.body': 'By the time you get there, the service is over. The chairs are stacked by the wall. Her sister gives you the program and a cup of tea. You read her name on it until they turn off the lights.',
+  'funeral:ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send her sister the time and sit on a bench under the light. She writes that they will wait. You read it until the screen goes dark.',
+  // The queues: classmates on the way to the same funeral.
+  'funeral:msg.0.2': 'A woman ahead holds lilies wrapped in newspaper.',
+  'funeral:msg.1.0': "Sorry about your friend. Monday's call can wait.",
+  'funeral:msg.1.1': 'Two old classmates stand in the next line.',
+  'funeral:msg.1.2': 'One nods. Neither comes over.',
+  'funeral:msg.1.3': 'An inspector holds honey to the light.',
+  'funeral:msg.1.4': '"Answer only what they ask," someone says.',
+  'funeral:msg.2.1': 'The Wi-Fi drops.',
+  'funeral:msg.2.2': 'A classmate says they asked her about you.',
+  'funeral:msg.2.4': 'A phone rings. Nobody answers it.',
+  'funeral:msg.2.5': 'A door opens. "This way, please."',
+  'funeral:check.recordsCheck.title': 'Checking your passport.',
+  'funeral:check.medicineLab.title': 'Testing the medicine.',
+  'funeral:check.hostCall.title': 'Calling your mother.',
+  'funeral:officer.interview.priority': "This officer cares who you know and where you've been.",
+  'funeral:spot.clear': 'The officer checks "{claim}" against your file. It fits.',
+  'funeral:insp.s_supervisor.accept.reaction': 'She phones the ward. Your father is a patient there. She notes it.',
 
   // ── Characters
   'char.lena.name': 'Lena',
@@ -271,6 +309,8 @@ export const en: Record<string, string> = {
   'claim.neverDonated': 'Never donated',
   'claim.stayingWithFamily': 'Staying with family',
   'claim.cashUnderLimit': 'Cash under the limit',
+  'claim.stayDays': 'Staying three days',
+  'claim.stayWeeks': 'Staying two weeks',
   'fact.familyAddress': 'Family address',
   'fact.employer': 'Your employer',
   'fact.fatherCondition': "Your father's condition",
@@ -287,6 +327,8 @@ export const en: Record<string, string> = {
   'fact.hostStatement': 'Your mother says you stay with her',
   'fact.bankNotice': 'A bank notice for your donation',
   'fact.relativeContact': 'Another relative, on record',
+  'fact.sisterSaysDays': 'Her sister said three days, by phone this morning',
+  'fact.sisterSaysWeeks': 'Her sister said two weeks, by phone this morning',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for visiting',
   'claim.tourism.recorded': 'Recorded as your reason for visiting',
@@ -295,6 +337,8 @@ export const en: Record<string, string> = {
   'claim.neverDonated.recorded': 'Recorded as a denial',
   'claim.stayingWithFamily.recorded': "Recorded as where you're staying",
   'claim.cashUnderLimit.recorded': 'Recorded as your cash declaration',
+  'claim.stayDays.recorded': "Recorded as how long you're staying",
+  'claim.stayWeeks.recorded': "Recorded as how long you're staying",
   // The same, where this officer does not write the claim down (OFFICERS writesDown).
   'claim.said': 'Said aloud, not written down',
   'fact.familyAddress.reveal': 'Reveals her address',
@@ -313,6 +357,8 @@ export const en: Record<string, string> = {
   'fact.hostStatement.reveal': 'Your mother says where you stay',
   'fact.bankNotice.reveal': 'Reveals a bank notice',
   'fact.relativeContact.reveal': 'Reveals another relative',
+  'fact.sisterSaysDays.reveal': 'Her sister says how long you stay',
+  'fact.sisterSaysWeeks.reveal': 'Her sister says how long you stay',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicine and cash are checked today.',
@@ -358,7 +404,11 @@ export const en: Record<string, string> = {
   // is a phone message and which is said or seen). A .lena / .mark key is one traveler's.
   'msg.from.mother': 'Mom',
   'msg.from.work': 'Work',
+  'msg.from.sister': 'Her sister',
   'msg.0.0': "The doctor says Dad can hear me. He hasn't said anything yet. Come straight to the hospital.",
+  // The funeral: what her sister told the border (QueueBeat.fact), in place of msg.0.0.
+  'msg.0.0.sisterSaysDays': 'The border phoned. I told them you stay three days.',
+  'msg.0.0.sisterSaysWeeks': 'The border phoned. I told them you stay two weeks.',
   'msg.0.1.lena': "Don't mention Ilya to anyone. Please.",
   'msg.0.1.mark': "Don't mention Tom to anyone. Please.",
   'msg.0.2': 'The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
@@ -410,6 +460,22 @@ export const en: Record<string, string> = {
   'enc.p_employer.evidence.reaction': 'She copies the company name into a form.',
   'enc.p_employer.check.label': 'Let them look up the company',
   'enc.p_employer.check.reaction': 'She looks up the company in the register.',
+
+  // The funeral: her sister's statement is on file at every desk (fact.sisterSays*).
+  'enc.p_days.q': '"How long will you stay?"',
+  'enc.p_days.days.label': '"Three days."',
+  'enc.p_days.days.reaction': 'She types three days.',
+  'enc.p_days.weeks.label': '"Two weeks."',
+  'enc.p_days.weeks.reaction': 'She types two weeks.',
+  // Your answer and her sister's statement disagree (caught.line quotes both). Each
+  // explanation is worded for the pair it answers (answerKey()).
+  'enc.p_statement.q': '"Her sister said otherwise. Explain the difference."',
+  'enc.p_statement.explain.label': '"Let me explain."',
+  'enc.p_statement.explain.reaction': 'She phones the sister again and notes it.',
+  'enc.p_statement.stayWeeks.sisterSaysDays.explain.label': '"I may stay for the memorial."',
+  'enc.p_statement.stayDays.sisterSaysWeeks.explain.label': '"I have to be back at work."',
+  'enc.p_statement.stand.label': '"That is my answer."',
+  'enc.p_statement.stand.reaction': 'She writes both answers down.',
 
   // ── Customs
   'enc.c_medicine.q': '"What is in the cool bag?"',
@@ -647,6 +713,8 @@ export const en: Record<string, string> = {
   'said.noOtherFamily.mark': 'No family across the border',
   'said.neverDonated': 'I never donated',
   'said.cashUnderLimit': "In cash. It's under the limit",
+  'said.stayDays': 'Three days',
+  'said.stayWeeks': 'Two weeks',
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',

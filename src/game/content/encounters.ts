@@ -28,6 +28,18 @@ export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
 ];
+/**
+ * Contact statements (Level 3 The funeral): what a relative told the border
+ * before you came, on file at every desk. It is testimony, not proof: a claim
+ * that agrees with it stands, and one it `disproves` is a discrepancy the clerk
+ * asks you to explain (p_statement, STATEMENT_PAIRS).
+ */
+export const STATEMENTS: readonly { fact: FactId; agrees: ClaimId; disproves: ClaimId }[] = [
+  { fact: 'sisterSaysDays', agrees: 'stayDays', disproves: 'stayWeeks' },
+  { fact: 'sisterSaysWeeks', agrees: 'stayWeeks', disproves: 'stayDays' },
+];
+/** A claim against a statement on file: the pair p_statement puts to you. */
+export const STATEMENT_PAIRS: readonly [ClaimId, FactId][] = STATEMENTS.map((x) => [x.disproves, x.fact]);
 /** What the clarify answer says. Once you have said it, a spot-check finds an inconsistency explained (spotCheckOf()). */
 export const CLARIFIED_BY: ClaimId = 'familyVisit';
 /** In this order, which also picks the one an apology is charged for (firstCaught). */
@@ -45,13 +57,15 @@ export const DISPROOFS: readonly [ClaimId, FactId][] = [
 /**
  * The cards that challenge a claim, most expensive first. One that applies is
  * always dealt before its checkpoint ends, so a lie disproved by the last
- * answer still has to be answered.
+ * answer still has to be answered. p_statement is the passport desk's, and only
+ * a level with contact statements deals it.
  */
-export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
+export const CHALLENGES = ['i_contradiction', 'p_statement', 'i_clarify'] as const;
 
 /** The claim and fact pairs each challenge card puts to you. */
 export const CHALLENGE_PAIRS: Record<(typeof CHALLENGES)[number], readonly [ClaimId, FactId][]> = {
   i_contradiction: DISPROOFS,
+  p_statement: STATEMENT_PAIRS,
   i_clarify: INCONSISTENCIES,
 };
 
@@ -115,6 +129,31 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       { id: 'check', kind: 'verify', effects: [{ time: -1 }] },
+    ],
+  },
+
+  {
+    // Level 3 The funeral asks this right after the opening card (Level.asks).
+    // Your friend's sister has already told the border how long you stay (STATEMENTS). The
+    // clerk only hears your answer, so no spot-check reads it. Neither answer costs
+    // anything here: the price is explaining the one that disagrees with her (p_statement).
+    id: 'p_days', checkpoint: 'passport', kind: 'routine', topic: 'stay',
+    approaches: [
+      { id: 'days', kind: 'say', effects: [{ claim: 'stayDays' }] },
+      { id: 'weeks', kind: 'say', effects: [{ claim: 'stayWeeks' }] },
+    ],
+  },
+  {
+    // Your answer and her sister's statement disagree (STATEMENT_PAIRS). Her word
+    // is testimony, not proof, so explaining is a real answer: the clerk phones her
+    // again and notes it, which takes an hour. Standing by the answer without one
+    // is what gets caught, with both lines quoted (caughtLine()).
+    // Asked as the desk ends (lastAtDesk), on top of the desk's own cards.
+    id: 'p_statement', checkpoint: 'passport', kind: 'related', priority: 5, topic: 'stay', lastAtDesk: true,
+    when: anyPair(STATEMENT_PAIRS),
+    approaches: [
+      { id: 'explain', kind: 'say', effects: [{ time: -1 }] },
+      { id: 'stand', kind: 'say', effects: firstCaught(STATEMENT_PAIRS, 2) },
     ],
   },
 

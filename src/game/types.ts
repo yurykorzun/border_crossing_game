@@ -28,16 +28,22 @@ export type FactId =
   | 'noBooking'
   | 'hostStatement'
   | 'bankNotice'
-  | 'relativeContact';
+  | 'relativeContact'
+  /** Contact statements (STATEMENTS in src/game/content/encounters.ts): what your friend's sister told the border before you came. */
+  | 'sisterSaysDays'
+  | 'sisterSaysWeeks';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
-  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact',
+  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact', 'sisterSaysDays', 'sisterSaysWeeks',
 ];
 
 /** What the player has said. Can be contradicted by facts. */
-export type ClaimId = 'familyVisit' | 'tourism' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
+export type ClaimId =
+  | 'familyVisit' | 'tourism' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
+  /** How long you stay (p_days, Level 3 The funeral). */
+  | 'stayDays' | 'stayWeeks';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -122,6 +128,12 @@ export interface Encounter {
    * decision. Only the dealer's breather deals one (breather() in src/game/engine.ts).
    */
   calm?: true;
+  /**
+   * A challenge dealt only as its desk ends (pendingChallenge() in
+   * src/game/engine.ts), never in the related slot, so it comes on top of the
+   * desk's cards instead of replacing one.
+   */
+  lastAtDesk?: true;
   /** related cards: higher wins. Consequences of answers beat background. */
   priority?: number;
   when?: Cond;
@@ -247,7 +259,7 @@ export interface EvidenceCard {
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
-export type LevelId = 'arrival';
+export type LevelId = 'arrival' | 'funeral';
 
 /**
  * The one new rule a level adds (docs/research/2026-11-09-balance-and-levels.md,
@@ -260,6 +272,13 @@ export type LevelId = 'arrival';
 export interface LevelRule {
   id: string;
   heeds: readonly string[];
+  /**
+   * Picks that go against what is on file, as [fact, claim]: an answer that makes
+   * the claim while this desk knows the fact. On a card that offers one, every
+   * other answer heeds the rule. For a rule whose right answer depends on the run
+   * (the contact statement the setup picked), so no fixed `card.approach` can name it.
+   */
+  against?: readonly (readonly [FactId, ClaimId])[];
 }
 
 export interface Level {
@@ -281,6 +300,17 @@ export interface Level {
   cards: readonly string[];
   /** The rules this level adds. Level 1 adds none. */
   rules: readonly LevelRule[];
+  /**
+   * Contact statements, one of them on file at every desk before you arrive. The
+   * setup picks which (statementOf() in src/game/engine.ts), so the walk tries
+   * each and one memorised answer list cannot learn the run. The sister's phone
+   * message in the first queue says it (QueueBeat.fact).
+   */
+  statements?: readonly FactId[];
+  /** Cards always asked at the first desk, right after its opening card. */
+  asks?: readonly string[];
+  /** i18n key of one line the begin screen shows above the goal, before the first queue. */
+  opening?: string;
   /**
    * How many different endings the player must have seen before the level opens
    * (levelOpen() in src/game/content/levels.ts). Seeing them opens it, not winning. 0: open from the start.
@@ -400,7 +430,7 @@ export interface RunState {
    * src/game/engine.ts), once each before you leave. Unset in saves from before it existed.
    */
   spotChecked?: Checkpoint[];
-  /** Follow-ups waiting to be dealt before the next slot. */
+  /** Follow-ups, and a level's asks (Level.asks), waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;
   /** Reaction to the last choice, shown above the next screen until acknowledged. */
