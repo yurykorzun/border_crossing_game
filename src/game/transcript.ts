@@ -6,8 +6,10 @@
 // is the story; the top strip, scene label, tool bar and the two bottom sheets
 // are `chrome` lines: rules 1 and 5 check them, but they are not counted as words
 // read or written to the plain-text transcript, because they repeat on every
-// screen. When a screen there changes, change it here too, or the transcript
-// stops being what the player reads.
+// screen. The level list's rows for levels a run did not pick are `once` lines:
+// read once per session, so they are checked and kept in the transcript but
+// counted in onceWords(), not in the run's play time. When a screen there
+// changes, change it here too, or the transcript stops being what the player reads.
 
 import { andList, own, t, tn } from '../i18n';
 import type { BotRun } from './bots';
@@ -20,7 +22,7 @@ import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, isCalm, k
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
-import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, LevelId, RunState } from './types';
+import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
 export interface Line {
@@ -36,6 +38,14 @@ export interface Line {
   picked?: boolean;
   /** Around the panel (top strip, tool bar, sheets): checked, but not read as story. */
   chrome?: boolean;
+  /**
+   * Read once per session, not once per run: the level list's rows for the
+   * levels this run did not pick. The list stays the same between runs, so a
+   * player reads a row when it first appears and skims it after. Checked like
+   * any line and kept in the plain-text transcript, but counted in onceWords(),
+   * not in the run's play time (rule 4), so each new level does not lengthen every run.
+   */
+  once?: boolean;
 }
 
 export type Happening =
@@ -73,6 +83,7 @@ class Page {
 }
 
 const CHROME = { chrome: true } as const;
+const ONCE = { once: true } as const;
 
 /** What src/App.tsx Run shows around the panel: TopStrip, scene label, tool bar, both sheets. */
 function chromeLines(s: RunState, p: Page): void {
@@ -124,20 +135,24 @@ function render(fn: () => string, key: string): { key: string; text: string; pro
   }
 }
 
-function setupLines(setup: RunSetup, p: Page): void {
+function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.stamp');
   p.add('ui.title');
   p.add('ui.tagline');
   p.add('ui.start');
   // Setup 1: LevelStep, the level list. One tap on a level, so it is not counted as a decision.
+  // The heading and the picked level's row count in this run. The other rows
+  // count once per session (Line.once), so the run does not get longer as levels are added.
   p.add('ui.title');
   p.add('ui.level');
   p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 4 }), name: t('ui.level') });
   p.add('ui.pickLevel');
-  for (const id of LEVEL_IDS) {
-    p.add('ui.levelNumber', { n: LEVELS[id].number });
-    p.add(LEVELS[id].title);
-    p.add(LEVELS[id].blurb);
+  const picked = levelOf(setup).id;
+  for (const l of levels) {
+    const extra = l.id === picked ? {} : ONCE;
+    p.add('ui.levelNumber', { n: l.number }, extra);
+    p.add(l.title, {}, extra);
+    p.add(l.blurb, {}, extra);
   }
   // Setup 2: TravelerStep. Title, Back, stage label, the premise as the heading, two cards.
   p.add('ui.title');
@@ -372,11 +387,14 @@ function endingLines(s: RunState, p: Page): void {
   storyLines(s, p);
 }
 
-/** Replays a bot run from its setup and records every screen. */
-export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
+/**
+ * Replays a bot run from its setup and records every screen. `levels` is the
+ * level list on the first setup screen: every level (LEVEL_IDS) unless a test passes its own.
+ */
+export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): Transcript {
   let s = newRun(setup);
   const first = new Page(0);
-  setupLines(setup, first);
+  setupLines(setup, first, levels);
   const lines: Line[] = [...first.lines];
   const happenings: Happening[] = [];
   let decisions = 1 + setup.loadout.length;
@@ -435,8 +453,15 @@ export const SECONDS_PER_DECISION = 3;
  */
 export const PLAY_MINUTES = { floor: 4, target: 5, max: 8 } as const;
 
+const wordCount = (l: Line) => l.text.split(/\s+/).filter(Boolean).length;
+
+/** Words read in this run: not chrome, and not the lines read once per session. */
 export const words = (tr: Transcript) =>
-  tr.lines.reduce((n, l) => (l.chrome ? n : n + l.text.split(/\s+/).filter(Boolean).length), 0);
+  tr.lines.reduce((n, l) => (l.chrome || l.once ? n : n + wordCount(l)), 0);
+
+/** Words read once per session (Line.once): the level list's other rows. */
+export const onceWords = (tr: Transcript) =>
+  tr.lines.reduce((n, l) => (l.once && !l.chrome ? n + wordCount(l) : n), 0);
 
 /** Words shown / 200 wpm + waiting-room beats at normal speed + 3 s per decision. */
 export function playMinutes(tr: Transcript): number {
@@ -517,9 +542,12 @@ export function playTimeRule(range: PlayTimeRange): Rule {
       if (median === undefined) return undefined;
       // The longest full run, so the room left under the ceiling shows (pfi.11).
       const longest = Math.max(...trs.filter((tr) => tr.ending !== 'turnedBack').map(playMinutes));
+      // The level list's other rows, counted once per session rather than in each run (Line.once).
+      const once = Math.max(...trs.map(onceWords));
       return {
         ok: true,
-        text: `median full run ${median.toFixed(1)} min (aim ${range.target}, not checked), longest ${longest.toFixed(2)} of ${range.max} (${runs} runs)`,
+        text: `median full run ${median.toFixed(1)} min (aim ${range.target}, not checked), longest ${longest.toFixed(2)} of ${range.max} (${runs} runs)`
+          + (once ? `, plus ${once} words of the level list read once per session` : ''),
       };
     },
   };
