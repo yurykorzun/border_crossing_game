@@ -190,8 +190,14 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   const reaction = page.locator('main.run .panel.reaction');
   const beat = reaction.locator('.story-beat');
   const rows = reaction.locator('.changes li');
-  await expect(beat).toHaveText('Your mother answers on the second ring.');
-  await expect(rows).toHaveText(['Visit verified.', "On file at Customs: your mother's number."]);
+  await expect(beat).toHaveText('Your mother answers on the second ring. She gives her address and names the rest of the family.');
+  // She also gives her address and names the family; on a records day both reach the desks ahead.
+  await expect(rows).toHaveText([
+    'Visit verified.', "On file at Customs: your mother's number.",
+    "Your mother's address is now on file.", 'Another relative of yours is now on file.',
+    'Into the shared records for the desks ahead: Family address.',
+    'Into the shared records for the desks ahead: Another relative, on record.',
+  ]);
   // Separate elements: the beat holds no result text, and the rows sit under it.
   await expect(beat).not.toContainText('verified');
   const beatBox = (await beat.boundingBox())!;

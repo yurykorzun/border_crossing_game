@@ -73,9 +73,11 @@ Each card covers two topics, so a "wrong" pick is never useless. History questio
 
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
-| Customs | "Medicines are lab-tested today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file |
-| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call |
-| Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once |
+| Customs | "Medicines are lab-tested and cash is counted today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
+| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
+| Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
+
+So the day decides which answer is safe: the same denial or evasion is free on one day and caught on another, and a memorised script cannot tell the days apart.
 
 Under the bulletin, one plain cue says what officers are doing today in the words of that topic ("Officers are calling hosts to check where you'll stay.", `bulletin.<id>.cue`). It replaced a Relevant today tag on each row, so the rows stay clean and the player matches the cue to the topics line.
 
@@ -151,7 +153,7 @@ A claim is in one of three tiers:
 
 1. Unchallenged: nothing on file speaks against it. The claim stands and you saved the time, card or contact a true answer would have cost. "It's under the limit" is free while nobody has counted the cash.
 2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said tourist, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
-3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
+3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).
 
@@ -161,7 +163,7 @@ Spot-checks (`spotCheck()` in `src/game/engine.ts`): before you leave each desk,
 - answered: that challenge card was already put to you, so it passes.
 - explained: an inconsistency you have since explained with the clarify answer's claim, so checking it takes 3 hours (`SPOT_CHECK_HOURS`).
 
-Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection, and a paper on the bulletin's warned topic settles her on one draw of 2.
+Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection, and a paper on the bulletin's warned topic settles her on two draws of 3.
 
 No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things plus a way out.
 

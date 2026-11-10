@@ -21,7 +21,7 @@ TL;DR: you hold a small hand of document cards and two people you can call on. A
 
 **The bulletin (the "modifier")**
 - One of 3 is dealt per run: medicines are lab-tested, hosts are phoned, or IDs are checked against old records.
-- It changes the price of some answers and the results of some checks. The same hand plays differently on a different day.
+- It changes the price of some answers and the results of some checks. The same hand plays differently on a different day, and it decides which lie is safe: on the customs day the cash is counted even after "It's under the limit", on the hosts day "I haven't decided yet" costs +1 scrutiny and your mother is phoned, and on the records day the old family register lists your relatives. Denying other relatives is disproved on the hosts and records days and holds on the customs day.
 - The packing screen shows it as a warning next to the documents. It points at a topic (medicine, accommodation, identity) and never names a document, so packing is a choice and not a lottery. The walk proves the warning pays: packings that cover its topic get home in time more often.
 
 ## The decks and the dealer
@@ -36,7 +36,7 @@ Two more rules give the run some relief, so escalation lands harder:
 - Pacing: after 2 escalating cards in a row (related, follow-up, inspection), a routine card still left at that desk comes first. Whatever was next still comes after it. `npm run eval` rule 6 checks this on every transcript.
 - The breather is a calm card: an inspector lending you a pen at customs, a glass of water or a ringing phone at the interview. It has one answer, it costs nothing, and the tap is not counted as a decision. Calm cards are only dealt as breathers, so the desk always has one when the rule needs it.
 
-This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3). If you showed your mother's letter, or hosts are being phoned today, customs deals "We need to confirm where you will stay" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
+This is the storylet rule. Cards wait until they make sense. If you said "tourist" at passport control, customs deals "A tourist carrying a pensioner's prescription?" (priority 3), and every answer there puts the family on file at customs: admitting it means a new form with your mother's address, a document shows its facts, and your mother on the phone gives her address and names the rest of the family (sent on to the interview). So the customs spot-check of "tourist" finds the address. If you showed your mother's letter, or hosts are being phoned today, customs deals "We need to confirm where you will stay" (priority 2). If your phone could hold something (the protest photo, the donation), customs may search it.
 
 Some answers also queue a follow-up card that is dealt next. For example, a phone search that finds the protest photo queues "Were you at this rally?".
 
@@ -62,9 +62,9 @@ The rule that keeps it fair: every card has at least one answer that needs no do
 - An answer records only what its words say. Asked about relatives, you name your contact, say "I have no other relatives here." or ask why. Only the denial records "No other relatives", because leaving someone out is not a lie. Mark's brother lives across the border, so he is asked "Any family across the border?" and his denial records "No family across the border" (per-traveler keys like `enc.i_family.mark.q`, resolved by `own()` in src/i18n/index.ts).
 - Facts are what the state now knows (shown as "On file"): the family address, your employer, your phone was searched, your brother abroad.
 - Each desk knows only what came out there, and My story tags each fact with the desks that know it. A fact travels on only through a channel: the shared records (with the records bulletin it reaches every later desk at once), a call from one desk to the next, or a printout handed over after a check. So the address you showed at passport control is not known at the interview unless something carried it there.
-- A lie has three tiers. Unchallenged: nothing on file speaks against it, so it is free and you saved what the truth would have cost. Inconsistency: a fact makes it look odd (say "tourist", then your family address goes on file), and you get a cheap clarify card: clarify for 1 hour (the new story is checked), show a document, or take +1 scrutiny. Disproof: a fact says the opposite (deny other relatives while your brother abroad is on file, or say your cash is under the limit and then the bag search counts it), and you get an expensive card: 3 hours for a formal review or +2 scrutiny. Nobody can vouch it away. Either card quotes you: `You said: "..." (desk). On file: fact.`
+- A lie has three tiers. Unchallenged: nothing on file speaks against it, so it is free and you saved what the truth would have cost. Inconsistency: a fact makes it look odd (say "tourist", then your family address goes on file), and you get a cheap clarify card: clarify for 1 hour (the new story is checked), show a document, or take +1 scrutiny. Disproof: a fact says the opposite (deny other relatives while your brother abroad or another relative is on file, or say your cash is under the limit and then someone counts it), and you get an expensive card: 3 hours for a formal review or +2 scrutiny. Nobody can vouch it away. Either card quotes you: `You said: "..." (desk). On file: fact.`
 - Spot-checks: before you leave each desk, the officer checks one claim you made against what that desk has on file. The dealer picks which, among the claims written down at some desk. A claim that fits passes at no cost. A flaw opens a check and the check decides: the clarify or contradiction card is dealt at that desk, before you move on. A flaw you have already answered for passes, and an inconsistency you have since explained clears after a 3-hour check. Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking, because the whole file has been read. A challenge that applies at the interview is still always dealt there.
-- Before admission a supervisor reads the file once, on a run with no inspection yet that can still make the bus. She sends you to a secondary inspection whenever scrutiny is above 0 (Mark's starting 1 counts). A paper on the bulletin's warned topic, shown on the way, settles her half the time.
+- Before admission a supervisor reads the file once, on a run with no inspection yet that can still make the bus. She sends you to a secondary inspection whenever scrutiny is above 0 (Mark's starting 1 counts). A paper on the bulletin's warned topic, shown on the way, settles her two times in three.
 - Every scrutiny gain names its reason (a fact on file or a check result), and the reaction says it. A lie never adds scrutiny until something catches it.
 - Each officer has one priority, stated in one line above the first question at their desk (`OFFICERS` in `src/game/content/world.ts`). The passport clerk wants accurate paperwork and the customs inspector wants goods declared, and their cards already price that in. The security officer cares about politics: an answer that brings a political fact out at the interview for the first time (the second passport, the brother across the border, the old donation) costs +1 scrutiny with that fact as the reason, where the same answer at the passport desk costs nothing extra. Officer mood is not shown yet, because no mechanic sits behind it.
 - Only claims that truly exclude each other block a document. Saying you stay with your mother blocks the hotel booking; visiting family does not.
@@ -95,13 +95,13 @@ So there are two levels of winning. Getting through at all is the first level, a
 **Design rules every card follows**
 - Each answer costs something different, so no answer is the best one on every card. Documents are limited (3-4 for 6-9 questions), time is limited (8, and you need 2 left), and suspicion has a hard ceiling (3).
 - Honesty costs time now, and lying costs suspicion or a contradiction later. That trade is the core tension.
-- No free exits: every challenge card and every inspection answer costs something (the walk checks this). An inspection shows two answers that cost different things (time, belongings, a disclosure, a person) plus a way out, and with 2 hours left or fewer it offers no wait, so it asks for one sacrifice. Asking the supervisor to phone the hospital costs an hour on hold.
+- No free exits: every challenge card and every inspection answer costs something (the walk checks this). An inspection shows two answers that cost different things (time, belongings, a disclosure, a person) plus a way out, and with 2 hours left or fewer it offers no wait, so it asks for one sacrifice. Asking the supervisor to phone the hospital costs an hour on hold, and so does having her call your mother.
 - An inspection changes the problem instead of only costing hours, and it resets scrutiny to 1, so one inspection hurts and does not end the run. The bag search costs 3 hours (and counts your cash) or a person. Confiscation holds the medicine: wait 3 hours to get it back, or leave without it. A missed connection makes the trip to the bus an hour longer, so you need an hour more left, unless someone drives out for you (a person on file). Extra verification checks why you travel: spend the document that backs it, or your father's condition goes on file.
 - Once you have fewer hours left than the trip takes, the bus is out of reach: the card says "You will not make the bus now." and offers to finish the crossing quickly (Too late), so a doomed run does not need more clicking. The walk checks that no deal from such a state still reaches the bus.
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**
-A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-09) visited 7,200,246 states across 105 setups in about 93 s and checked, at every state and move:
+A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-10) visited 6,495,559 states across 105 setups in about 155 s and checked, at every state and move:
 - No dead ends and no loops: every run ends.
 - Time stays 0-8 and scrutiny 0-3; a spent document, an exposed contact or the used Advantage never comes back.
 - A double tap or a second resolution of the same check is refused; nothing is accepted after the ending.
@@ -109,21 +109,22 @@ A script (`npm run walk`) plays every possible choice and every card the dealer 
 - Scrutiny never rises without a reason that holds, the clarify and contradiction cards are only dealt when their claim and fact pair is on file, and the hotel is never shown after "Staying with family".
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
-- Every bulletin warning pays: with random answers and deals, packings with a document on the warned topic get home in time more often (customs, medicine: 35.9% vs 21.1%; accommodation: 44.1% vs 42.9%, against the one packing with no accommodation document; records, identity: 30.5% vs 28.4%).
-- The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.8 minutes and the median 5.7 (eval rule 4 asks for 4-8 and only reports the median).
+- Every bulletin warning pays: with random answers and deals, packings with a document on the warned topic get home in time more often (customs, medicine: 22.4% vs 13.7%; accommodation: 37.1% vs 24.3%, against the one packing with no accommodation document; records, identity: 23.1% vs 17.7%).
+- The longest run is 14 decisions (the limit is 14). In the eval the median full run is 5.6 minutes and the longest 7.3 (eval rule 4 asks for 4-8 and only reports the median).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 
-Ending shares across all branches (share of branches, not of players): home in time 16.4%, at a cost 29.7%, too late 34.6%, turned back 19.3%.
+Ending shares across all branches (share of branches, not of players): home in time 26.6%, at a cost 25.1%, too late 20.7%, turned back 27.6%.
 
-**The balance targets (eval rules 7-9)**
+**The balance targets (eval rules 7-10)**
 `npm run eval` plays every bot style over 200 seeds and fails when a target slips (shares are only checked with at least 100 runs per style):
-- Rule 7: honest play gets home in time in at least 50% of runs, so honesty is not punished (61.5% on 2026-11-10).
-- Rule 8: the liar bot gets home in time in at most 80% of runs, so lying does not always win (79.0%).
-- Rule 9: an inspection happens in 25-33% of runs across all styles, so scrutiny is a real risk without being every run (29.6%).
+- Rule 7: honest play gets home in time in at least 50% of runs, so honesty is not punished (65.5% on 2026-11-10).
+- Rule 8: the liar bot gets home in time in at most 80% of runs, so lying does not always win (67.5%).
+- Rule 9: an inspection happens in 25-33% of runs across all styles, so scrutiny is a real risk without being every run (29.5%).
+- Rule 10: the memorised script (one answer per card, learned from a first pass of every style) gets home in time in at most 80% of runs, so the game is not solved by heart (75.0%, down from 94.0%). The bulletin and the file decide which answer is safe, so a fixed script pays where a player who reads the day would not.
 
 **What is not balanced yet**
-The memorised script (one answer per card, learned from earlier runs) still gets home in time in 94.0% of runs. The eval prints that number but does not fail on it, because getting it under the review's 60% target is design work in its own beads. The walk also works out the best ending a player can force in each setup whatever the dealer deals, and today it is "home in time" in all 105 setups. The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost".
+The review's target for the memorised script is 60%. Rule 10 is the first of two steps, and the second comes after a playtest. The walk also works out the best ending a player can force in each setup whatever the dealer deals, and today it is "home in time" in 89 of 105 setups and "home, at a cost" in the other 16 (mostly the customs day). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost".
 
 ## Where it lives in code
 
