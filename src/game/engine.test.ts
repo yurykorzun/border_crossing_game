@@ -274,7 +274,7 @@ describe('too late endings', () => {
   });
 
   it('arriving too late: through the border with hours left, but fewer than the trip', () => {
-    const { final } = honest(2);
+    const { final } = honest(3);
     expect(final.ending).toBe('tooLate');
     expect(final.time).toBeGreaterThan(0);
     expect(final.time).toBeLessThan(travelOf(final));
@@ -283,7 +283,7 @@ describe('too late endings', () => {
 
   it('gives the two runs different ending text', () => {
     const a = honest(18).final;
-    const b = honest(2).final;
+    const b = honest(3).final;
     for (const part of ['title', 'body']) {
       const ka = `ending.${endingText(a)}.${part}`;
       const kb = `ending.${endingText(b)}.${part}`;
