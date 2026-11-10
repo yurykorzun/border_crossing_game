@@ -745,12 +745,19 @@ export const en: Record<string, string> = {
   'exposure.mother.call': "She has to leave your father's bedside to answer questions.",
   // Each contact line's stated reason (EndingLine.reason): why naming them does this.
   'exposure.mother.call.reason': 'Her number is on your file.',
-  'exposure.mother.home.reason': 'Her address is on your file.',
+  // A visit needs something about her flagged at a desk, named with the desk (consequences()).
+  'exposure.mother.home.reason.familyAddress': '{desk} flagged her address, and it is on the report.',
+  'exposure.mother.home.reason.hostStatement': '{desk} flagged that her account differs from yours. Her address is on the report.',
+  'exposure.mother.home.reason.relativeNamed': '{desk} flagged the relative she named. Her address is on the report.',
+  // The same, for a save from before the desk was kept.
+  'exposure.mother.home.reason.familyAddress.anywhere': 'A desk flagged her address, and it is on the report.',
+  'exposure.mother.home.reason.hostStatement.anywhere': 'A desk flagged that her account differs from yours. Her address is on the report.',
+  'exposure.mother.home.reason.relativeNamed.anywhere': 'A desk flagged the relative she named. Her address is on the report.',
   'exposure.cousin.protected.reason': 'Ilya was already questioned about the fundraiser.',
   'exposure.brother.protected.reason': 'He lives in a country at war with this one.',
   'exposure.brother.protected.record.reason': 'Your file flags your brother across the border.',
   'exposure.mother.home.title': "Officers go to your mother's address",
-  'exposure.mother.home': 'She has to leave the hospital to give a statement.',
+  'exposure.mother.home': "The following morning, officers come to her address and ask her to come in. She has to leave your father's bedside to give a statement.",
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',
   'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out of it.',
   // Tom's line says why: with his record already flagged on your file he is listed, else he is only questioned.

@@ -433,7 +433,10 @@ function apply(s: RunState, effects: Effect[]): RunState {
       // A fact that is the reason scrutiny rises reads as flagged from now on (factTier()).
       const reason = e.reason in FACT_TIERS ? (e.reason as FactId) : undefined;
       const flag = e.scrutiny > 0 && reason && !(n.flagged ?? []).includes(reason);
-      n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)), ...(flag ? { flagged: [...(n.flagged ?? []), reason] } : {}) };
+      n = {
+        ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)),
+        ...(flag ? { flagged: [...(n.flagged ?? []), reason], flaggedAt: { ...n.flaggedAt, [reason]: deskOf(n) } } : {}),
+      };
     }
     else if ('fact' in e) n = { ...n, facts: teach(n.facts, e.fact, desksLearning(n.bulletin, deskOf(n))) };
     else if ('send' in e) {

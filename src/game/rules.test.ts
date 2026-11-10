@@ -645,22 +645,28 @@ describe('every exposure has a consequence (fsx.3)', () => {
   it('consequences() lists each exposure and the medicine, worst first, under any ending', () => {
     const base = newRun(lena);
     expect(consequences(base)).toEqual([]);
-    // A phone call: minor. Her address on file turns it into a visit: serious.
-    expect(consequences({ ...base, exposed: ['mother'] })).toEqual([
-      { kind: 'contact', key: 'exposure.mother.call', vars: { contact: 'mother' }, severity: 1, reason: 'exposure.mother.call.reason' },
-    ]);
+    // A phone call: minor. Her address on file alone sends nobody, so it stays a call.
+    const call = { kind: 'contact', key: 'exposure.mother.call', vars: { contact: 'mother' }, severity: 1, reason: 'exposure.mother.call.reason' };
+    expect(consequences({ ...base, exposed: ['mother'] })).toEqual([call]);
+    expect(consequences({ ...base, exposed: ['mother'], facts: known('familyAddress') })).toEqual([call]);
     // Worst first, the protected contact ahead of the medicine; what is on file has no line (the records sheet lists it).
-    const tooLate: RunState = { ...base, time: 1, exposed: ['mother', 'cousin'], medicine: false, facts: known('familyAddress', 'employer', 'urgency', 'cashCount') };
+    // Her address flagged at customs gives the visit its reason, named from the run: serious.
+    const tooLate: RunState = {
+      ...base, time: 1, exposed: ['mother', 'cousin'], medicine: false, facts: known('familyAddress', 'employer', 'urgency', 'cashCount'),
+      flagged: ['familyAddress'], flaggedAt: { familyAddress: 'customs' },
+    };
     expect(endingFor(tooLate)).toBe('tooLate');
     expect(consequences(tooLate)).toEqual([
       { kind: 'contact', key: 'exposure.cousin.protected', vars: { contact: 'cousin' }, severity: 3, reason: 'exposure.cousin.protected.reason' },
       { kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 },
-      { kind: 'contact', key: 'exposure.mother.home', vars: { contact: 'mother' }, severity: 2, reason: 'exposure.mother.home.reason' },
+      { kind: 'contact', key: 'exposure.mother.home', vars: { contact: 'mother', desk: 'customs' }, severity: 2, reason: 'exposure.mother.home.reason.familyAddress' },
     ]);
+    expect(t('exposure.mother.home.reason.familyAddress', { desk: 'customs' })).toBe('Customs flagged her address, and it is on the report.');
     // Each line is something the player can picture: a heading, then one line.
     expect(t('exposure.mother.call.title', { contact: 'mother' })).toBe('The border calls your mother');
     expect(t('exposure.mother.home.title', { contact: 'mother' })).toBe("Officers go to your mother's address");
-    expect(t('exposure.mother.home', { contact: 'mother' })).toBe('She has to leave the hospital to give a statement.');
+    // The visit is the following morning, so it agrees with every epilogue, where she is at the hospital that night.
+    expect(t('exposure.mother.home', { contact: 'mother' })).toMatch(/^The following morning, /);
     expect(consequences({ ...base, facts: known('employer') })).toEqual([]);
     // Mark's brother is his protected contact.
     expect(consequences({ ...newRun(mark), exposed: ['brother'] })[0]).toMatchObject({ key: 'exposure.brother.protected', severity: 3 });
@@ -954,21 +960,44 @@ describe('every time loss names its cause in the reaction (fsx.12)', () => {
 
 describe('exposure needs a stated reason, and each reaction says which of three it is (4qd.3)', () => {
   it('every consequence that harms a contact carries a reason key that renders non-empty text', () => {
-    // Every person each traveler can name, with and without their home and record on file, flagged or not.
-    let lines = 0;
+    // Every person each traveler can name, with and without their home and record on file,
+    // flagged or not, at each desk or (an old save) with no desk kept.
+    const keys = new Set<string>();
+    const flaggable: FactId[] = ['familyAddress', 'brotherAbroad', 'hostStatement', 'relativeNamed'];
+    const sets: FactId[][] = [[], ['familyAddress'], ['brotherAbroad'], ['familyAddress', 'brotherAbroad'], ['familyAddress', 'hostStatement'], ['familyAddress', 'relativeNamed']];
     for (const setup of [lena, mark])
       for (const c of CHARACTERS[setup.character].contacts)
-        for (const facts of [[], ['familyAddress'], ['brotherAbroad'], ['familyAddress', 'brotherAbroad']] as FactId[][])
+        for (const facts of sets)
           for (const flagged of [[], facts])
-            for (const l of consequences({ ...newRun(setup), exposed: [c], facts: known(...facts), flagged })) {
-              if (l.kind !== 'contact') continue;
-              lines++;
-              expect(l.reason, l.key).toBe(`${l.key}.reason`);
-              expect(t(l.reason!, l.vars).trim(), l.key).not.toBe('');
-            }
-    expect(lines).toBeGreaterThan(0);
+            for (const desk of [undefined, 'passport', 'customs', 'interview'] as const)
+              for (const l of consequences({
+                ...newRun(setup), exposed: [c], facts: known(...facts), flagged,
+                ...(desk ? { flaggedAt: Object.fromEntries(flagged.map((f) => [f, desk])) } : {}),
+              })) {
+                if (l.kind !== 'contact') continue;
+                keys.add(l.key);
+                expect(l.reason, l.key).toMatch(new RegExp(`^${l.key.replace(/\./g, '\\.')}\\.reason`));
+                expect(t(l.reason!, l.vars).trim(), l.reason).not.toBe('');
+                expect(t(l.reason!, l.vars), l.reason).not.toMatch(/[{}]/);
+                // A visit only ever comes with something about them flagged, and the reason names it.
+                if (l.key.endsWith('.home')) expect(flaggable.some((f) => flagged.includes(f) && l.reason!.includes(f)), l.reason).toBe(true);
+              }
+    expect([...keys].sort()).toEqual(['exposure.brother.protected', 'exposure.brother.protected.record', 'exposure.cousin.protected', 'exposure.mother.call', 'exposure.mother.home']);
     // The cousin's reason is the one the player can already read on his contact card.
     expect(t('exposure.cousin.protected.reason')).toBe('Ilya was already questioned about the fundraiser.');
+  });
+
+  it("the visit to the mother fires only once the run flags something about her, and the reason names the desk that did", () => {
+    // Her address on file, then an evasion at the interview: that answer flags it there.
+    const s = at({ ...newRun(lena), exposed: ['mother'], facts: known('familyAddress') }, 'i_stay');
+    expect(consequences(s).map((l) => l.key)).toEqual(['exposure.mother.call']);
+    const r = tryStep(s, { type: 'choose', approach: 'undecidedOnFile' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.flaggedAt).toEqual({ familyAddress: 'interview' });
+    const [visit] = consequences(r.state);
+    expect(visit).toMatchObject({ key: 'exposure.mother.home', reason: 'exposure.mother.home.reason.familyAddress' });
+    expect(t(visit.reason!, visit.vars)).toBe('Security interview flagged her address, and it is on the report.');
   });
 
   // Every pair each challenge card catches, answered every way it can be.

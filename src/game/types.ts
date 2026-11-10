@@ -244,8 +244,16 @@ export interface Contact {
   id: ContactId;
   /** Topics they can confirm. A contact answer shows only on a card or check with one of these. */
   abilities: Topic[];
-  /** The fact that puts their home on file. With it on file, a call-in becomes a visit (a worse exposure). */
+  /**
+   * The fact that puts their home on file. On file alone it sends nobody: a call-in
+   * becomes a visit (a worse exposure) only once one of `flaggedBy` is flagged too.
+   */
   home?: FactId;
+  /**
+   * Facts about them that, flagged at a desk, give officers a reason to visit their
+   * home (`exposure.<id>.home.reason.<fact>` names which, and where).
+   */
+  flaggedBy?: FactId[];
   /**
    * The record that makes naming them worse: on file and flagged (factTier()), the ending
    * reads `exposure.<id>.protected.record` (listed), else `exposure.<id>.protected`.
@@ -427,6 +435,8 @@ export interface RunState {
    * (factTier() in src/game/engine.ts). Unset in saves from before it existed.
    */
   flagged?: FactId[];
+  /** The desk where each flagged fact was flagged, so the ending can name it. Unset in saves from before it existed. */
+  flaggedAt?: Partial<Record<FactId, Checkpoint>>;
   /**
    * Claims a document or record has shown false (catchKind() 'disproof'), recorded
    * when the contradiction card is answered. Conflicting testimony and suspicion

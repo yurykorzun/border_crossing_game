@@ -87,7 +87,7 @@ Each card but the return ticket covers two topics, so a "wrong" pick is rarely u
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
 | Customs | "Medicines require supporting paperwork today." followed in the same bar by "Cash is checked at customs today." (`bulletin.customs.also`) | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
-| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
+| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives meets your mother's account on the phone, which conflicts with yours (testimony, not a disproof) |
 | Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
 
 So the day decides which answer is safe: the same denial or evasion is free on one day and caught on another, and a memorised script cannot tell the days apart.
@@ -147,7 +147,7 @@ Every card, new or changed, must also answer these seven questions (from the rev
 
 The rule behind questions 2 and 4: a check can establish facts, but does not prove the officer's interpretation. Confirming that Lena works for a foreign company puts her employer on file; it does not establish political involvement. So the engine keeps three things apart: what exists (the character's background), what the check found (a fact on file) and what the officer infers (a suspicion line, `Officer.readings` in `src/game/content/world.ts`). The card shows "Confirmed and on file: Your employer" under the reaction and "The officer questions your employer's connection." as a reaction line of its own, and no fact on file ever records the reading.
 
-Naming a contact causes harm only with a stated reason the player can see ("Ilya was already questioned about the fundraiser"). Each contact line in the ending carries one (`EndingLine.reason`, `consequences()` in `src/game/consequence.ts`), and his contact card says it before you name him.
+Naming a contact causes harm only with a stated reason the player can see ("Ilya was already questioned about the fundraiser"). Each contact line in the ending carries one (`EndingLine.reason`, `consequences()` in `src/game/consequence.ts`), and his contact card says it before you name him. Recording an address never sends anyone by itself: officers visit your mother only when the run flagged something about her at a desk (her address, her account against yours, or the relative she named; `Contact.flaggedBy`), and the reason names it and the desk ("Customs flagged her address, and it is on the report."). Without that, she gets a phone call. The visit happens the following morning, so it agrees with every epilogue, where she is at the hospital that night.
 
 ## Answers no style picks
 

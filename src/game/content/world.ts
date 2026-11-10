@@ -53,8 +53,13 @@ export const CHARACTERS: Record<CharacterId, Character> = {
  */
 export const CONTACTS: Record<ContactId, Contact> = {
   // The address, the visit and the prescription.
-  // With her address on file, officers visit her instead of phoning.
-  mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress' },
+  // With her address on file and something about her flagged at a desk (her address,
+  // her account against yours, the relative she named), officers visit her the
+  // following morning instead of phoning. The address on file alone sends nobody.
+  mother: {
+    id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress',
+    flaggedBy: ['familyAddress', 'hostStatement', 'relativeNamed'],
+  },
   // He can host.
   cousin: { id: 'cousin', abilities: ['accommodation'] },
   // A job offer abroad. With his record on file and flagged, naming him lists him, not only questions him.

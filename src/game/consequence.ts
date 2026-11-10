@@ -212,7 +212,8 @@ export function nextActionKey(s: RunState): string {
  * you exposed your mother. Severity comes from the state and only orders the list (no
  * tag on screen, because research warns against scoring family harm): the protected
  * contact and the medicine are severe (the contact also rules out homeInTime), anyone
- * else is serious once their home is on file and minor otherwise. Ties keep the person
+ * else is serious once their home is on file and something about them is flagged at a desk
+ * (Contact.flaggedBy, named with the desk in the reason), and minor otherwise. Ties keep the person
  * first. What is on file is not here, because the records sheet lists it. Each line has
  * a short heading at `<key>.title`, and each contact line a stated reason at `reason`
  * (`<key>.reason`): harm to a person never comes without one the player can read. Ending in src/App.tsx lists them and endingLines()
@@ -230,8 +231,14 @@ export function consequences(s: RunState): EndingLine[] {
     const listed = !!record && facts.includes(record) && factTier(s, record) === 'flagged';
     // Every line states why naming them does this harm, at `<key>.reason`.
     const line = (key: string, severity: Severity): EndingLine => ({ kind: 'contact', key, vars: { contact: c }, severity, reason: `${key}.reason` });
+    // A visit needs a reason the run established: their home on file is not enough,
+    // something about them must be flagged at a desk, and the reason names which and where.
+    const flag = (CONTACTS[c].flaggedBy ?? []).find((f) => facts.includes(f) && factTier(s, f) === 'flagged');
     if (c === protectedContact) out.push(line(`exposure.${c}.protected${listed ? '.record' : ''}`, 3));
-    else if (home && facts.includes(home)) out.push(line(`exposure.${c}.home`, 2));
+    else if (home && facts.includes(home) && flag) {
+      const desk = s.flaggedAt?.[flag];
+      out.push({ ...line(`exposure.${c}.home`, 2), reason: `exposure.${c}.home.reason.${flag}${desk ? '' : '.anywhere'}`, vars: { contact: c, ...(desk ? { desk } : {}) } });
+    }
     else out.push(line(`exposure.${c}.call`, 1));
   }
   if (!s.medicine) out.push({ kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 });
