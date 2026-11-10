@@ -403,6 +403,8 @@ p { margin: 0 0 var(--gap); }
 .priority { margin: 0 0 6px; font-size: 0.9rem; color: #c5cec9; }
 .ask-card .priority { color: var(--muted); }
 .ask-short.inspection { padding-inline-start: 10px; }
+/* A caught claim: your own words and the fact that catches them, under the question. */
+.caught { margin: 8px 0 0; font-size: 1rem; line-height: 1.35; }
 .reaction .said { font-style: italic; }
 /* What changed: plain lines under the officer's words, amber for escalation, red only for a confirmed loss. */
 .changes { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px dashed var(--bg-line); display: flex; flex-direction: column; gap: 4px; }

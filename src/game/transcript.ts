@@ -14,7 +14,7 @@ import type { BotRun } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
-import { SEPARATOR, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
+import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
 import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -297,6 +297,9 @@ function screenLines(s: RunState, p: Page): void {
     if (finishing) p.add('ui.doomed');
     if (desk) p.add(`officer.${desk}.priority`);
     p.add(own(`${prefix}.${sc.id}.q`, s.character));
+    // A challenge card: your own words, the desk and the fact that catches them.
+    const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
+    if (caught) p.add(caught.key, caught.vars);
     for (const o of options(s)) {
       if (o.blocked === 'noCard') p.add('ui.showDocument');
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');

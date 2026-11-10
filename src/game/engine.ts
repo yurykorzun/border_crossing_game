@@ -39,6 +39,7 @@ export function newRun(setup: RunSetup): RunState {
     facts: {},
     claims: [],
     logged: {},
+    saidAt: {},
     medicine: true,
     perkUsed: false,
     withdrew: false,
@@ -94,7 +95,7 @@ export const loggedAt = (s: RunState, c: ClaimId): Checkpoint[] => s.logged?.[c]
 /** `s` after claiming `c` here: on the record of what you said, and written down if this officer does (writesDown). */
 function claim(s: RunState, c: ClaimId): RunState {
   const desk = deskOf(s);
-  const n = s.claims.includes(c) ? s : { ...s, claims: [...s.claims, c] };
+  const n = s.claims.includes(c) ? s : { ...s, claims: [...s.claims, c], saidAt: { ...s.saidAt, [c]: desk } };
   const had = loggedAt(n, c);
   if (!writesDown(desk, c) || had.includes(desk)) return n;
   return { ...n, logged: { ...n.logged, [c]: CHECKPOINTS.filter((d) => had.includes(d) || d === desk) } };
@@ -588,6 +589,21 @@ export function spotCheckOf(s: RunState, c: ClaimId): SpotResult {
   if (s.seen.includes(card)) return { result: 'answered' };
   if (card === 'i_clarify' && s.claims.includes(CLARIFIED_BY)) return { result: 'explained' };
   return { result: 'flaw', card };
+}
+
+/**
+ * What a challenge card puts to you: the claim, the desk where you first said
+ * it, and the fact on file that catches it. The pair is the first that holds
+ * here, the one an answer is charged for (firstCaught). Undefined on any other
+ * card. A save from before saidAt existed names the first desk that wrote the
+ * claim down, else this one.
+ */
+export function caught(s: RunState, card: string): { claim: ClaimId; desk: Checkpoint; fact: FactId } | undefined {
+  const pairs = (CHALLENGE_PAIRS as Record<string, readonly (readonly [ClaimId, FactId])[]>)[card];
+  const pair = pairs?.find(([c, f]) => s.claims.includes(c) && knows(s, f));
+  if (!pair) return undefined;
+  const [claim, fact] = pair;
+  return { claim, desk: s.saidAt?.[claim] ?? loggedAt(s, claim)[0] ?? deskOf(s), fact };
 }
 
 /**

@@ -310,6 +310,12 @@ export interface RunState {
    * A claim in `claims` with no desk here was only said aloud. Unset in saves from before it existed.
    */
   logged?: Partial<Record<ClaimId, Checkpoint[]>>;
+  /**
+   * The desk where each claim was first said, written down or not, so a card that
+   * catches it can name where you said it (caughtLine() in src/game/engine.ts).
+   * Unset in saves from before it existed.
+   */
+  saidAt?: Partial<Record<ClaimId, Checkpoint>>;
   medicine: boolean;
   perkUsed: boolean;
   withdrew: boolean;
