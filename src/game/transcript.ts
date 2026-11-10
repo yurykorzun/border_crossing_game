@@ -18,6 +18,7 @@ import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextAction
 import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
+import { openQuestions } from './save';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
@@ -346,8 +347,10 @@ function endingLines(s: RunState, p: Page): void {
   p.add(s.medicine ? 'ui.kept' : 'ui.lost');
   p.add(`contact.${ch.protectedContact}`);
   p.add(protectedRow(s).key);
-  // The count includes this ending; a first run shows 1.
-  p.add('ui.endingsSeen', { n: 1 }, CHROME);
+  // Open questions, as a first run shows them: every ending but this one.
+  const open = openQuestions({ endingsSeen: s.ending ? [s.ending] : [] });
+  if (open.length) p.add('ui.openQuestions', {}, CHROME);
+  for (const q of open) p.add(q, {}, CHROME);
   p.add('ui.seeOnFile');
   p.add('ui.playAgain');
   // The Border records sheet behind "See what's on file".

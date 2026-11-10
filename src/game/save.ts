@@ -25,6 +25,17 @@ export interface Store {
 export const SAVE_KEY = 'purpose-of-visit-save';
 export const SAVE_VERSION = 1 as const;
 
+/** Every ending, in the order its open question is listed. */
+export const ENDINGS: readonly EndingId[] = ['homeInTime', 'homeAtCost', 'tooLate', 'turnedBack'];
+
+/**
+ * What the player has not found out yet: one question per ending not seen, as the
+ * i18n key `question.<ending>`. Seeing an ending crosses its question off. The list
+ * comes from endingsSeen, so an older save keeps its progress with no new field.
+ */
+export const openQuestions = (data: Pick<SaveData, 'endingsSeen'>): string[] =>
+  ENDINGS.filter((e) => !data.endingsSeen.includes(e)).map((e) => `question.${e}`);
+
 export const freshSave = (): SaveData => ({
   v: SAVE_VERSION,
   run: null,
@@ -42,7 +53,7 @@ export function load(store: Store): SaveData {
     return {
       v: SAVE_VERSION,
       run: data.run && data.run.v === 2 ? data.run : null,
-      endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen : [],
+      endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e) => ENDINGS.includes(e)) : [],
       settings: { ...base.settings, ...(data.settings ?? {}) },
     };
   } catch {

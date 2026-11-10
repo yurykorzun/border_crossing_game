@@ -131,7 +131,13 @@ export const en: Record<string, string> = {
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
-  'ui.endingsSeen': 'Endings seen: {n} of 4',
+  // Open questions (openQuestions in src/game/save.ts): one per ending not seen yet, on the title and the ending card.
+  // Each hints where an ending might be. None says what to feel or counts harm to the family.
+  'ui.openQuestions': 'Still to find out',
+  'question.homeInTime': 'Can you get home with everything you carried?',
+  'question.homeAtCost': 'What if something stays behind?',
+  'question.tooLate': 'What if the last bus leaves without you?',
+  'question.turnedBack': 'What happens if you stop waiting?',
   // Ending card (Ending in src/App.tsx)
   'ui.crossingComplete': 'Crossing complete',
   'ui.crossingRefused': 'Request withdrawn',

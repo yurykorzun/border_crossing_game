@@ -13,7 +13,7 @@ import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
-import { browserStore, load, save } from './game/save';
+import { browserStore, load, openQuestions, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
@@ -73,7 +73,7 @@ function Game() {
           }}
         />
       ) : (
-        <Title onStart={startSetup} seen={data.endingsSeen.length} />
+        <Title onStart={startSetup} questions={openQuestions(data)} />
       )}
     </div>
   );
@@ -121,7 +121,7 @@ function Autoplay({ style }: { style: BotStyle }) {
   );
 }
 
-function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
+function Title({ onStart, questions }: { onStart: () => void; questions: string[] }) {
   return (
     <main className="title-screen">
       <div className="paper title-card">
@@ -130,10 +130,23 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
         <p>{t('ui.tagline')}</p>
       </div>
       <div className="controls">
-        {seen > 0 && <p className="muted-dark">{t('ui.endingsSeen', { n: seen })}</p>}
+        <OpenQuestions questions={questions} />
         <button className="primary" onClick={onStart}>{t('ui.start')}</button>
       </div>
     </main>
+  );
+}
+
+/** What the player has not found out yet, one question per ending not seen (openQuestions). Nothing once all are seen. */
+function OpenQuestions({ questions }: { questions: string[] }) {
+  if (questions.length === 0) return null;
+  return (
+    <section className="open-questions" aria-labelledby="open-questions-title">
+      <h2 id="open-questions-title" className="mono">{t('ui.openQuestions')}</h2>
+      <ul>
+        {questions.map((q) => <li key={q}>{t(q)}</li>)}
+      </ul>
+    </section>
   );
 }
 
@@ -394,7 +407,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
   // The last officer line still shows before the ending card.
-  if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
+  if (s.ending && !s.reaction) return <Ending s={s} questions={openQuestions(data)} onRestart={onRestart} />;
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
@@ -662,7 +675,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * and the other stats. Then "See border records", which opens the records alone, and
  * "Play again".
  */
-function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
+function Ending({ s, questions, onRestart }: { s: RunState; questions: string[]; onRestart: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
   const text = endingText(s);
@@ -701,7 +714,7 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
               </div>
             ))}
           </dl>
-          <p className="mono muted seen">{t('ui.endingsSeen', { n: seen })}</p>
+          <OpenQuestions questions={questions} />
         </div>
       </section>
       {/* Sticky, so Play again stays in view however long the story above runs (pfi.9). */}
