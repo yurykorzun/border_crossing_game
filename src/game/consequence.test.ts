@@ -171,12 +171,13 @@ describe('the last bus, on the answer line', () => {
   });
 
   it('a later connection with too few hours left misses the bus', () => {
-    expect(line(at('s_connection', 2), 'later').map(text)).toEqual(expect.arrayContaining(['Misses the last bus']));
+    expect(line(at('s_connection', 3, 3), 'later').map(text)).toEqual(expect.arrayContaining(['Misses the last bus']));
   });
 
   it('a run already short of the trip still says a costly answer misses the bus, and a free one does not', () => {
-    const s = at('s_bag', 1);
-    expect(travelOf(s)).toBe(2);
+    // Above LAST_HOURS, so the inspection still offers to wait, but short of a 4-hour trip.
+    const s = at('s_bag', 3, 4);
+    expect(travelOf(s)).toBe(4);
     expect(line(s, 'wait').map(text)).toContain('Misses the last bus');
     expect(line(s, 'wait').some((p) => p.kind === 'time')).toBe(false);
     // An answer with no time or travel cost changes nothing about the bus, so it says nothing about it.

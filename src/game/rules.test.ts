@@ -4,9 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { own, t, tn } from '../i18n';
 import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
-import { CHARACTERS, CONTACTS, EVIDENCE, MISSION_MIN_TIME, OFFICERS } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE, LAST_HOURS, MISSION_MIN_TIME, OFFICERS } from './content/world';
 import { consequence, consequences, SEPARATOR } from './consequence';
-import { cardFor, deskIntro, endingFor, factIds, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
+import { cardFor, costsOf, deskIntro, endingFor, factIds, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { hoursOf, unexplained } from './lint';
 import { tryStep } from './play';
@@ -136,13 +136,13 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
     expect(r.ok && r.state.scrutiny).toBe(0);
   });
 
-  it('an inconsistency (tourism + family address) deals the cheap clarify card', () => {
+  it('an inconsistency (tourism + family address) deals the cheaper clarify card, with no free answer', () => {
     for (const fact of ['familyAddress', 'fatherCondition'] as const) {
       const s = interview({ claims: ['tourism'], facts: known(fact) });
       expect(s.screen, fact).toEqual({ kind: 'encounter', id: 'i_clarify' });
-      // clarify: +0 and a new claim; evidence; or accept +1 scrutiny
+      // clarify: the new story is checked, 1 hour; evidence; or accept +1 scrutiny
       expect(options(s).map((o) => o.approach.id)).toEqual(['clarify', 'evidence', 'accept']);
-      expect(cost(s, 'clarify')).toEqual({ time: 0, scrutiny: 0, contact: undefined, claims: ['familyVisit'] });
+      expect(cost(s, 'clarify')).toEqual({ time: 1, scrutiny: 0, contact: undefined, claims: ['familyVisit'] });
       expect(options(s)[1].approach.kind).toBe('evidence');
       expect(cost(s, 'accept')).toEqual({ time: 0, scrutiny: 1, contact: undefined, claims: [] });
     }
@@ -714,7 +714,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     expect(drive.time).toBe(s.time);
   });
 
-  it('extra verification: spend the document that backs the claim, or a fact goes on file', () => {
+  it('extra verification: spend the document, name your mother, or the call costs an hour and a fact', () => {
     const s = inspection('s_supervisor');
     const shown = play(s, 'evidence');
     expect(shown.used).toEqual(['motherLetter']);
@@ -722,7 +722,49 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     const accepted = play(s, 'accept');
     expect(accepted.used).toEqual([]);
     expect(knows(accepted, 'fatherCondition')).toBe(true);
-    expect(accepted.time).toBe(s.time);
+    // The phone call is no longer free, even at the last desk.
+    expect(accepted.time).toBe(s.time - 1);
+    const named = play(s, 'contact');
+    expect(named.exposed).toEqual(['mother']);
+    expect(named.time).toBe(s.time);
+  });
+
+  it('every inspection lists two answers that cost different things, plus a way out', () => {
+    for (const i of INSPECTIONS) {
+      const answers = i.approaches.filter((a) => a.kind !== 'withdraw');
+      expect(answers.length, i.id).toBeGreaterThanOrEqual(2);
+      expect(i.approaches.some((a) => a.kind === 'withdraw'), i.id).toBe(true);
+    }
+  });
+
+  it('with LAST_HOURS left, an inspection offers no wait, only a sacrifice', () => {
+    const atLast = (id: string, extra: Partial<RunState> = {}) => inspection(id, { time: LAST_HOURS, ...extra });
+    const answers = (s: RunState) => options(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
+    for (const id of ['s_bag', 's_medicine', 's_connection', 's_supervisor']) {
+      const s = atLast(id);
+      expect(answers(s).length, id).toBeGreaterThan(0);
+      for (const o of answers(s)) {
+        expect(costsOf(s, o), `${id}.${o.approach.id}`).not.toContain('time');
+        expect(costsOf(s, o).length, `${id}.${o.approach.id}`).toBeGreaterThan(0);
+      }
+      // With more hours left the wait comes back.
+      const early = inspection(id, { time: LAST_HOURS + 1 });
+      expect(new Set(answers(early).map((o) => costsOf(early, o).sort().join('+'))).size, id).toBeGreaterThanOrEqual(2);
+    }
+    // An inspection is the supervisor's: a call-in hour waits for a later desk card.
+    for (const time of [LAST_HOURS, 8]) {
+      const called = inspection('s_bag', { time, exposed: ['mother'], calledIn: ['mother'] });
+      expect(costsOf(called, options(called).find((o) => o.approach.id === 'declare')!)).toEqual(['disclosure']);
+      expect(play(called, 'declare').calledIn).toEqual(['mother']);
+    }
+  });
+
+  it('confiscation: the hospital note gets the medicine back, and stays with them', () => {
+    const s = inspection('s_medicine', { loadout: ['hospitalNote', 'hotel', 'deed'] });
+    const shown = play(s, 'evidence');
+    expect(shown.medicine).toBe(true);
+    expect(shown.used).toEqual(['hospitalNote']);
+    expect(shown.time).toBe(s.time);
   });
 
   it('under MISSION_MIN_TIME a card says the bus is gone and offers to finish quickly', () => {
@@ -740,10 +782,76 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     expect(tryStep(fine, { type: 'finish' }).ok).toBe(false);
   });
 
-  it('a later shuttle can be what dooms the run', () => {
-    const later = play(inspection('s_connection', { time: 2 }), 'later');
-    const next: RunState = { ...later, reaction: null, screen: { kind: 'encounter', id: 'c_cash' } };
-    expect(legalActions(next)).toContainEqual({ type: 'finish' });
+  it('a later shuttle that would miss the bus is not offered: the inspection asks for a sacrifice instead', () => {
+    const ids = (s: RunState) => options(s).map((o) => o.approach.id);
+    expect(ids(inspection('s_connection', { time: 3 }))).toContain('later');
+    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['drive', 'transfer', 'evidence', 'withdraw']);
+  });
+});
+
+describe('before admission, scrutiny is a risk', () => {
+  /** The last answer of the interview, with every dealer draw fixed at `pick`. */
+  const lastAnswer = (scrutiny: number, pick: number, extra: Partial<RunState> = {}, setup: RunSetup = lena) => {
+    const s: RunState = {
+      ...newRun(setup), checkpoint: 2, slot: 2, scrutiny, seen: ['i_stay', 'i_family'], decisions: 6,
+      screen: { kind: 'encounter', id: 'i_family' }, ...extra,
+    };
+    const draws: number[] = [];
+    const n = step(s, { type: 'choose', approach: 'why' }, (rng, size) => {
+      draws.push(size);
+      return { index: Math.min(pick, size - 1), rng };
+    });
+    return { n, draws };
+  };
+
+  it('sends you to secondary inspection when scrutiny rose this run', () => {
+    for (const scrutiny of [1, 2]) {
+      const { n } = lastAnswer(scrutiny, 0);
+      expect(n.screen.kind, `scrutiny ${scrutiny}`).toBe('inspection');
+      expect(n.inspections).toBe(1);
+    }
+  });
+
+  it('does not count the scrutiny a character starts with, unless a challenge caught you', () => {
+    const start = CHARACTERS.mark.startScrutiny;
+    expect(start).toBeGreaterThan(0);
+    expect(lastAnswer(start, 0, {}, mark).n.ending).toBe('homeInTime');
+    expect(lastAnswer(start + 1, 0, {}, mark).n.screen.kind).toBe('inspection');
+    expect(lastAnswer(start, 0, { seen: ['i_stay', 'i_clarify', 'i_family'] }, mark).n.screen.kind).toBe('inspection');
+  });
+
+  it('lets a paper on the bulletin topic, shown on the way, settle her on one draw of 2', () => {
+    // The records bulletin warns about identity, and the deed covers it.
+    const shown: Partial<RunState> = { loadout: ['deed', 'hotel', 'employerLetter'], used: ['deed'] };
+    const pass = lastAnswer(1, 0, shown);
+    expect(pass.draws).toEqual([2]);
+    expect(pass.n.ending).toBe('homeInTime');
+    expect(lastAnswer(1, 1, shown).n.screen.kind).toBe('inspection');
+  });
+
+  it('inspects on the bulletin topic when an inspection takes such a paper', () => {
+    const day: RunSetup = { ...lena, bulletin: 'accommodation' };
+    for (const pick of [0, 1, 2]) {
+      const { n, draws } = lastAnswer(1, pick, {}, day);
+      expect(n.screen, `pick ${pick}`).toEqual({ kind: 'inspection', id: 's_connection' });
+      expect(draws).toEqual([]);
+    }
+  });
+
+  it('waves a run through that can no longer make the bus', () => {
+    expect(lastAnswer(2, 0, { time: 2, travel: 3 })).toMatchObject({ draws: [], n: { ending: 'tooLate' } });
+  });
+
+  it('never looks at Scrutiny 0 or after an inspection this run', () => {
+    expect(lastAnswer(0, 0)).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
+    expect(lastAnswer(1, 0, { inspections: 1 })).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
+  });
+
+  it('ends the run once the inspection is answered', () => {
+    const { n } = lastAnswer(1, 0);
+    const answer = options(n).find((o) => !o.blocked && o.approach.kind !== 'withdraw')!;
+    const after = step({ ...n, reaction: null }, { type: 'choose', approach: answer.approach.id });
+    expect(after.screen.kind).toBe('ending');
   });
 });
 

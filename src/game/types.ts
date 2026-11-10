@@ -51,6 +51,8 @@ export interface Cond {
   noClaims?: ClaimId[];
   /** At least one of these contacts is still unexposed. */
   contactFree?: ContactId[];
+  /** true: LAST_HOURS hours left or fewer (src/game/content/world.ts). false: more than that. */
+  lastHours?: boolean;
   /** Any of these conditions holds. */
   any?: Cond[];
 }

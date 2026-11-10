@@ -9,6 +9,12 @@ export const START_TIME = 8;
 export const MISSION_MIN_TIME = 2;
 export const MAX_SCRUTINY = 3;
 export const SCRUTINY_AFTER_INSPECTION = 1;
+/**
+ * With this many hours left or fewer, any delay misses the bus, so an
+ * inspection stops offering to wait and asks for one sacrifice instead:
+ * belongings, a disclosure or a person (Cond.lastHours).
+ */
+export const LAST_HOURS = 2;
 
 export const CHARACTERS: Record<CharacterId, Character> = {
   lena: {

@@ -45,6 +45,7 @@ const rows: [string, BotRun[]][] = [...runs, ['memorised', memorised]];
 const pct = (n: number, of: number) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 const mean = (xs: number[]) => (xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2) : '-');
 const won = (r: BotRun) => r.final.ending === 'homeInTime';
+const inspected = (r: BotRun) => r.final.inspections > 0;
 const cells = (xs: (string | number)[], w: number) => xs.map((x) => String(x).padStart(w)).join('');
 
 /**
@@ -66,16 +67,18 @@ console.log(`autoplay: ${RUNS} runs per style, setups ${SEED}..${SEED + RUNS - 1
 // no-cost/run: answers that spent no time, scrutiny or contact and put no new fact on file (noCost() in src/game/engine.ts).
 // lies/run: untrue claims made plus photo denials. lies caught: the share of those lies a challenge card put to the player (caughtLies()).
 console.log('\nEndings (% of runs) and run stats per style');
-console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'no-cost/run', 'lies/run', 'lies caught'], 12)}`);
+// inspected: the share of runs with at least one secondary inspection (the balance target is 25-33% across all styles).
+console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'inspected', 'no-cost/run', 'lies/run', 'lies caught'], 12)}`);
 for (const [style, list] of rows) {
   const counts = ENDINGS.map((e) => list.filter((r) => r.final.ending === e).length);
   const times = list.map((r) => r.final.time);
   console.log(`  ${style.padEnd(12)}${cells(shares(counts, list.length), 11)}${cells([
     mean(times), Math.min(...times), mean(list.map((r) => r.final.decisions)), mean(list.map((r) => r.final.inspections)),
-    mean(list.map((r) => r.noCost)), mean(list.map((r) => r.lies)),
+    pct(list.filter(inspected).length, list.length), mean(list.map((r) => r.noCost)), mean(list.map((r) => r.lies)),
     pct(list.reduce((n, r) => n + r.caught, 0), list.reduce((n, r) => n + r.lies, 0)),
   ], 12)}`);
 }
+console.log(`  runs with an inspection, all styles: ${pct(all.filter(inspected).length, all.length)} (memorised not counted)`);
 
 // ── 2. Success by setup
 console.log('\nhomeInTime by character x packing x bulletin (won/played per style)');

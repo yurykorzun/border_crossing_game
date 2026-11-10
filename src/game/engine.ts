@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, canConfirm, writesDown,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
@@ -116,6 +116,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.claims && !cond.claims.every((c) => s.claims.includes(c))) return false;
   if (cond.noClaims && cond.noClaims.some((c) => s.claims.includes(c))) return false;
   if (cond.contactFree && !cond.contactFree.some((c) => ch.contacts.includes(c) && !s.exposed.includes(c))) return false;
+  if (cond.lastHours !== undefined && (s.time <= LAST_HOURS) !== cond.lastHours) return false;
   if (cond.any && !cond.any.some((c) => check(c, s))) return false;
   return true;
 }
@@ -231,15 +232,29 @@ export function options(s: RunState): Option[] {
  * an answer, and losing the medicine or the bus connection is a cost.
  */
 export function noCost(s: RunState, o: Option): boolean {
-  if (o.contact || o.approach.kind === 'withdraw') return false;
+  return o.approach.kind !== 'withdraw' && costsOf(s, o).every((c) => c === 'document');
+}
+
+/**
+ * What an answer spends. time: hours, or a longer trip to the bus. scrutiny:
+ * officers watch closer. document: a card from the packing. person: a contact
+ * named. belongings: the medicine. disclosure: a fact new to this desk, or sent
+ * on new to the next one. Walking away spends none of these: it ends the run.
+ */
+export type Cost = 'time' | 'scrutiny' | 'document' | 'person' | 'belongings' | 'disclosure';
+
+export function costsOf(s: RunState, o: Option): Cost[] {
   const to = nextDesk(deskOf(s));
-  return !o.effects.some((e) =>
-    ('time' in e && e.time < 0)
-    || ('scrutiny' in e && e.scrutiny > 0)
-    || ('fact' in e && !knows(s, e.fact))
-    || 'loseMedicine' in e
-    || ('travel' in e && e.travel > 0)
-    || ('send' in e && !!to && sentFacts(s, e).some((f) => !knows(s, f, to))));
+  const out = new Set<Cost>();
+  if (o.card) out.add('document');
+  if (o.contact) out.add('person');
+  for (const e of o.effects) {
+    if (('time' in e && e.time < 0) || ('travel' in e && e.travel > 0)) out.add('time');
+    else if ('scrutiny' in e && e.scrutiny > 0) out.add('scrutiny');
+    else if ('loseMedicine' in e && s.medicine) out.add('belongings');
+    else if (('fact' in e && !knows(s, e.fact)) || ('send' in e && !!to && sentFacts(s, e).some((f) => !knows(s, f, to)))) out.add('disclosure');
+  }
+  return [...out];
 }
 
 /**
@@ -306,10 +321,12 @@ export function deskIntro(s: RunState): Checkpoint | undefined {
 /**
  * The contacts called in earlier whose statement this card checks: the ones who
  * can confirm its topic. Each costs 1 hour on whatever the player answers, except
- * walking away.
+ * walking away. Only on a desk's own cards: an inspection is the supervisor's,
+ * and its answers keep the price they show, so the statements wait for a
+ * later card.
  */
 export function callInsDue(s: RunState, a: Approach, topic: Topic | undefined): ContactId[] {
-  if (a.kind === 'withdraw') return [];
+  if (a.kind === 'withdraw' || s.screen.kind === 'inspection') return [];
   return (s.calledIn ?? []).filter((c) => canConfirm(c, topic));
 }
 
@@ -469,8 +486,18 @@ function escalatesNext(s: RunState): boolean {
  */
 function breather(s: RunState): Encounter | undefined {
   if ((s.streak ?? 0) < 2 || !escalatesNext(s)) return undefined;
+  return restCard(s);
+}
+
+/**
+ * The card a breather deals: a calm one if any is left at this desk, else any
+ * routine card left. After an inspection the calm cards come in reverse order,
+ * so the interruption differs between runs (the officer's phone, not the water).
+ */
+function restCard(s: RunState): Encounter | undefined {
   const left = routinesLeft(s);
-  return left.find((e) => e.calm) ?? left[0];
+  const calm = left.filter((e) => e.calm);
+  return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left[0];
 }
 
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
@@ -488,15 +515,54 @@ function advance(s: RunState, dealer: Dealer): RunState {
     const challenge = pendingChallenge(s);
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
-    if (next >= CHECKPOINTS.length) return finish(s);
+    if (next >= CHECKPOINTS.length) return admission(s, dealer);
     return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
   }
   return deal(s, dealer);
 }
 
-/** A challenge card for this checkpoint that applies and has not been dealt yet. */
+/**
+ * Before admission a supervisor reads the file once, on a run with no
+ * inspection yet that can still make the bus (a doomed run is waved through,
+ * because one more card changes nothing). She sends you to secondary
+ * inspection when your scrutiny rose during the crossing or a challenge card
+ * caught you out, and scrutiny is above 0. A paper on the topic the bulletin
+ * warned about, shown on the way, settles her half the time: the dealer draws
+ * one of 2. She inspects on that topic when an inspection takes such a paper
+ * (an evidence answer), else the dealer picks one as usual.
+ *
+ * This is what puts an inspection in a quarter to a third of runs (`npm run
+ * autoplay`). It counts scrutiny gained, not the start value, so a character
+ * who starts at 1 is not inspected for that alone. The pacing rule still holds:
+ * after 2 escalating cards a routine card left comes first, and the supervisor
+ * reads the file again after it, drawing only then.
+ */
+function admission(s: RunState, dealer: Dealer): RunState {
+  if (s.inspections || s.scrutiny <= 0 || doomed(s) || !inspectionsFitting(s).length) return finish(s);
+  const gained = s.scrutiny > CHARACTERS[s.character].startScrutiny;
+  const caught = CHALLENGES.some((id) => s.seen.includes(id));
+  if (!gained && !caught) return finish(s);
+  const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
+  if (rest) return show(s, rest.id);
+  let n = s;
+  if (coversWarning(s.used, s.bulletin)) {
+    const r = dealer(s.rng, 2);
+    n = { ...s, rng: r.rng };
+    if (r.index === 0) return finish(n);
+  }
+  const topic = BULLETIN_TOPICS[n.bulletin];
+  return inspect(n, dealer, (i) => i.approaches.some((a) => a.kind === 'evidence' && a.topic === topic));
+}
+
+/**
+ * A challenge card for this checkpoint that applies and has not been dealt yet.
+ * Once a run has been inspected, one per desk: an inspection answer (a phone
+ * search, say) can put a new fact on file, and a second challenge on top would
+ * push the run past the decision budget.
+ */
 function pendingChallenge(s: RunState): string | undefined {
   const cp = CHECKPOINTS[s.checkpoint];
+  if (s.inspections && CHALLENGES.some((id) => s.seen.includes(id) && ENCOUNTER_BY_ID.get(id)?.checkpoint === cp)) return undefined;
   return CHALLENGES.find((id) => {
     const e = ENCOUNTER_BY_ID.get(id);
     return !!e && e.checkpoint === cp && eligible(s, e);
@@ -546,12 +612,21 @@ function deal(s: RunState, dealer: Dealer): RunState {
   return show({ ...s, rng, slot: s.slot + 1 }, chosen.id);
 }
 
-function inspect(s: RunState, dealer: Dealer): RunState {
-  const fits = INSPECTIONS.filter((i) => check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
+/** The inspections that can be dealt now: their condition holds, and a confiscation needs the medicine. */
+const inspectionsFitting = (s: RunState): Inspection[] =>
+  INSPECTIONS.filter((i) => check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
+
+/** Deal an inspection: the first fitting one `prefer` accepts, else the dealer picks. */
+function inspect(s: RunState, dealer: Dealer, prefer?: (i: Inspection) => boolean): RunState {
+  const fits = inspectionsFitting(s);
   const fresh = fits.filter((i) => !s.seen.includes(i.id));
   const pool = fresh.length ? fresh : fits;
-  if (!pool.length) throw new Error('no inspection fits');
-  const r = dealer(s.rng, pool.length);
+  // Nothing left to ask for: the medicine, your mother and every fact an
+  // inspection could take are already gone or on file. The supervisor reads
+  // the file and sends you back, and scrutiny drops as after an inspection.
+  if (!pool.length) return advance(say({ ...s, scrutiny: SCRUTINY_AFTER_INSPECTION }, [{ key: 'insp.none' }]), dealer);
+  const preferred = prefer && pool.find(prefer);
+  const r = preferred ? { rng: s.rng, index: pool.indexOf(preferred) } : dealer(s.rng, pool.length);
   const id = pool[r.index].id;
   return {
     ...s,
