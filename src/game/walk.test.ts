@@ -52,11 +52,16 @@ describe('every possible run', () => {
   });
 
   it('makes every bulletin warning worth heeding: covering packings reach homeInTime more often', () => {
+    // Like with like: within one character, because characters differ in
+    // difficulty and every Mark packing covers accommodation, so a pooled
+    // comparison would put Mark's extra scrutiny on the covered side.
     const shares = warningShares(report.setups);
     expect(shares.map((w) => w.bulletin)).toEqual(BULLETINS);
     for (const w of shares) {
-      expect(w.coveredCount * w.ignoredCount, w.bulletin).toBeGreaterThan(0);
-      expect(w.covered, `${w.bulletin}: covered ${w.covered} vs ignored ${w.ignored}`).toBeGreaterThan(w.ignored);
+      const compared = w.byCharacter.filter((c) => c.coveredCount * c.ignoredCount > 0);
+      expect(compared.length, `${w.bulletin}: no character has packings on both sides`).toBeGreaterThan(0);
+      for (const c of compared)
+        expect(c.covered, `${w.bulletin} / ${c.character}: covered ${c.covered} vs ignored ${c.ignored}`).toBeGreaterThan(c.ignored);
     }
   });
 

@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { own, t } from './i18n';
-import { canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -555,7 +555,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
             disabled={!!o.blocked}
             onClick={() => dispatch({ type: 'choose', approach: o.approach.id })}
           >
-            <span className="choice-label">{optionLabel(prefix, id, o, s.character)}</span>
+            <span className="choice-label">{optionLabel(s, o)}</span>
             <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
@@ -568,13 +568,13 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 }
 
 /** A blocked option has no card or person to name, so it gets a generic label. */
-function optionLabel(prefix: string, id: string, o: Option, traveler: CharacterId): string {
+function optionLabel(s: RunState, o: Option): string {
   if (o.blocked === 'noCard') return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;
   if (o.contact) vars.contact = vars.contactMine = o.contact;
-  return t(own(`${prefix}.${id}.${o.approach.id}.label`, traveler), vars);
+  return t(answerKey(s, o.approach.id, 'label'), vars);
 }
 
 /**

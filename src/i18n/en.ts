@@ -480,7 +480,12 @@ export const en: Record<string, string> = {
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
   'enc.i_clarify.accept.label': '"I came as a tourist."',
-  'enc.i_clarify.accept.reaction': '"With your family\'s details on file?" The officer marks it as unexplained.',
+  'enc.i_clarify.accept.reaction': '"With your family\'s address on file?" The officer marks it as unexplained.',
+  // The accept answer stands by the claim the file caught, so it is worded per pair (answerKey()).
+  'enc.i_clarify.tourism.fatherCondition.accept.reaction': '"With your father\'s condition on file?" The officer marks it as unexplained.',
+  'enc.i_clarify.tourism.noBooking.accept.reaction': '"A tourist with no booking?" The officer marks it as unexplained.',
+  'enc.i_clarify.hotelStay.familyAddress.accept.label': '"I booked a hotel."',
+  'enc.i_clarify.hotelStay.familyAddress.accept.reaction': '"With your family\'s address on file?" The officer marks it as unexplained.',
 
   'enc.i_contradiction.q': '"Your file says otherwise."',
   'enc.i_contradiction.apologise.label': '"I\'m sorry. I was scared."',

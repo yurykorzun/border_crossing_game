@@ -15,7 +15,7 @@ import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID }
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
-import { canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
+import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
@@ -307,7 +307,7 @@ function screenLines(s: RunState, p: Page): void {
         const vars: Record<string, string> = {};
         if (o.card) vars.card = vars.cardThe = o.card;
         if (o.contact) vars.contact = vars.contactMine = o.contact;
-        p.add(own(`${prefix}.${sc.id}.${o.approach.id}.label`, s.character), vars);
+        p.add(answerKey(s, o.approach.id, 'label'), vars);
       }
       consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
     }
@@ -371,7 +371,7 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
     const sc = s.screen;
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
-        ? own(`${sc.kind === 'inspection' ? 'insp' : 'enc'}.${sc.id}.${action.approach}.label`, s.character)
+        ? answerKey(s, action.approach, 'label')
         : action.type === 'waitAction' ? `wait.${action.action}.label`
         : action.type === 'finish' ? 'ui.finishQuickly'
         : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`

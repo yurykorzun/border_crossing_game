@@ -10,6 +10,7 @@ import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { has, own } from '../i18n';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
@@ -525,23 +526,22 @@ function advance(s: RunState, dealer: Dealer): RunState {
  * Before admission a supervisor reads the file once, on a run with no
  * inspection yet that can still make the bus (a doomed run is waved through,
  * because one more card changes nothing). She sends you to secondary
- * inspection when your scrutiny rose during the crossing or a challenge card
- * caught you out, and scrutiny is above 0. A paper on the topic the bulletin
- * warned about, shown on the way, settles her half the time: the dealer draws
- * one of 2. She inspects on that topic when an inspection takes such a paper
- * (an evidence answer), else the dealer picks one as usual.
+ * inspection whenever scrutiny is above 0, the scrutiny a character starts
+ * with included: Mark's second passport is on file before he says a word. A
+ * paper on the topic the bulletin warned about, shown on the way, settles her
+ * half the time: the dealer draws one of 2. She inspects on that topic when an
+ * inspection takes such a paper (an evidence answer), else the dealer picks one
+ * as usual.
  *
  * This is what puts an inspection in a quarter to a third of runs (`npm run
- * autoplay`). It counts scrutiny gained, not the start value, so a character
- * who starts at 1 is not inspected for that alone. The pacing rule still holds:
- * after 2 escalating cards a routine card left comes first, and the supervisor
- * reads the file again after it, drawing only then.
+ * autoplay`). Once spot-checks caught lies at the desks, counting only the
+ * scrutiny gained on the way left the share under a quarter, so the start
+ * value counts too (2op.9). The pacing rule still holds: after 2 escalating
+ * cards a routine card left comes first, and the supervisor reads the file
+ * again after it, drawing only then.
  */
 function admission(s: RunState, dealer: Dealer): RunState {
   if (s.inspections || s.scrutiny <= 0 || doomed(s) || !inspectionsFitting(s).length) return finish(s);
-  const gained = s.scrutiny > CHARACTERS[s.character].startScrutiny;
-  const caught = CHALLENGES.some((id) => s.seen.includes(id));
-  if (!gained && !caught) return finish(s);
   const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
   if (rest) return show(s, rest.id);
   let n = s;
@@ -602,6 +602,23 @@ export function caught(s: RunState, card: string): { claim: ClaimId; desk: Check
   return { claim, desk: saidDesk(s, claim), fact };
 }
 
+/**
+ * The text key for an answer on the card showing, `part` being its label or its
+ * reaction. A challenge card can word an answer for the pair that dealt it
+ * (caught()): `enc.i_clarify.hotelStay.familyAddress.accept.label`, because
+ * "I came as a tourist" is the wrong answer to a hotel booking. Else the
+ * traveler's own wording (own()), else the key itself.
+ */
+export function answerKey(s: RunState, approach: string, part: 'label' | 'reaction'): string {
+  const sc = s.screen;
+  const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
+  const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
+  const pair = sc.kind === 'encounter' ? caught(s, id) : undefined;
+  const paired = pair && `${prefix}.${id}.${pair.claim}.${pair.fact}.${approach}.${part}`;
+  if (paired && has(paired)) return paired;
+  return own(`${prefix}.${id}.${approach}.${part}`, s.character);
+}
+
 /** Where you first said `c`; a save from before saidAt existed names the first desk that wrote it down, else this one. */
 const saidDesk = (s: RunState, c: ClaimId): Checkpoint => s.saidAt?.[c] ?? loggedAt(s, c)[0] ?? deskOf(s);
 
@@ -625,7 +642,9 @@ function spotCheck(s: RunState, dealer: Dealer): RunState {
   const r = dealer(s.rng, onFile.length);
   const claimed = onFile[r.index];
   const found = spotCheckOf(s, claimed);
-  const vars: Record<string, string> = { claim: claimed, hours: String(SPOT_CHECK_HOURS) };
+  // The claim in this traveler's own wording when there is one: Mark's denial is
+  // claim.noOtherFamily.mark, about the border, not Lena's relatives here.
+  const vars: Record<string, string> = { claim: own(`claim.${claimed}`, s.character).slice('claim.'.length), hours: String(SPOT_CHECK_HOURS) };
   if (found.result === 'explained') {
     // Like a challenge card (caught()): your words, where you said them, and the fact
     // that makes them look odd. No inconsistency claim has a traveler's own wording,
@@ -755,7 +774,6 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const card = currentCard(s);
   const opt = options(s).find((o) => o.approach.id === approachId);
   if (!card || !opt || opt.blocked) return s;
-  const prefix = s.screen.kind === 'inspection' ? 'insp' : 'enc';
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
@@ -768,7 +786,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
-  n = say(n, [{ key: `${prefix}.${card.id}.${approachId}.reaction`, vars }]);
+  n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars }]);
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
   for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f } }]);
   // The call-in hour is a real cost too, so the reaction names whose statement it checks.
