@@ -14,7 +14,7 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
+  callInsDue, check, checkEffects, checkFindings, costsOf, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
   options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
@@ -23,7 +23,7 @@ import type { Dealer } from './rng';
 import type { Action, BulletinId, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm, coversWarning,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { t } from '../i18n';
@@ -158,6 +158,28 @@ export function changesProblem(s: RunState, o: Option): boolean {
     ('loseMedicine' in e && s.medicine) || ('travel' in e && e.travel > 0) || ('fact' in e && !knows(s, e.fact)));
 }
 
+/**
+ * No free exits, on a challenge card (i_clarify, i_contradiction) or in an
+ * inspection: every open answer but walking away costs something (costsOf(): a
+ * document counts). An inspection offers two open answers that cost different
+ * things; with LAST_HOURS left or fewer it offers no wait at all, only a
+ * sacrifice, so a delay never decides the run for you. A doomed run is past
+ * saving, so only the first rule holds there.
+ */
+export function noFreeExits(s: RunState): string[] {
+  if (s.reaction || (s.screen.kind !== 'inspection' && !(s.screen.kind === 'encounter' && s.screen.id in CHALLENGES))) return [];
+  const id = s.screen.id;
+  const open = options(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
+  const bad = open.filter((o) => !costsOf(s, o).length).map((o) => `${id}.${o.approach.id} is free`);
+  if (s.screen.kind !== 'inspection' || doomed(s)) return bad;
+  const sets = new Set(open.map((o) => costsOf(s, o).sort().join('+')));
+  if (s.time <= LAST_HOURS) {
+    if (!open.length) bad.push(`${id} asks for no sacrifice with ${s.time} hours left`);
+    for (const o of open) if (costsOf(s, o).includes('time')) bad.push(`${id}.${o.approach.id} costs time with ${s.time} hours left`);
+  } else if (sets.size < 2) bad.push(`${id} offers [${open.map((o) => o.approach.id)}], not two answers that cost different things`);
+  return bad;
+}
+
 /** The rules every reachable state must keep. Returns what is broken. */
 export function checkState(s: RunState): string[] {
   const bad: string[] = [];
@@ -202,6 +224,10 @@ export function checkState(s: RunState): string[] {
   const insp = s.screen.kind === 'inspection' && !s.reaction ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
   if (insp && insp.kind !== 'search' && !options(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
     bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
+  for (const d of noFreeExits(s)) bad.push(d);
+  // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
+  if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !s.reaction && options(s).length > 3)
+    bad.push(`${s.screen.id} shows ${options(s).length} answers`);
   // A calm card has one answer, and it costs nothing.
   const calm = s.screen.kind === 'encounter' && !s.reaction && ENCOUNTER_BY_ID.get(s.screen.id)?.calm;
   if (calm && !(options(s).length === 1 && options(s).every((o) => !o.blocked && noCost(s, o))))

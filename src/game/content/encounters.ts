@@ -23,10 +23,21 @@ import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspecti
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   ['tourism', 'familyAddress'],
   ['tourism', 'fatherCondition'],
+  // A tourist with nowhere booked (i_stay).
+  ['tourism', 'noBooking'],
+  // A hotel booking, and the family address on file.
+  ['hotelStay', 'familyAddress'],
 ];
+/** In this order, which also picks the one an apology is charged for (firstCaught). */
 export const DISPROOFS: readonly [ClaimId, FactId][] = [
   ['noOtherFamily', 'brotherAbroad'],
   ['cashUnderLimit', 'cashCount'],
+  // The host call: your mother says you stay with her.
+  ['hotelStay', 'hostStatement'],
+  // The phone search: a bank notice for the donation.
+  ['neverDonated', 'bankNotice'],
+  // A relative synced on the phone, or named by your mother on the host call.
+  ['noOtherFamily', 'relativeContact'],
 ];
 
 /**
@@ -37,6 +48,18 @@ export const DISPROOFS: readonly [ClaimId, FactId][] = [
 export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
 
 const anyPair =(pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
+
+/** Holds when no pair has both its claim made and its fact known at this desk. */
+function noneOf(pairs: readonly [ClaimId, FactId][]): Cond {
+  if (!pairs.length) return {};
+  const [[c, f], ...rest] = pairs;
+  const tail = noneOf(rest);
+  return { any: [{ noClaims: [c], ...tail }, { noFacts: [f], ...tail }] };
+}
+
+/** `scrutiny` for the first pair that holds, with its fact as the reason, so one answer is charged once. */
+const firstCaught = (pairs: readonly [ClaimId, FactId][], scrutiny: number): Effect[] =>
+  pairs.map(([c, f], i) => ({ scrutiny, reason: f, when: { claims: [c], facts: [f], ...noneOf(pairs.slice(0, i)) } }));
 
 export const ENCOUNTERS: Encounter[] = [
   // ── Passport control: identity and purpose (the clerk wants complete paperwork)
@@ -140,6 +163,9 @@ export const ENCOUNTERS: Encounter[] = [
           { fact: 'phoneSearched' },
           { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } },
           { fact: 'donationRecord', when: { background: 'donation' } },
+          // The bank's notice for the donation, and a relative synced in the contacts.
+          { fact: 'bankNotice', when: { background: 'donation' } },
+          { fact: 'relativeContact' },
         ],
       },
       { id: 'refuse', kind: 'say', effects: [{ fact: 'phoneRefused' }, { scrutiny: 1, reason: 'phoneRefused' }, { time: -1 }] },
@@ -154,8 +180,12 @@ export const ENCOUNTERS: Encounter[] = [
       // Staying with her is what rules the hotel out, not visiting family.
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }, { claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
       // An evasion is free unless something on file makes it odd: her address is right there.
-      { id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] }, effects: [] },
-      { id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] }, effects: [{ scrutiny: 1, reason: 'familyAddress' }] },
+      // A tourist who has not decided has no booking to show.
+      { id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] }, effects: [{ fact: 'noBooking', when: { claims: ['tourism'] } }] },
+      {
+        id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] },
+        effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['tourism'] } }],
+      },
     ],
   },
   {
@@ -177,24 +207,20 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [{ id: 'drink', kind: 'say', effects: [] }],
   },
   {
-    // Calm: the officer's phone interrupts. The interview can need two breathers.
+    // Calm: the officer's phone interrupts. After an inspection it comes before the water (restCard()).
     id: 'i_phone', checkpoint: 'interview', kind: 'routine', calm: true,
     approaches: [{ id: 'wait', kind: 'say', effects: [] }],
   },
   {
-    // Inconsistency: something on file makes a claim look odd. Cheap to clear up.
+    // Inconsistency: something on file makes a claim look odd. Cheaper than a
+    // disproof, never free: the new story is checked (time), a document settles
+    // it, or it stays unexplained (scrutiny).
     id: 'i_clarify', checkpoint: 'interview', kind: 'related', priority: 3, topic: 'purpose',
     when: anyPair(INCONSISTENCIES),
     approaches: [
-      { id: 'clarify', kind: 'say', effects: [{ claim: 'familyVisit' }] },
+      { id: 'clarify', kind: 'say', effects: [{ claim: 'familyVisit' }, { time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
-      {
-        id: 'accept', kind: 'say',
-        effects: [
-          { scrutiny: 1, reason: 'familyAddress', when: { facts: ['familyAddress'] } },
-          { scrutiny: 1, reason: 'fatherCondition', when: { facts: ['fatherCondition'], noFacts: ['familyAddress'] } },
-        ],
-      },
+      { id: 'accept', kind: 'say', effects: firstCaught(INCONSISTENCIES, 1) },
     ],
   },
   {
@@ -202,16 +228,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'i_contradiction', checkpoint: 'interview', kind: 'related', priority: 4, topic: 'history',
     when: anyPair(DISPROOFS),
     approaches: [
-      {
-        id: 'apologise', kind: 'say',
-        effects: [
-          { scrutiny: 2, reason: 'brotherAbroad', when: { claims: ['noOtherFamily'], facts: ['brotherAbroad'] } },
-          {
-            scrutiny: 2, reason: 'cashCount',
-            when: { claims: ['cashUnderLimit'], facts: ['cashCount'], any: [{ noClaims: ['noOtherFamily'] }, { noFacts: ['brotherAbroad'] }] },
-          },
-        ],
-      },
+      { id: 'apologise', kind: 'say', effects: firstCaught(DISPROOFS, 2) },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
@@ -272,7 +289,7 @@ export const ENCOUNTERS: Encounter[] = [
 ];
 
 /** What the phone search found, printed for the next desk. */
-const PHONE_REPORT: Effect = { send: 'printout', facts: ['phoneSearched', 'brotherAbroad', 'donationRecord'] };
+const PHONE_REPORT: Effect = { send: 'printout', facts: ['phoneSearched', 'brotherAbroad', 'donationRecord', 'bankNotice', 'relativeContact'] };
 
 /** Results are fixed when the check starts; the waiting room only reveals them. */
 export const CHECKS: Record<CheckId, Check> = {
@@ -282,7 +299,15 @@ export const CHECKS: Record<CheckId, Check> = {
     cases: [
       // The call note goes with your file to the interview, address and all.
       { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
-      { result: 'clear', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
+      // When she answers, her account goes with it: you stay with her, and who else is family here.
+      {
+        result: 'clear',
+        effects: [
+          { fact: 'hostStatement' },
+          { fact: 'relativeContact' },
+          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeContact'] },
+        ],
+      },
     ],
   },
   medicineLab: {
@@ -313,19 +338,37 @@ export const CHECKS: Record<CheckId, Check> = {
 };
 
 /**
- * Drawn when scrutiny reaches 3. Every one has an answer that needs no card and
- * no contact, and a way out. Apart from the bag search, each changes the
- * problem instead of only costing hours (InspectionKind, checked in checkState).
+ * Drawn when scrutiny reaches 3. Each one asks you to pay with something:
+ * time, belongings (the medicine or a document), a disclosure, or a person.
+ * Every one shows two answers that cost different things, plus a way out, and
+ * never more, so a card keeps to three answers on screen. Where a card has more
+ * than two ways to pay, the conditions pick which two you see. Apart from the
+ * bag search, each changes the problem instead of only costing hours
+ * (InspectionKind, checked in checkState). With LAST_HOURS left or fewer any
+ * wait misses the bus, so the waits are not offered and the card asks for one
+ * sacrifice instead. A card is only dealt when its `when` holds, which keeps a
+ * second answer there (noFreeExits() in src/game/walk.ts).
  */
 export const INSPECTIONS: Inspection[] = [
   {
-    // The prescription is in the bag, and your mother can confirm it.
+    // The prescription is in the bag, and your mother can confirm it. With her
+    // out of reach, you lay it all out yourself instead.
     id: 's_bag', kind: 'search', topic: 'medicine',
+    when: { any: [{ contactFree: ['mother'] }, { noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
     approaches: [
       // A full search counts the cash, so the total goes on file.
       // The search report, cash total included, goes with you to the next desk.
-      { id: 'wait', kind: 'verify', effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }] },
-      { id: 'contact', kind: 'contact', contacts: ['mother'], effects: [{ time: -1 }] },
+      {
+        id: 'wait', kind: 'verify', requires: { lastHours: false },
+        effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }],
+      },
+      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
+      // The cash total and who the prescription is for go on file, and the search stops.
+      {
+        id: 'declare', kind: 'say',
+        requires: { not: { contactFree: ['mother'] }, any: [{ noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
+        effects: [{ fact: 'cashCount' }, { fact: 'fatherCondition' }, { send: 'printout', facts: ['cashCount', 'fatherCondition'] }],
+      },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
@@ -335,31 +378,46 @@ export const INSPECTIONS: Inspection[] = [
     id: 's_medicine', kind: 'confiscation',
     approaches: [
       { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
-      { id: 'wait', kind: 'verify', effects: [{ time: -3 }] },
+      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
     // Missed connection: the shuttle to the station has gone. The next one makes
-    // the trip an hour longer, so the run needs an hour more left; or someone
-    // drives out for you, which puts them on file. Driving is not confirming
-    // anything, so anyone close enough will do (namesOnly).
+    // the trip an hour longer, so the run needs an hour more left. Or another
+    // way out: a paper with where you stay books the border transfer, and they
+    // keep it; else someone drives out for you, which puts them on file; else
+    // the transfer takes you and they write down where it drops you. Driving is
+    // not confirming anything, so anyone close enough will do (namesOnly).
     id: 's_connection', kind: 'connection',
+    when: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }, { noFacts: ['familyAddress'] }] },
     approaches: [
-      { id: 'later', kind: 'say', effects: [{ travel: 1 }] },
-      { id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true, effects: [] },
+      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }] },
+      { id: 'evidence', kind: 'evidence', topic: 'accommodation', requires: { holds: 'accommodation' }, effects: [] },
+      {
+        id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true,
+        requires: { not: { holds: 'accommodation' }, contactFree: ['mother', 'cousin'] }, effects: [],
+      },
+      {
+        id: 'transfer', kind: 'say',
+        requires: { not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] }, noFacts: ['familyAddress'] },
+        effects: [{ fact: 'familyAddress' }],
+      },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
     // Extra verification: the supervisor checks why you travel. Spend the document
-    // that backs it, or let her phone the hospital and your father's condition goes
-    // on file. Only dealt while that call would tell this desk something new.
+    // that backs it (or, without one, have your mother confirm it), or let her
+    // phone the hospital: the call takes time and your father's condition goes on
+    // file. Only dealt while that call would tell this desk something new, and
+    // while there is a paper or your mother for the second answer.
     id: 's_supervisor', kind: 'verification', topic: 'purpose',
-    when: { noFacts: ['fatherCondition'] },
+    when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
     approaches: [
-      { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
-      { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }] },
+      { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
+      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [] },
+      { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },

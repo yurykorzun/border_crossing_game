@@ -24,11 +24,16 @@ export type FactId =
   | 'brotherAbroad'
   | 'secondPassport'
   | 'phoneRefused'
-  | 'cashCount';
+  | 'cashCount'
+  | 'noBooking'
+  | 'hostStatement'
+  | 'bankNotice'
+  | 'relativeContact';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
+  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact',
 ];
 
 /** What the player has said. Can be contradicted by facts. */
@@ -46,8 +51,14 @@ export interface Cond {
   noClaims?: ClaimId[];
   /** At least one of these contacts is still unexposed. */
   contactFree?: ContactId[];
+  /** true: LAST_HOURS hours left or fewer (src/game/content/world.ts). false: more than that. */
+  lastHours?: boolean;
+  /** A held, unused card covers this topic. */
+  holds?: Topic;
   /** Any of these conditions holds. */
   any?: Cond[];
+  /** This condition does not hold. */
+  not?: Cond;
 }
 
 /**

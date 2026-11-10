@@ -21,7 +21,7 @@ export const en: Record<string, string> = {
   'ui.scrutinyCount': 'Scrutiny {n}/{max}',
   'ui.scrutinyHelp.what': 'Scrutiny is how closely the officers are watching you.',
   'ui.scrutinyHelp.rise': 'Some answers add scrutiny. Their cards show it, for example "+1 scrutiny".',
-  'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, the next officer sends you to secondary inspection. After that, scrutiny drops back to {after}.',
+  'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, a supervisor takes you to secondary inspection before you can go on, even at the last desk. Before admission she reads your file once more: if your scrutiny rose on the way, or an officer caught you out, she can still send you there. A paper on what the bulletin warned about can settle her. After an inspection, scrutiny drops back to {after}.',
   'ui.progressCount': '{n} / {total}',
   'ui.progress': '{count} · {name}',
   'ui.settings': 'Settings',
@@ -107,6 +107,10 @@ export const en: Record<string, string> = {
   'change.fact.secondPassport': 'Your second passport is now on file.',
   'change.fact.phoneRefused': 'Your refusal is now on file.',
   'change.fact.cashCount': 'Your cash total is now on file.',
+  'change.fact.noBooking': 'That you have no booking is now on file.',
+  'change.fact.hostStatement': "Your mother's account of your stay is now on file.",
+  'change.fact.bankNotice': 'A bank notice about your donation is now on file.',
+  'change.fact.relativeContact': 'Another relative of yours is now on file.',
   'change.sent': 'Sent on to {desk}: {fact}.',
   'change.records': 'Into the shared records for the desks ahead: {fact}.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
@@ -264,6 +268,10 @@ export const en: Record<string, string> = {
   'fact.secondPassport': 'Your second passport',
   'fact.phoneRefused': 'You refused a phone search',
   'fact.cashCount': 'Your cash, counted',
+  'fact.noBooking': 'No booking to show',
+  'fact.hostStatement': 'Your mother says you stay with her',
+  'fact.bankNotice': 'A bank notice for your donation',
+  'fact.relativeContact': 'Another relative, in your contacts',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for visiting',
   'claim.tourism.recorded': 'Recorded as your reason for visiting',
@@ -286,6 +294,10 @@ export const en: Record<string, string> = {
   'fact.secondPassport.reveal': 'Puts your second passport on file',
   'fact.phoneRefused.reveal': 'Your refusal goes on file',
   'fact.cashCount.reveal': 'Cash total recorded',
+  'fact.noBooking.reveal': 'No booking to show',
+  'fact.hostStatement.reveal': 'Your mother says where you stay',
+  'fact.bankNotice.reveal': 'Reveals a bank notice',
+  'fact.relativeContact.reveal': 'Reveals another relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicines are lab-tested today.',
@@ -462,7 +474,7 @@ export const en: Record<string, string> = {
 
   'enc.i_clarify.q': '"You said you came as a tourist, but your family\'s details are in your file."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
-  'enc.i_clarify.clarify.reaction': 'The officer adds a line to your entry card.',
+  'enc.i_clarify.clarify.reaction': 'The officer adds a line to your entry card, then phones the passport desk to check it.',
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
   'enc.i_clarify.accept.label': '"I came as a tourist."',
@@ -524,9 +536,13 @@ export const en: Record<string, string> = {
   'enc.f_photo.law.reaction': 'Nobody knows. They go looking for someone who does.',
 
   // ── Secondary inspections
+  // No inspection fits: everything an inspection could take is already given or on file.
+  'insp.none': 'A supervisor turns every page of your file. There is nothing left to ask. She sends you back to the desk.',
   'insp.s_bag.q': 'Secondary room. They empty your suitcase onto a steel table.',
   'insp.s_bag.wait.label': 'Wait while they search',
   'insp.s_bag.wait.reaction': 'They count your cash and search every pocket.',
+  'insp.s_bag.declare.label': 'Lay out the cash and the prescription',
+  'insp.s_bag.declare.reaction': 'They write down the cash total and who the prescription is for. The search stops.',
   'insp.s_bag.contact.label': 'Ask them to call {contact}',
   // Why her word helps here: the search stops once the prescription checks out.
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
@@ -547,6 +563,10 @@ export const en: Record<string, string> = {
   'insp.s_connection.later.reaction': 'You write down the new time.',
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
   'insp.s_connection.drive.reaction': 'A short call. Someone will be waiting past the gate.',
+  'insp.s_connection.transfer.label': 'Take the border transfer',
+  'insp.s_connection.transfer.reaction': 'The driver asks where you are going. The officer writes down the address.',
+  'insp.s_connection.evidence.label': 'Show {cardThe} for the transfer',
+  'insp.s_connection.evidence.reaction': 'The officer clips it to the transfer form and keeps it.',
   'insp.s_connection.withdraw.label': 'Withdraw your entry request',
   'insp.s_connection.withdraw.reaction': 'The officer hands back your passport and points you to departures.',
 
@@ -554,7 +574,9 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
   'insp.s_supervisor.evidence.reaction': 'She keeps it for the file and waves you on.',
   'insp.s_supervisor.accept.label': 'Let her phone the hospital',
-  'insp.s_supervisor.accept.reaction': 'The hospital confirms your father is a patient. She writes it down.',
+  'insp.s_supervisor.accept.reaction': 'She waits on hold for the ward. The hospital confirms your father is a patient, and she writes it down.',
+  'insp.s_supervisor.contact.label': 'Ask her to call {contact}',
+  'insp.s_supervisor.contact.reaction': 'She calls {contact}, who tells her about your father.',
   'insp.s_supervisor.withdraw.label': 'Withdraw your entry request',
   'insp.s_supervisor.withdraw.reaction': 'She closes your file and hands back your passport.',
 

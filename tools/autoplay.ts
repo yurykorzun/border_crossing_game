@@ -4,7 +4,12 @@
 // Run i of a style uses setupFor(seed + i): every character x packing x bulletin
 // in turn, with seed + i + 1 as the run seed. No clock and no Math.random, so the
 // same flags always print the same tables. Bead plj (balance) reads these numbers.
-import { BOT_STYLES, playRun, setupFor } from '../src/game/bots';
+//
+// The memorised row is the harshest probe: a first pass of every style over the
+// same setups picks, per card id, the answer that won most often (buildScript()),
+// and that script then plays the setups again without reading state. It is
+// reported, not enforced, and stays out of the all-styles tables below.
+import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor } from '../src/game/bots';
 import type { BotRun, BotStyle } from '../src/game/bots';
 import { CHARACTERS } from '../src/game/content/world';
 import { ENDING_RANK } from '../src/game/walk';
@@ -32,10 +37,15 @@ for (const style of BOT_STYLES) {
   runs.set(style, list);
 }
 const all = [...runs.values()].flat();
+const script = firstPassScript(RUNS, SEED);
+const memorised: BotRun[] = [];
+for (let i = 0; i < RUNS; i++) memorised.push(playScript(script, setupFor(SEED + i)));
+const rows: [string, BotRun[]][] = [...runs, ['memorised', memorised]];
 
 const pct = (n: number, of: number) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 const mean = (xs: number[]) => (xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2) : '-');
 const won = (r: BotRun) => r.final.ending === 'homeInTime';
+const inspected = (r: BotRun) => r.final.inspections > 0;
 const cells = (xs: (string | number)[], w: number) => xs.map((x) => String(x).padStart(w)).join('');
 
 /**
@@ -55,16 +65,20 @@ console.log(`autoplay: ${RUNS} runs per style, setups ${SEED}..${SEED + RUNS - 1
 
 // ── 1. One row per style
 // no-cost/run: answers that spent no time, scrutiny or contact and put no new fact on file (noCost() in src/game/engine.ts).
+// lies/run: untrue claims made plus photo denials. lies caught: the share of those lies a challenge card put to the player (caughtLies()).
 console.log('\nEndings (% of runs) and run stats per style');
-console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'no-cost/run'], 12)}`);
-for (const [style, list] of runs) {
+// inspected: the share of runs with at least one secondary inspection (the balance target is 25-33% across all styles).
+console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'inspected', 'no-cost/run', 'lies/run', 'lies caught'], 12)}`);
+for (const [style, list] of rows) {
   const counts = ENDINGS.map((e) => list.filter((r) => r.final.ending === e).length);
   const times = list.map((r) => r.final.time);
   console.log(`  ${style.padEnd(12)}${cells(shares(counts, list.length), 11)}${cells([
     mean(times), Math.min(...times), mean(list.map((r) => r.final.decisions)), mean(list.map((r) => r.final.inspections)),
-    mean(list.map((r) => r.noCost)),
+    pct(list.filter(inspected).length, list.length), mean(list.map((r) => r.noCost)), mean(list.map((r) => r.lies)),
+    pct(list.reduce((n, r) => n + r.caught, 0), list.reduce((n, r) => n + r.lies, 0)),
   ], 12)}`);
 }
+console.log(`  runs with an inspection, all styles: ${pct(all.filter(inspected).length, all.length)} (memorised not counted)`);
 
 // ── 2. Success by setup
 console.log('\nhomeInTime by character x packing x bulletin (won/played per style)');
@@ -125,5 +139,5 @@ const inspRow = (list: BotRun[]) => {
   const home = hit.filter((r) => r.final.ending === 'homeInTime' || r.final.ending === 'homeAtCost');
   return cells([bucket((n) => n === 0), bucket((n) => n === 1), bucket((n) => n >= 2), pct(home.length, hit.length)], 16);
 };
-for (const [style, list] of runs) console.log(`  ${style.padEnd(12)}${inspRow(list)}`);
+for (const [style, list] of rows) console.log(`  ${style.padEnd(12)}${inspRow(list)}`);
 console.log(`  ${'all'.padEnd(12)}${inspRow(all)}`);
