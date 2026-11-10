@@ -472,7 +472,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   const queueShown = beats.at === queueAt ? beats.n : 1;
   const sceneState: SceneState = {
     handedOver: s.used.length > (usedBefore[sceneAt] ?? s.used.length),
-    writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.fact.')),
+    writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.onFile.')),
     away: s.screen.kind === 'wait',
     medicine: s.medicine,
     inspection: s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.kind ?? null : null,

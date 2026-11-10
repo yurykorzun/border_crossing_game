@@ -549,7 +549,7 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .record { list-style: none; padding: 0; font-size: 1.05rem; }
 .record li { padding: 6px 0; border-bottom: 1px solid var(--paper-2); }
 /* Who has each item, written out under it: "Recorded at Customs". */
-.record .desks { display: block; font-size: 0.95rem; color: var(--muted); }
+.record .desks, .record .tier { display: block; font-size: 0.95rem; color: var(--muted); }
 /* An answer only said aloud reads faint; one an officer wrote down reads firm. */
 .record li.said > span:first-child { font-style: italic; color: var(--muted); }
 .who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }

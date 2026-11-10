@@ -2,20 +2,20 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { deskOf, factIds, legalActions, newRun, options, step, travelOf } from './engine';
+import { deskOf, factIds, factTier, legalActions, newRun, options, step, travelOf } from './engine';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, RunState, Topic } from './types';
+import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, OnFileTier, RunState, Topic } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 12;
+export const CONTENT_VERSION = 13;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
@@ -27,7 +27,8 @@ export type GameEvent =
    * `passed` says whether that settled it, so the reaction reports only what happened.
    */
   | { type: 'contactExposed'; id: ContactId; desk: Checkpoint; shares: 'number' | 'name'; vouch?: { topic: Topic; passed: boolean } }
-  | { type: 'factRecorded'; id: FactId }
+  /** A fact came out, and how it now sits on file (factTier() in src/game/engine.ts). */
+  | { type: 'factRecorded'; id: FactId; tier: OnFileTier }
   /** A desk ahead learned the fact: through the shared records (records bulletin) or a call or printout from this desk. */
   | { type: 'factSent'; id: FactId; desks: Checkpoint[]; via: 'records' | 'desk' }
   | { type: 'claimRecorded'; id: ClaimId }
@@ -88,7 +89,7 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   if (n.time < s.time) ev.push({ type: 'timeSpent', hours: s.time - n.time });
   if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
   for (const id of added(s.claims, n.claims)) ev.push({ type: 'claimRecorded', id });
-  for (const id of added(factIds(s), factIds(n))) ev.push({ type: 'factRecorded', id });
+  for (const id of added(factIds(s), factIds(n))) ev.push({ type: 'factRecorded', id, tier: factTier(n, id) });
   const here = deskOf(s);
   for (const id of factIds(n)) {
     const desks = added(s.facts[id] ?? [], n.facts[id] ?? []).filter((d) => d !== here);

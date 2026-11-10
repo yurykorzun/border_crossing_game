@@ -18,7 +18,7 @@ import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
-import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
+import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
@@ -253,6 +253,7 @@ function storyLines(s: RunState, p: Page): void {
   p.add('ui.onFile', {}, CHROME);
   for (const f of factIds(s)) {
     p.add(`fact.${f}`, {}, CHROME);
+    p.add(`ui.tier.${factTier(s, f)}`, {}, CHROME);
     const at = s.facts[f] ?? [];
     p.add(`ui.haveOnFile.${at.length === 1 ? 'one' : 'other'}`, { desks: desks(at), n: at.length }, CHROME);
   }

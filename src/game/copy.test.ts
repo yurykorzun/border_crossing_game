@@ -135,7 +135,7 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.p_employer.check': { always: 1, most: 1 },
     'enc.c_medicine.declare': { always: 1, most: 2 },
     'enc.c_cash.count': { always: 1, most: 1 },
-    'enc.c_tourist.admit': { always: 1, most: 1 },
+    'enc.c_shortTrip.admit': { always: 1, most: 1 },
     'enc.c_host.call': { always: 1, most: 1 },
     'enc.c_phone.unlock': { always: 1, most: 1 },
     'enc.c_phone.refuse': { always: 1, most: 1 },

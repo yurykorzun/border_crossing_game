@@ -2,7 +2,7 @@
 // names and descriptions are in src/i18n/en.ts under the same ids.
 
 import type {
-  BulletinId, Character, CharacterId, Checkpoint, ClaimId, Contact, ContactId, EvidenceCard, EvidenceId, FactId, Officer, Topic,
+  OnFileTier, BulletinId, Character, CharacterId, Checkpoint, ClaimId, Contact, ContactId, EvidenceCard, EvidenceId, FactId, Officer, Topic,
 } from '../types';
 
 export const START_TIME = 8;
@@ -80,7 +80,7 @@ export const POLITICAL_FACTS: readonly FactId[] = ['secondPassport', 'brotherAbr
 export const OFFICERS: Record<Checkpoint, Officer> = {
   passport: {
     desk: 'passport', priority: 'paperwork', reactions: [],
-    writesDown: ['familyVisit', 'tourism', 'hotelStay', 'stayingWithFamily'],
+    writesDown: ['familyVisit', 'shortTrip', 'hotelStay', 'stayingWithFamily'],
   },
   customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'] },
   interview: {
@@ -99,6 +99,35 @@ export const canConfirm = (c: ContactId, topic: Topic | undefined): boolean => !
  * them. Only these may stay off file when a document settles a question (settles).
  */
 export const HARMLESS_FACTS: readonly FactId[] = ['departureDate', 'property'];
+
+/**
+ * How each fact sits on file before anything flags it (factTier() in
+ * src/game/engine.ts). Lena and Mark are citizens, so the state already has some
+ * of their life: the registered family address, the apartment in the land
+ * register, and the exit record that shows which passport they left on. A desk
+ * that finds one of these found it in the old records. A donation to a listed
+ * fund and a refused search are flagged the moment they are on file. Everything
+ * else came out on this crossing. Any fact becomes flagged once it is the
+ * reason scrutiny rises.
+ */
+export const FACT_TIERS: Record<FactId, OnFileTier> = {
+  familyAddress: 'recorded',
+  property: 'recorded',
+  secondPassport: 'recorded',
+  employer: 'confirmed',
+  fatherCondition: 'confirmed',
+  departureDate: 'confirmed',
+  urgency: 'confirmed',
+  phoneSearched: 'confirmed',
+  brotherAbroad: 'confirmed',
+  cashCount: 'confirmed',
+  noBooking: 'confirmed',
+  hostStatement: 'confirmed',
+  bankNotice: 'confirmed',
+  relativeContact: 'confirmed',
+  donationRecord: 'flagged',
+  phoneRefused: 'flagged',
+};
 
 export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
   hotel: {

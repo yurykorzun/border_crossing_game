@@ -6,7 +6,7 @@
 import { has, own } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, factIds, travelOf } from './engine';
+import { caught, factIds, factTier, travelOf } from './engine';
 import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
@@ -176,7 +176,9 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
       if (e.vouch?.passed) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
       out.push({ key: `change.contact.${e.shares}`, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
     }
-  for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.fact.${e.id}`, tone: 'plain' });
+  // Each fact names how it sits on file: found in the old records, confirmed on this
+  // crossing, or flagged (factTier() in src/game/engine.ts).
+  for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.onFile.${e.tier}`, vars: { fact: e.id }, tone: 'plain' });
   for (const e of events)
     if (e.type === 'factSent')
       out.push(e.via === 'records'
@@ -264,5 +266,5 @@ export function caughtLine(s: RunState, card: string): { key: string; vars: Reco
   const c = caught(s, card);
   if (!c) return undefined;
   const said = own(`said.${c.claim}`, s.character).slice('said.'.length);
-  return { key: 'caught.line', vars: { said, desk: c.desk, fact: c.fact } };
+  return { key: `caught.line.${factTier(s, c.fact)}`, vars: { said, desk: c.desk, fact: c.fact } };
 }

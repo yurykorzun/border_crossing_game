@@ -21,9 +21,9 @@ export const BOT_STYLES: readonly BotStyle[] = ['honest', 'liar', 'cautious', 'r
 export const isBotStyle = (x: unknown): x is BotStyle => BOT_STYLES.includes(x as BotStyle);
 
 /** Claims that are not true for anyone in this mission. */
-const LIES: readonly ClaimId[] = ['tourism', 'hotelStay', 'noOtherFamily', 'neverDonated', 'cashUnderLimit'];
+const LIES: readonly ClaimId[] = ['shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'cashUnderLimit'];
 /** Lies that hide the family visit, the liar's whole story. */
-const HIDES_FAMILY: readonly ClaimId[] = ['tourism', 'hotelStay', 'noOtherFamily'];
+const HIDES_FAMILY: readonly ClaimId[] = ['shortTrip', 'hotelStay', 'noOtherFamily'];
 /** Say-approaches that are untrue without adding a claim (deny the photo). */
 const LYING_SAYS = new Set(['deny']);
 
@@ -76,7 +76,7 @@ const SCORE: Record<'honest' | 'liar' | 'cautious', (s: RunState, o: Option) => 
     const t = traits(s, o);
     return KIND_RANK[o.approach.kind] + 10 * t.lies + (t.losesMedicine ? 4 : 0) + (t.exposesProtected ? 3 : 0) + 0.1 * t.time;
   },
-  // Hides the family behind tourism and the hotel; keeps contacts out of it; else the cheapest answer.
+  // Hides the family behind shortTrip and the hotel; keeps contacts out of it; else the cheapest answer.
   liar: (s, o) => {
     const t = traits(s, o);
     return -10 * t.hides + (t.revealsFamily ? 6 : 0) + (t.contact ? 3 : 0) + (t.withdraw ? 50 : 0)
@@ -106,7 +106,7 @@ export function stateValue(s: RunState): number {
   // A fact counts while a desk still ahead (or this one) knows it: only they can catch a claim with it.
   const ahead = (f: FactId) => (s.facts[f] ?? []).some((d) => CHECKPOINTS.indexOf(d) >= s.checkpoint);
   const familyOnFile = ahead('familyAddress') || ahead('fatherCondition');
-  if (s.claims.includes('tourism') && familyOnFile) v -= 20;
+  if (s.claims.includes('shortTrip') && familyOnFile) v -= 20;
   if (s.claims.includes('noOtherFamily') && ahead('brotherAbroad')) v -= 20;
   if (s.claims.includes('cashUnderLimit') && ahead('cashCount')) v -= 20;
   if (s.screen.kind === 'encounter' && s.screen.id.startsWith('f_')) v -= 8;

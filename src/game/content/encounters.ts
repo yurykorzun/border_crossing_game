@@ -21,10 +21,10 @@ import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspecti
  * Disproof: a fact on file says the opposite. Expensive (i_contradiction).
  */
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
-  ['tourism', 'familyAddress'],
-  ['tourism', 'fatherCondition'],
-  // A tourist with nowhere booked (i_stay).
-  ['tourism', 'noBooking'],
+  ['shortTrip', 'familyAddress'],
+  ['shortTrip', 'fatherCondition'],
+  // A short trip home with nowhere booked (i_stay).
+  ['shortTrip', 'noBooking'],
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
 ];
@@ -84,7 +84,7 @@ export const ENCOUNTERS: Encounter[] = [
         ],
       },
       { id: 'family', kind: 'verify', effects: [{ claim: 'familyVisit' }, { time: -1 }] },
-      { id: 'tourism', kind: 'say', effects: [{ claim: 'tourism' }] },
+      { id: 'shortTrip', kind: 'say', effects: [{ claim: 'shortTrip' }] },
     ],
   },
   {
@@ -127,10 +127,10 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'p_employer', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'work',
-    // A tourist paid by a foreign company: the clerk wants to know who pays.
+    // A short trip home on a foreign salary: the clerk wants to know who pays.
     // No perk here: the clerk wants paper or the register, not an explanation,
     // so Lena's plain answer is kept for the interview (i_employer).
-    when: { background: 'foreignEmployer', claims: ['tourism'] },
+    when: { background: 'foreignEmployer', claims: ['shortTrip'] },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       { id: 'check', kind: 'verify', effects: [{ time: -1 }] },
@@ -169,12 +169,12 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [{ id: 'yes', kind: 'say', effects: [] }],
   },
   {
-    // The bag shows it: a tourist carrying a pensioner's prescription.
-    id: 'c_tourist', checkpoint: 'customs', kind: 'related', priority: 3, topic: 'purpose',
-    when: { claims: ['tourism'] },
+    // The bag shows it: a short trip home, with a pensioner's prescription.
+    id: 'c_shortTrip', checkpoint: 'customs', kind: 'related', priority: 3, topic: 'purpose',
+    when: { claims: ['shortTrip'] },
     approaches: [
       // Changing the purpose means re-entering it, which takes an hour, and the new form has her address.
-      // Every answer here puts the family on file at customs, so a spot-check of "tourist" finds it.
+      // Every answer here puts the family on file at customs, so a spot-check of "short trip" finds it.
       { id: 'admit', kind: 'say', effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
       // She confirms the visit and names the rest of the family, which goes with your file.
@@ -222,19 +222,19 @@ export const ENCOUNTERS: Encounter[] = [
       // Staying with her is what rules the hotel out, not visiting family.
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }, { claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
       // An evasion is free unless something on file makes it odd: her address is right there.
-      // A tourist who has not decided has no booking to show.
+      // A short trip with no decided place to stay has no booking to show.
       // On a day hosts are phoned, having no host to name is itself flagged.
       {
         id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] },
         effects: [
-          { fact: 'noBooking', when: { claims: ['tourism'] } },
+          { fact: 'noBooking', when: { claims: ['shortTrip'] } },
           { fact: 'noBooking', when: { bulletin: 'accommodation' } },
           { scrutiny: 1, reason: 'noBooking', when: { bulletin: 'accommodation' } },
         ],
       },
       {
         id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] },
-        effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['tourism'] } }],
+        effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['shortTrip'] } }],
       },
     ],
   },

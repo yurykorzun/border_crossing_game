@@ -91,7 +91,7 @@ describe('rules', () => {
     expect(factIds(r.state)).toContain('familyAddress');
     expect(r.state.claims).toContain('familyVisit');
     expect(r.events).toContainEqual({ type: 'documentUsed', id: 'motherLetter' });
-    expect(r.events).toContainEqual({ type: 'factRecorded', id: 'familyAddress' });
+    expect(r.events).toContainEqual({ type: 'factRecorded', id: 'familyAddress', tier: 'recorded' });
   });
 
   it('a spent document cannot be played again', () => {
@@ -108,7 +108,7 @@ describe('rules', () => {
   it('a spoken claim the officer writes down is on file at that desk; one only said aloud is not', () => {
     // The inspector writes down a cash declaration (goods), but not a reason for visiting.
     const declared = tryStep(at(newRun(lena), 'c_cash', { checkpoint: 1, slot: 1 }), { type: 'choose', approach: 'under' });
-    const admitted = tryStep(at(newRun(lena), 'c_tourist', { checkpoint: 1, slot: 1 }), { type: 'choose', approach: 'admit' });
+    const admitted = tryStep(at(newRun(lena), 'c_shortTrip', { checkpoint: 1, slot: 1 }), { type: 'choose', approach: 'admit' });
     if (!declared.ok || !admitted.ok) throw new Error('both answers are legal here');
     expect(declared.state.claims).toContain('cashUnderLimit');
     expect(loggedAt(declared.state, 'cashUnderLimit')).toEqual(['customs']);
@@ -169,8 +169,8 @@ describe('scenarios', () => {
   const interviewSlot2 = (extra: Partial<RunState>): RunState =>
     ({ ...newRun(lena), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra });
 
-  it('a tourism claim plus the family address on file deals the clarify card', () => {
-    const s = step(interviewSlot2({ claims: ['tourism'], facts: known('familyAddress') }), { type: 'ack' });
+  it('a shortTrip claim plus the family address on file deals the clarify card', () => {
+    const s = step(interviewSlot2({ claims: ['shortTrip'], facts: known('familyAddress') }), { type: 'ack' });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
@@ -180,10 +180,10 @@ describe('scenarios', () => {
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
-  // Passport after "tourism" and the employer card: 2 decisions, both checkpoint cards.
+  // Passport after "shortTrip" and the employer card: 2 decisions, both checkpoint cards.
   const quietPassport = (extra: Partial<RunState> = {}): RunState =>
     at(newRun(lena), 'p_employer', {
-      slot: 2, decisions: 1, seen: ['p_purpose', 'p_employer'], claims: ['tourism'], ...extra,
+      slot: 2, decisions: 1, seen: ['p_purpose', 'p_employer'], claims: ['shortTrip'], ...extra,
     });
 
   it('every desk deals 2 cards, a quiet run too: no third card (2op.6)', () => {
@@ -288,15 +288,15 @@ describe('contact results', () => {
   const rows = (s: RunState) => (s.changes ?? []).map((c) => (c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)));
 
   it('a vouch that passes: the beat alone, then a verified row and an on-file row naming the desk', () => {
-    const s = at(newRun(lena), 'c_tourist', { checkpoint: 1, claims: ['tourism'] });
+    const s = at(newRun(lena), 'c_shortTrip', { checkpoint: 1, claims: ['shortTrip'] });
     const n = playStep(s, { type: 'choose', approach: 'mother' });
     expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.']);
     // Asked, she also gives her address and who else lives there (2op.12); on a records day both reach the desks ahead.
     expect(rows(n)).toEqual([
-      'Visit verified.', "On file at Customs: your mother's number.",
-      "Your mother's address is now on file.", 'Another relative of yours is now on file.',
-      'Into the shared records for the desks ahead: Family address.',
-      'Into the shared records for the desks ahead: Another relative, on record.',
+      'Your reason verified.', "On file at Customs: your mother's number.",
+      'Found in the old records: Your registered family address.', 'Confirmed and on file: Another relative of yours.',
+      'Into the shared records for the desks ahead: Your registered family address.',
+      'Into the shared records for the desks ahead: Another relative of yours.',
     ]);
   });
 

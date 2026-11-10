@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS, FACT_TIERS } from './content/world';
 import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, eventKey, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, newRun, options, travelOf } from './engine';
@@ -128,10 +128,10 @@ describe('consequence line', () => {
     };
     expect(t('enc.p_purpose.evidence.label', { cardThe: 'motherLetter' })).toBe("Show your mother's letter");
     expect(line('evidence', 'motherLetter').text).toBe('Uses letter · Reveals her address');
-    expect(t('enc.p_purpose.family.label')).toBe('"I\'m visiting family."');
+    expect(t('enc.p_purpose.family.label')).toBe('"My family needs me here."');
     expect(line('family').text).toBe('Register check: 1 hour');
-    expect(t('enc.p_purpose.tourism.label')).toBe('"I\'m here as a tourist."');
-    expect(line('tourism')).toEqual({ icon: 'check', text: 'Recorded as your reason for visiting' });
+    expect(t('enc.p_purpose.shortTrip.label')).toBe('"Just a short trip home."');
+    expect(line('shortTrip')).toEqual({ icon: 'check', text: 'Recorded as your reason for coming back' });
   });
 
   it('shows a blocked answer as why it is blocked', () => {
@@ -211,8 +211,8 @@ describe('packing rows', () => {
   const rows = (id: EvidenceId) => packDetail(id).map((line) => line.map((k) => t(k)).join(SEPARATOR));
 
   it('lists every topic a document answers, then what it reveals', () => {
-    expect(rows('hospitalNote')).toEqual(['Medicine · Visit purpose', "Reveals your father's condition"]);
-    expect(rows('motherLetter')).toEqual(['Visit purpose · Accommodation', 'Reveals her address']);
+    expect(rows('hospitalNote')).toEqual(['Medicine · Why you came back', "Reveals your father's condition"]);
+    expect(rows('motherLetter')).toEqual(['Why you came back · Accommodation', 'Reveals her address']);
     expect(rows('hotel')).toEqual(['Accommodation · Length of stay']);
     for (const id of EVIDENCE_IDS) expect(packDetail(id)[0], id).toHaveLength(EVIDENCE[id].topics.length);
   });
@@ -290,18 +290,19 @@ describe('what changed, under the reaction', () => {
       c.n === undefined ? (c.key in en ? [] : [c.key]) : [`${c.key}.one`, `${c.key}.other`].filter((k) => !(k in en)),
     );
     expect([...new Set(missing)]).toEqual([]);
-    // And every fact in the game, not only the ones the bots happened to reveal.
+    // And every fact in the game, not only the ones the bots happened to reveal: each has a tier, and each tier a line.
     const facts = Object.keys(en).filter((k) => /^fact\.[^.]+$/.test(k)).map((k) => k.slice('fact.'.length));
-    expect(facts.filter((f) => !(`change.fact.${f}` in en))).toEqual([]);
+    expect(facts.filter((f) => !(f in FACT_TIERS))).toEqual([]);
+    for (const tier of ['recorded', 'confirmed', 'flagged']) expect(`change.onFile.${tier}` in en, tier).toBe(true);
   });
 
-  it('reads as plain sentences: an address on file, an hour lost, scrutiny up', () => {
+  it('reads as plain sentences: an address found in the records, an hour lost, scrutiny up', () => {
     const lines = changeLines(
-      [{ type: 'factRecorded', id: 'familyAddress' }, { type: 'timeSpent', hours: 1 }, { type: 'scrutinyChanged', from: 1, to: 2 }],
+      [{ type: 'factRecorded', id: 'familyAddress', tier: 'recorded' }, { type: 'timeSpent', hours: 1 }, { type: 'scrutinyChanged', from: 1, to: 2 }],
       'cousin',
     );
     expect(lines.map((c) => (c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)))).toEqual([
-      "Your mother's address is now on file.",
+      'Found in the old records: Your registered family address.',
       '1 hour lost.',
       'Scrutiny 2/3.',
     ]);
@@ -321,7 +322,7 @@ describe('what changed, under the reaction', () => {
     const s = { ...base, screen: { kind: 'encounter', id: 'p_purpose' } as const, slot: 2 };
     const after = playStep(s, { type: 'choose', approach: 'evidence' });
     expect(after.reaction).not.toBeNull();
-    expect(after.changes?.map((c) => c.key)).toContain('change.fact.familyAddress');
+    expect(after.changes).toContainEqual({ key: 'change.onFile.recorded', vars: { fact: 'familyAddress' }, tone: 'plain' });
     expect(nextActionKey(after)).toBe('ui.proceed.customs');
     expect(playStep(after, { type: 'ack' }).changes).toBeNull();
   });

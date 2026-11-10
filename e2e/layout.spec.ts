@@ -254,8 +254,8 @@ test('the passport question: answers as speech or an action, one icon and one li
   await expect(answers).toHaveCount(3);
   await expect(answers.locator('.choice-label')).toHaveText([
     "Show your mother's letter",
-    '"I\'m visiting family."',
-    '"I\'m here as a tourist."',
+    '"My family needs me here."',
+    '"Just a short trip home."',
   ]);
   await expect(answers.locator('.consequence-text')).toHaveText([
     'Uses letter · Reveals her address',

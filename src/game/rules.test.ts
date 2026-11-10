@@ -148,9 +148,9 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
     expect(r.ok && r.state.scrutiny).toBe(0);
   });
 
-  it('an inconsistency (tourism + family address) deals the cheaper clarify card, with no free answer', () => {
+  it('an inconsistency (shortTrip + family address) deals the cheaper clarify card, with no free answer', () => {
     for (const fact of ['familyAddress', 'fatherCondition'] as const) {
-      const s = interview({ claims: ['tourism'], facts: known(fact) });
+      const s = interview({ claims: ['shortTrip'], facts: known(fact) });
       expect(s.screen, fact).toEqual({ kind: 'encounter', id: 'i_clarify' });
       // clarify: the new story is checked, 1 hour; evidence; or accept +1 scrutiny
       expect(options(s).map((o) => o.approach.id)).toEqual(['clarify', 'evidence', 'accept']);
@@ -164,7 +164,7 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
     const cases: Partial<RunState>[] = [
       { claims: ['noOtherFamily'], facts: known('brotherAbroad') },
       { claims: ['cashUnderLimit'], facts: known('cashCount') },
-      { claims: ['noOtherFamily', 'cashUnderLimit', 'tourism'], facts: known('brotherAbroad', 'cashCount', 'familyAddress') },
+      { claims: ['noOtherFamily', 'cashUnderLimit', 'shortTrip'], facts: known('brotherAbroad', 'cashCount', 'familyAddress') },
     ];
     for (const extra of cases) {
       const s = interview(extra, mark);
@@ -178,7 +178,7 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
   });
 
   it('the disproof costs more than the inconsistency on every axis it charges', () => {
-    const clarify = interview({ claims: ['tourism'], facts: known('familyAddress') });
+    const clarify = interview({ claims: ['shortTrip'], facts: known('familyAddress') });
     const disproof = interview({ claims: ['noOtherFamily'], facts: known('brotherAbroad') }, mark);
     expect(cost(disproof, 'apologise').scrutiny).toBeGreaterThan(cost(clarify, 'accept').scrutiny);
     expect(cost(disproof, 'review').time).toBeGreaterThan(cost(clarify, 'clarify').time);
@@ -197,7 +197,7 @@ describe('claim-versus-fact pairs from real procedure', () => {
 
   // The pairs the balance review asked for (docs/research/2026-11-09-balance-and-levels.md), each with the card that catches it.
   const pairs: [string, ClaimId, FactId, 'i_clarify' | 'i_contradiction', RunSetup][] = [
-    ['a tourist with no booking to show', 'tourism', 'noBooking', 'i_clarify', lena],
+    ['a tourist with no booking to show', 'shortTrip', 'noBooking', 'i_clarify', lena],
     ['a hotel stay against the family address on file', 'hotelStay', 'familyAddress', 'i_clarify', lena],
     ["a hotel stay against the host's account", 'hotelStay', 'hostStatement', 'i_contradiction', lena],
     ['"I never donated" against the bank notice on the phone', 'neverDonated', 'bankNotice', 'i_contradiction', lena],
@@ -219,7 +219,7 @@ describe('claim-versus-fact pairs from real procedure', () => {
   });
 
   it('a tourist who has not decided where to stay puts "no booking" on file, a family visitor does not', () => {
-    const tourist = tryStep(at({ ...newRun(lena), claims: ['tourism'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
+    const tourist = tryStep(at({ ...newRun(lena), claims: ['shortTrip'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
     expect(tourist.ok && knows(tourist.state, 'noBooking', 'interview')).toBe(true);
     const visitor = tryStep(at({ ...newRun(lena), claims: ['familyVisit'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
     expect(visitor.ok && factIds(visitor.state)).not.toContain('noBooking');
@@ -517,7 +517,7 @@ describe('contacts confirm only what they know', () => {
   });
 
   it('My story lists what each contact can confirm', () => {
-    expect(t('contact.mother.can')).toBe('Can confirm: address, visit, prescription');
+    expect(t('contact.mother.can')).toBe('Can confirm: address, why you came, prescription');
     for (const c of allContacts) expect(t(`contact.${c}.can`)).toMatch(/^Can confirm: /);
   });
 });
@@ -533,9 +533,9 @@ describe('what each official knows: facts travel between desks only through a ch
   /** Shows the mother's letter at passport control: her address comes out at that desk. */
   const letterAtPassport = (bulletin: RunSetup['bulletin']) =>
     play({ ...lenaWith(bulletin), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
-  /** Walks up to the interview with "tourism" said, and lets the director deal its related card. */
+  /** Walks up to the interview with "shortTrip" said, and lets the director deal its related card. */
   const toInterview = (s: RunState): RunState =>
-    step({ ...s, reaction: null, pending: [], claims: [...s.claims, 'tourism'], checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 } }, { type: 'ack' });
+    step({ ...s, reaction: null, pending: [], claims: [...s.claims, 'shortTrip'], checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 } }, { type: 'ack' });
 
   it('a fact is known only at the desk where it came out', () => {
     const s = letterAtPassport('customs');
@@ -545,7 +545,7 @@ describe('what each official knows: facts travel between desks only through a ch
 
   it('a passport-desk fact does not deal the interview clarify card without a channel', () => {
     const s = toInterview(letterAtPassport('customs'));
-    expect(s.claims).toContain('tourism');
+    expect(s.claims).toContain('shortTrip');
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
     expect(knows(s, 'familyAddress')).toBe(false);
   });
@@ -583,14 +583,14 @@ describe('what each official knows: facts travel between desks only through a ch
   it('the reaction says where a fact was sent', () => {
     const r = tryStep({ ...lenaWith('accommodation'), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
     expect(r.ok && r.events).toContainEqual({ type: 'factSent', id: 'familyAddress', desks: ['customs'], via: 'desk' });
-    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Sent on to Customs: Family address.');
+    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Sent on to Customs: Your registered family address.');
   });
 });
 
 describe('every exposure has a consequence (fsx.3)', () => {
   /** Lena names her mother on the tourist card at customs. */
   const motherNamed = (): RunState => {
-    const s = { ...at(newRun(lena), 'c_tourist'), checkpoint: 1, claims: ['tourism'] as ClaimId[] };
+    const s = { ...at(newRun(lena), 'c_shortTrip'), checkpoint: 1, claims: ['shortTrip'] as ClaimId[] };
     const r = tryStep(s, { type: 'choose', approach: 'mother' });
     expect(r.ok).toBe(true);
     return r.ok ? r.state : s;

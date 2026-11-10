@@ -90,11 +90,11 @@ for (const level of LEVEL_IDS) {
 
     it.runIf(level === 'arrival')('lists an answer that no style picks', () => {
       // Take an answer the bots do pick out of their picks: the report must then name it.
-      expect(report.offered.get('p_purpose')?.has('tourism')).toBe(true);
-      expect(picked.has('p_purpose.tourism')).toBe(true);
-      const without = new Set([...picked].filter((k) => k !== 'p_purpose.tourism'));
-      expect(neverPicked(report.offered, without)).toContain('p_purpose.tourism');
-      expect(neverPicked(report.offered, picked)).not.toContain('p_purpose.tourism');
+      expect(report.offered.get('p_purpose')?.has('shortTrip')).toBe(true);
+      expect(picked.has('p_purpose.shortTrip')).toBe(true);
+      const without = new Set([...picked].filter((k) => k !== 'p_purpose.shortTrip'));
+      expect(neverPicked(report.offered, without)).toContain('p_purpose.shortTrip');
+      expect(neverPicked(report.offered, picked)).not.toContain('p_purpose.shortTrip');
     });
 
     it('keeps only answers docs/design.md names with a reason', () => {

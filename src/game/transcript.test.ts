@@ -75,11 +75,11 @@ describe('scenario evals', () => {
 
   it('rule 3: a contradiction card with nothing to contradict exits 1 with seed and step', () => {
     const tr = run(LENA);
-    tr.happenings.push({ step: 12, type: 'cardDealt', id: 'i_contradiction', claims: ['tourism'], facts: ['employer'], routinesLeft: [] });
+    tr.happenings.push({ step: 12, type: 'cardDealt', id: 'i_contradiction', claims: ['shortTrip'], facts: ['employer'], routinesLeft: [] });
     const r = only(3, [tr]);
     expect(r.exitCode).toBe(1);
     expect(formatFailure(r.fresh[0])).toBe(
-      `rule 3: honest seed ${LENA + 1} step 12 (lena, i_contradiction): dealt with claims [tourism] and facts [employer]`,
+      `rule 3: honest seed ${LENA + 1} step 12 (lena, i_contradiction): dealt with claims [shortTrip] and facts [employer]`,
     );
   });
 

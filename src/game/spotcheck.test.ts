@@ -11,7 +11,7 @@ import type { Dealer } from './rng';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import type { Action, Checkpoint, ClaimId, FactId, FactMap, RunState } from './types';
 
-const CLAIMS: ClaimId[] = ['familyVisit', 'tourism', 'hotelStay', 'noOtherFamily', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit'];
+const CLAIMS: ClaimId[] = ['familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit'];
 const PAIRS = [...INCONSISTENCIES, ...DISPROOFS];
 
 /** Every fact that no challenge pairs against `c`: a file that fits the claim, as full as it can be. */
@@ -63,11 +63,11 @@ describe('spot-checks', () => {
   );
 
   it('checks each desk once, with the claim the dealer picks', () => {
-    const s = leaving('customs', ['familyVisit', 'tourism'], ['familyAddress']);
+    const s = leaving('customs', ['familyVisit', 'shortTrip'], ['familyAddress']);
     // The first claim fits; the second, a tourist with the family address on file, does not.
     expect(step(s, choose('customs'), picks(0)).time).toBe(s.time);
     expect(step(s, choose('customs'), picks(1)).time).toBe(s.time - SPOT_CHECK_HOURS);
-    const caught = step({ ...s, claims: ['tourism'] }, choose('customs'), picks(0));
+    const caught = step({ ...s, claims: ['shortTrip'] }, choose('customs'), picks(0));
     expect(caught.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
     expect(caught.spotChecked).toEqual(['customs']);
     // Answering the challenge moves on: the desk does not check again.
@@ -87,24 +87,24 @@ describe('spot-checks', () => {
   });
 
   it('an inconsistency you have since explained clears after the check, which takes its hours', () => {
-    const s = leaving('customs', ['tourism', 'familyVisit'], ['familyAddress']);
-    expect(spotCheckOf(s, 'tourism')).toEqual({ result: 'explained' });
+    const s = leaving('customs', ['shortTrip', 'familyVisit'], ['familyAddress']);
+    expect(spotCheckOf(s, 'shortTrip')).toEqual({ result: 'explained' });
     const n = step(s, choose('customs'), picks(0));
     expect(n.time).toBe(s.time - SPOT_CHECK_HOURS);
     expect(n.screen).toEqual({ kind: 'between', next: 2 });
   });
 
   it('a flaw whose challenge was already answered costs nothing more', () => {
-    const s = leaving('interview', ['tourism'], ['noBooking'], { seen: ['i_water', 'i_clarify'] });
-    expect(spotCheckOf(s, 'tourism')).toEqual({ result: 'answered' });
+    const s = leaving('interview', ['shortTrip'], ['noBooking'], { seen: ['i_water', 'i_clarify'] });
+    expect(spotCheckOf(s, 'shortTrip')).toEqual({ result: 'answered' });
     const n = step(s, choose('interview'), picks(0));
     expect(n.time).toBe(s.time);
     expect(n.ending).toBe('homeInTime');
   });
 
   it('reads only what this desk knows: a fact at another desk is not a flaw', () => {
-    const s = leaving('customs', ['tourism'], []);
-    expect(spotCheckOf({ ...s, facts: { familyAddress: ['passport'] } }, 'tourism')).toEqual({ result: 'clear' });
+    const s = leaving('customs', ['shortTrip'], []);
+    expect(spotCheckOf({ ...s, facts: { familyAddress: ['passport'] } }, 'shortTrip')).toEqual({ result: 'clear' });
   });
 
   it('a run with no claims yet is not checked and draws nothing', () => {
@@ -117,7 +117,7 @@ describe('spot-checks', () => {
 
   it('checks only claims on file: one said aloud to an officer who does not write it down is never picked', () => {
     // Both claims would be a flaw here; only the hotel stay was written down.
-    const s = leaving('customs', ['tourism', 'hotelStay'], ['familyAddress', 'hostStatement'], { logged: { hotelStay: ['passport'] } });
+    const s = leaving('customs', ['shortTrip', 'hotelStay'], ['familyAddress', 'hostStatement'], { logged: { hotelStay: ['passport'] } });
     const checked = step(s, choose('customs'), picks(0));
     expect(checked.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', hours: String(SPOT_CHECK_HOURS) } });
     // Nothing written down: no claim to check, and the dealer is not asked.
@@ -129,7 +129,7 @@ describe('spot-checks', () => {
   });
 
   it('stops after a secondary inspection, which has read the whole file', () => {
-    const n = step(leaving('customs', ['tourism'], ['familyAddress'], { inspections: 1 }), choose('customs'), picks(0));
+    const n = step(leaving('customs', ['shortTrip'], ['familyAddress'], { inspections: 1 }), choose('customs'), picks(0));
     expect(n.screen).toEqual({ kind: 'between', next: 2 });
     expect(n.reaction?.some((l) => l.key.startsWith('spot.'))).toBe(false);
   });
@@ -177,7 +177,7 @@ describe('spot-checks', () => {
 
   it('every result has text, with no dash', () => {
     for (const r of ['clear', 'flaw', 'answered', 'explained']) {
-      const line = t(`spot.${r}`, { claim: 'tourism', said: 'tourism', desk: 'passport', fact: 'familyAddress', hours: '2' });
+      const line = t(`spot.${r}`, { claim: 'shortTrip', said: 'shortTrip', desk: 'passport', fact: 'familyAddress', hours: '2' });
       expect(line).not.toMatch(/[{}—]/);
     }
   });

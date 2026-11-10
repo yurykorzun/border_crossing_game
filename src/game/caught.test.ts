@@ -54,8 +54,8 @@ describe('a caught claim quotes your own words next to the fact', () => {
 
   it('Mark denies family across the border, Lena relatives here', () => {
     const vars = (who: CharacterId) => caughtLine(facing('i_contradiction', 'noOtherFamily', 'brotherAbroad', 'interview', who), 'i_contradiction')!;
-    expect(t('caught.line', vars('mark').vars)).toContain('"No family across the border"');
-    expect(t('caught.line', vars('lena').vars)).toContain('"I have no other relatives here"');
+    expect(t(vars('mark').key, vars('mark').vars)).toContain('"No family across the border"');
+    expect(t(vars('lena').key, vars('lena').vars)).toContain('"I have no other relatives here"');
   });
 
   it('the quoted words are the answer that made the claim', () => {
@@ -78,17 +78,18 @@ describe('a caught claim quotes your own words next to the fact', () => {
   it('names the desk where you said it, not the one catching it', () => {
     // A tourist at passport control, with no booking to show at the interview.
     let s: RunState = { ...newRun(lena), screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'], slot: 1 };
-    s = step(s, { type: 'choose', approach: 'tourism' });
-    expect(s.saidAt).toEqual({ tourism: 'passport' });
+    s = step(s, { type: 'choose', approach: 'shortTrip' });
+    expect(s.saidAt).toEqual({ shortTrip: 'passport' });
     const later: RunState = { ...s, reaction: null, checkpoint: 2, facts: { noBooking: ['interview'] }, screen: { kind: 'encounter', id: 'i_clarify' } };
-    expect(t('caught.line', caughtLine(later, 'i_clarify')!.vars)).toBe('You said: "I\'m here as a tourist" (Passport control). On file: No booking to show.');
+    const line = caughtLine(later, 'i_clarify')!;
+    expect(t(line.key, line.vars)).toBe('You said: "Just a short trip home" (Passport control). Confirmed on file: No booking to show.');
     // An old save without saidAt names the desk that wrote it down, else this one.
     expect(caughtLine({ ...later, saidAt: undefined, logged: {} }, 'i_clarify')!.vars.desk).toBe('interview');
-    expect(caughtLine({ ...later, saidAt: undefined, logged: { tourism: ['customs'] } }, 'i_clarify')!.vars.desk).toBe('customs');
+    expect(caughtLine({ ...later, saidAt: undefined, logged: { shortTrip: ['customs'] } }, 'i_clarify')!.vars.desk).toBe('customs');
   });
 
   it('only a challenge card has the line', () => {
-    const s = facing('i_family', 'tourism', 'noBooking', 'passport', 'lena');
+    const s = facing('i_family', 'shortTrip', 'noBooking', 'passport', 'lena');
     expect(caughtLine(s, 'i_family')).toBeUndefined();
     expect(caughtLine(s, 'i_contradiction')).toBeUndefined();
   });
@@ -103,7 +104,7 @@ describe('a caught claim quotes your own words next to the fact', () => {
           if (!CARDS.some((c) => l.key === `enc.${c}.q` || l.key.startsWith(`enc.${c}.`) && l.key.endsWith('.q'))) return;
           met++;
           const next = tr.lines[at + 1];
-          expect(next?.key, `${style} seed ${setup.seed} step ${l.step}`).toBe('caught.line');
+          expect(next?.key, `${style} seed ${setup.seed} step ${l.step}`).toMatch(/^caught\.line\.(recorded|confirmed|flagged)$/);
           expect(next?.problem).toBeUndefined();
         });
       }
@@ -113,14 +114,14 @@ describe('a caught claim quotes your own words next to the fact', () => {
 
 describe('the clarify answers fit the pair that dealt the card', () => {
   // What each pair is about: the claim the accept answer stands by, and the fact
-  // its reaction names. A tourism answer to a hotel booking names the wrong claim.
+  // its reaction names. A shortTrip answer to a hotel booking names the wrong claim.
   const FIT: Record<string, { claim: RegExp; fact: RegExp }> = {
-    'tourism.familyAddress': { claim: /tourist/, fact: /family's address/ },
-    'tourism.fatherCondition': { claim: /tourist/, fact: /father's condition/ },
-    'tourism.noBooking': { claim: /tourist/, fact: /no booking/ },
+    'shortTrip.familyAddress': { claim: /short trip/, fact: /family's address/ },
+    'shortTrip.fatherCondition': { claim: /short trip/, fact: /father's condition/ },
+    'shortTrip.noBooking': { claim: /short trip/, fact: /no booking/ },
     'hotelStay.familyAddress': { claim: /hotel/, fact: /family's address/ },
   };
-  const CLAIM_WORDS = /tourist|hotel/;
+  const CLAIM_WORDS = /short trip|hotel/;
   const FACT_WORDS = /family's address|father's condition|no booking/;
   const pairs = INCONSISTENCIES.flatMap(([claim, fact]) => TRAVELERS.map((who) => [claim, fact, who] as const));
 

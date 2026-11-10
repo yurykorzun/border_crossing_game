@@ -3,11 +3,11 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
@@ -73,6 +73,13 @@ export const factIds = (s: RunState): FactId[] => Object.keys(s.facts) as FactId
 
 /** Whether the official at `desk` (the current one by default) knows `f`. */
 export const knows = (s: RunState, f: FactId, desk: Checkpoint = deskOf(s)): boolean => !!s.facts[f]?.includes(desk);
+
+/**
+ * How `f` sits on file: flagged once it was the reason scrutiny rose, else its
+ * tier in FACT_TIERS (recorded before you arrived, or confirmed on this crossing).
+ */
+export const factTier = (s: Pick<RunState, 'flagged'>, f: FactId): OnFileTier =>
+  s.flagged?.includes(f) ? 'flagged' : FACT_TIERS[f];
 
 /** What the official at `desk` knows, in the order it came out. */
 export const knownAt = (s: RunState, desk: Checkpoint = deskOf(s)): FactId[] => factIds(s).filter((f) => knows(s, f, desk));
@@ -398,7 +405,12 @@ function apply(s: RunState, effects: Effect[]): RunState {
     if (!check(e.when, n)) continue;
     if ('time' in e) n = { ...n, time: Math.max(0, n.time + e.time) };
     // Capped at the max, because anything at the max already means an inspection.
-    else if ('scrutiny' in e) n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)) };
+    else if ('scrutiny' in e) {
+      // A fact that is the reason scrutiny rises reads as flagged from now on (factTier()).
+      const reason = e.reason in FACT_TIERS ? (e.reason as FactId) : undefined;
+      const flag = e.scrutiny > 0 && reason && !(n.flagged ?? []).includes(reason);
+      n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)), ...(flag ? { flagged: [...(n.flagged ?? []), reason] } : {}) };
+    }
     else if ('fact' in e) n = { ...n, facts: teach(n.facts, e.fact, desksLearning(n.bulletin, deskOf(n))) };
     else if ('send' in e) {
       const to = nextDesk(deskOf(n));
@@ -613,7 +625,7 @@ export function caught(s: RunState, card: string): { claim: ClaimId; desk: Check
  * The text key for an answer on the card showing, `part` being its label or its
  * reaction. A challenge card can word an answer for the pair that dealt it
  * (caught()): `enc.i_clarify.hotelStay.familyAddress.accept.label`, because
- * "I came as a tourist" is the wrong answer to a hotel booking. Else the
+ * "It's just a short trip" is the wrong answer to a hotel booking. Else the
  * day's wording, when the bulletin changes what the answer does
  * (`enc.c_cash.under.bulletin.customs.reaction`: on a customs day the cash is
  * counted anyway). Else the traveler's own wording (own()), else the key itself.

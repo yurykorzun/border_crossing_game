@@ -18,6 +18,17 @@ Politics stay concrete and arrive through people and decisions: an outlet was ba
 
 Names used so far: the country is never named on screen in v0.1 (officers say "the Republic"), the capital crossing is Halden Central.
 
+Lena and Mark are citizens coming home after years abroad (Lena six, Mark four), not visitors. Nobody asks them for a visa or treats them as tourists. The officers ask about the absence and the ties abroad instead: "You haven't been back for six years. Why now?", a residence permit abroad, which passport they left on, a demonstration abroad. The state already holds part of their life (a registered address, an apartment in the land register, the record of each crossing), so some of what comes up is found, not told (see On file tiers under "Truth, claims, official knowledge").
+
+### Two pressures
+
+The Republic draws on two different present-day pressures. They stay distinct: each card, fact and line belongs to one of them, and no game text names a real country, a real person or a recognisable trip-plus-charge combination. Only the mechanisms are kept.
+
+1. The lists (the pressure on what you did before). Past support and protest become records long after the fact: a small donation to a fund that is now on an extremist list, an old photo from a demonstration, a phone that can be copied at the border. Family inside becomes leverage ("who else lives there"), and returning emigrants are questioned about what they did while away. In the game: `donation`, `protestPhoto`, `c_phone`, `f_donation`, `f_photo`, the bank notice, the protected cousin and the mother's call.
+2. The war (the pressure on where your loyalty lies). The Republic is at war with a neighbouring country. A second citizenship, a relative on the other side and money or work from abroad read as questions of loyalty, and the exit record shows which passport you left on. In the game: `secondPassport`, `brotherAtWar`, `foreignEmployer`, `p_secondPassport`, `i_brother`, `i_employer` and the protected brother.
+
+Lena carries mostly the first (the donation, her cousin) plus a foreign employer from the second. Mark carries mostly the second (two passports, his brother across the border) plus one photo from the first. The officers follow the same split: customs and the phone search look for the lists, the security interview asks about the war and ties abroad. When new content arrives, name which pressure it belongs to, and keep a mechanism from one out of the other (a donation is never a loyalty question about the war, a brother across the border is never on a fund's list).
+
 ## First mission: your father's stroke
 
 Your mother needs help arranging his care. The last bus to the hospital leaves in 8 hours, and the station is 2 hours past the border. You carry his medicine, some cash and your everyday phone.
@@ -54,6 +65,8 @@ At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny dr
 ## Characters (one strength, one weakness, three background facts)
 
 Background facts come from ordinary life and are the "My story" panel. Encounters key off them.
+
+Both are citizens returning after years abroad (see Setting).
 
 - Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
 - Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
@@ -162,15 +175,23 @@ What checks them so far:
 ## Truth, claims, official knowledge
 
 - Truth: fixed by your character ("My story" panel).
-- Claims: what you said ("Visiting as a tourist").
-- On file: what officials know ("Family address on file"), and which desk knows it.
+- Claims: what you said ("Just a short trip home").
+- On file: what officials know ("Your registered family address"), which desk knows it, and how it sits on file.
+
+On file tiers (`FACT_TIERS` in `src/game/content/world.ts`, `factTier()` in `src/game/engine.ts`). Every fact is one of three kinds, and the card names which: My story tags each fact, the line under a reaction says it ("Found in the old records: Your registered family address."), and the line under a challenge card's question says it ("In the old records: ..." / "Confirmed on file: ..." / "Flagged on file: ...").
+
+1. Recorded: the state had it before you arrived, because you are a citizen. The registered family address, the apartment in the land register, and the exit record that shows which passport you left on. A desk that brings one up found it ("He finds your registered address and asks whether your mother still lives there.").
+2. Confirmed: it came out on this crossing, from a document, an answer, a call or a search (your employer, your father's condition, the cash count).
+3. Flagged: marked for attention. A donation to a listed fund and a refused search are flagged as soon as they are on file, and any fact becomes flagged once it is the reason scrutiny rises (`RunState.flagged`), so "Yes, I have both" turns the recorded second passport into a flagged one.
+
+The tier is a label: it changes what the card says, never what a card costs or which card is dealt.
 
 The engine keeps these separate. Content can only key off claims and On file facts (and the character's background for which deck cards exist), never off truth officials couldn't know.
 
 A claim is in one of three tiers:
 
 1. Unchallenged: nothing on file speaks against it. The claim stands and you saved the time, card or contact a true answer would have cost. "It's under the limit" is free while nobody has counted the cash.
-2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said tourist, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
+2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said it is just a short trip home, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
 3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).

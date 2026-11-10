@@ -257,10 +257,10 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   }
   // Every topic a document answers is in its row, not only the first.
   const hospital = docsScreen.locator('.doc', { hasText: 'Hospital note' });
-  await expect(hospital.locator('.doc-topics')).toHaveText('Medicine · Visit purpose');
+  await expect(hospital.locator('.doc-topics')).toHaveText('Medicine · Why you came back');
   await expect(hospital.locator('.doc-reveals')).toHaveText("Reveals your father's condition");
   const letter = docsScreen.locator('.doc', { hasText: "Mother's letter" });
-  await expect(letter.locator('.doc-topics')).toHaveText('Visit purpose · Accommodation');
+  await expect(letter.locator('.doc-topics')).toHaveText('Why you came back · Accommodation');
   await expect(letter.locator('.doc-reveals')).toHaveText('Reveals her address');
   await expect(docsScreen.locator('.doc', { hasText: 'Hotel booking' }).locator('.doc-reveals')).toHaveCount(0);
 
