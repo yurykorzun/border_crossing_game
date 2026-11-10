@@ -10,7 +10,7 @@ import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
-import { own } from '../i18n';
+import { has, own } from '../i18n';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
@@ -602,6 +602,23 @@ export function caught(s: RunState, card: string): { claim: ClaimId; desk: Check
   return { claim, desk: saidDesk(s, claim), fact };
 }
 
+/**
+ * The text key for an answer on the card showing, `part` being its label or its
+ * reaction. A challenge card can word an answer for the pair that dealt it
+ * (caught()): `enc.i_clarify.hotelStay.familyAddress.accept.label`, because
+ * "I came as a tourist" is the wrong answer to a hotel booking. Else the
+ * traveler's own wording (own()), else the key itself.
+ */
+export function answerKey(s: RunState, approach: string, part: 'label' | 'reaction'): string {
+  const sc = s.screen;
+  const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
+  const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
+  const pair = sc.kind === 'encounter' ? caught(s, id) : undefined;
+  const paired = pair && `${prefix}.${id}.${pair.claim}.${pair.fact}.${approach}.${part}`;
+  if (paired && has(paired)) return paired;
+  return own(`${prefix}.${id}.${approach}.${part}`, s.character);
+}
+
 /** Where you first said `c`; a save from before saidAt existed names the first desk that wrote it down, else this one. */
 const saidDesk = (s: RunState, c: ClaimId): Checkpoint => s.saidAt?.[c] ?? loggedAt(s, c)[0] ?? deskOf(s);
 
@@ -757,7 +774,6 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const card = currentCard(s);
   const opt = options(s).find((o) => o.approach.id === approachId);
   if (!card || !opt || opt.blocked) return s;
-  const prefix = s.screen.kind === 'inspection' ? 'insp' : 'enc';
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
@@ -770,7 +786,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
-  n = say(n, [{ key: `${prefix}.${card.id}.${approachId}.reaction`, vars }]);
+  n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars }]);
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
   for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f } }]);
   // The call-in hour is a real cost too, so the reaction names whose statement it checks.

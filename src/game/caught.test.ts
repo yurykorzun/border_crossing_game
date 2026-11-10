@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { own, t } from '../i18n';
 import { playRun, setupFor } from './bots';
 import { caughtLine } from './consequence';
-import { CHALLENGE_PAIRS, ENCOUNTERS } from './content/encounters';
+import { CHALLENGE_PAIRS, ENCOUNTERS, INCONSISTENCIES } from './content/encounters';
 import { EVIDENCE } from './content/world';
-import { newRun, step } from './engine';
+import { answerKey, newRun, options, step } from './engine';
 import type { RunSetup } from './engine';
 import { transcriptOf } from './transcript';
 import { CHECKPOINTS } from './types';
@@ -108,5 +108,53 @@ describe('a caught claim quotes your own words next to the fact', () => {
         });
       }
     expect(met).toBeGreaterThan(0);
+  });
+});
+
+describe('the clarify answers fit the pair that dealt the card', () => {
+  // What each pair is about: the claim the accept answer stands by, and the fact
+  // its reaction names. A tourism answer to a hotel booking names the wrong claim.
+  const FIT: Record<string, { claim: RegExp; fact: RegExp }> = {
+    'tourism.familyAddress': { claim: /tourist/, fact: /family's address/ },
+    'tourism.fatherCondition': { claim: /tourist/, fact: /father's condition/ },
+    'tourism.noBooking': { claim: /tourist/, fact: /no booking/ },
+    'hotelStay.familyAddress': { claim: /hotel/, fact: /family's address/ },
+  };
+  const CLAIM_WORDS = /tourist|hotel/;
+  const FACT_WORDS = /family's address|father's condition|no booking/;
+  const pairs = INCONSISTENCIES.flatMap(([claim, fact]) => TRAVELERS.map((who) => [claim, fact, who] as const));
+
+  it('has a wording for every pair', () => {
+    expect(Object.keys(FIT).sort()).toEqual(INCONSISTENCIES.map(([c, f]) => `${c}.${f}`).sort());
+  });
+
+  it.each(pairs)('i_clarify for "%s" against %s (%s)', (claim, fact, who) => {
+    const s = facing('i_clarify', claim, fact, 'passport', who);
+    const fit = FIT[`${claim}.${fact}`];
+    const opts = options(s).filter((o) => !o.blocked);
+    expect(opts.map((o) => o.approach.id)).toEqual(['clarify', 'evidence', 'accept']);
+    for (const o of opts) {
+      const vars: Record<string, string> = {};
+      if (o.card) vars.card = vars.cardThe = o.card;
+      const label = t(answerKey(s, o.approach.id, 'label'), vars);
+      // The reaction as the engine says it after the answer.
+      const said = step(s, { type: 'choose', approach: o.approach.id }).reaction![0];
+      expect(said.key).toBe(answerKey(s, o.approach.id, 'reaction'));
+      const reaction = t(said.key, said.vars);
+      for (const text of [label, reaction]) expect(text).not.toMatch(/[{}—]/);
+      if (o.approach.id === 'accept') {
+        // Standing by what you said: the label repeats the claim, the officer names the fact.
+        expect(label).toMatch(fit.claim);
+        expect(label.replace(fit.claim, '')).not.toMatch(CLAIM_WORDS);
+        expect(reaction).toMatch(fit.fact);
+        expect(reaction.replace(fit.fact, '')).not.toMatch(FACT_WORDS);
+      } else {
+        // A new story or a document: neither names a claim or a fact, so each fits every pair.
+        expect(label).not.toMatch(CLAIM_WORDS);
+        expect(reaction).not.toMatch(CLAIM_WORDS);
+        expect(reaction).not.toMatch(FACT_WORDS);
+      }
+      expect(words(`${label} ${reaction}`)).toBeLessThanOrEqual(MAX_WORDS);
+    }
   });
 });
