@@ -38,15 +38,15 @@ test('one ending seen: Start shows the level list with Arrival, and Arrival play
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
 
-  // The level list comes before the traveler screen, with Level 1 Arrival only for now.
+  // The level list comes before the traveler screen: Level 1 Arrival, then Level 2 The funeral.
   const list = page.locator('main.level-step');
   await expect(list).toBeVisible();
   await expect(page.locator('main.traveler-step')).toHaveCount(0);
   await expect(list.locator('.stage-label')).toHaveText('1 / 4 · Crossing');
   await expect(list.getByRole('heading', { name: en['ui.pickLevel'] })).toBeVisible();
   const levels = list.getByRole('list', { name: en['ui.pickLevel'] }).locator('button.level');
-  await expect(levels).toHaveCount(1);
-  await expect(levels.locator('.level-name')).toHaveText(['Arrival']);
+  await expect(levels).toHaveCount(2);
+  await expect(levels.locator('.level-name')).toHaveText(['Arrival', 'The funeral']);
   await expect(levels.first()).toContainText('Level 1');
   await fitsScreen(page, 'level list');
 
