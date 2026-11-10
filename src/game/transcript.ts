@@ -139,7 +139,18 @@ function setupLines(setup: RunSetup, p: Page): void {
     p.add(LEVELS[id].title);
     p.add(LEVELS[id].blurb);
   }
-  // Setup 2: TravelerStep. Title, Back, stage label, the premise as the heading, two cards.
+  // The daily crossing's row, under the levels.
+  p.add('ui.dailyLabel');
+  p.add('ui.dailyTitle');
+  p.add('ui.dailyBlurb');
+  // The daily crossing picks the traveler, so it goes straight to packing.
+  if (!setup.daily) travelerLines(setup, p);
+  packingLines(setup, p);
+  beginLines(setup, p);
+}
+
+/** Setup 2: TravelerStep. Title, Back, stage label, the premise as the heading, two cards. */
+function travelerLines(setup: RunSetup, p: Page): void {
   p.add('ui.title');
   p.add('scene.traveler', {}, CHROME);
   p.add('ui.back');
@@ -161,7 +172,10 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.readHistory', { name });
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character, ...CHROME });
   p.add('ui.continueAs', { name });
-  // Setup 3: Pack your documents (DocumentsStep)
+}
+
+/** Setup 3: Pack your documents (DocumentsStep). A daily crossing lists a bulletin per desk and no cue. */
+function packingLines(setup: RunSetup, p: Page): void {
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
   p.add('scene.preparation', {}, CHROME);
@@ -171,9 +185,13 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.prepareDocuments');
   p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
-  p.add(`bulletin.${setup.bulletin}`);
-  // The one cue above the list: what officers are doing today. It is read, so it counts.
-  p.add(`bulletin.${setup.bulletin}.cue`);
+  if (setup.bulletins) {
+    setup.bulletins.forEach((b, i) => p.add('ui.dailyBulletin', { desk: CHECKPOINTS[i], text: t(`bulletin.${b}`) }));
+  } else {
+    p.add(`bulletin.${setup.bulletin}`);
+    // The one cue above the list: what officers are doing today. It is read, so it counts.
+    p.add(`bulletin.${setup.bulletin}.cue`);
+  }
   for (const id of EVIDENCE_IDS) {
     p.add(`ev.${id}.label`);
     for (const line of packDetail(id)) {
@@ -189,13 +207,22 @@ function setupLines(setup: RunSetup, p: Page): void {
   }
   p.add('ui.moreBelow');
   p.add('ui.continue');
-  // Setup 4: Begin the crossing, with the level's goal
+}
+
+/** Setup 4: Begin the crossing, with the level's goal. A daily crossing names its traveler and offers carry-over. */
+function beginLines(setup: RunSetup, p: Page): void {
   const level = levelOf(setup);
   p.add('ui.beginCrossing');
+  if (setup.daily) {
+    p.add('ui.yourTraveler');
+    p.add(`char.${setup.character}.name`, {}, { who: setup.character });
+    p.add(`char.${setup.character}.role`, {}, { who: setup.character });
+  }
   p.add('ui.mission');
   p.add(level.goalTitle);
   p.add(level.goalBody, { hours: level.startTime, travel: level.minTripTime });
   p.add('ui.missionRule', { n: level.minTripTime });
+  if (setup.daily) p.add('ui.dailyMemory');
   p.add('ui.yourDocuments');
   for (const id of setup.loadout) p.add(`ev.${id}.name`);
 }
@@ -747,7 +774,7 @@ export const formatFailure = (f: Failure) =>
 export function transcriptText(tr: Transcript): string {
   const { setup } = tr;
   const head = [
-    `${tr.style} · seed ${setup.seed} · ${setup.character} · ${setup.bulletin} bulletin · packed ${setup.loadout.join(', ')}`,
+    `${tr.style} · seed ${setup.seed} · ${setup.daily ? `daily ${setup.daily} · ` : ''}${setup.character} · ${setup.bulletins ? `${setup.bulletins.join(' / ')} bulletins` : `${setup.bulletin} bulletin`} · packed ${setup.loadout.join(', ')}`,
     `ending: ${tr.ending ?? 'none'} · estimated ${playMinutes(tr).toFixed(1)} min (${words(tr)} words, ${tr.beatSeconds.toFixed(0)} s of beats, ${tr.decisions} decisions)`,
     '',
   ];

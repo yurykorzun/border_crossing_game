@@ -309,6 +309,8 @@ export interface CarriedFile {
   medicine: boolean;
   /** Set when no crossing was saved and the file was built from a seed (defaultFile()). */
   seeded?: true;
+  /** The date (YYYY-MM-DD) when the file came from a daily crossing (src/game/daily.ts). */
+  daily?: string;
 }
 
 export type WaitAction = 'wait' | 'ask' | 'assist';
@@ -352,7 +354,15 @@ export interface RunState {
   seed: number;
   rng: number;
   character: CharacterId;
+  /** The bulletin in force. With `bulletins` set, the first desk's: bulletinOf() in src/game/engine.ts reads the right one. */
   bulletin: BulletinId;
+  /**
+   * A daily crossing's bulletins, one per desk in CHECKPOINTS order (src/game/daily.ts).
+   * Unset on a level run, where `bulletin` holds at every desk.
+   */
+  bulletins?: BulletinId[];
+  /** The date (YYYY-MM-DD) of the daily crossing this run is. Unset on a level run. */
+  daily?: string;
   loadout: EvidenceId[];
   used: EvidenceId[];
   exposed: ContactId[];

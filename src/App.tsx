@@ -9,7 +9,9 @@ import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
-import type { Option } from './game/engine';
+import type { Option, RunSetup } from './game/engine';
+import { dailyRunSetup, dailySetup, dateKey } from './game/daily';
+import type { DailySetup } from './game/daily';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
@@ -17,7 +19,7 @@ import { DEFAULT_LEVEL, LEVELS, levelRows } from './game/content/levels';
 import { browserStore, load, openQuestions, save } from './game/save';
 import { recordRun } from './game/carry';
 import type { SaveData } from './game/save';
-import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
+import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
 import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
@@ -38,7 +40,7 @@ export default function App() {
 
 function Game() {
   const [data, setData] = useState<SaveData>(() => load(store));
-  const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number } | null>(null);
+  const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number; date: string } | null>(null);
 
   useEffect(() => save(store, data), [data]);
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
@@ -53,7 +55,8 @@ function Game() {
 
   const startSetup = () => {
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
-    setSetup({ seed, bulletin: BULLETINS[Math.abs(seed) % BULLETINS.length] });
+    // The clock is read here, once, and the date passed down: the daily crossing is picked by it (src/game/daily.ts).
+    setSetup({ seed, bulletin: BULLETINS[Math.abs(seed) % BULLETINS.length], date: dateKey(new Date()) });
     setData((d) => ({ ...d, run: null }));
   };
 
@@ -64,9 +67,14 @@ function Game() {
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
+          seed={setup.seed}
+          date={setup.date}
           endingsSeen={data.endingsSeen}
-          onStart={(level, character, loadout) => {
-            setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
+          dailyFile={data.dailyFile}
+          memory={data.settings.dailyMemory}
+          setMemory={(on) => setData((d) => ({ ...d, settings: { ...d.settings, dailyMemory: on } }))}
+          onStart={(runSetup) => {
+            setData((d) => ({ ...d, run: newRun(runSetup) }));
             setSetup(null);
           }}
         />
@@ -156,23 +164,54 @@ type SetupStep = (typeof SETUP_STEPS)[number];
 
 // Before the first ending (firstRun) there are no choices yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1, with no way back to the picks.
-function Setup({ bulletin, endingsSeen, onStart }: {
+function Setup({ bulletin, seed, date, endingsSeen, dailyFile, memory, setMemory, onStart }: {
   bulletin: BulletinId;
+  seed: number;
+  /** Today, YYYY-MM-DD: picks the daily crossing. */
+  date: string;
   endingsSeen: readonly EndingId[];
-  onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
+  /** The last daily crossing's file, which the officers remember with carry-over on. */
+  dailyFile: CarriedFile | null;
+  memory: boolean;
+  setMemory: (on: boolean) => void;
+  onStart: (setup: RunSetup) => void;
 }) {
   const firstRun = endingsSeen.length === 0;
   const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'level');
   const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
+  // The daily crossing, once picked on the list: it sets the level and the traveler, so the traveler screen is skipped.
+  const [day, setDay] = useState<DailySetup | null>(null);
   const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
+  const start = (c: CharacterId) =>
+    onStart(day ? dailyRunSetup(day, picked, memory ? dailyFile : null) : { level, character: c, loadout: picked, bulletin, seed });
 
   if (firstRun && character) {
-    return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => onStart(level, character, picked)} />;
+    return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => start(character)} />;
   }
   if (at === 'level') {
-    return <LevelStep endingsSeen={endingsSeen} onPick={(id) => { setLevel(id); move(1); }} />;
+    const pickDaily = () => {
+      const d = dailySetup(date);
+      setDay(d);
+      setLevel(d.level);
+      setCharacter(d.character);
+      setPicked((p) => p.slice(0, CHARACTERS[d.character].evidenceSlots));
+      setAt('documents');
+    };
+    return <LevelStep endingsSeen={endingsSeen} onPick={(id) => { setDay(null); setLevel(id); move(1); }} onDaily={pickDaily} />;
+  }
+  if (day && character) {
+    if (at === 'documents') {
+      return (
+        <DocumentsStep character={character} bulletin={bulletin} bulletins={day.bulletins} picked={picked} setPicked={setPicked}
+          onBack={() => { setDay(null); setCharacter(null); setPicked([]); setAt('level'); }} onContinue={() => setAt('begin')} />
+      );
+    }
+    return (
+      <BeginStep level={day.level} picked={picked} traveler={character} memory={{ on: memory, set: setMemory }}
+        onBack={() => setAt('documents')} onBegin={() => start(character)} />
+    );
   }
   if (at === 'traveler' || !character) {
     return (
@@ -191,14 +230,14 @@ function Setup({ bulletin, endingsSeen, onStart }: {
   if (at === 'documents') {
     return <DocumentsStep character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
   }
-  return <BeginStep level={level} picked={picked} onBack={() => move(-1)} onBegin={() => onStart(level, character, picked)} />;
+  return <BeginStep level={level} picked={picked} onBack={() => move(-1)} onBegin={() => start(character)} />;
 }
 
 /**
  * Setup 1, once an ending is seen: the level list. Each level is one button, so
  * a tap starts it and the traveler screen follows. Level 1 Arrival is today's mission.
  */
-function LevelStep({ endingsSeen, onPick }: { endingsSeen: readonly EndingId[]; onPick: (id: LevelId) => void }) {
+function LevelStep({ endingsSeen, onPick, onDaily }: { endingsSeen: readonly EndingId[]; onPick: (id: LevelId) => void; onDaily: () => void }) {
   const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('level') + 1, total: SETUP_STEPS.length });
   return (
     <main className="setup setup-step level-step">
@@ -218,6 +257,14 @@ function LevelStep({ endingsSeen, onPick }: { endingsSeen: readonly EndingId[]; 
               </button>
             </li>
           ))}
+          {/* The daily crossing: open from the start, the same setup for everyone on the same date (src/game/daily.ts). */}
+          <li>
+            <button type="button" className="daily" onClick={onDaily}>
+              <span className="mono level-number">{t('ui.dailyLabel')}</span>
+              <strong className="level-name">{t('ui.dailyTitle')}</strong>
+              <span className="level-line">{t('ui.dailyBlurb')}</span>
+            </button>
+          </li>
         </ul>
       </div>
     </main>
@@ -234,9 +281,11 @@ function BackButton({ onBack }: { onBack: () => void }) {
 }
 
 /** Setup 3. Packing is where hours and scrutiny first matter, so both are explained here. */
-function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onContinue }: {
+function DocumentsStep({ character, bulletin, bulletins, picked, setPicked, onBack, onContinue }: {
   character: CharacterId;
   bulletin: BulletinId;
+  /** A daily crossing's bulletins, one per desk: listed by desk, with no cue, in place of the one bulletin. */
+  bulletins?: readonly BulletinId[];
   picked: EvidenceId[];
   setPicked: React.Dispatch<React.SetStateAction<EvidenceId[]>>;
   onBack: () => void;
@@ -260,12 +309,23 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
           <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
           <p className="pack-count" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
         </header>
-        <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
-          <Icon name="alert" />
-          <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
-        </p>
-        {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
-        <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
+        {bulletins ? (
+          <div className="bulletin daily-bulletins" role="note" aria-label={t('ui.bulletin')}>
+            <Icon name="alert" />
+            <ul className="bulletin-text">
+              {bulletins.map((b, i) => <li key={CHECKPOINTS[i]}>{t('ui.dailyBulletin', { desk: CHECKPOINTS[i], text: t(`bulletin.${b}`) })}</li>)}
+            </ul>
+          </div>
+        ) : (
+          <>
+            <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
+              <Icon name="alert" />
+              <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
+            </p>
+            {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
+            <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
+          </>
+        )}
         <ul className="cards pick" aria-label={t('ui.prepareDocuments')}>
           {EVIDENCE_IDS.map((id) => (
             <li key={id}>
@@ -316,10 +376,12 @@ function useMoreBelow() {
  * Setup 4. The mission, the rest of the premise and what you packed, then the one strong button.
  * On the first run there is no Back, and `traveler` names who you cross as, since nobody picked.
  */
-function BeginStep({ level, picked, traveler, onBack, onBegin }: {
+function BeginStep({ level, picked, traveler, memory, onBack, onBegin }: {
   level: LevelId;
   picked: EvidenceId[];
   traveler?: CharacterId;
+  /** The daily crossing's carry-over box: off by default, kept in the settings. */
+  memory?: { on: boolean; set: (on: boolean) => void };
   onBack?: () => void;
   onBegin: () => void;
 }) {
@@ -345,6 +407,12 @@ function BeginStep({ level, picked, traveler, onBack, onBegin }: {
           <p>{t(goal.goalBody, { hours: goal.startTime, travel: goal.minTripTime })}</p>
           <p className="rule">{t('ui.missionRule', { n: goal.minTripTime })}</p>
         </section>
+        {memory && (
+          <label className="setting daily-memory">
+            <input type="checkbox" checked={memory.on} onChange={(e) => memory.set(e.target.checked)} />
+            <span>{t('ui.dailyMemory')}</span>
+          </label>
+        )}
         <section className="packed-list">
           <h3 className="mono">{t('ui.yourDocuments')}</h3>
           <ul>{packed.map((id) => <li key={id}>{t(`ev.${id}.name`)}</li>)}</ul>

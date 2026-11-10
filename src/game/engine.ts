@@ -21,20 +21,33 @@ export interface RunSetup {
   character: CharacterId;
   loadout: EvidenceId[];
   bulletin: BulletinId;
+  /** A daily crossing's bulletins, one per desk in CHECKPOINTS order. `bulletin` is then the first of them. */
+  bulletins?: readonly BulletinId[];
+  /** The date (YYYY-MM-DD) of a daily crossing (dailyRunSetup() in src/game/daily.ts). */
+  daily?: string;
+  /**
+   * Claims the officers remember from your last daily crossing: on file from the
+   * start, written down at every desk that writes such a claim down (writesDown).
+   */
+  remembered?: readonly ClaimId[];
   seed: number;
 }
 
 export function newRun(setup: RunSetup): RunState {
   const ch = CHARACTERS[setup.character];
   if (setup.loadout.length !== ch.evidenceSlots) throw new Error(`${ch.id} takes ${ch.evidenceSlots} evidence cards`);
+  if (setup.bulletins && setup.bulletins.length !== CHECKPOINTS.length) throw new Error(`a daily crossing has one bulletin per desk, ${CHECKPOINTS.length}`);
   const level = levelOf(setup);
+  const remembered = [...new Set(setup.remembered ?? [])];
   return {
     v: 2,
     level: setup.level ?? DEFAULT_LEVEL,
     seed: setup.seed,
     rng: setup.seed,
     character: ch.id,
-    bulletin: setup.bulletin,
+    bulletin: setup.bulletins?.[0] ?? setup.bulletin,
+    ...(setup.bulletins ? { bulletins: [...setup.bulletins] } : {}),
+    ...(setup.daily ? { daily: setup.daily } : {}),
     loadout: [...setup.loadout],
     used: [],
     exposed: [],
@@ -43,8 +56,8 @@ export function newRun(setup: RunSetup): RunState {
     travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
     facts: {},
-    claims: [],
-    logged: {},
+    claims: remembered,
+    logged: Object.fromEntries(remembered.map((c) => [c, CHECKPOINTS.filter((d) => writesDown(d, c))])),
     saidAt: {},
     medicine: true,
     perkUsed: false,
@@ -88,6 +101,13 @@ function teach(facts: FactMap, f: FactId, desks: Checkpoint[]): FactMap {
 }
 
 /**
+ * The bulletin in force at `desk` (the current one by default): on a daily
+ * crossing that desk's own, else the run's one bulletin.
+ */
+export const bulletinOf = (s: Pick<RunState, 'bulletin' | 'bulletins' | 'checkpoint'>, desk: Checkpoint = CHECKPOINTS[Math.min(s.checkpoint, CHECKPOINTS.length - 1)]): BulletinId =>
+  s.bulletins?.[CHECKPOINTS.indexOf(desk)] ?? s.bulletin;
+
+/**
  * The desks that learn a fact when it comes out at `desk`: that desk, and with
  * the records bulletin every later one, through the shared records system.
  */
@@ -117,7 +137,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   const ch = CHARACTERS[s.character];
   if (cond.character && cond.character !== s.character) return false;
   if (cond.background && !ch.background.includes(cond.background)) return false;
-  if (cond.bulletin && cond.bulletin !== s.bulletin) return false;
+  if (cond.bulletin && cond.bulletin !== bulletinOf(s)) return false;
   if (cond.facts && !cond.facts.every((f) => knows(s, f))) return false;
   if (cond.noFacts && cond.noFacts.some((f) => knows(s, f))) return false;
   if (cond.claims && !cond.claims.every((c) => s.claims.includes(c))) return false;
@@ -399,7 +419,7 @@ function apply(s: RunState, effects: Effect[]): RunState {
     if ('time' in e) n = { ...n, time: Math.max(0, n.time + e.time) };
     // Capped at the max, because anything at the max already means an inspection.
     else if ('scrutiny' in e) n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)) };
-    else if ('fact' in e) n = { ...n, facts: teach(n.facts, e.fact, desksLearning(n.bulletin, deskOf(n))) };
+    else if ('fact' in e) n = { ...n, facts: teach(n.facts, e.fact, desksLearning(bulletinOf(n), deskOf(n))) };
     else if ('send' in e) {
       const to = nextDesk(deskOf(n));
       if (to) for (const f of sentFacts(n, e)) n = { ...n, facts: teach(n.facts, f, [to]) };
@@ -552,12 +572,12 @@ function admission(s: RunState, dealer: Dealer): RunState {
   const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
   if (rest) return show(s, rest.id);
   let n = s;
-  if (coversWarning(s.used, s.bulletin)) {
+  if (coversWarning(s.used, bulletinOf(s))) {
     const r = dealer(s.rng, 3);
     n = { ...s, rng: r.rng };
     if (r.index !== 0) return finish(n);
   }
-  const topic = BULLETIN_TOPICS[n.bulletin];
+  const topic = BULLETIN_TOPICS[bulletinOf(n)];
   return inspect(n, dealer, (i) => i.approaches.some((a) => a.kind === 'evidence' && a.topic === topic));
 }
 
@@ -625,7 +645,7 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   const pair = sc.kind === 'encounter' ? caught(s, id) : undefined;
   const paired = pair && `${prefix}.${id}.${pair.claim}.${pair.fact}.${approach}.${part}`;
   if (paired && has(paired)) return paired;
-  const daily = `${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`;
+  const daily = `${prefix}.${id}.${approach}.bulletin.${bulletinOf(s)}.${part}`;
   if (has(daily)) return daily;
   return own(`${prefix}.${id}.${approach}.${part}`, s.character);
 }

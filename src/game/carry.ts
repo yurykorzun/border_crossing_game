@@ -20,17 +20,21 @@ export function fileOf(s: RunState): CarriedFile {
     kept: s.loadout.filter((e) => !s.used.includes(e)),
     spent: s.loadout.filter((e) => s.used.includes(e)),
     medicine: s.medicine,
+    ...(s.daily ? { daily: s.daily } : {}),
   };
 }
 
 /**
  * The save after a run step: once the run has ended, its ending counts as seen and
- * its file replaces the last one. A run still under way leaves both alone.
+ * its file replaces the last one. A daily crossing's file also replaces the last
+ * daily one, which the next daily crossing reads (src/game/daily.ts). A run still
+ * under way leaves all of them alone.
  */
 export function recordRun(d: SaveData, run: RunState): SaveData {
   if (!run.ending) return { ...d, run };
   const endingsSeen = d.endingsSeen.includes(run.ending) ? d.endingsSeen : [...d.endingsSeen, run.ending];
-  return { ...d, run, endingsSeen, file: fileOf(run) };
+  const file = fileOf(run);
+  return { ...d, run, endingsSeen, file, dailyFile: run.daily ? file : d.dailyFile };
 }
 
 /**

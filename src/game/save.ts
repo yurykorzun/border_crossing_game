@@ -8,6 +8,8 @@ export interface Settings {
   reduceWait: boolean;
   reduceMotion: boolean;
   sound: boolean;
+  /** Daily crossing carry-over: the officers remember your last daily crossing. Off by default (src/game/daily.ts). */
+  dailyMemory: boolean;
 }
 
 export interface SaveData {
@@ -19,6 +21,8 @@ export interface SaveData {
    * to read. Null until a crossing ends; unset in saves from before it existed.
    */
   file: CarriedFile | null;
+  /** The file from the last finished daily crossing, which the next one reads with carry-over on. Null until one ends. */
+  dailyFile: CarriedFile | null;
   settings: Settings;
 }
 
@@ -52,7 +56,8 @@ function loadFile(x: unknown): CarriedFile | null {
   if (!x || typeof x !== 'object') return null;
   const f = x as Partial<CarriedFile>;
   const ok = typeof f.level === 'string' && typeof f.character === 'string' && ENDINGS.includes(f.ending as EndingId)
-    && isList(f.claims) && isList(f.named) && isList(f.kept) && isList(f.spent) && typeof f.medicine === 'boolean';
+    && isList(f.claims) && isList(f.named) && isList(f.kept) && isList(f.spent) && typeof f.medicine === 'boolean'
+    && (f.daily === undefined || typeof f.daily === 'string');
   return ok ? (f as CarriedFile) : null;
 }
 
@@ -61,7 +66,8 @@ export const freshSave = (): SaveData => ({
   run: null,
   endingsSeen: [],
   file: null,
-  settings: { reduceWait: false, reduceMotion: false, sound: true },
+  dailyFile: null,
+  settings: { reduceWait: false, reduceMotion: false, sound: true, dailyMemory: false },
 });
 
 export function load(store: Store): SaveData {
@@ -76,6 +82,7 @@ export function load(store: Store): SaveData {
       run: data.run && data.run.v === 2 ? data.run : null,
       endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e) => ENDINGS.includes(e)) : [],
       file: loadFile(data.file),
+      dailyFile: loadFile(data.dailyFile),
       settings: { ...base.settings, ...(data.settings ?? {}) },
     };
   } catch {

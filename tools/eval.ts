@@ -4,10 +4,11 @@
 // whole-eval check that is not ok (rule 4 only reports the median full run;
 // rules 7-9 check balance shares once every style has 100 runs, rule 10 the
 // memorised script's homeInTime once it has 100 runs).
-// `npm run eval -- [--seeds 200] [--seed 0] [--level arrival] [--no-known] [--min-minutes 4.5] [--out dir]`
+// `npm run eval -- [--seeds 200] [--seed 0] [--level arrival|daily] [--daily-from 2026-11-01] [--no-known] [--min-minutes 4.5] [--out dir]`
 //
-// Every level in turn (LEVEL_IDS in src/game/content/levels.ts), or only --level,
-// each judged by the same rules. Any level failing fails the command.
+// Every level in turn (LEVEL_IDS in src/game/content/levels.ts), then the daily
+// crossing over 30 dates from --daily-from (src/game/daily.ts), or only --level,
+// each judged by the same rules. Any part failing fails the command.
 //
 // Run i uses setupFor(seed + i), like `npm run autoplay`, so a failure's
 // "seed N" is setupFor(N - 1). Also writes 3 transcripts per style to eval-out/
@@ -19,6 +20,8 @@ import type { BotStyle } from '../src/game/bots';
 import { KNOWN_FAILURES, MEMORISED_RULE, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
 import type { Transcript } from '../src/game/transcript';
 import { LEVELS, LEVEL_IDS, isLevelId } from '../src/game/content/levels';
+import { EVAL_DAYS, dailyEvalSetup } from '../src/game/daily';
+import type { RunSetup } from '../src/game/engine';
 import type { LevelId } from '../src/game/types';
 
 /**
@@ -58,34 +61,59 @@ if (!OUT) {
 
 const levelAt = process.argv.indexOf('--level');
 const ONLY = levelAt < 0 ? undefined : process.argv[levelAt + 1];
-if (ONLY !== undefined && !isLevelId(ONLY)) {
-  console.error(`--level needs one of: ${LEVEL_IDS.join(', ')}`);
+if (ONLY !== undefined && ONLY !== 'daily' && !isLevelId(ONLY)) {
+  console.error(`--level needs one of: ${[...LEVEL_IDS, 'daily'].join(', ')}`);
   process.exit(2);
 }
-const PLAYED: LevelId[] = ONLY === undefined ? LEVEL_IDS : [ONLY];
+const PLAYED: LevelId[] = ONLY === undefined ? LEVEL_IDS : isLevelId(ONLY) ? [ONLY] : [];
+const DAILY = ONLY === undefined || ONLY === 'daily';
+
+// The daily crossing's first date. Fixed, so every eval plays the same 30 dates.
+const fromAt = process.argv.indexOf('--daily-from');
+const DAILY_FROM = fromAt < 0 ? '2026-11-01' : process.argv[fromAt + 1];
+if (!/^\d{4}-\d{2}-\d{2}$/.test(DAILY_FROM ?? '')) {
+  console.error('--daily-from needs a YYYY-MM-DD date');
+  process.exit(2);
+}
 
 if (outAt < 0) rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 let written = 0;
 let exitCode = 0;
 
-for (const level of PLAYED) {
+/** One part of the eval: a level, or the daily crossing. Run i plays setupAt(START + i). */
+interface Part {
+  name: string;
+  title: string;
+  setupAt: (i: number) => RunSetup;
+  /** The level whose known entries apply. The daily crossing has none of its own. */
+  knownLevel?: LevelId;
+}
+
+const parts: Part[] = PLAYED.map((level) => ({
+  name: level, title: `level ${LEVELS[level].number} ${level}`, setupAt: (i: number) => setupFor(i, level), knownLevel: level,
+}));
+// The daily crossing over EVAL_DAYS dates from DAILY_FROM, carry-over off (dailyEvalSetup() in src/game/daily.ts).
+if (DAILY) parts.push({ name: 'daily', title: `daily crossing, ${EVAL_DAYS} dates from ${DAILY_FROM}`, setupAt: (i) => dailyEvalSetup(i, DAILY_FROM) });
+
+for (const part of parts) {
   const transcripts: Transcript[] = [];
   for (const style of STYLES)
     for (let i = 0; i < SEEDS; i++) {
-      const setup = setupFor(START + i, level);
+      const setup = part.setupAt(START + i);
       transcripts.push(transcriptOf(playRun(style, setup), setup));
     }
 
   for (const style of STYLES)
     for (const tr of transcripts.filter((x) => x.style === style).slice(0, SAMPLES_PER_STYLE)) {
-      writeFileSync(join(OUT, `${level}-${style}-seed${tr.setup.seed}.txt`), transcriptText(tr));
+      const day = tr.setup.daily ? `-${tr.setup.daily}` : '';
+      writeFileSync(join(OUT, `${part.name}-${style}${day}-seed${tr.setup.seed}.txt`), transcriptText(tr));
       written++;
     }
 
   // A known entry with no level is Arrival's, from before levels existed.
-  const r = evaluate(transcripts, known.filter((k) => (k.level ?? 'arrival') === level), rules);
-  console.log(`eval: level ${LEVELS[level].number} ${level}, ${SEEDS} seeds x ${STYLES.length} styles (${STYLES.join(', ')}) = ${r.runs} runs`);
+  const r = evaluate(transcripts, known.filter((k) => part.knownLevel !== undefined && (k.level ?? 'arrival') === part.knownLevel), rules);
+  console.log(`eval: ${part.title}, ${SEEDS} seeds x ${STYLES.length} styles (${STYLES.join(', ')}) = ${r.runs} runs`);
   for (const rule of rules) {
     const all = r.byRule.get(rule.id)!;
     const fresh = r.fresh.filter((f) => f.rule === rule.id).length;
@@ -100,9 +128,9 @@ for (const level of PLAYED) {
       ? `  known: rule ${k.entry.rule} ${k.entry.key}${k.entry.character ? ` (${k.entry.character})` : ''}, ${k.count} failures, fixed by ${k.entry.bead}`
       : `  STALE known entry: rule ${k.entry.rule} ${k.entry.key} no longer fails; remove it (${k.entry.bead})`);
   // Rule 10, the memorised script (see tools/autoplay.ts): played here, judged by memorisedSummary().
-  const script = firstPassScript(SEEDS, START, level);
+  const script = firstPassScript(SEEDS, START, part.knownLevel, part.setupAt);
   let memorisedHome = 0;
-  for (let i = 0; i < SEEDS; i++) if (playScript(script, setupFor(START + i, level)).final.ending === 'homeInTime') memorisedHome++;
+  for (let i = 0; i < SEEDS; i++) if (playScript(script, part.setupAt(START + i)).final.ending === 'homeInTime') memorisedHome++;
   const memorised = memorisedSummary(memorisedHome, SEEDS);
   console.log(`  ${(memorised.ok ? 'ok' : 'FAIL').padEnd(6)}rule ${MEMORISED_RULE.id}: ${MEMORISED_RULE.name}`);
   console.log(`        ${memorised.ok ? '' : 'FAIL '}${formatSummary(memorised)}`);

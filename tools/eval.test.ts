@@ -26,8 +26,9 @@ describe('npm run eval', () => {
     expect(r.status, r.stderr).toBe(1);
     expect(r.stdout).toMatch(/rule 4: liar seed 5 step \d+ \(lena, tooShort\)/);
     expect(r.stdout).toContain('eval: FAIL');
-    // 3 transcripts for each of the 5 bot styles.
-    expect(r.files).toHaveLength(15);
+    // 3 transcripts for each of the 5 bot styles, for Arrival and for the daily crossing.
+    expect(r.files).toHaveLength(30);
+    expect(r.files.filter((f) => f.startsWith('daily-'))).toHaveLength(15);
   }, 30_000);
 
   it('exits 0 when no rule breaks', () => {

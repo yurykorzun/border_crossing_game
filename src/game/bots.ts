@@ -316,10 +316,13 @@ export function buildScript(runs: readonly BotRun[]): Script {
   return script;
 }
 
-/** The first pass: every style over a level's setups seed..seed + runs - 1, the ones autoplay plays. */
-export function firstPassScript(runs: number, seed = 0, level: LevelId = DEFAULT_LEVEL): Script {
+/**
+ * The first pass: every style over a level's setups seed..seed + runs - 1, the ones autoplay plays.
+ * `setupAt` swaps in other setups by run number (the daily crossing's in tools/eval.ts).
+ */
+export function firstPassScript(runs: number, seed = 0, level: LevelId = DEFAULT_LEVEL, setupAt: (i: number) => RunSetup = (i) => setupFor(i, level)): Script {
   const pass: BotRun[] = [];
-  for (const style of BOT_STYLES) for (let i = 0; i < runs; i++) pass.push(playRun(style, setupFor(seed + i, level)));
+  for (const style of BOT_STYLES) for (let i = 0; i < runs; i++) pass.push(playRun(style, setupAt(seed + i)));
   return buildScript(pass);
 }
 

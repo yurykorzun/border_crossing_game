@@ -144,6 +144,10 @@ p { margin: 0 0 var(--gap); }
   line-height: 1.35;
 }
 .bulletin .icon { margin-top: 2px; }
+/* A daily crossing's bulletins: the same amber bar, one line per desk. */
+.daily-bulletins ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+/* The daily crossing's carry-over box on the begin screen: a paper row, off by default. */
+.daily-memory { background: var(--paper); color: var(--ink); border-radius: var(--radius); border-bottom: 0; padding: 0 12px; }
 .bulletin .icon-ink { fill: var(--amber-dark); }
 .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap); }
 .doc {
@@ -231,9 +235,9 @@ p { margin: 0 0 var(--gap); }
 .packed-list h3 { color: #c5cec9; margin-bottom: 6px; }
 .packed-list ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
 /* Traveler (TravelerStep): title, scene slot, stage, premise heading, two cards, history link. */
-/* The level list (LevelStep): one paper button per level, a tap starts it. */
+/* The level list (LevelStep): one paper button per level, a tap starts it, and the daily crossing styled the same under them. */
 .levels { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap); }
-.level {
+.level, .daily {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -248,7 +252,7 @@ p { margin: 0 0 var(--gap); }
   text-align: start;
   cursor: pointer;
 }
-.level:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
+.level:focus-visible, .daily:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
 /* A locked level: still listed, with what opens it in place of its blurb. */
 .level:disabled { cursor: default; border-style: dashed; }
 .level-number { color: var(--muted); }

@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { deskOf, factIds, legalActions, newRun, options, step, travelOf } from './engine';
+import { bulletinOf, deskOf, factIds, legalActions, newRun, options, step, travelOf } from './engine';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
 import { CHARACTERS } from './content/world';
@@ -92,7 +92,7 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   const here = deskOf(s);
   for (const id of factIds(n)) {
     const desks = added(s.facts[id] ?? [], n.facts[id] ?? []).filter((d) => d !== here);
-    if (desks.length) ev.push({ type: 'factSent', id, desks, via: s.bulletin === 'records' ? 'records' : 'desk' });
+    if (desks.length) ev.push({ type: 'factSent', id, desks, via: bulletinOf(s) === 'records' ? 'records' : 'desk' });
   }
   if (s.medicine && !n.medicine) ev.push({ type: 'medicineLost' });
   if (travelOf(n) !== travelOf(s)) ev.push({ type: 'travelChanged', hours: travelOf(n) });

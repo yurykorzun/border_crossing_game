@@ -40,6 +40,14 @@ export const en: Record<string, string> = {
   'ui.levelOpensAt.other': 'Opens after {n} different endings',
   'level.arrival.title': 'Arrival',
   'level.arrival.blurb': 'Home to your father in the hospital, before the last bus leaves.',
+  // The daily crossing's row under the levels, kept short: every returning player reads it.
+  'ui.dailyLabel': 'Today',
+  'ui.dailyTitle': 'Daily crossing',
+  'ui.dailyBlurb': 'The same for everyone.',
+  // Packing on a daily crossing: one bulletin per desk, "Passport: IDs are checked against old records."
+  'ui.dailyBulletin': '{desk}: {text}',
+  // The carry-over box on the daily crossing's begin screen, off by default.
+  'ui.dailyMemory': 'Officers remember your last daily crossing',
   'ui.traveler': 'Traveler',
   'ui.pickCharacter': 'Choose your traveler',
   'ui.continueAs': 'Continue as {name}',

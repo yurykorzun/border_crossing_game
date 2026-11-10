@@ -14,7 +14,7 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, costsOf, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
+  bulletinOf, callInsDue, check, checkEffects, checkFindings, costsOf, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
   options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
@@ -322,7 +322,7 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     for (const d of (n.facts[f] ?? []).filter((x) => !(s.facts[f] ?? []).includes(x))) {
       if (d === here) continue;
       const later = CHECKPOINTS.indexOf(d) > CHECKPOINTS.indexOf(here);
-      if (s.bulletin === 'records' && later && knows(n, f, here)) continue;
+      if (bulletinOf(s) === 'records' && later && knows(n, f, here)) continue;
       if (d === nextDesk(here) && knows(n, f, here) && sent.some((e) => !e.facts || e.facts.includes(f))) continue;
       bad.push(`${f} reached ${d} from ${here} through no channel`);
     }
