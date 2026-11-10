@@ -225,6 +225,9 @@ export function checkState(s: RunState): string[] {
   if (insp && insp.kind !== 'search' && !options(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
     bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
   for (const d of noFreeExits(s)) bad.push(d);
+  // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
+  if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !s.reaction && options(s).length > 3)
+    bad.push(`${s.screen.id} shows ${options(s).length} answers`);
   // A calm card has one answer, and it costs nothing.
   const calm = s.screen.kind === 'encounter' && !s.reaction && ENCOUNTER_BY_ID.get(s.screen.id)?.calm;
   if (calm && !(options(s).length === 1 && options(s).every((o) => !o.blocked && noCost(s, o))))

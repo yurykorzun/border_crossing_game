@@ -547,8 +547,6 @@ export const en: Record<string, string> = {
   // Why her word helps here: the search stops once the prescription checks out.
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
   'insp.s_bag.contact.reaction': 'They make the call, and the search stops early.',
-  'insp.s_bag.phone.label': 'Unlock your phone for them instead',
-  'insp.s_bag.phone.reaction': 'They close the suitcase and scroll through your phone, then print what they find.',
   'insp.s_bag.withdraw.label': 'Withdraw your entry request',
   'insp.s_bag.withdraw.reaction': 'They pack your things back into the suitcase. The officer hands back your passport.',
 
@@ -557,8 +555,6 @@ export const en: Record<string, string> = {
   'insp.s_medicine.surrender.reaction': 'You watch the cool bag go behind a door.',
   'insp.s_medicine.wait.label': 'Wait to get it back',
   'insp.s_medicine.wait.reaction': 'They test the medicine, then the bag comes back.',
-  'insp.s_medicine.evidence.label': 'Show {cardThe}',
-  'insp.s_medicine.evidence.reaction': 'They keep the paper for the file and hand back the cool bag.',
   'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
   'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport.',
 

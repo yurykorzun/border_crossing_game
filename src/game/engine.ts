@@ -117,7 +117,9 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.noClaims && cond.noClaims.some((c) => s.claims.includes(c))) return false;
   if (cond.contactFree && !cond.contactFree.some((c) => ch.contacts.includes(c) && !s.exposed.includes(c))) return false;
   if (cond.lastHours !== undefined && (s.time <= LAST_HOURS) !== cond.lastHours) return false;
+  if (cond.holds && !cardFor(s, cond.holds)) return false;
   if (cond.any && !cond.any.some((c) => check(c, s))) return false;
+  if (cond.not && check(cond.not, s)) return false;
   return true;
 }
 

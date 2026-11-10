@@ -340,18 +340,21 @@ export const CHECKS: Record<CheckId, Check> = {
 /**
  * Drawn when scrutiny reaches 3. Each one asks you to pay with something:
  * time, belongings (the medicine or a document), a disclosure, or a person.
- * Every one offers two answers that cost different things, plus a way out.
- * Apart from the bag search, each changes the problem instead of only costing
- * hours (InspectionKind, checked in checkState). With LAST_HOURS left or fewer
- * any wait misses the bus, so the waits are not offered and the card asks for
- * one sacrifice instead. A card is only dealt when it has something to ask for
- * besides time (inspect() in src/game/engine.ts).
+ * Every one shows two answers that cost different things, plus a way out, and
+ * never more, so a card keeps to three answers on screen. Where a card has more
+ * than two ways to pay, the conditions pick which two you see. Apart from the
+ * bag search, each changes the problem instead of only costing hours
+ * (InspectionKind, checked in checkState). With LAST_HOURS left or fewer any
+ * wait misses the bus, so the waits are not offered and the card asks for one
+ * sacrifice instead. A card is only dealt when its `when` holds, which keeps a
+ * second answer there (noFreeExits() in src/game/walk.ts).
  */
 export const INSPECTIONS: Inspection[] = [
   {
-    // The prescription is in the bag, and your mother can confirm it.
+    // The prescription is in the bag, and your mother can confirm it. With her
+    // out of reach, you lay it all out yourself instead.
     id: 's_bag', kind: 'search', topic: 'medicine',
-    when: { any: [{ contactFree: ['mother'] }, { noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }, { noFacts: ['phoneSearched'] }] },
+    when: { any: [{ contactFree: ['mother'] }, { noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
     approaches: [
       // A full search counts the cash, so the total goes on file.
       // The search report, cash total included, goes with you to the next desk.
@@ -359,68 +362,62 @@ export const INSPECTIONS: Inspection[] = [
         id: 'wait', kind: 'verify', requires: { lastHours: false },
         effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }],
       },
-      // Lay it all out yourself: the cash total and who the prescription is for go on file, and the search stops.
+      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
+      // The cash total and who the prescription is for go on file, and the search stops.
       {
-        id: 'declare', kind: 'say', requires: { any: [{ noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
+        id: 'declare', kind: 'say',
+        requires: { not: { contactFree: ['mother'] }, any: [{ noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
         effects: [{ fact: 'cashCount' }, { fact: 'fatherCondition' }, { send: 'printout', facts: ['cashCount', 'fatherCondition'] }],
-      },
-      { id: 'contact', kind: 'contact', contacts: ['mother'], effects: [{ time: -1, when: { lastHours: false } }] },
-      // Unlock the phone instead: what it holds goes on file, as in the customs search (c_phone).
-      {
-        id: 'phone', kind: 'say', requires: { noFacts: ['phoneSearched'] },
-        effects: [
-          { fact: 'phoneSearched' },
-          { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } },
-          { fact: 'donationRecord', when: { background: 'donation' } },
-          { fact: 'bankNotice', when: { background: 'donation' } },
-          { fact: 'relativeContact' },
-          PHONE_REPORT,
-        ],
       },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
-    // Confiscation: the medicine is held. Get it back now, show the paper that
-    // explains it, or leave without it. Only dealt while you still carry it
-    // (inspect() in src/game/engine.ts).
+    // Confiscation: the medicine is held. Get it back now, or leave without it.
+    // Only dealt while you still carry it (inspect() in src/game/engine.ts).
     id: 's_medicine', kind: 'confiscation',
     approaches: [
       { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
       { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }] },
-      { id: 'evidence', kind: 'evidence', topic: 'medicine', effects: [] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
     // Missed connection: the shuttle to the station has gone. The next one makes
-    // the trip an hour longer, so the run needs an hour more left; someone
-    // drives out for you, which puts them on file; or the border transfer takes
-    // you, and they write down where it drops you. Driving is not confirming
-    // anything, so anyone close enough will do (namesOnly).
+    // the trip an hour longer, so the run needs an hour more left. Or another
+    // way out: a paper with where you stay books the border transfer, and they
+    // keep it; else someone drives out for you, which puts them on file; else
+    // the transfer takes you and they write down where it drops you. Driving is
+    // not confirming anything, so anyone close enough will do (namesOnly).
     id: 's_connection', kind: 'connection',
-    when: { any: [{ contactFree: ['mother', 'cousin'] }, { noFacts: ['familyAddress'] }] },
+    when: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }, { noFacts: ['familyAddress'] }] },
     approaches: [
       { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }] },
-      { id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true, effects: [] },
-      { id: 'transfer', kind: 'say', requires: { noFacts: ['familyAddress'] }, effects: [{ fact: 'familyAddress' }] },
-      // A paper with where you stay books the same transfer, and they keep it.
-      { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
+      { id: 'evidence', kind: 'evidence', topic: 'accommodation', requires: { holds: 'accommodation' }, effects: [] },
+      {
+        id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true,
+        requires: { not: { holds: 'accommodation' }, contactFree: ['mother', 'cousin'] }, effects: [],
+      },
+      {
+        id: 'transfer', kind: 'say',
+        requires: { not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] }, noFacts: ['familyAddress'] },
+        effects: [{ fact: 'familyAddress' }],
+      },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
     // Extra verification: the supervisor checks why you travel. Spend the document
-    // that backs it, have your mother confirm it, or let her phone the hospital:
-    // the call takes time and your father's condition goes on file. Only dealt
-    // while that call would tell this desk something new, and while your mother
-    // is free to call, so there is always a second answer.
+    // that backs it (or, without one, have your mother confirm it), or let her
+    // phone the hospital: the call takes time and your father's condition goes on
+    // file. Only dealt while that call would tell this desk something new, and
+    // while there is a paper or your mother for the second answer.
     id: 's_supervisor', kind: 'verification', topic: 'purpose',
-    when: { noFacts: ['fatherCondition'], contactFree: ['mother'] },
+    when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
     approaches: [
-      { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
+      { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
+      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [] },
       { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
-      { id: 'contact', kind: 'contact', contacts: ['mother'], effects: [] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },

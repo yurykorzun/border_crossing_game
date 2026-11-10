@@ -708,7 +708,12 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     // The same hours left now miss the bus: the deadline moved, not the clock.
     expect(endingFor({ ...later, time: 2 })).toBe('tooLate');
     expect(endingFor({ ...s, time: 2 })).toBe('homeInTime');
-    const drive = play(s, 'drive');
+    // A paper with where you stay books the transfer; without one, someone drives out.
+    const booked = play(s, 'evidence');
+    expect(booked.used).toHaveLength(1);
+    expect(booked.travel).toBe(2);
+    const noPaper = inspection('s_connection', { loadout: ['employerLetter', 'returnTicket', 'hospitalNote'] });
+    const drive = play(noPaper, 'drive');
     expect(drive.exposed).toEqual(['mother']);
     expect(drive.travel).toBe(2);
     expect(drive.time).toBe(s.time);
@@ -724,9 +729,22 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     expect(knows(accepted, 'fatherCondition')).toBe(true);
     // The phone call is no longer free, even at the last desk.
     expect(accepted.time).toBe(s.time - 1);
-    const named = play(s, 'contact');
+    // Without a paper on why you travel, your mother is the other answer.
+    const noPaper = inspection('s_supervisor', { loadout: ['hotel', 'employerLetter', 'deed'] });
+    const named = play(noPaper, 'contact');
     expect(named.exposed).toEqual(['mother']);
     expect(named.time).toBe(s.time);
+  });
+
+  it('shows at most two answers and a way out: the conditions pick which two', () => {
+    const ids = (s: RunState) => options(s).map((o) => o.approach.id);
+    expect(ids(inspection('s_bag'))).toEqual(['wait', 'contact', 'withdraw']);
+    expect(ids(inspection('s_bag', { exposed: ['mother'] }))).toEqual(['wait', 'declare', 'withdraw']);
+    expect(ids(inspection('s_supervisor'))).toEqual(['evidence', 'accept', 'withdraw']);
+    expect(ids(inspection('s_supervisor', { loadout: ['hotel', 'employerLetter', 'deed'] }))).toEqual(['contact', 'accept', 'withdraw']);
+    expect(ids(inspection('s_connection'))).toEqual(['later', 'evidence', 'withdraw']);
+    expect(ids(inspection('s_connection', { loadout: ['employerLetter', 'returnTicket', 'hospitalNote'], exposed: ['mother', 'cousin'] })))
+      .toEqual(['later', 'transfer', 'withdraw']);
   });
 
   it('every inspection lists two answers that cost different things, plus a way out', () => {
@@ -759,14 +777,6 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     }
   });
 
-  it('confiscation: the hospital note gets the medicine back, and stays with them', () => {
-    const s = inspection('s_medicine', { loadout: ['hospitalNote', 'hotel', 'deed'] });
-    const shown = play(s, 'evidence');
-    expect(shown.medicine).toBe(true);
-    expect(shown.used).toEqual(['hospitalNote']);
-    expect(shown.time).toBe(s.time);
-  });
-
   it('under MISSION_MIN_TIME a card says the bus is gone and offers to finish quickly', () => {
     const s = { ...at(newRun(lena), 'i_stay'), time: MISSION_MIN_TIME - 1 };
     expect(t('ui.doomed')).toBe('You will not make the bus now.');
@@ -785,7 +795,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
   it('a later shuttle that would miss the bus is not offered: the inspection asks for a sacrifice instead', () => {
     const ids = (s: RunState) => options(s).map((o) => o.approach.id);
     expect(ids(inspection('s_connection', { time: 3 }))).toContain('later');
-    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['drive', 'transfer', 'evidence', 'withdraw']);
+    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['evidence', 'withdraw']);
   });
 });
 

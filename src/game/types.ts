@@ -53,8 +53,12 @@ export interface Cond {
   contactFree?: ContactId[];
   /** true: LAST_HOURS hours left or fewer (src/game/content/world.ts). false: more than that. */
   lastHours?: boolean;
+  /** A held, unused card covers this topic. */
+  holds?: Topic;
   /** Any of these conditions holds. */
   any?: Cond[];
+  /** This condition does not hold. */
+  not?: Cond;
 }
 
 /**
