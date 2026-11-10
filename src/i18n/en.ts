@@ -300,12 +300,12 @@ export const en: Record<string, string> = {
   'fact.relativeContact.reveal': 'Reveals another relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
-  'bulletin.customs': 'Medicines are lab-tested and cash is counted today.',
+  'bulletin.customs': 'Medicine and cash are checked today.',
   'bulletin.accommodation': 'Hosts are being phoned today.',
   'bulletin.records': 'IDs are checked against old records.',
   // The one cue above the packing list: what officers are doing today, in the words of
   // the topic the bulletin points at (BULLETIN_TOPICS), so the rows that answer it stand out.
-  'bulletin.customs.cue': 'Officers are testing any medicine you carry and counting cash.',
+  'bulletin.customs.cue': 'Officers are testing medicine and counting cash.',
   'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
   'bulletin.records.cue': 'Officers are checking who you are against old files.',
 
