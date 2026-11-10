@@ -90,3 +90,13 @@ Checked in code this session: the hotel booking is only blocked by the stayingWi
 - Well sourced: a fixed first run, the questions list, carry-over between runs, one rule per level, quoting the lie back.
 - Opinion or thin evidence: the currency count, the level list, the sound plan beyond the platform facts.
 - Not checked: a real phone, human playtesters, the deployed site.
+
+## Levels (added 2026-11-10)
+
+- About 17 level ideas carry a new rule. The game can sustain 8-12, so plan 6-8 first.
+- Ranked shortlist: arrival, departure, the funeral, overland bus, carrying for someone else, collecting a child, returning resident, transit limbo, renewal, two passports. Held back: shuttle trader (it went into the daily crossing as memory across days), carnet, airline desk, third-party permit, exit ban.
+- Regions and a daily crossing add levels without a new rule to learn. Sixteen reskin ideas feed them.
+- Each new rule means re-balancing every earlier level.
+- The test: cut any level the player can win while ignoring its new rule. Every rwf level's walk check shows a bot that ignores the rule reaching homeInTime less often.
+- Comparable games: a new situation per level keeps 60-75% of players to the end, against 30% for Not Tonight. A list of open questions drove replay in Overboard better than achievements did.
+- Filed as epic rwf. Returning resident and transit limbo are noted on the reverse-campaign beads (0ts.4, 0ts.3) instead.
