@@ -129,7 +129,7 @@ p { margin: 0 0 var(--gap); }
 .setup { overflow-y: auto; }
 .on-dark { font-size: 1.1rem; margin-top: 4px; }
 .rule { font-weight: 600; }
-/* Today's bulletin: one amber bar, one sentence per line (a customs day has a second line for cash). Amber marks attention (docs/plan.md "UI rules"). */
+/* Today's bulletin: one amber bar, one sentence (a customs day adds a second, for cash, in the same bar). Amber marks attention (docs/plan.md "UI rules"). */
 .bulletin {
   display: flex;
   align-items: flex-start;
@@ -144,7 +144,7 @@ p { margin: 0 0 var(--gap); }
   line-height: 1.35;
 }
 .bulletin .icon { margin-top: 2px; }
-.bulletin-line { display: block; }
+.bulletin-line + .bulletin-line::before { content: " "; }
 .bulletin .icon-ink { fill: var(--amber-dark); }
 .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap); }
 .doc {
@@ -182,11 +182,12 @@ p { margin: 0 0 var(--gap); }
   cursor: pointer;
 }
 .back:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
-/* Packing (DocumentsStep): scene slot, stage, title and count, bulletin, the cue, six rows (topics, then Reveals), each line unwrapped. */
+/* Packing (DocumentsStep): scene slot, stage, title and count, bulletin, the cue, six rows (topics, then Reveals), each line unwrapped.
+   The scene is decoration, so it gives up to 24px before the list has to scroll (a customs day's bulletin has a second line). */
 .pack-scene {
   position: relative;
-  flex: none;
-  height: 72px;
+  flex: 0 1 72px;
+  min-height: 48px;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--wall);
