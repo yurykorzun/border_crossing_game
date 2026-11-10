@@ -262,15 +262,12 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
         </header>
         <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
           <Icon name="alert" />
-          <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
+          <span className="bulletin-text">
+            <span className="bulletin-line">{t(`bulletin.${bulletin}`)}</span>
+            {/* A day with a second warning (cash on a customs day) gives it its own line in the same bar. */}
+            {has(`bulletin.${bulletin}.also`) && <span className="bulletin-line">{t(`bulletin.${bulletin}.also`)}</span>}
+          </span>
         </p>
-        {/* A day with a second warning (cash on a customs day) gives it its own line. */}
-        {has(`bulletin.${bulletin}.also`) && (
-          <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
-            <Icon name="alert" />
-            <span className="bulletin-text">{t(`bulletin.${bulletin}.also`)}</span>
-          </p>
-        )}
         {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
         <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
         <ul className="cards pick" aria-label={t('ui.prepareDocuments')}>

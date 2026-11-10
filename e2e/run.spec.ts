@@ -193,8 +193,8 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   const reaction = page.locator('main.run .panel.reaction');
   const beat = reaction.locator('.story-beat');
   const rows = reaction.locator('.changes li');
-  await expect(beat).toHaveText('Your mother answers on the second ring. She gives her address and names the rest of the family.');
-  // She also gives her address and names the family; on a records day both reach the desks ahead.
+  await expect(beat).toHaveText('Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.');
+  // Her address and the family go on file too; on a records day both reach the desks ahead.
   await expect(rows).toHaveText([
     'Visit verified.', "On file at Customs: your mother's number.",
     "Your mother's address is now on file.", 'Another relative of yours is now on file.',

@@ -325,7 +325,7 @@ export const en: Record<string, string> = {
   'bulletin.records': 'IDs are checked against old records.',
   // The one cue above the packing list: what officers are doing today, in the words of
   // the topic the bulletin points at (BULLETIN_TOPICS), so the rows that answer it stand out.
-  'bulletin.customs.cue': 'Officers are asking for medicine paperwork and counting cash.',
+  'bulletin.customs.cue': 'Officers check medicine papers and count cash.',
   'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
   'bulletin.records.cue': 'Officers are checking who you are against old files.',
 
