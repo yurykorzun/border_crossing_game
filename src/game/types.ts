@@ -28,13 +28,25 @@ export type FactId =
   | 'noBooking'
   | 'hostStatement'
   | 'bankNotice'
-  | 'relativeContact';
+  | 'relativeContact'
+  /** Your mother named another relative on the phone: her account, not a record (TESTIMONY). */
+  | 'relativeNamed';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
-  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact',
+  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact', 'relativeNamed',
 ];
+
+/**
+ * Which of three an officer's reaction against you is (docs/design.md "Truth,
+ * claims, official knowledge"). suspicion: a question raised, the officer's
+ * reading of what is on file. testimony: someone said otherwise, which you can
+ * explain. disproof: a document or record shows a claim false. A check can
+ * establish facts, but it never proves the officer's interpretation, so a
+ * reading is always a suspicion and never a fact.
+ */
+export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 
 /** What the player has said. Can be contradicted by facts. */
 export type ClaimId = 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
@@ -219,6 +231,12 @@ export interface Officer {
   reactions: OfficerReaction[];
   /** The claims this officer writes down when you make them here. Any other claim is only said aloud. */
   writesDown: ClaimId[];
+  /**
+   * Facts this officer reads something into when they come out here: the fact goes
+   * on file, and the reading is a separate suspicion line (`reading.<fact>.<desk>`),
+   * never a fact. Lena's employer is confirmed; political involvement is not.
+   */
+  readings: FactId[];
 }
 
 /** A person the traveler can name, and what they can confirm. */
@@ -244,6 +262,11 @@ export interface EndingLine {
   key: string;
   vars?: Record<string, string | number>;
   severity: Severity;
+  /**
+   * A contact line's stated reason: why naming them does this harm ("Ilya was
+   * already questioned about the fundraiser"). Every contact line has one.
+   */
+  reason?: string;
 }
 
 export interface EvidenceCard {
@@ -340,6 +363,8 @@ export interface LogEntry {
   /** i18n key of the line shown after a choice. */
   key: string;
   vars?: Record<string, string>;
+  /** Set on a reaction against you: a challenge answered, a fact the officer flags or reads something into. */
+  kind?: ReactionKind;
 }
 
 /** One "what changed" line under the officer's reaction (changeLines() in src/game/consequence.ts). */
@@ -402,6 +427,12 @@ export interface RunState {
    * (factTier() in src/game/engine.ts). Unset in saves from before it existed.
    */
   flagged?: FactId[];
+  /**
+   * Claims a document or record has shown false (catchKind() 'disproof'), recorded
+   * when the contradiction card is answered. Conflicting testimony and suspicion
+   * never land here. Unset in saves from before it existed.
+   */
+  disproved?: ClaimId[];
   medicine: boolean;
   perkUsed: boolean;
   withdrew: boolean;

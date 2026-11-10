@@ -3,10 +3,10 @@
 
 import { describe, expect, it } from 'vitest';
 import { own, t, tn } from '../i18n';
-import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS, TESTIMONY, catchKind } from './content/encounters';
 import { CHARACTERS, CONTACTS, EVIDENCE, LAST_HOURS, MISSION_MIN_TIME, OFFICERS } from './content/world';
-import { consequence, consequences, SEPARATOR } from './consequence';
-import { cardFor, costsOf, deskIntro, endingFor, factIds, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
+import { changeLines, consequence, consequences, SEPARATOR } from './consequence';
+import { cardFor, costsOf, deskIntro, endingFor, factIds, factTier, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { hoursOf, unexplained } from './lint';
 import { tryStep } from './play';
@@ -53,12 +53,14 @@ describe('relatives question (i_family)', () => {
     expect(options(customs).map((o) => line(customs, o))).toEqual(['His name goes on file', 'Recorded as a denial', 'Supervisor called: 1 hour']);
   });
 
-  it('the day decides whether a denial holds: disproved on a records or hosts day, not on a customs day (2op.12)', () => {
+  it('the day decides whether a denial holds: the register on a records day, your mother on a hosts day, nothing on a customs day (2op.12)', () => {
     for (const bulletin of ['records', 'accommodation', 'customs'] as const) {
       const r = tryStep(at(newRun({ ...lena, bulletin }), 'i_family'), { type: 'choose', approach: 'deny' });
       expect(r.ok).toBe(true);
       if (!r.ok) continue;
-      expect(knows(r.state, 'relativeContact'), bulletin).toBe(bulletin !== 'customs');
+      // The register is a record; your mother's word is testimony (TESTIMONY).
+      expect(knows(r.state, 'relativeContact'), bulletin).toBe(bulletin === 'records');
+      expect(knows(r.state, 'relativeNamed'), bulletin).toBe(bulletin === 'accommodation');
     }
   });
 
@@ -206,7 +208,7 @@ describe('claim-versus-fact pairs from real procedure', () => {
   ];
 
   it.each(pairs)('%s: the claim and the fact deal the card, the claim alone does not', (_, claim, fact, card, setup) => {
-    expect(card === 'i_clarify' ? INCONSISTENCIES : DISPROOFS).toContainEqual([claim, fact]);
+    expect(card === 'i_clarify' ? INCONSISTENCIES : CONTRADICTIONS).toContainEqual([claim, fact]);
     expect(challenge(interview({ claims: [claim], facts: known(fact) }, setup))).toBe(card);
     expect(challenge(interview({ claims: [claim] }, setup))).toBeUndefined();
     expect(challenge(interview({ facts: known(fact) }, setup))).toBeUndefined();
@@ -237,8 +239,8 @@ describe('claim-versus-fact pairs from real procedure', () => {
     const clear = CHECKS.hostCall.cases.find((c) => c.result === 'clear')!;
     expect(clear.effects).toEqual(expect.arrayContaining([
       { fact: 'hostStatement' },
-      { fact: 'relativeContact' },
-      { send: 'printout', facts: expect.arrayContaining(['familyAddress', 'hostStatement', 'relativeContact']) },
+      { fact: 'relativeNamed' },
+      { send: 'printout', facts: expect.arrayContaining(['familyAddress', 'hostStatement', 'relativeNamed']) },
     ]));
   });
 
@@ -355,7 +357,7 @@ describe('a challenge is dealt even when the last interview answer creates it', 
   });
 
   // One row per pair: the claim and the fact are both standing when the final card ends.
-  const rows = [...DISPROOFS.map((p) => [...p, 'i_contradiction']), ...INCONSISTENCIES.map((p) => [...p, 'i_clarify'])] as const;
+  const rows = [...CONTRADICTIONS.map((p) => [...p, 'i_contradiction']), ...INCONSISTENCIES.map((p) => [...p, 'i_clarify'])] as const;
   it.each(rows)('%s + %s at the end of the interview deals %s', (claim, fact, challenge) => {
     const s = last(newRun(lena), 'i_family', { claims: [claim as ClaimId], facts: known(fact as FactId) });
     const r = tryStep(s, { type: 'choose', approach: 'why' });
@@ -645,15 +647,15 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(consequences(base)).toEqual([]);
     // A phone call: minor. Her address on file turns it into a visit: serious.
     expect(consequences({ ...base, exposed: ['mother'] })).toEqual([
-      { kind: 'contact', key: 'exposure.mother.call', vars: { contact: 'mother' }, severity: 1 },
+      { kind: 'contact', key: 'exposure.mother.call', vars: { contact: 'mother' }, severity: 1, reason: 'exposure.mother.call.reason' },
     ]);
     // Worst first, the protected contact ahead of the medicine; what is on file has no line (the records sheet lists it).
     const tooLate: RunState = { ...base, time: 1, exposed: ['mother', 'cousin'], medicine: false, facts: known('familyAddress', 'employer', 'urgency', 'cashCount') };
     expect(endingFor(tooLate)).toBe('tooLate');
     expect(consequences(tooLate)).toEqual([
-      { kind: 'contact', key: 'exposure.cousin.protected', vars: { contact: 'cousin' }, severity: 3 },
+      { kind: 'contact', key: 'exposure.cousin.protected', vars: { contact: 'cousin' }, severity: 3, reason: 'exposure.cousin.protected.reason' },
       { kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 },
-      { kind: 'contact', key: 'exposure.mother.home', vars: { contact: 'mother' }, severity: 2 },
+      { kind: 'contact', key: 'exposure.mother.home', vars: { contact: 'mother' }, severity: 2, reason: 'exposure.mother.home.reason' },
     ]);
     // Each line is something the player can picture: a heading, then one line.
     expect(t('exposure.mother.call.title', { contact: 'mother' })).toBe('The border calls your mother');
@@ -687,7 +689,7 @@ describe('officers with one stated priority each (fsx.10)', () => {
     expect(atInterview.state.scrutiny).toBe(interview.scrutiny + 1);
     expect(atPassport.state.reaction?.map((l) => l.key)).not.toContain('officer.passport.flags');
     // The reason is stated in the reaction.
-    expect(atInterview.state.reaction).toContainEqual({ key: 'officer.interview.flags', vars: { fact: 'brotherAbroad' } });
+    expect(atInterview.state.reaction).toContainEqual({ key: 'officer.interview.flags', vars: { fact: 'brotherAbroad' }, kind: 'suspicion' });
     expect(t('officer.interview.flags', { fact: 'brotherAbroad' })).toBe('Your brother across the border: the officer marks it as a security matter.');
   });
 
@@ -947,5 +949,71 @@ describe('every time loss names its cause in the reaction (fsx.12)', () => {
     expect(unexplained('He takes the bag away. That takes a while.')).not.toBeNull();
     expect(unexplained('Waiting.')).not.toBeNull();
     expect(unexplained('He counts your cash twice.')).toBeNull();
+  });
+});
+
+describe('exposure needs a stated reason, and each reaction says which of three it is (4qd.3)', () => {
+  it('every consequence that harms a contact carries a reason key that renders non-empty text', () => {
+    // Every person each traveler can name, with and without their home and record on file, flagged or not.
+    let lines = 0;
+    for (const setup of [lena, mark])
+      for (const c of CHARACTERS[setup.character].contacts)
+        for (const facts of [[], ['familyAddress'], ['brotherAbroad'], ['familyAddress', 'brotherAbroad']] as FactId[][])
+          for (const flagged of [[], facts])
+            for (const l of consequences({ ...newRun(setup), exposed: [c], facts: known(...facts), flagged })) {
+              if (l.kind !== 'contact') continue;
+              lines++;
+              expect(l.reason, l.key).toBe(`${l.key}.reason`);
+              expect(t(l.reason!, l.vars).trim(), l.key).not.toBe('');
+            }
+    expect(lines).toBeGreaterThan(0);
+    // The cousin's reason is the one the player can already read on his contact card.
+    expect(t('exposure.cousin.protected.reason')).toBe('Ilya was already questioned about the fundraiser.');
+  });
+
+  // Every pair each challenge card catches, answered every way it can be.
+  const rows = [
+    ...CONTRADICTIONS.map(([c, f]) => ['i_contradiction', c, f] as const),
+    ...INCONSISTENCIES.map(([c, f]) => ['i_clarify', c, f] as const),
+  ];
+  it.each(rows)('%s on %s + %s: the reaction is tagged, and only a disproof records the claim as disproved', (card, claim, fact) => {
+    const kind = catchKind(card, fact);
+    expect(kind).toBe(card === 'i_clarify' ? 'suspicion' : TESTIMONY.includes(fact) ? 'testimony' : 'disproof');
+    const s = at({ ...newRun(lena), claims: [claim], facts: known(fact) }, card);
+    let answered = 0;
+    for (const o of options(s)) {
+      const r = tryStep(s, { type: 'choose', approach: o.approach.id, ...(o.card ? { card: o.card } : {}), ...(o.contact ? { contact: o.contact } : {}) } as Action);
+      if (!r.ok) continue;
+      answered++;
+      expect(r.state.reaction?.[0]?.kind, o.approach.id).toBe(kind);
+      expect((r.state.disproved ?? []).includes(claim), o.approach.id).toBe(kind === 'disproof');
+      expect(r.events.find((x) => x.type === 'claimChallenged'), o.approach.id).toMatchObject({ claim, fact, kind });
+      const said = changeLines(r.events, 'cousin').find((l) => l.key.startsWith('change.claim.'));
+      expect(said?.key).toBe(`change.claim.${kind}`);
+      expect(t(said!.key, said!.vars)).not.toBe('');
+    }
+    expect(answered).toBeGreaterThan(0);
+  });
+
+  it("a check that confirms Lena's foreign employer records that fact, and the officer's reading stays a separate suspicion", () => {
+    for (const [card, checkpoint, approach, desk] of [['p_employer', 0, 'check', 'passport'], ['i_employer', 2, 'contract', 'interview']] as const) {
+      const s: RunState = { ...at({ ...newRun(lena), claims: ['shortTrip'] }, card), checkpoint };
+      const r = tryStep(s, { type: 'choose', approach });
+      expect(r.ok, card).toBe(true);
+      if (!r.ok) continue;
+      // The fact, and only the fact, goes on file, confirmed and never flagged.
+      expect(factIds(r.state).filter((f) => !factIds(s).includes(f)), card).toEqual(['employer']);
+      expect(factTier(r.state, 'employer'), card).toBe('confirmed');
+      expect(r.state.flagged ?? [], card).not.toContain('employer');
+      // What the officer reads into it is a line of its own, tagged suspicion.
+      expect(r.state.reaction, card).toContainEqual({ key: `reading.employer.${desk}`, kind: 'suspicion' });
+      expect(t(`reading.employer.${desk}`)).toMatch(/questions your employer's connection/);
+      // "Employer verified" sits apart, under the reaction, as an on-file line.
+      const changes = changeLines(r.events, 'cousin').map((l) => l.key);
+      expect(changes, card).toContain('change.onFile.confirmed');
+      expect(changes, card).not.toContain(`reading.employer.${desk}`);
+    }
+    // Nothing on file can record political involvement: no fact exists for it.
+    expect(FACT_IDS.filter((f) => /politic|involve|loyal/i.test(f))).toEqual([]);
   });
 });

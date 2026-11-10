@@ -13,7 +13,7 @@
 
 import { andList, has, own, t, tn } from '../i18n';
 import type { BotRun } from './bots';
-import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
@@ -368,6 +368,7 @@ function endingLines(s: RunState, p: Page): void {
   // like the epilogue, are counted as chrome, as the card's longer text always was.
   consequences(s).forEach((l, i) => {
     p.add(`${l.key}.title`, l.vars, i === 0 ? {} : CHROME);
+    if (l.reason) p.add(l.reason, l.vars, i === 0 ? {} : CHROME);
     p.add(l.key, l.vars, i === 0 ? {} : CHROME);
   });
   p.add(`ending.${text}.body`, {}, CHROME);
@@ -484,7 +485,7 @@ export const CONTACT_WORDS: Record<ContactId, RegExp> = {
  */
 export const CATCHES: Record<string, readonly [ClaimId, FactId][]> = {
   i_clarify: INCONSISTENCIES,
-  i_contradiction: DISPROOFS,
+  i_contradiction: CONTRADICTIONS,
 };
 
 export interface Failure {

@@ -78,14 +78,18 @@ export const POLITICAL_FACTS: readonly FactId[] = ['secondPassport', 'brotherAbr
  * other claim is only said aloud, and My story shows the difference.
  */
 export const OFFICERS: Record<Checkpoint, Officer> = {
+  // The clerk and the security officer read a foreign salary as a question about
+  // loyalty. The employer is a fact once confirmed; that reading stays a suspicion.
   passport: {
     desk: 'passport', priority: 'paperwork', reactions: [],
     writesDown: ['familyVisit', 'shortTrip', 'hotelStay', 'stayingWithFamily'],
+    readings: ['employer'],
   },
-  customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'] },
+  customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'], readings: [] },
   interview: {
     desk: 'interview', priority: 'politics', reactions: [{ reveals: [...POLITICAL_FACTS], scrutiny: 1 }],
     writesDown: ['noOtherFamily', 'neverDonated', 'stayingWithFamily'],
+    readings: ['employer'],
   },
 };
 
@@ -125,6 +129,7 @@ export const FACT_TIERS: Record<FactId, OnFileTier> = {
   hostStatement: 'confirmed',
   bankNotice: 'confirmed',
   relativeContact: 'confirmed',
+  relativeNamed: 'confirmed',
   donationRecord: 'flagged',
   phoneRefused: 'flagged',
 };

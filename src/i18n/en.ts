@@ -112,6 +112,10 @@ export const en: Record<string, string> = {
   'change.medicine': 'The medicine is gone.',
   'change.travel.one': 'You now need {n} hour to reach the station.',
   'change.travel.other': 'You now need {n} hours to reach the station.',
+  // A challenge answered says which of three it is (catchKind() in src/game/content/encounters.ts).
+  'change.claim.suspicion': 'A question, not a disproof: "{claim}".',
+  'change.claim.testimony': 'Two accounts differ, nothing proven: "{claim}".',
+  'change.claim.disproof': 'Disproved by the record: "{claim}".',
   'change.onFile.recorded': 'Found in the old records: {fact}.',
   'change.onFile.confirmed': 'Confirmed and on file: {fact}.',
   'change.onFile.flagged': 'Flagged on your file: {fact}.',
@@ -194,7 +198,7 @@ export const en: Record<string, string> = {
   'contact.cousin': 'your cousin Ilya',
   'contact.brother': 'your brother Tom',
   'contact.mother.note': 'At the hospital most of the day.',
-  'contact.cousin.note': 'Your mother asked you not to mention him.',
+  'contact.cousin.note': 'Already questioned once about the fundraiser. Your mother asked you not to mention him.',
   'contact.brother.note': 'Lives across the border. Calls every Sunday.',
   // What each contact can confirm (CONTACTS in src/game/content/world.ts): one line in My story,
   // and the possible gain on an answer that names them, after the guaranteed cost.
@@ -282,6 +286,7 @@ export const en: Record<string, string> = {
   'fact.hostStatement': 'Your mother says you stay with her',
   'fact.bankNotice': 'A bank notice for your donation',
   'fact.relativeContact': 'Another relative of yours',
+  'fact.relativeNamed': 'Your mother names another relative',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for coming back',
   'claim.shortTrip.recorded': 'Recorded as your reason for coming back',
@@ -308,6 +313,7 @@ export const en: Record<string, string> = {
   'fact.hostStatement.reveal': 'Your mother says where you stay',
   'fact.bankNotice.reveal': 'Reveals a bank notice',
   'fact.relativeContact.reveal': 'Reveals another relative',
+  'fact.relativeNamed.reveal': 'Your mother names a relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicines require supporting paperwork today.',
@@ -339,6 +345,9 @@ export const en: Record<string, string> = {
   'officer.interview.priority': "This officer cares who you know and where you've been, not your paperwork.",
   // The security officer's reaction to a political fact coming out at the interview.
   'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
+  // What an officer reads into a confirmed fact (Officer.readings): a suspicion, never on file.
+  'reading.employer.passport': "The clerk questions your employer's connection.",
+  'reading.employer.interview': "The officer questions your employer's connection.",
   // Scene names for screen readers (src/ui/art): never shown, so not counted as read.
   'scene.passport': 'The passport booth: the clerk behind the glass',
   'scene.customs': 'The customs inspection table',
@@ -531,6 +540,13 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.review.label': 'Ask for a formal review',
   'enc.i_contradiction.review.event': 'Formal review',
   'enc.i_contradiction.review.reaction': 'A form, then another form, then a review of both.',
+  // Your mother's account against yours is testimony, not a record, so it can be explained (TESTIMONY).
+  'enc.i_contradiction.hotelStay.hostStatement.apologise.reaction': "The officer writes that your mother's account and yours differ.",
+  'enc.i_contradiction.hotelStay.hostStatement.review.label': 'Explain the difference',
+  'enc.i_contradiction.hotelStay.hostStatement.review.reaction': 'You explain. Both accounts go to a formal review.',
+  'enc.i_contradiction.noOtherFamily.relativeNamed.apologise.reaction': "The officer writes that your mother's account and yours differ.",
+  'enc.i_contradiction.noOtherFamily.relativeNamed.review.label': 'Explain the difference',
+  'enc.i_contradiction.noOtherFamily.relativeNamed.review.reaction': 'You explain. Both accounts go to a formal review.',
 
   'enc.i_employer.q': '"Your employer is registered abroad. What exactly do you do for them?"',
   'enc.i_employer.perk.label': 'Explain your job plainly',
@@ -727,6 +743,12 @@ export const en: Record<string, string> = {
   // What exposing each person costs them, worst for the one you were asked to protect.
   'exposure.mother.call.title': 'The border calls your mother',
   'exposure.mother.call': "She has to leave your father's bedside to answer questions.",
+  // Each contact line's stated reason (EndingLine.reason): why naming them does this.
+  'exposure.mother.call.reason': 'Her number is on your file.',
+  'exposure.mother.home.reason': 'Her address is on your file.',
+  'exposure.cousin.protected.reason': 'Ilya was already questioned about the fundraiser.',
+  'exposure.brother.protected.reason': 'He lives in a country at war with this one.',
+  'exposure.brother.protected.record.reason': 'Your file flags your brother across the border.',
   'exposure.mother.home.title': "Officers go to your mother's address",
   'exposure.mother.home': 'She has to leave the hospital to give a statement.',
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',

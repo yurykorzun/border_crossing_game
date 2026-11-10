@@ -750,6 +750,8 @@ function Ending({ s, questions, onRestart }: { s: RunState; questions: string[];
             {cost.map((l, i) => (
               <li key={i} className={`cost ${l.kind}${i === 0 ? ' worst' : ''}`}>
                 <h2 className="cost-title">{t(`${l.key}.title`, l.vars)}</h2>
+                {/* Why naming them did this (EndingLine.reason), before what it did. */}
+                {l.reason && <p className="cost-line cost-reason">{t(l.reason, l.vars)}</p>}
                 <p className="cost-line">{t(l.key, l.vars)}</p>
               </li>
             ))}

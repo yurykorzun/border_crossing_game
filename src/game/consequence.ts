@@ -7,7 +7,7 @@ import { has, own } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
 import { caught, factIds, factTier, knows, travelOf } from './engine';
-import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
+import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -159,7 +159,7 @@ export function packDetail(id: EvidenceId): string[][] {
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */
-export const CHANGE_EVENTS = ['contactExposed', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged'] as const;
+export const CHANGE_EVENTS = ['contactExposed', 'claimChallenged', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged'] as const;
 
 /**
  * What a step changed, one plain line each, built from its events: "Address verified.",
@@ -176,6 +176,10 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
       if (e.vouch?.passed) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
       out.push({ key: `change.contact.${e.shares}`, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
     }
+  // A challenge says which of three it is: a question raised, two accounts that
+  // differ, or a claim a record shows false (catchKind() in src/game/content/encounters.ts).
+  for (const e of events)
+    if (e.type === 'claimChallenged') out.push({ key: `change.claim.${e.kind}`, vars: { claim: e.said }, tone: e.kind === 'disproof' ? 'red' : 'amber' });
   // Each fact names how it sits on file: found in the old records, confirmed on this
   // crossing, or flagged (factTier() in src/game/engine.ts).
   for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.onFile.${e.tier}`, vars: { fact: e.id }, tone: 'plain' });
@@ -210,7 +214,8 @@ export function nextActionKey(s: RunState): string {
  * contact and the medicine are severe (the contact also rules out homeInTime), anyone
  * else is serious once their home is on file and minor otherwise. Ties keep the person
  * first. What is on file is not here, because the records sheet lists it. Each line has
- * a short heading at `<key>.title`. Ending in src/App.tsx lists them and endingLines()
+ * a short heading at `<key>.title`, and each contact line a stated reason at `reason`
+ * (`<key>.reason`): harm to a person never comes without one the player can read. Ending in src/App.tsx lists them and endingLines()
  * in src/game/transcript.ts writes them down.
  */
 export function consequences(s: RunState): EndingLine[] {
@@ -223,9 +228,11 @@ export function consequences(s: RunState): EndingLine[] {
     // (factTier()), or none. On file but never flagged, they are only questioned.
     const record = CONTACTS[c].record;
     const listed = !!record && facts.includes(record) && factTier(s, record) === 'flagged';
-    if (c === protectedContact) out.push({ kind: 'contact', key: `exposure.${c}.protected${listed ? '.record' : ''}`, vars: { contact: c }, severity: 3 });
-    else if (home && facts.includes(home)) out.push({ kind: 'contact', key: `exposure.${c}.home`, vars: { contact: c }, severity: 2 });
-    else out.push({ kind: 'contact', key: `exposure.${c}.call`, vars: { contact: c }, severity: 1 });
+    // Every line states why naming them does this harm, at `<key>.reason`.
+    const line = (key: string, severity: Severity): EndingLine => ({ kind: 'contact', key, vars: { contact: c }, severity, reason: `${key}.reason` });
+    if (c === protectedContact) out.push(line(`exposure.${c}.protected${listed ? '.record' : ''}`, 3));
+    else if (home && facts.includes(home)) out.push(line(`exposure.${c}.home`, 2));
+    else out.push(line(`exposure.${c}.call`, 1));
   }
   if (!s.medicine) out.push({ kind: 'medicine', key: 'ending.line.medicineLost', severity: 3 });
   // Array.prototype.sort is stable, so equal severities keep the order above.

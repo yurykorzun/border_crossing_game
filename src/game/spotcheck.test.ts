@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { own, t } from '../i18n';
-import { CHALLENGE_PAIRS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
+import { CHALLENGE_PAIRS, CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
 import { SPOT_CHECK_HOURS } from './content/world';
 import { newRun, spotCheckOf, step } from './engine';
 import type { RunSetup } from './engine';
@@ -12,7 +12,7 @@ import { CHECKPOINTS, FACT_IDS } from './types';
 import type { Action, Checkpoint, ClaimId, FactId, FactMap, RunState } from './types';
 
 const CLAIMS: ClaimId[] = ['familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit'];
-const PAIRS = [...INCONSISTENCIES, ...DISPROOFS];
+const PAIRS = [...INCONSISTENCIES, ...CONTRADICTIONS];
 
 /** Every fact that no challenge pairs against `c`: a file that fits the claim, as full as it can be. */
 const fitting = (c: ClaimId): FactId[] => FACT_IDS.filter((f) => !PAIRS.some(([claim, fact]) => claim === c && fact === f));

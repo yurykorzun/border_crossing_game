@@ -25,7 +25,7 @@ import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
 } from './content/world';
-import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { DEFAULT_LEVEL, levelOf } from './content/levels';
 import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
@@ -141,7 +141,7 @@ const unique = <T>(list: T[]) => new Set(list).size === list.length;
 const holds = (pairs: readonly [ClaimId, FactId][], s: RunState) => pairs.some(([c, f]) => s.claims.includes(c) && knows(s, f));
 
 /** Cards that challenge a claim, and the claim and fact pairs that let them be dealt. */
-const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: INCONSISTENCIES, i_contradiction: DISPROOFS };
+const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: INCONSISTENCIES, i_contradiction: CONTRADICTIONS };
 
 /** The effects a move applied, or null for a move that applies none of its own (ack, beat). An assisted check applies only its findings; an ask only the urgency. */
 function moveEffects(s: RunState, action: Action): Effect[] | null {

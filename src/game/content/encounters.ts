@@ -12,13 +12,15 @@
 // official knows"). They travel on only through a channel: the records
 // bulletin, or a `send` effect here (a call between desks, a printout after a check).
 
-import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspection } from '../types';
+import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspection, ReactionKind } from '../types';
 
 /**
  * Three tiers for a claim (docs/design.md "Truth, claims, official knowledge").
  * Unchallenged: nothing on file speaks against it, so it stands for free.
  * Inconsistency: a fact on file makes it look odd. Cheap to clarify (i_clarify).
- * Disproof: a fact on file says the opposite. Expensive (i_contradiction).
+ * Contradiction: a fact on file says the opposite. Expensive (i_contradiction).
+ * A contradiction is a disproof when a record or a document says it, and
+ * conflicting testimony when a person does (TESTIMONY, catchKind()).
  */
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   // "No reason, a short trip" answers "Why now?" with no reason, so a
@@ -33,16 +35,25 @@ export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
 /** What the clarify answer says. Once you have said it, a spot-check finds an inconsistency explained (spotCheckOf()). */
 export const CLARIFIED_BY: ClaimId = 'familyVisit';
 /** In this order, which also picks the one an apology is charged for (firstCaught). */
-export const DISPROOFS: readonly [ClaimId, FactId][] = [
+export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
   ['noOtherFamily', 'brotherAbroad'],
   ['cashUnderLimit', 'cashCount'],
   // The host call: your mother says you stay with her.
   ['hotelStay', 'hostStatement'],
   // The phone search: a bank notice for the donation.
   ['neverDonated', 'bankNotice'],
-  // A relative synced on the phone, or named by your mother on the host call.
+  // A relative synced on the phone, or listed in the old family register.
   ['noOtherFamily', 'relativeContact'],
+  // Your mother names another relative, on the host call or when customs phones her.
+  ['noOtherFamily', 'relativeNamed'],
 ];
+
+/**
+ * Facts that are someone's account, not a record: what your mother told an
+ * officer on the phone. A claim they speak against is conflicting testimony,
+ * which you can explain, never a proven lie.
+ */
+export const TESTIMONY: readonly FactId[] = ['hostStatement', 'relativeNamed'];
 
 /**
  * The cards that challenge a claim, most expensive first. One that applies is
@@ -53,9 +64,21 @@ export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
 
 /** The claim and fact pairs each challenge card puts to you. */
 export const CHALLENGE_PAIRS: Record<(typeof CHALLENGES)[number], readonly [ClaimId, FactId][]> = {
-  i_contradiction: DISPROOFS,
+  i_contradiction: CONTRADICTIONS,
   i_clarify: INCONSISTENCIES,
 };
+
+/**
+ * Which of three a challenge is (docs/design.md "Truth, claims, official
+ * knowledge"). suspicion: an inconsistency, a question raised. testimony:
+ * someone said otherwise, which you can explain. disproof: a document or
+ * record shows the claim false. Only a disproof records the claim as disproved
+ * (RunState.disproved).
+ */
+export function catchKind(card: (typeof CHALLENGES)[number], fact: FactId): ReactionKind {
+  if (card === 'i_clarify') return 'suspicion';
+  return TESTIMONY.includes(fact) ? 'testimony' : 'disproof';
+}
 
 const anyPair =(pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
 
@@ -135,7 +158,9 @@ export const ENCOUNTERS: Encounter[] = [
     when: { background: 'foreignEmployer', claims: ['shortTrip'] },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
-      { id: 'check', kind: 'verify', effects: [{ time: -1 }] },
+      // The register confirms who pays you. That is a fact; what the clerk reads into a
+      // foreign salary stays her suspicion (Officer.readings), never a fact on file.
+      { id: 'check', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }] },
     ],
   },
 
@@ -182,7 +207,7 @@ export const ENCOUNTERS: Encounter[] = [
       // She confirms the visit and names the rest of the family, which goes with your file.
       {
         id: 'mother', kind: 'contact', contacts: ['mother'],
-        effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { fact: 'relativeContact' }, { send: 'printout', facts: ['familyAddress', 'relativeContact'] }],
+        effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { fact: 'relativeNamed' }, { send: 'printout', facts: ['familyAddress', 'relativeNamed'] }],
       },
     ],
   },
@@ -250,10 +275,15 @@ export const ENCOUNTERS: Encounter[] = [
         effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
       },
       // The day decides whether a denial holds: the old register lists relatives on a
-      // records day, and your mother is phoned on a hosts day. Either way it is disproved.
+      // records day, which disproves it, and your mother is phoned on a hosts day, whose
+      // account only conflicts with yours (TESTIMONY).
       {
         id: 'deny', kind: 'say',
-        effects: [{ claim: 'noOtherFamily' }, { fact: 'relativeContact', when: { any: [{ bulletin: 'records' }, { bulletin: 'accommodation' }] } }],
+        effects: [
+          { claim: 'noOtherFamily' },
+          { fact: 'relativeContact', when: { bulletin: 'records' } },
+          { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
+        ],
       },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
@@ -283,9 +313,9 @@ export const ENCOUNTERS: Encounter[] = [
   {
     // Disproof: something on file says the opposite of a claim. Expensive.
     id: 'i_contradiction', checkpoint: 'interview', kind: 'related', priority: 4, topic: 'history',
-    when: anyPair(DISPROOFS),
+    when: anyPair(CONTRADICTIONS),
     approaches: [
-      { id: 'apologise', kind: 'say', effects: firstCaught(DISPROOFS, 2) },
+      { id: 'apologise', kind: 'say', effects: firstCaught(CONTRADICTIONS, 2) },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
@@ -296,7 +326,8 @@ export const ENCOUNTERS: Encounter[] = [
     // on file, and Lena's plain answer settles this for free.
     approaches: [
       { id: 'perk', kind: 'perk', effects: [] },
-      { id: 'contract', kind: 'verify', effects: [{ time: -2 }] },
+      // The contract confirms the employer, and only that (Officer.readings).
+      { id: 'contract', kind: 'verify', effects: [{ time: -2 }, { fact: 'employer' }] },
       { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],
   },
@@ -362,8 +393,8 @@ export const CHECKS: Record<CheckId, Check> = {
         result: 'clear',
         effects: [
           { fact: 'hostStatement' },
-          { fact: 'relativeContact' },
-          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeContact'] },
+          { fact: 'relativeNamed' },
+          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeNamed'] },
         ],
       },
     ],
