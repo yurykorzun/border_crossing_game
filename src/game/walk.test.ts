@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ENDING_RANK, allSetups, checkState, outcomes, walk, warningShares } from './walk';
+import { readFileSync } from 'node:fs';
+import { ENDING_RANK, allSetups, checkState, neverPicked, outcomes, walk, warningShares } from './walk';
+import { pickedAnswers } from './bots';
 import { legalActions, newRun, step } from './engine';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { BULLETINS, BULLETIN_TOPICS } from './content/world';
@@ -74,6 +76,33 @@ describe('every possible run', () => {
 
   it('never rates the guaranteed ending above the lucky one', () => {
     expect(report.setups.filter((s) => ENDING_RANK.indexOf(s.guaranteed) > ENDING_RANK.indexOf(s.best))).toEqual([]);
+  });
+});
+
+describe('answers no style of play picks', () => {
+  const picked = pickedAnswers();
+
+  it('lists an answer that no style picks', () => {
+    // Take an answer the bots do pick out of their picks: the report must then name it.
+    expect(report.offered.get('p_purpose')?.has('tourism')).toBe(true);
+    expect(picked.has('p_purpose.tourism')).toBe(true);
+    const without = new Set([...picked].filter((k) => k !== 'p_purpose.tourism'));
+    expect(neverPicked(report.offered, without)).toContain('p_purpose.tourism');
+    expect(neverPicked(report.offered, picked)).not.toContain('p_purpose.tourism');
+  });
+
+  it('keeps only answers docs/design.md names with a reason', () => {
+    // Each one left is named on a list line of the "Answers no style picks" section,
+    // among the ids before the " - " that starts the reason.
+    const doc = readFileSync('docs/design.md', 'utf8');
+    const at = doc.indexOf('\n## Answers no style picks\n');
+    expect(at).toBeGreaterThanOrEqual(0);
+    const end = doc.indexOf('\n## ', at + 1);
+    const named = doc.slice(at, end < 0 ? undefined : end).split('\n')
+      .filter((l) => l.startsWith('- ') && l.includes(' - '))
+      .map((l) => l.slice(2, l.indexOf(' - ')));
+    const missing = neverPicked(report.offered, picked).filter((a) => !named.some((ids) => ids.includes(`\`${a}\``)));
+    expect(missing).toEqual([]);
   });
 });
 

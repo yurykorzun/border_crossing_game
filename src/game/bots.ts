@@ -233,6 +233,29 @@ export function playRun(style: BotStyle, setup: RunSetup): BotRun {
   return playWith(style, setup, (s, botRng) => botAction(style, s, botRng));
 }
 
+/**
+ * The styles that play with a purpose. The random style is left out of
+ * pickedAnswers(), because given enough runs it picks every answer once, so
+ * counting it would hide answers no player has a reason to pick.
+ */
+export const PICKING_STYLES: readonly BotStyle[] = BOT_STYLES.filter((x) => x !== 'random');
+
+/** Seeds 1..WALK_SEEDS per walk setup. The never-picked list stops changing from about 10. */
+export const WALK_SEEDS = 10;
+
+/**
+ * Every `card.approach` a style in PICKING_STYLES picks, over every walk setup
+ * (allSetups()) with seeds 1..seeds. Fed to neverPicked() in src/game/walk.ts.
+ */
+export function pickedAnswers(seeds = WALK_SEEDS, styles: readonly BotStyle[] = PICKING_STYLES): Set<string> {
+  const picked = new Set<string>();
+  for (const style of styles)
+    for (const setup of SETUPS)
+      for (let seed = 1; seed <= seeds; seed++)
+        for (const c of playRun(style, { ...setup, seed }).choices) picked.add(`${c.card}.${c.pick}`);
+  return picked;
+}
+
 // ── The memorised script: a harsher probe than the styles above.
 // It reads no state. Per card id it always gives the one answer that won most
 // often in a first pass, the way a player who learned the game by heart would.

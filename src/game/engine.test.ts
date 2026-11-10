@@ -188,7 +188,7 @@ describe('scenarios', () => {
 
   it('every desk deals 2 cards, a quiet run too: no third card (2op.6)', () => {
     for (const extra of [{ bulletin: 'customs' as const }, { decisions: 2 }, { inspections: 1 }]) {
-      const s = step(quietPassport(extra), { type: 'choose', approach: 'perk' });
+      const s = step(quietPassport(extra), { type: 'choose', approach: 'check' });
       expect(s.screen, JSON.stringify(extra)).toEqual({ kind: 'between', next: 1 });
       expect(s.seen).not.toContain('p_photo');
     }

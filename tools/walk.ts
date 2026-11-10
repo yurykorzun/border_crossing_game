@@ -3,7 +3,8 @@
 // "lucky" is the best ending with the kindest deal. Ending shares count
 // branches, not players, so they are a smell, not a balance verdict.
 import { writeFileSync } from 'node:fs';
-import { ENDING_RANK, walk, warningShares } from '../src/game/walk';
+import { ENDING_RANK, neverPicked, walk, warningShares } from '../src/game/walk';
+import { PICKING_STYLES, WALK_SEEDS, pickedAnswers } from '../src/game/bots';
 import { BULLETIN_TOPICS } from '../src/game/content/world';
 import type { SetupResult } from '../src/game/walk';
 import type { EndingId } from '../src/game/types';
@@ -62,3 +63,8 @@ for (const w of warningShares(r.setups)) {
 }
 console.log(`\nEnd states by ending (share of branches, not of players), ${total} total:`);
 for (const [e, n] of Object.entries(r.endings)) console.log(`  ${e.padEnd(12)} ${n} (${((n / total) * 100).toFixed(1)}%)`);
+
+// Answers no style of play picks: cut them, rework them, or say in docs/design.md why they stay.
+const never = neverPicked(r.offered, pickedAnswers());
+console.log(`\nNever picked by ${PICKING_STYLES.join(', ')} (every setup, seeds 1-${WALK_SEEDS}): ${never.length}`);
+for (const a of never) console.log(`  ${a}`);

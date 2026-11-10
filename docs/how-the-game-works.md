@@ -101,7 +101,7 @@ So there are two levels of winning. Getting through at all is the first level, a
 - The Advantage and the Complication touch the same topic. Lena is good at work questions and slow when her work is checked.
 
 **The branch walk (the proof)**
-A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-10) visited 6,495,559 states across 105 setups in about 155 s and checked, at every state and move:
+A script (`npm run walk`) plays every possible choice and every card the dealer could deal, from every possible state: both characters, every packing, all 3 bulletins. It does not sample, it plays them all. The last run (2026-11-10) visited 5,383,866 states across 105 setups in about 134 s and checked, at every state and move:
 - No dead ends and no loops: every run ends.
 - Time stays 0-8 and scrutiny 0-3; a spent document, an exposed contact or the used Advantage never comes back.
 - A double tap or a second resolution of the same check is refused; nothing is accepted after the ending.
@@ -109,22 +109,23 @@ A script (`npm run walk`) plays every possible choice and every card the dealer 
 - Scrutiny never rises without a reason that holds, the clarify and contradiction cards are only dealt when their claim and fact pair is on file, and the hotel is never shown after "Staying with family".
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
-- Every bulletin warning pays: with random answers and deals, packings with a document on the warned topic get home in time more often (customs, medicine: 22.4% vs 13.7%; accommodation: 37.1% vs 24.3%, against the one packing with no accommodation document; records, identity: 23.1% vs 17.7%).
+- It also lists the answers no bot with a purpose ever picks (15 on 2026-11-10). Each one left has a line in docs/design.md, "Answers no style picks", saying why it stays.
+- Every bulletin warning pays: with random answers and deals, packings with a document on the warned topic get home in time more often (customs, medicine: 25.4% vs 13.1%; accommodation: 43.6% vs 25.8%, against the one packing with no accommodation document; records, identity: 26.5% vs 19.0%).
 - The longest run is 14 decisions (the limit is 14). In the eval the median full run is 5.6 minutes and the longest 7.3 (eval rule 4 asks for 4-8 and only reports the median).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 
-Ending shares across all branches (share of branches, not of players): home in time 26.6%, at a cost 25.1%, too late 20.7%, turned back 27.6%.
+Ending shares across all branches (share of branches, not of players): home in time 30.0%, at a cost 20.6%, too late 21.9%, turned back 27.6%.
 
 **The balance targets (eval rules 7-10)**
 `npm run eval` plays every bot style over 200 seeds and fails when a target slips (shares are only checked with at least 100 runs per style):
 - Rule 7: honest play gets home in time in at least 50% of runs, so honesty is not punished (65.5% on 2026-11-10).
-- Rule 8: the liar bot gets home in time in at most 80% of runs, so lying does not always win (67.5%).
-- Rule 9: an inspection happens in 25-33% of runs across all styles, so scrutiny is a real risk without being every run (29.5%).
-- Rule 10: the memorised script (one answer per card, learned from a first pass of every style) gets home in time in at most 80% of runs, so the game is not solved by heart (75.0%, down from 94.0%). The bulletin and the file decide which answer is safe, so a fixed script pays where a player who reads the day would not.
+- Rule 8: the liar bot gets home in time in at most 80% of runs, so lying does not always win (66.0%).
+- Rule 9: an inspection happens in 25-33% of runs across all styles, so scrutiny is a real risk without being every run (28.7%).
+- Rule 10: the memorised script (one answer per card, learned from a first pass of every style) gets home in time in at most 80% of runs, so the game is not solved by heart (73.5%, down from 94.0%). The bulletin and the file decide which answer is safe, so a fixed script pays where a player who reads the day would not.
 
 **What is not balanced yet**
-The review's target for the memorised script is 60%. Rule 10 is the first of two steps, and the second comes after a playtest. The walk also works out the best ending a player can force in each setup whatever the dealer deals, and today it is "home in time" in 89 of 105 setups and "home, at a cost" in the other 16 (mostly the customs day). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost".
+The review's target for the memorised script is 60%. Rule 10 is the first of two steps, and the second comes after a playtest. The walk also works out the best ending a player can force in each setup whatever the dealer deals, and today it is "home in time" in 88 of 105 setups and "home, at a cost" in the other 17 (mostly the customs day). The target is situational play: the best answer depends on the moment, no single style wins, and some packings can only guarantee "home, at a cost".
 
 ## Where it lives in code
 
