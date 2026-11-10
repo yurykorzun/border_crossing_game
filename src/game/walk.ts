@@ -20,12 +20,13 @@ import {
 import { consequences } from './consequence';
 import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, BulletinId, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, RunState } from './types';
+import type { Action, BulletinId, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, START_TIME, canConfirm, coversWarning,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
+import { DEFAULT_LEVEL, levelOf } from './content/levels';
 import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
@@ -37,12 +38,12 @@ export function combinations<T>(list: readonly T[], k: number): T[][] {
   return [...combinations(rest, k - 1).map((c) => [head, ...c]), ...combinations(rest, k)];
 }
 
-/** Every character x packing x bulletin. The seed only moves cosmetic beats here. */
-export function allSetups(): RunSetup[] {
+/** Every character x packing x bulletin in one level. The seed only moves cosmetic beats here. */
+export function allSetups(level: LevelId = DEFAULT_LEVEL): RunSetup[] {
   const out: RunSetup[] = [];
   for (const character of CHARACTER_IDS as CharacterId[])
     for (const loadout of combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots))
-      for (const bulletin of BULLETINS) out.push({ character, loadout, bulletin, seed: 1 });
+      for (const bulletin of BULLETINS) out.push({ level, character, loadout, bulletin, seed: 1 });
   return out;
 }
 
@@ -185,7 +186,8 @@ export function noFreeExits(s: RunState): string[] {
 export function checkState(s: RunState): string[] {
   const bad: string[] = [];
   const ch = CHARACTERS[s.character];
-  if (s.time < 0 || s.time > START_TIME) bad.push(`time ${s.time} outside 0..${START_TIME}`);
+  const { startTime, minTripTime } = levelOf(s);
+  if (s.time < 0 || s.time > startTime) bad.push(`time ${s.time} outside 0..${startTime}`);
   if (s.scrutiny < 0 || s.scrutiny > MAX_SCRUTINY) bad.push(`scrutiny ${s.scrutiny} outside 0..${MAX_SCRUTINY}`);
   if (!s.used.every((id) => s.loadout.includes(id)) || !unique(s.used)) bad.push(`used ${s.used} not a subset of loadout`);
   if (!s.exposed.every((c) => ch.contacts.includes(c)) || !unique(s.exposed)) bad.push(`exposed ${s.exposed} not a subset of contacts`);
@@ -215,7 +217,7 @@ export function checkState(s: RunState): string[] {
     if (!desks.length || desks.join() !== CHECKPOINTS.filter((d) => desks.includes(d)).join()) bad.push(`${f} known at [${desks}]`);
   }
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !currentCard(s)) bad.push(`unknown card ${s.screen.id}`);
-  if (travelOf(s) < MISSION_MIN_TIME || travelOf(s) > START_TIME) bad.push(`trip of ${travelOf(s)} hours outside ${MISSION_MIN_TIME}..${START_TIME}`);
+  if (travelOf(s) < minTripTime || travelOf(s) > startTime) bad.push(`trip of ${travelOf(s)} hours outside ${minTripTime}..${startTime}`);
   // Once the bus is out of reach, every card offers to finish quickly instead of more clicking.
   const finishing = legalActions(s).some((a) => a.type === 'finish');
   const onCard = !s.reaction && (s.screen.kind === 'encounter' || s.screen.kind === 'inspection');

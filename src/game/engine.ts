@@ -3,18 +3,21 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
 import { has, own } from '../i18n';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
 export interface RunSetup {
+  /** The level to play (LEVELS in src/game/content/levels.ts). Unset: Arrival. A destination (70r.1) sits beside it. */
+  level?: LevelId;
   character: CharacterId;
   loadout: EvidenceId[];
   bulletin: BulletinId;
@@ -24,8 +27,10 @@ export interface RunSetup {
 export function newRun(setup: RunSetup): RunState {
   const ch = CHARACTERS[setup.character];
   if (setup.loadout.length !== ch.evidenceSlots) throw new Error(`${ch.id} takes ${ch.evidenceSlots} evidence cards`);
+  const level = levelOf(setup);
   return {
     v: 2,
+    level: setup.level ?? DEFAULT_LEVEL,
     seed: setup.seed,
     rng: setup.seed,
     character: ch.id,
@@ -34,8 +39,8 @@ export function newRun(setup: RunSetup): RunState {
     used: [],
     exposed: [],
     calledIn: [],
-    time: START_TIME,
-    travel: MISSION_MIN_TIME,
+    time: level.startTime,
+    travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
     facts: {},
     claims: [],
@@ -407,7 +412,7 @@ function apply(s: RunState, effects: Effect[]): RunState {
 }
 
 /** Hours the trip from the border to the bus takes: the run needs at least this many left. */
-export const travelOf = (s: Pick<RunState, 'travel'>): number => s.travel ?? MISSION_MIN_TIME;
+export const travelOf = (s: Pick<RunState, 'travel' | 'level'>): number => s.travel ?? levelOf(s).minTripTime;
 
 /**
  * The bus is out of reach: fewer hours left than the trip takes. Time never
@@ -446,7 +451,7 @@ function finish(s: RunState): RunState {
 // ── The director
 
 function eligible(s: RunState, e: Encounter): boolean {
-  return !s.seen.includes(e.id) && check(e.when, s);
+  return !s.seen.includes(e.id) && dealsCard(s, e.id) && check(e.when, s);
 }
 
 /** A calm card has one answer, so tapping it is not a decision. */
@@ -683,7 +688,7 @@ function deal(s: RunState, dealer: Dealer): RunState {
 
 /** The inspections that can be dealt now: their condition holds, and a confiscation needs the medicine. */
 const inspectionsFitting = (s: RunState): Inspection[] =>
-  INSPECTIONS.filter((i) => check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
+  INSPECTIONS.filter((i) => dealsCard(s, i.id) && check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
 
 /** Deal an inspection: the first fitting one `prefer` accepts, else the dealer picks. */
 function inspect(s: RunState, dealer: Dealer, prefer?: (i: Inspection) => boolean): RunState {

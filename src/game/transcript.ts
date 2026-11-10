@@ -13,13 +13,14 @@ import { andList, own, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
-import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, MISSION_MIN_TIME, SCRUTINY_AFTER_INSPECTION, START_TIME, beatDelayMs } from './content/world';
+import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
+import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
 import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
-import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, RunState } from './types';
+import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
 export interface Line {
@@ -128,11 +129,22 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.title');
   p.add('ui.tagline');
   p.add('ui.start');
-  // Setup 1: TravelerStep. Title, stage label, the premise as the heading, two cards.
+  // Setup 1: LevelStep, the level list. One tap on a level, so it is not counted as a decision.
+  p.add('ui.title');
+  p.add('ui.level');
+  p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 4 }), name: t('ui.level') });
+  p.add('ui.pickLevel');
+  for (const id of LEVEL_IDS) {
+    p.add('ui.levelNumber', { n: LEVELS[id].number });
+    p.add(LEVELS[id].title);
+    p.add(LEVELS[id].blurb);
+  }
+  // Setup 2: TravelerStep. Title, Back, stage label, the premise as the heading, two cards.
   p.add('ui.title');
   p.add('scene.traveler', {}, CHROME);
+  p.add('ui.back');
   p.add('ui.traveler');
-  p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 3 }), name: t('ui.traveler') });
+  p.add('ui.progress', { count: t('ui.progressCount', { n: 2, total: 4 }), name: t('ui.traveler') });
   p.add('ui.premise');
   // The radio group's accessible name: read out, never shown.
   p.add('ui.pickCharacter', {}, CHROME);
@@ -149,11 +161,11 @@ function setupLines(setup: RunSetup, p: Page): void {
   p.add('ui.readHistory', { name });
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character, ...CHROME });
   p.add('ui.continueAs', { name });
-  // Setup 2: Pack your documents (DocumentsStep)
+  // Setup 3: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
   p.add('scene.preparation', {}, CHROME);
-  const count = t('ui.progressCount', { n: 2, total: 3 });
+  const count = t('ui.progressCount', { n: 3, total: 4 });
   p.add('ui.preparation');
   p.add('ui.progress', { count, name: t('ui.preparation') });
   p.add('ui.prepareDocuments');
@@ -177,12 +189,13 @@ function setupLines(setup: RunSetup, p: Page): void {
   }
   p.add('ui.moreBelow');
   p.add('ui.continue');
-  // Setup 3: Begin the crossing
+  // Setup 4: Begin the crossing, with the level's goal
+  const level = levelOf(setup);
   p.add('ui.beginCrossing');
   p.add('ui.mission');
-  p.add('mission.title');
-  p.add('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME });
-  p.add('ui.missionRule', { n: MISSION_MIN_TIME });
+  p.add(level.goalTitle);
+  p.add(level.goalBody, { hours: level.startTime, travel: level.minTripTime });
+  p.add('ui.missionRule', { n: level.minTripTime });
   p.add('ui.yourDocuments');
   for (const id of setup.loadout) p.add(`ev.${id}.name`);
 }
@@ -670,6 +683,8 @@ export interface KnownFailure {
   character?: CharacterId;
   /** Rule 4 only: covers runs estimated at this many minutes or more, so a run that gets shorter still fails. */
   atLeastMinutes?: number;
+  /** The level it fails in. Unset: Arrival (tools/eval.ts). */
+  level?: LevelId;
   /** The bead that fixes it and removes this entry. */
   bead: string;
 }

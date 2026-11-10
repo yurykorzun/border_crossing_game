@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 import type { CharacterId } from '../src/game/types';
-import { openReturning } from './returning';
+import { openReturning, pickArrival } from './returning';
 
 // The queue before each checkpoint at 390x844: one beat per tap, a scene cropped around
 // the booth (200-240 px), the current beat alone under it at 18/26 px, then one button up
@@ -14,6 +14,7 @@ const MAX_STEPS = 400;
 async function startRun(page: Page, id: CharacterId) {
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf(id)).click();
   await page.locator('.traveler-step .controls button.primary').click();
   const docs = page.locator('.documents-step .doc');

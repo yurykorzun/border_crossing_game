@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN } from '../src/game/content/world';
-import { openReturning } from './returning';
+import { openReturning, pickArrival } from './returning';
 
 // The three setup screens at 390x844: Choose your traveler, Pack your documents, Begin the crossing.
 // They show once an ending is seen (openReturning); a fresh save skips to Begin as Lena.
@@ -15,6 +15,7 @@ test('fresh save: Start opens the begin screen as Lena with the fixed packing, n
 
   const begin = page.locator('main.begin-step');
   await expect(begin).toBeVisible();
+  await expect(page.locator('main.level-step')).toHaveCount(0);
   await expect(page.locator('main.traveler-step')).toHaveCount(0);
   await expect(page.locator('main.documents-step')).toHaveCount(0);
   await expect(begin.locator('button.back')).toHaveCount(0);
@@ -26,17 +27,61 @@ test('fresh save: Start opens the begin screen as Lena with the fixed packing, n
   await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('purpose-of-visit-save') ?? '{}'));
   expect(saved.run.character).toBe('lena');
+  expect(saved.run.level).toBe('arrival');
   expect([...saved.run.loadout].sort()).toEqual([...FIRST_RUN.loadout].sort());
   expect(errors).toEqual([]);
 });
 
-test('one ending seen: Start shows the traveler screen first', async ({ page }) => {
+test('one ending seen: Start shows the level list with Arrival, and Arrival plays today\'s mission', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+
+  // The level list comes before the traveler screen, with Level 1 Arrival only for now.
+  const list = page.locator('main.level-step');
+  await expect(list).toBeVisible();
+  await expect(page.locator('main.traveler-step')).toHaveCount(0);
+  await expect(list.locator('.stage-label')).toHaveText('1 / 4 · Crossing');
+  await expect(list.getByRole('heading', { name: en['ui.pickLevel'] })).toBeVisible();
+  const levels = list.getByRole('list', { name: en['ui.pickLevel'] }).locator('button.level');
+  await expect(levels).toHaveCount(1);
+  await expect(levels.locator('.level-name')).toHaveText(['Arrival']);
+  await expect(levels.first()).toContainText('Level 1');
+  await fitsScreen(page, 'level list');
+
+  // Arrival opens the traveler screen, and Back returns to the list.
+  await pickArrival(page);
   await expect(page.locator('main.traveler-step')).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
   await expect(page.locator('main.begin-step')).toHaveCount(0);
+  await page.locator('main.traveler-step').getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(list).toBeVisible();
+  await pickArrival(page);
+
+  // Through to the begin screen: today's mission, 8 hours with a 2-hour trip.
+  await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  for (const id of FIRST_RUN.loadout) await page.locator('.doc').nth(EVIDENCE_IDS.indexOf(id)).click();
+  await page.locator('.documents-step .controls button.primary').click();
+  const mission = page.locator('main.begin-step .mission');
+  await expect(mission.locator('h3')).toHaveText(en['mission.title']);
+  await expect(mission).toContainText('leaves in 8 hours');
+  await expect(mission).toContainText('2 hours past the border');
+  await page.locator('main.begin-step .controls button.primary').click();
+  await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
+  await expect(page.locator('main.run .strip')).toContainText('8 hours');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('purpose-of-visit-save') ?? '{}'));
+  expect(saved.run.level).toBe('arrival');
+  expect(saved.run.time).toBe(8);
+  expect(errors).toEqual([]);
 });
+
+/** No page scroll on a setup screen. */
+async function fitsScreen(page: Page, where: string) {
+  const scroll = await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight);
+  expect(scroll, `page scroll on ${where}`).toBeLessThanOrEqual(0);
+}
 
 /** The traveler screen: no page scroll, and Continue in view. `bodyMayScroll` for the open history. */
 async function fits(page: Page, where: string, bodyMayScroll = false) {
@@ -61,12 +106,13 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   page.on('pageerror', (err) => errors.push(err.message));
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
 
   const screen = page.locator('main.traveler-step');
   await expect(screen.locator('.setup-title')).toHaveText('Purpose of Visit');
   await expect(screen.locator('.traveler-scene')).toBeVisible();
-  await expect(screen.locator('.stage-label')).toHaveText('1 / 3 · Traveler');
-  await expect(screen.locator('.stage-label .amber')).toHaveText('1 / 3');
+  await expect(screen.locator('.stage-label')).toHaveText('2 / 4 · Traveler');
+  await expect(screen.locator('.stage-label .amber')).toHaveText('2 / 4');
   await expect(screen.getByRole('heading', { name: "You're going home. Your father is in the hospital." })).toBeVisible();
 
   // A two-sentence premise at most: count every sentence that ends in . ! or ?
@@ -174,6 +220,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   // Title, then each setup heading in order, into the first queue.
   await expect(page.locator('.title-screen h1')).toHaveText('Purpose of Visit');
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
   await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
@@ -181,8 +228,8 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   // Screen 2: stage, title and count, the bulletin bar, six rows whose lines do not wrap.
   const docsScreen = page.locator('main.documents-step');
   await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
-  await expect(docsScreen.locator('.stage-label')).toHaveText('2 / 3 · Preparation');
-  await expect(docsScreen.locator('.stage-label .amber')).toHaveText('2 / 3');
+  await expect(docsScreen.locator('.stage-label')).toHaveText('3 / 4 · Preparation');
+  await expect(docsScreen.locator('.stage-label .amber')).toHaveText('3 / 4');
   await expect(docsScreen.locator('.pack-count')).toHaveText('0 of 3 packed');
 
   // The bulletin is one sentence: exactly one terminal . ! or ?, at the end.
@@ -275,6 +322,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
 test('packing at large text: a "more below" cue until the list is scrolled to the end', async ({ page }) => {
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
   const docsScreen = page.locator('main.documents-step');
@@ -307,6 +355,7 @@ for (const [n, bulletin] of BULLETINS.entries()) {
       Date.now = () => seed; Math.random = () => 0;
     }, BULLETINS.length + n);
     await page.locator('.title-screen button.primary').click();
+    await pickArrival(page);
     await page.evaluate(() => {
       const w = window as unknown as { __now: () => number; __random: () => number };
       Date.now = w.__now; Math.random = w.__random;

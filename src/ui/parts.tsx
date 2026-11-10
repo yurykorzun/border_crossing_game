@@ -11,7 +11,8 @@ import type { Part } from '../game/consequence';
 import type { ChangeLine, RunState } from '../game/types';
 import type { Settings } from '../game/save';
 import { CHECKPOINTS } from '../game/types';
-import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, START_TIME } from '../game/content/world';
+import { CHARACTERS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION } from '../game/content/world';
+import { levelOf } from '../game/content/levels';
 import { messagesSoFar } from '../game/content/queues';
 import type { QueueBeat } from '../game/content/queues';
 import { Portrait } from './art/Portrait';
@@ -22,9 +23,10 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
   const now = shownCheckpoint(s);
   const hours = tn('ui.hours', s.time);
   const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
-  const left = Math.max(0, Math.min(s.time, START_TIME)) / START_TIME;
+  const start = levelOf(s).startTime;
+  const left = Math.max(0, Math.min(s.time, start)) / start;
   // The hours the trip to the bus needs: once the bar runs past this mark, the last bus is gone.
-  const reserve = Math.max(0, Math.min(travelOf(s), START_TIME)) / START_TIME;
+  const reserve = Math.max(0, Math.min(travelOf(s), start)) / start;
   return (
     <header className="strip" aria-label={t('ui.yourCrossing')}>
       <p className="goal">{t('ui.goal')}</p>

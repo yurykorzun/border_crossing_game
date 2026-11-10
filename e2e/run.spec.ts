@@ -8,7 +8,7 @@ import { own, t } from '../src/i18n';
 import { en } from '../src/i18n/en';
 import type { CheckId, RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
-import { openReturning } from './returning';
+import { openReturning, pickArrival } from './returning';
 
 // One full run on a phone-size screen: title → character → documents → begin → play by
 // always taking the first enabled option → ending card.
@@ -34,6 +34,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   await expect(page.locator('.title-screen')).toBeVisible();
   await noHorizontalScroll(page, 'title');
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
 
   // Character: a tap selects, Continue moves on.
   await expect(page.getByRole('radio').first()).toBeVisible();
@@ -338,8 +339,9 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toHaveCount(0);
 
-  // Play again goes back to picking a traveler.
+  // Play again goes back to the level list, then to picking a traveler.
   await page.getByRole('button', { name: 'Play again' }).click();
+  await pickArrival(page);
   await expect(page.locator('.traveler-step')).toBeVisible();
   await expect(page.getByRole('radio').first()).toBeVisible();
   expect(errors).toEqual([]);

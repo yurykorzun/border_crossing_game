@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { en } from '../src/i18n/en';
 import { CHARACTERS, CHARACTER_IDS } from '../src/game/content/world';
-import { openReturning } from './returning';
+import { openReturning, pickArrival } from './returning';
 
 // The pixel art (src/ui/art, inline SVG): drawn in code, so it adds no requests and little weight.
 
@@ -19,6 +19,7 @@ test('portraits on the traveler cards and in My story, the queue scene, and no r
 
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
 
   // Each traveler card has its own passport photo, named for screen readers.
   const cards = page.getByRole('radio');
