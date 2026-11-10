@@ -38,15 +38,15 @@ describe('npm run eval', () => {
     expect(r.stdout).toContain('eval: PASS');
     // 3 seeds say nothing about a share, so the balance rules report and do not decide.
     expect(r.stdout).toMatch(/rule 7: honest homeInTime [\d.]+% of 3 runs \(not checked/);
-    expect(r.stdout).toMatch(/report: memorised homeInTime [\d.]+% of 3 runs \(not checked\)/);
+    expect(r.stdout).toMatch(/rule 10: memorised homeInTime [\d.]+% of 3 runs \(not checked/);
   }, 30_000);
 
-  it('checks the balance shares on the default 200 seeds and prints the memorised rate without failing on it', () => {
+  it('checks the balance shares and the memorised script on the default 200 seeds', () => {
     const r = evalCli([]);
     expect(r.status, r.stdout).toBe(0);
-    for (const id of [7, 8, 9]) expect(r.stdout).toMatch(new RegExp(`ok {4}rule ${id}:`));
+    for (const id of [7, 8, 9, 10]) expect(r.stdout).toMatch(new RegExp(`ok {4}rule ${id}:`));
     expect(r.stdout).toMatch(/rule 9: runs with an inspection [\d.]+% of 1000 runs\n/);
-    expect(r.stdout).toMatch(/report: memorised homeInTime [\d.]+% of 200 runs \(not checked\)/);
+    expect(r.stdout).toMatch(/rule 10: memorised homeInTime [\d.]+% of 200 runs\n/);
   }, 60_000);
 
   it('refuses a bad flag with exit 2', () => {

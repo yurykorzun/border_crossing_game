@@ -519,7 +519,23 @@ export const MAX_ESCALATIONS = 2;
  * checked with at least minRuns runs per style, because a handful of seeds
  * cannot say anything about a share; with fewer the summary says so.
  */
-export const BALANCE = { honestHomeMin: 50, liarHomeMax: 80, inspected: { min: 25, max: 33 }, minRuns: 100 } as const;
+export const BALANCE = { honestHomeMin: 50, liarHomeMax: 80, memorisedHomeMax: 80, inspected: { min: 25, max: 33 }, minRuns: 100 } as const;
+
+/**
+ * Rule 10: one fixed answer per card, learned from a first pass of every style
+ * (firstPassScript() in src/game/bots.ts), gets home in time in at most
+ * BALANCE.memorisedHomeMax percent of runs, so the game is not solved by heart.
+ * The script plays outside the per-style transcripts, so tools/eval.ts counts
+ * its wins and this only judges the share. 60 percent is the next step, after a playtest.
+ */
+export const MEMORISED_RULE = { id: 10, name: `the memorised script gets home in time in at most ${BALANCE.memorisedHomeMax}% of runs` } as const;
+
+export function memorisedSummary(won: number, runs: number): Summary {
+  const pct = runs ? (won * 100) / runs : 0;
+  const text = `memorised homeInTime ${pct.toFixed(1)}% of ${runs} runs`;
+  if (runs < BALANCE.minRuns) return { rule: MEMORISED_RULE.id, ok: true, text: `${text} (not checked: ${runs} runs, needs ${BALANCE.minRuns})` };
+  return { rule: MEMORISED_RULE.id, ok: pct <= BALANCE.memorisedHomeMax, text };
+}
 
 /** True when the run dealt at least one secondary inspection. */
 export const inspected = (tr: Transcript) => tr.happenings.some((h) => h.type === 'cardDealt' && INSPECTION_BY_ID.has(h.id));

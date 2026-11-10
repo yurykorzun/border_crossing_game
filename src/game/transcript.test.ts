@@ -6,7 +6,7 @@ import partsSource from '../ui/parts.tsx?raw';
 import { playRun, setupFor } from './bots';
 import type { BotStyle } from './bots';
 import { INSPECTIONS } from './content/encounters';
-import { BALANCE, KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, playMinutes, playTimeRule, transcriptOf } from './transcript';
+import { BALANCE, KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, playMinutes, playTimeRule, transcriptOf } from './transcript';
 import type { KnownFailure, Transcript } from './transcript';
 
 // setupFor() cycles Lena's setups first, then Mark's; 60 is Mark's first.
@@ -192,7 +192,16 @@ describe('scenario evals', () => {
     });
 
     it('the targets are the balance review numbers', () => {
-      expect(BALANCE).toEqual({ honestHomeMin: 50, liarHomeMax: 80, inspected: { min: 25, max: 33 }, minRuns: 100 });
+      // The memorised script's 80 is the first of two steps; 60 comes after a playtest (2op.12).
+      expect(BALANCE).toEqual({ honestHomeMin: 50, liarHomeMax: 80, memorisedHomeMax: 80, inspected: { min: 25, max: 33 }, minRuns: 100 });
+    });
+  });
+
+  describe('rule 10: the memorised script', () => {
+    it('fails above 80 percent, passes at it, and does not judge under 100 runs', () => {
+      expect(memorisedSummary(161, 200)).toMatchObject({ rule: 10, ok: false, text: 'memorised homeInTime 80.5% of 200 runs' });
+      expect(memorisedSummary(160, 200)).toMatchObject({ rule: 10, ok: true, text: 'memorised homeInTime 80.0% of 200 runs' });
+      expect(memorisedSummary(3, 3)).toMatchObject({ ok: true, text: 'memorised homeInTime 100.0% of 3 runs (not checked: 3 runs, needs 100)' });
     });
   });
 

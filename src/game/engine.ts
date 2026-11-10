@@ -529,14 +529,16 @@ function advance(s: RunState, dealer: Dealer): RunState {
  * inspection whenever scrutiny is above 0, the scrutiny a character starts
  * with included: Mark's second passport is on file before he says a word. A
  * paper on the topic the bulletin warned about, shown on the way, settles her
- * half the time: the dealer draws one of 2. She inspects on that topic when an
+ * two times in three: the dealer draws one of 3. She inspects on that topic when an
  * inspection takes such a paper (an evidence answer), else the dealer picks one
  * as usual.
  *
  * This is what puts an inspection in a quarter to a third of runs (`npm run
  * autoplay`). Once spot-checks caught lies at the desks, counting only the
  * scrutiny gained on the way left the share under a quarter, so the start
- * value counts too (2op.9). The pacing rule still holds: after 2 escalating
+ * value counts too (2op.9). Once the day and the file decided which lies get
+ * caught, caught liars pushed it over a third, so a warned-about paper settles
+ * her more often (2op.12). The pacing rule still holds: after 2 escalating
  * cards a routine card left comes first, and the supervisor reads the file
  * again after it, drawing only then.
  */
@@ -546,9 +548,9 @@ function admission(s: RunState, dealer: Dealer): RunState {
   if (rest) return show(s, rest.id);
   let n = s;
   if (coversWarning(s.used, s.bulletin)) {
-    const r = dealer(s.rng, 2);
+    const r = dealer(s.rng, 3);
     n = { ...s, rng: r.rng };
-    if (r.index === 0) return finish(n);
+    if (r.index !== 0) return finish(n);
   }
   const topic = BULLETIN_TOPICS[n.bulletin];
   return inspect(n, dealer, (i) => i.approaches.some((a) => a.kind === 'evidence' && a.topic === topic));
@@ -607,7 +609,9 @@ export function caught(s: RunState, card: string): { claim: ClaimId; desk: Check
  * reaction. A challenge card can word an answer for the pair that dealt it
  * (caught()): `enc.i_clarify.hotelStay.familyAddress.accept.label`, because
  * "I came as a tourist" is the wrong answer to a hotel booking. Else the
- * traveler's own wording (own()), else the key itself.
+ * day's wording, when the bulletin changes what the answer does
+ * (`enc.c_cash.under.bulletin.customs.reaction`: on a customs day the cash is
+ * counted anyway). Else the traveler's own wording (own()), else the key itself.
  */
 export function answerKey(s: RunState, approach: string, part: 'label' | 'reaction'): string {
   const sc = s.screen;
@@ -616,6 +620,8 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   const pair = sc.kind === 'encounter' ? caught(s, id) : undefined;
   const paired = pair && `${prefix}.${id}.${pair.claim}.${pair.fact}.${approach}.${part}`;
   if (paired && has(paired)) return paired;
+  const daily = `${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`;
+  if (has(daily)) return daily;
   return own(`${prefix}.${id}.${approach}.${part}`, s.character);
 }
 

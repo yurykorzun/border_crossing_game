@@ -2,8 +2,8 @@
 // against the story rules in src/game/transcript.ts. Exits 1 on any failure no
 // known entry covers, on a known entry that no longer happens, or on a
 // whole-eval check that is not ok (rule 4 only reports the median full run;
-// rules 7-9 check balance shares once every style has 100 runs). The memorised
-// script's homeInTime is printed as a report and never fails the eval.
+// rules 7-9 check balance shares once every style has 100 runs, rule 10 the
+// memorised script's homeInTime once it has 100 runs).
 // `npm run eval -- [--seeds 200] [--seed 0] [--no-known] [--min-minutes 4.5] [--out dir]`
 //
 // Run i uses setupFor(seed + i), like `npm run autoplay`, so a failure's
@@ -13,7 +13,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor } from '../src/game/bots';
 import type { BotStyle } from '../src/game/bots';
-import { KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
+import { KNOWN_FAILURES, MEMORISED_RULE, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
 import type { Transcript } from '../src/game/transcript';
 
 /**
@@ -82,16 +82,18 @@ for (const k of r.known)
   console.log(k.count
     ? `  known: rule ${k.entry.rule} ${k.entry.key}${k.entry.character ? ` (${k.entry.character})` : ''}, ${k.count} failures, fixed by ${k.entry.bead}`
     : `  STALE known entry: rule ${k.entry.rule} ${k.entry.key} no longer fails; remove it (${k.entry.bead})`);
-// The memorised script (see tools/autoplay.ts): reported, never a rule. Getting it
-// under the review's 60% target is design work in its own beads.
+// Rule 10, the memorised script (see tools/autoplay.ts): played here, judged by memorisedSummary().
 const script = firstPassScript(SEEDS, START);
 let memorisedHome = 0;
 for (let i = 0; i < SEEDS; i++) if (playScript(script, setupFor(START + i)).final.ending === 'homeInTime') memorisedHome++;
-console.log(`  report: memorised homeInTime ${((memorisedHome * 100) / SEEDS).toFixed(1)}% of ${SEEDS} runs (not checked)`);
+const memorised = memorisedSummary(memorisedHome, SEEDS);
+console.log(`  ${(memorised.ok ? 'ok' : 'FAIL').padEnd(6)}rule ${MEMORISED_RULE.id}: ${MEMORISED_RULE.name}`);
+console.log(`        ${memorised.ok ? '' : 'FAIL '}${formatSummary(memorised)}`);
+const exitCode = r.exitCode || (memorised.ok ? 0 : 1);
 if (r.fresh.length) {
   console.log(`\n${r.fresh.length} failures${r.fresh.length > SHOW ? `, first ${SHOW}` : ''}:`);
   for (const f of r.fresh.slice(0, SHOW)) console.log(`  ${formatFailure(f)}`);
 }
 console.log(`\n${written} transcripts in ${OUT}/`);
-console.log(r.exitCode ? 'eval: FAIL' : 'eval: PASS');
-process.exit(r.exitCode);
+console.log(exitCode ? 'eval: FAIL' : 'eval: PASS');
+process.exit(exitCode);

@@ -98,7 +98,9 @@ function reasonHolds(content: Content, card: Encounter | Inspection, a: Approach
   const fact = reason as FactId;
   const effect = a.effects[i];
   if ([card.when, a.requires, effect.when].some((c) => factsIn(c).includes(fact))) return true;
-  if (a.effects.slice(0, i).some((e) => 'fact' in e && e.fact === fact && !e.when)) return true;
+  // An earlier effect files it always, or under the very condition this scrutiny has.
+  const same = (c: Cond | undefined) => !c || JSON.stringify(c) === JSON.stringify(effect.when);
+  if (a.effects.slice(0, i).some((e) => 'fact' in e && e.fact === fact && same(e.when))) return true;
   if (!queued.length) return false;
   // The check found it, or the answer that started the check filed it.
   const files = (es: readonly Effect[] | undefined) => (es ?? []).some((e) => 'fact' in e && e.fact === fact);

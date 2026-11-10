@@ -290,8 +290,14 @@ describe('contact results', () => {
   it('a vouch that passes: the beat alone, then a verified row and an on-file row naming the desk', () => {
     const s = at(newRun(lena), 'c_tourist', { checkpoint: 1, claims: ['tourism'] });
     const n = playStep(s, { type: 'choose', approach: 'mother' });
-    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring.']);
-    expect(rows(n)).toEqual(['Visit verified.', "On file at Customs: your mother's number."]);
+    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. She gives her address and names the rest of the family.']);
+    // She also gives her address and names the family (2op.12); on a records day both reach the desks ahead.
+    expect(rows(n)).toEqual([
+      'Visit verified.', "On file at Customs: your mother's number.",
+      "Your mother's address is now on file.", 'Another relative of yours is now on file.',
+      'Into the shared records for the desks ahead: Family address.',
+      'Into the shared records for the desks ahead: Another relative, on record.',
+    ]);
   });
 
   it('a vouch in the waiting room clears the check and reports the same two rows', () => {
