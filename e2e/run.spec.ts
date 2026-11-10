@@ -241,7 +241,7 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   for (const w of widths) expect(w, 'My story section width').toBeGreaterThanOrEqual(300);
   // Each contact's abilities, from the table in src/game/content/world.ts.
   await expect(sheet.locator('.people .can')).toHaveText([
-    'Can confirm: address, visit, prescription',
+    'Can confirm: address, why you came, prescription',
     /^Can confirm: (a place to stay|a job offer abroad)$/,
   ]);
   expect(errors).toEqual([]);

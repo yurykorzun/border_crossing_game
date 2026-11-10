@@ -260,7 +260,7 @@ test('the passport question: answers as speech or an action, one icon and one li
   await expect(answers.locator('.consequence-text')).toHaveText([
     'Uses letter · Reveals her address',
     'Register check: 1 hour',
-    'Recorded as your reason for visiting',
+    'Recorded as your reason for coming back',
   ]);
   for (const answer of await answers.all()) {
     await expect(answer.locator('svg')).toHaveCount(1);
