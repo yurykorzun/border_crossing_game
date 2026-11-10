@@ -617,7 +617,8 @@ export const en: Record<string, string> = {
   'spot.clear': 'Before you go, the officer checks one thing you said against your file: "{claim}". It fits.',
   'spot.flaw': 'Before you go, the officer checks one thing you said against your file: "{claim}". It does not fit.',
   'spot.answered': 'Before you go, the officer checks one thing you said against your file: "{claim}". You have already answered for it.',
-  'spot.explained': 'Before you go, the officer checks one thing you said against your file: "{claim}". It does not fit, but you have since said why you came. Phoning to square the two takes {hours} hours.',
+  // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
+  'spot.explained': 'Before you go, a spot-check. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
   // Under a clarify or contradiction card's question (caughtLine() in src/game/consequence.ts):
   // your own words, the desk where you said them, the fact that catches them.
   'caught.line': 'You said: "{said}" ({desk}). On file: {fact}.',

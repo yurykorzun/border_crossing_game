@@ -2,7 +2,7 @@
 // src/game/engine.ts). The dealer picks the claim; the file decides the result.
 
 import { describe, expect, it } from 'vitest';
-import { t } from '../i18n';
+import { own, t } from '../i18n';
 import { CHALLENGE_PAIRS, DISPROOFS, INCONSISTENCIES } from './content/encounters';
 import { SPOT_CHECK_HOURS } from './content/world';
 import { newRun, spotCheckOf, step } from './engine';
@@ -134,9 +134,28 @@ describe('spot-checks', () => {
     expect(n.reaction?.some((l) => l.key.startsWith('spot.'))).toBe(false);
   });
 
+  // 2op.4: a spot-check that fires quotes your words, the desk and the fact, in 30 words or fewer.
+  it.each(INCONSISTENCIES.flatMap(([c, f]) => CHECKPOINTS.map((said) => [c, f, said] as const)))(
+    'an explained "%s" against %s (said at %s) quotes your words, the desk and the fact',
+    (c, f, said) => {
+      const s = leaving('interview', [c, 'familyVisit'], [f], { saidAt: { [c]: said } });
+      const n = step(s, choose('interview'), picks(0));
+      const line = n.reaction?.find((l) => l.key === 'spot.explained');
+      expect(line).toBeDefined();
+      const text = t(line!.key, line!.vars);
+      for (const who of ['lena', 'mark']) expect(own(`said.${c}`, who)).toBe(`said.${c}`);
+      expect(text).toContain(`"${t(`said.${c}`)}"`);
+      expect(text).toContain(`(${t(`checkpoint.${said}`)})`);
+      expect(text).toContain(t(`fact.${f}`));
+      expect(text).toContain(`${SPOT_CHECK_HOURS} hours`);
+      expect(text).not.toMatch(/[{}—]/);
+      expect(text.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(30);
+    },
+  );
+
   it('every result has text, with no dash', () => {
     for (const r of ['clear', 'flaw', 'answered', 'explained']) {
-      const line = t(`spot.${r}`, { claim: 'tourism', hours: '2' });
+      const line = t(`spot.${r}`, { claim: 'tourism', said: 'tourism', desk: 'passport', fact: 'familyAddress', hours: '2' });
       expect(line).not.toMatch(/[{}—]/);
     }
   });

@@ -599,8 +599,11 @@ export function caught(s: RunState, card: string): { claim: ClaimId; desk: Check
   const pair = pairs?.find(([c, f]) => s.claims.includes(c) && knows(s, f));
   if (!pair) return undefined;
   const [claim, fact] = pair;
-  return { claim, desk: s.saidAt?.[claim] ?? loggedAt(s, claim)[0] ?? deskOf(s), fact };
+  return { claim, desk: saidDesk(s, claim), fact };
 }
+
+/** Where you first said `c`; a save from before saidAt existed names the first desk that wrote it down, else this one. */
+const saidDesk = (s: RunState, c: ClaimId): Checkpoint => s.saidAt?.[c] ?? loggedAt(s, c)[0] ?? deskOf(s);
 
 /**
  * Each desk spot-checks one claim you made before you leave it, once: the
@@ -622,7 +625,14 @@ function spotCheck(s: RunState, dealer: Dealer): RunState {
   const r = dealer(s.rng, onFile.length);
   const claimed = onFile[r.index];
   const found = spotCheckOf(s, claimed);
-  const vars = { claim: claimed, hours: String(SPOT_CHECK_HOURS) };
+  const vars: Record<string, string> = { claim: claimed, hours: String(SPOT_CHECK_HOURS) };
+  if (found.result === 'explained') {
+    // Like a challenge card (caught()): your words, where you said them, and the fact
+    // that makes them look odd. No inconsistency claim has a traveler's own wording,
+    // so `said` is the claim id (spotcheck.test.ts checks that).
+    const [, fact] = CHALLENGE_PAIRS.i_clarify.find(([c, f]) => c === claimed && knows(s, f))!;
+    Object.assign(vars, { said: claimed, desk: saidDesk(s, claimed), fact });
+  }
   const checked = say({ ...n, rng: r.rng }, [{ key: `spot.${found.result}`, vars }]);
   if (found.result === 'explained') return { ...checked, time: Math.max(0, checked.time - SPOT_CHECK_HOURS) };
   if (found.result === 'flaw') return { ...checked, pending: [...checked.pending, found.card] };
