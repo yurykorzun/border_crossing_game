@@ -18,9 +18,10 @@ export const LAST_HOURS = 2;
 /**
  * Hours a desk's spot-check takes to square a claim with a fact that makes it
  * look odd, when you have since told them the real reason (spotCheckOf() in
- * src/game/engine.ts): the officer phones the desk that wrote it down.
+ * src/game/engine.ts): the officer phones the desk that wrote it down. Three
+ * keeps the liar bot at or under 80 percent homeInTime in `npm run autoplay`.
  */
-export const SPOT_CHECK_HOURS = 2;
+export const SPOT_CHECK_HOURS = 3;
 
 export const CHARACTERS: Record<CharacterId, Character> = {
   lena: {

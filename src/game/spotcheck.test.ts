@@ -30,11 +30,13 @@ const LAST_CARD: Record<Checkpoint, { id: string; answer: string }> = {
   interview: { id: 'i_water', answer: 'drink' },
 };
 
+/** Leaving `desk` with `claims` on file there (written down) and `facts` known there. */
 function leaving(desk: Checkpoint, claims: ClaimId[], facts: FactId[], extra: Partial<RunState> = {}): RunState {
   const card = LAST_CARD[desk];
   return {
     ...newRun(lena),
     checkpoint: CHECKPOINTS.indexOf(desk), slot: 3, claims, facts: at(desk, facts),
+    logged: Object.fromEntries(claims.map((c) => [c, [desk]])),
     screen: { kind: 'encounter', id: card.id }, seen: [card.id], ...extra,
   };
 }
@@ -111,6 +113,19 @@ describe('spot-checks', () => {
     const n = step(leaving('passport', [], []), choose('passport'), counting);
     expect(drew).toBe(0);
     expect(n.spotChecked).toEqual(['passport']);
+  });
+
+  it('checks only claims on file: one said aloud to an officer who does not write it down is never picked', () => {
+    // Both claims would be a flaw here; only the hotel stay was written down.
+    const s = leaving('customs', ['tourism', 'hotelStay'], ['familyAddress', 'hostStatement'], { logged: { hotelStay: ['passport'] } });
+    const checked = step(s, choose('customs'), picks(0));
+    expect(checked.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', hours: String(SPOT_CHECK_HOURS) } });
+    // Nothing written down: no claim to check, and the dealer is not asked.
+    let drew = 0;
+    const counting: Dealer = (rng) => { drew++; return { index: 0, rng }; };
+    const n = step({ ...s, logged: {} }, choose('customs'), counting);
+    expect(drew).toBe(0);
+    expect(n.reaction?.some((l) => l.key.startsWith('spot.'))).toBe(false);
   });
 
   it('stops after a secondary inspection, which has read the whole file', () => {

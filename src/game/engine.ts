@@ -604,7 +604,9 @@ export function caught(s: RunState, card: string): { claim: ClaimId; desk: Check
 
 /**
  * Each desk spot-checks one claim you made before you leave it, once: the
- * dealer picks which. A claim that fits what this desk has on file passes
+ * dealer picks which, among the claims on file (written down at some desk, so
+ * one only said aloud to an officer who does not write it down is never
+ * checked). A claim that fits what this desk has on file passes
  * cleanly, at no cost. A flaw opens a check and the check decides
  * (spotCheckOf()): the challenge card is queued like a follow-up, so the pacing
  * rule still puts a routine card first, and its answers keep the price they
@@ -615,9 +617,10 @@ function spotCheck(s: RunState, dealer: Dealer): RunState {
   const n: RunState = { ...s, spotChecked: [...(s.spotChecked ?? []), deskOf(s)] };
   // After a secondary inspection the whole file has been read, so the desks stop
   // spot-checking. It also keeps a long run inside the decision budget.
-  if (!s.claims.length || s.inspections) return n;
-  const r = dealer(s.rng, s.claims.length);
-  const claimed = s.claims[r.index];
+  const onFile = s.claims.filter((c) => loggedAt(s, c).length);
+  if (!onFile.length || s.inspections) return n;
+  const r = dealer(s.rng, onFile.length);
+  const claimed = onFile[r.index];
   const found = spotCheckOf(s, claimed);
   const vars = { claim: claimed, hours: String(SPOT_CHECK_HOURS) };
   const checked = say({ ...n, rng: r.rng }, [{ key: `spot.${found.result}`, vars }]);
