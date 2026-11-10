@@ -237,6 +237,8 @@ English first, built for translation from day one:
 
 Someone returning for a funeral, a parent collecting a child, an emigrant renewing documents. Each has different resources and something different to lose. A familiar officer or passenger can reappear across runs. Build these only after the first mission is fun.
 
+Each story is a level: a record in `src/game/content/levels.ts` with its name and goal text keys, its start time, its minimum trip time, the cards it can deal and the one rule it adds. Level 1 Arrival is the first mission above, with no new rule. A run's setup names its level beside the traveler, packing and bulletin. Once an ending is seen, the level list comes before the traveler screen; a first run plays Arrival with no list. `npm run walk`, `npm run autoplay` and `npx tsx tools/eval.ts` run every level (or one, with `--level`), so each is checked by the same rules. `npm run walk -- --ignore <rule>` plays bots that never make the picks a level rule's heeders make, and a rule earns its place when ignoring it gets home in time less often.
+
 ## Prototype scope
 
 1 mission, 2 characters, 6 evidence cards, 12 encounters (4 per checkpoint), a few follow-ups, 4 secondary inspections. Placeholder rectangles only. Play the same setup repeatedly before expanding. If one loadout or response keeps winning, change its cost or coverage.

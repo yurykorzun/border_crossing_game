@@ -12,10 +12,11 @@ import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { messagesSoFar, queueBeats } from './game/content/queues';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
+import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS } from './game/content/levels';
 import { browserStore, load, openQuestions, save } from './game/save';
 import type { SaveData } from './game/save';
-import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
+import type { Action, BulletinId, CharacterId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
 import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
@@ -67,8 +68,8 @@ function Game() {
         <Setup
           bulletin={setup.bulletin}
           firstRun={data.endingsSeen.length === 0}
-          onStart={(character, loadout) => {
-            setData((d) => ({ ...d, run: newRun({ character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
+          onStart={(level, character, loadout) => {
+            setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
             setSetup(null);
           }}
         />
@@ -153,24 +154,33 @@ function OpenQuestions({ questions }: { questions: string[] }) {
 // Setup screens, in order. They are presentation state here, not engine phases.
 // Back and Continue walk this list, so a new screen (the destination briefing, 70r.3,
 // goes between traveler and documents) is one more entry and one more case below.
-const SETUP_STEPS = ['traveler', 'documents', 'begin'] as const;
+const SETUP_STEPS = ['level', 'traveler', 'documents', 'begin'] as const;
 type SetupStep = (typeof SETUP_STEPS)[number];
 
 // Before the first ending (firstRun) there are no choices yet: Setup opens on the
-// begin screen as FIRST_RUN's traveler and packing, with no way back to the picks.
-function Setup({ bulletin, firstRun, onStart }: { bulletin: BulletinId; firstRun: boolean; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
-  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'traveler');
+// begin screen as FIRST_RUN's traveler and packing in Level 1, with no way back to the picks.
+function Setup({ bulletin, firstRun, onStart }: {
+  bulletin: BulletinId;
+  firstRun: boolean;
+  onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
+}) {
+  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'level');
+  const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
 
   if (firstRun && character) {
-    return <BeginStep picked={picked} traveler={character} onBegin={() => onStart(character, picked)} />;
+    return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => onStart(level, character, picked)} />;
+  }
+  if (at === 'level') {
+    return <LevelStep onPick={(id) => { setLevel(id); move(1); }} />;
   }
   if (at === 'traveler' || !character) {
     return (
       <TravelerStep
         initial={character}
+        onBack={() => setAt('level')}
         onContinue={(c) => {
           // A traveler with fewer slots keeps only the first picks that still fit.
           setPicked((p) => p.slice(0, CHARACTERS[c].evidenceSlots));
@@ -183,7 +193,37 @@ function Setup({ bulletin, firstRun, onStart }: { bulletin: BulletinId; firstRun
   if (at === 'documents') {
     return <DocumentsStep character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
   }
-  return <BeginStep picked={picked} onBack={() => move(-1)} onBegin={() => onStart(character, picked)} />;
+  return <BeginStep level={level} picked={picked} onBack={() => move(-1)} onBegin={() => onStart(level, character, picked)} />;
+}
+
+/**
+ * Setup 1, once an ending is seen: the level list. Each level is one button, so
+ * a tap starts it and the traveler screen follows. Level 1 Arrival is today's mission.
+ */
+function LevelStep({ onPick }: { onPick: (id: LevelId) => void }) {
+  const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('level') + 1, total: SETUP_STEPS.length });
+  return (
+    <main className="setup setup-step level-step">
+      <div className="setup-body">
+        <p className="setup-title">{t('ui.title')}</p>
+        <header className="step-head">
+          <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.level') })} part={count} /></p>
+          <h2 className="on-dark">{t('ui.pickLevel')}</h2>
+        </header>
+        <ul className="levels" aria-label={t('ui.pickLevel')}>
+          {LEVEL_IDS.map((id) => (
+            <li key={id}>
+              <button type="button" className="level" data-level={id} onClick={() => onPick(id)}>
+                <span className="mono level-number">{t('ui.levelNumber', { n: LEVELS[id].number })}</span>
+                <strong className="level-name">{t(LEVELS[id].title)}</strong>
+                <span className="level-line">{t(LEVELS[id].blurb)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </main>
+  );
 }
 
 /** Back on setup screens: a quiet control, so only the forward action reads as primary. */
@@ -195,7 +235,7 @@ function BackButton({ onBack }: { onBack: () => void }) {
   );
 }
 
-/** Setup 2. Packing is where hours and scrutiny first matter, so both are explained here. */
+/** Setup 3. Packing is where hours and scrutiny first matter, so both are explained here. */
 function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onContinue }: {
   character: CharacterId;
   bulletin: BulletinId;
@@ -275,11 +315,18 @@ function useMoreBelow() {
 }
 
 /**
- * Setup 3. The mission, the rest of the premise and what you packed, then the one strong button.
+ * Setup 4. The mission, the rest of the premise and what you packed, then the one strong button.
  * On the first run there is no Back, and `traveler` names who you cross as, since nobody picked.
  */
-function BeginStep({ picked, traveler, onBack, onBegin }: { picked: EvidenceId[]; traveler?: CharacterId; onBack?: () => void; onBegin: () => void }) {
+function BeginStep({ level, picked, traveler, onBack, onBegin }: {
+  level: LevelId;
+  picked: EvidenceId[];
+  traveler?: CharacterId;
+  onBack?: () => void;
+  onBegin: () => void;
+}) {
   const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
+  const goal = LEVELS[level];
   return (
     <main className="setup setup-step begin-step">
       <div className="setup-body">
@@ -296,9 +343,9 @@ function BeginStep({ picked, traveler, onBack, onBegin }: { picked: EvidenceId[]
         <section className="paper mission">
           <p className="mono">{t('ui.mission')}</p>
           {/* The title says whose care it is, so "his care" in the body reads right. */}
-          <h3>{t('mission.title')}</h3>
-          <p>{t('mission.body', { hours: START_TIME, travel: MISSION_MIN_TIME })}</p>
-          <p className="rule">{t('ui.missionRule', { n: MISSION_MIN_TIME })}</p>
+          <h3>{t(goal.goalTitle)}</h3>
+          <p>{t(goal.goalBody, { hours: goal.startTime, travel: goal.minTripTime })}</p>
+          <p className="rule">{t('ui.missionRule', { n: goal.minTripTime })}</p>
         </section>
         <section className="packed-list">
           <h3 className="mono">{t('ui.yourDocuments')}</h3>
@@ -313,11 +360,11 @@ function BeginStep({ picked, traveler, onBack, onBegin }: { picked: EvidenceId[]
 }
 
 /**
- * Setup 1. The premise is the heading; the cards are a radio group, so a tap
+ * Setup 2. The premise is the heading; the cards are a radio group, so a tap
  * selects and only the button moves on. The picked traveler's history waits
  * behind a disclosure, closed until opened.
  */
-function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; onContinue: (c: CharacterId) => void }) {
+function TravelerStep({ initial, onBack, onContinue }: { initial: CharacterId | null; onBack: () => void; onContinue: (c: CharacterId) => void }) {
   const [chosen, setChosen] = useState<CharacterId | null>(initial);
   const [historyOpen, setHistoryOpen] = useState(false);
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
@@ -345,7 +392,10 @@ function TravelerStep({ initial, onContinue }: { initial: CharacterId | null; on
         <p className="setup-title">{t('ui.title')}</p>
         <div className="traveler-scene"><BorderPost /></div>
         <header className="step-head">
-          <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.traveler') })} part={count} /></p>
+          <div className="step-nav">
+            <BackButton onBack={onBack} />
+            <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.traveler') })} part={count} /></p>
+          </div>
           <h2 className="premise">{t('ui.premise')}</h2>
         </header>
         <div className="travelers" role="radiogroup" aria-label={t('ui.pickCharacter')}>

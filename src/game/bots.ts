@@ -7,10 +7,11 @@
 
 import { DISPROOFS, INCONSISTENCIES } from './content/encounters';
 import { CHARACTERS } from './content/world';
+import { DEFAULT_LEVEL, LEVEL_IDS } from './content/levels';
 import { legalActions, newRun, noCost, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
-import type { Action, ClaimId, EndingId, FactId, RunState } from './types';
+import type { Action, ClaimId, EndingId, FactId, Level, LevelId, LevelRule, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { allSetups, outcomes } from './walk';
 
@@ -124,9 +125,32 @@ export interface BotPick {
   botRng: number;
 }
 
-/** The bot's next action, or null when the run is over. */
-export function botAction(style: BotStyle, s: RunState, botRng: number): BotPick | null {
+/** The pick an action makes on the screen it is taken on, as `card.approach` or `check.waitAction`, or undefined. */
+export function pickKey(s: RunState, a: Action): string | undefined {
+  const sc = s.screen;
+  if (a.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) return `${sc.id}.${a.approach}`;
+  if (a.type === 'waitAction' && sc.kind === 'wait') return `${sc.check}.${a.action}`;
+  return undefined;
+}
+
+/**
+ * The actions a bot that ignores `rule` may take: every legal one but the picks
+ * the rule's heeders make, unless those are all that is open.
+ */
+function allowed(s: RunState, rule: LevelRule | undefined): Action[] {
   const legal = legalActions(s);
+  if (!rule) return legal;
+  const rest = legal.filter((a) => !rule.heeds.includes(pickKey(s, a) ?? ''));
+  return rest.length ? rest : legal;
+}
+
+/**
+ * The bot's next action, or null when the run is over. With `ignore`, the bot
+ * plays its style but never makes a pick that rule's heeders make while
+ * another pick is open (ruleShares()).
+ */
+export function botAction(style: BotStyle, s: RunState, botRng: number, ignore?: LevelRule): BotPick | null {
+  const legal = allowed(s, ignore);
   if (!legal.length) return null;
   // Told the bus is out of reach, every style finishes the crossing quickly, as a player would.
   const finish = legal.find((a) => a.type === 'finish');
@@ -138,7 +162,8 @@ export function botAction(style: BotStyle, s: RunState, botRng: number): BotPick
   }
   if (style === 'situational') return { action: best(legal, (a) => -lookahead(s, a)), botRng };
   if (legal[0].type === 'waitAction') return { action: waitPick(style, legal), botRng };
-  const opts = options(s).filter((o) => !o.blocked);
+  const open = new Set(legal.map((a) => (a.type === 'choose' ? a.approach : '')));
+  const opts = options(s).filter((o) => !o.blocked && (!ignore || open.has(o.approach.id)));
   const scored = best(opts, (o) => SCORE[style](s, o));
   return { action: { type: 'choose', approach: scored.approach.id }, botRng };
 }
@@ -159,10 +184,12 @@ function best<T>(list: T[], cost: (x: T) => number): T {
   return pick;
 }
 
-/** The setup for run number `i`: cycles every character x packing x bulletin, seed i + 1. */
-const SETUPS = allSetups();
-export function setupFor(i: number): RunSetup {
-  return { ...SETUPS[((i % SETUPS.length) + SETUPS.length) % SETUPS.length], seed: i + 1 };
+const SETUPS = new Map<LevelId, RunSetup[]>(LEVEL_IDS.map((id) => [id, allSetups(id)]));
+
+/** The setup for run number `i` in a level: cycles every character x packing x bulletin, seed i + 1. */
+export function setupFor(i: number, level: LevelId = DEFAULT_LEVEL): RunSetup {
+  const list = SETUPS.get(level)!;
+  return { ...list[((i % list.length) + list.length) % list.length], seed: i + 1 };
 }
 
 /** The bot's own random stream starts from the run seed, scrambled so it is not the dealer's. */
@@ -229,8 +256,9 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
   return { style, final: s, actions, choices, noCost: free, lies, caught: caught.size };
 }
 
-export function playRun(style: BotStyle, setup: RunSetup): BotRun {
-  return playWith(style, setup, (s, botRng) => botAction(style, s, botRng));
+/** One run of a style. With `ignore`, the bot ignores that level rule (botAction()). */
+export function playRun(style: BotStyle, setup: RunSetup, ignore?: LevelRule): BotRun {
+  return playWith(style, setup, (s, botRng) => botAction(style, s, botRng, ignore));
 }
 
 /**
@@ -247,10 +275,10 @@ export const WALK_SEEDS = 10;
  * Every `card.approach` a style in PICKING_STYLES picks, over every walk setup
  * (allSetups()) with seeds 1..seeds. Fed to neverPicked() in src/game/walk.ts.
  */
-export function pickedAnswers(seeds = WALK_SEEDS, styles: readonly BotStyle[] = PICKING_STYLES): Set<string> {
+export function pickedAnswers(seeds = WALK_SEEDS, styles: readonly BotStyle[] = PICKING_STYLES, level: LevelId = DEFAULT_LEVEL): Set<string> {
   const picked = new Set<string>();
   for (const style of styles)
-    for (const setup of SETUPS)
+    for (const setup of SETUPS.get(level)!)
       for (let seed = 1; seed <= seeds; seed++)
         for (const c of playRun(style, { ...setup, seed }).choices) picked.add(`${c.card}.${c.pick}`);
   return picked;
@@ -288,10 +316,10 @@ export function buildScript(runs: readonly BotRun[]): Script {
   return script;
 }
 
-/** The first pass: every style over setups seed..seed + runs - 1, the ones autoplay plays. */
-export function firstPassScript(runs: number, seed = 0): Script {
+/** The first pass: every style over a level's setups seed..seed + runs - 1, the ones autoplay plays. */
+export function firstPassScript(runs: number, seed = 0, level: LevelId = DEFAULT_LEVEL): Script {
   const pass: BotRun[] = [];
-  for (const style of BOT_STYLES) for (let i = 0; i < runs; i++) pass.push(playRun(style, setupFor(seed + i)));
+  for (const style of BOT_STYLES) for (let i = 0; i < runs; i++) pass.push(playRun(style, setupFor(seed + i, level)));
   return buildScript(pass);
 }
 
@@ -312,5 +340,40 @@ export function playScript(script: Script, setup: RunSetup): BotRun {
   return playWith('memorised', setup, (s, botRng) => {
     const action = scriptAction(script, s);
     return action && { action, botRng };
+  });
+}
+
+// ── Level rules: does ignoring one do worse?
+
+export interface RuleShare {
+  style: BotStyle;
+  /** homeInTime share of runs that play the style as it is. */
+  heeding: number;
+  /** homeInTime share of the same runs with the bot ignoring the rule. */
+  ignoring: number;
+  runs: number;
+}
+
+/** The level rule called `id`, or undefined when the level has none by that name. */
+export const ruleOf = (level: Level, id: string): LevelRule | undefined => level.rules.find((r) => r.id === id);
+
+/**
+ * Per style in PICKING_STYLES: the homeInTime share over every setup of the
+ * level with seeds 1..seeds, heeding and ignoring `rule`. A level's rule earns
+ * its place when ignoring it does worse (docs/research/2026-11-09-balance-and-levels.md).
+ */
+export function ruleShares(level: Level, rule: LevelRule, seeds = WALK_SEEDS, styles: readonly BotStyle[] = PICKING_STYLES): RuleShare[] {
+  const setups = allSetups(level.id);
+  return styles.map((style) => {
+    let heeding = 0;
+    let ignoring = 0;
+    let runs = 0;
+    for (const setup of setups)
+      for (let seed = 1; seed <= seeds; seed++) {
+        runs++;
+        if (playRun(style, { ...setup, seed }).final.ending === 'homeInTime') heeding++;
+        if (playRun(style, { ...setup, seed }, rule).final.ending === 'homeInTime') ignoring++;
+      }
+    return { style, heeding: heeding / runs, ignoring: ignoring / runs, runs };
   });
 }

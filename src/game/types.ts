@@ -246,6 +246,43 @@ export interface EvidenceCard {
   blockedBy?: Cond;
 }
 
+/** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
+export type LevelId = 'arrival';
+
+/**
+ * The one new rule a level adds (docs/research/2026-11-09-balance-and-levels.md,
+ * "Levels"). `heeds` lists the picks a player who follows the rule makes, as
+ * `card.approach` (or `check.waitAction` in the waiting room). A bot that
+ * ignores the rule never makes them while another pick is open, so the walk
+ * can show that ignoring it gets home in time less often (ruleShares() in
+ * src/game/walk.ts).
+ */
+export interface LevelRule {
+  id: string;
+  heeds: readonly string[];
+}
+
+export interface Level {
+  id: LevelId;
+  /** Shown as "Level <number>" on the level list. */
+  number: number;
+  /** i18n key of the level's name on the level list. */
+  title: string;
+  /** i18n key of the one line under the name on the level list. */
+  blurb: string;
+  /** i18n keys of the goal on the begin screen: its heading and its body ({hours}, {travel}). */
+  goalTitle: string;
+  goalBody: string;
+  /** Hours until the last bus when the run starts. */
+  startTime: number;
+  /** Hours the trip from the border takes: the run needs at least this many left. */
+  minTripTime: number;
+  /** Encounter and inspection ids this level can deal. Follow-ups and challenges come from what was dealt. */
+  cards: readonly string[];
+  /** The rules this level adds. Level 1 adds none. */
+  rules: readonly LevelRule[];
+}
+
 export type WaitAction = 'wait' | 'ask' | 'assist';
 
 export type Screen =
@@ -282,6 +319,8 @@ export type FactMap = Partial<Record<FactId, Checkpoint[]>>;
 
 export interface RunState {
   v: 2;
+  /** The level being played (LEVELS in src/game/content/levels.ts). Unset in saves from before it existed: Arrival. */
+  level?: LevelId;
   seed: number;
   rng: number;
   character: CharacterId;
@@ -297,7 +336,7 @@ export interface RunState {
   calledIn?: ContactId[];
   time: number;
   /**
-   * Hours the trip from the border to the bus takes: MISSION_MIN_TIME, or more
+   * Hours the trip from the border to the bus takes: the level's minTripTime, or more
    * after a missed connection. The run needs at least this many left (travelOf()
    * in src/game/engine.ts). Unset in saves from before it existed.
    */

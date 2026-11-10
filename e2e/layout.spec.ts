@@ -6,7 +6,7 @@ import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME }
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
-import { openReturning } from './returning';
+import { openReturning, pickArrival } from './returning';
 
 // The run screen at 390x844, a border counter: the header says where you stand, the
 // scene and the question sit in the middle with the question right on top of the
@@ -52,6 +52,7 @@ test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', asy
   page.on('pageerror', (err) => errors.push(err.message));
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
 
   // Mark starts with 1 scrutiny.
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('mark')).click();
@@ -106,6 +107,7 @@ test('the run header, the tray and its pixel icons, at the first checkpoint', as
   page.on('pageerror', (err) => errors.push(err.message));
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
 
   // Lena starts with no scrutiny.
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
@@ -335,6 +337,7 @@ test('each checkpoint has its own named scene, and so do the traveler, packing a
   await openReturning(page);
 
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
   await expect(page.locator('.traveler-scene svg[role="img"]')).toBeVisible();
   await page.getByRole('radio').first().click();
   await page.locator('.traveler-step .controls button.primary').click();
@@ -410,6 +413,7 @@ test.describe('on a 1280x800 desktop window', () => {
   test('Continue sits within 48 px under the last card on every setup screen', async ({ page }) => {
     await openReturning(page);
     await page.locator('.title-screen button.primary').click();
+    await pickArrival(page);
 
     const gaps: Record<string, number> = {};
     gaps.traveler = await continueGap(page, 'traveler-step', '.traveler');
@@ -435,6 +439,7 @@ test.describe('on a 1280x800 desktop window', () => {
 test('at 390x844 Continue stays pinned in view while the packing list scrolls', async ({ page }) => {
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
   await page.getByRole('radio').first().click();
   await page.locator('.traveler-step .controls button.primary').click();
   // Large text, so the list is sure to be longer than the screen.

@@ -32,6 +32,12 @@ export const en: Record<string, string> = {
   'ui.close': 'Close',
   // Setup 1: the premise is two sentences at most; the rest of the mission waits for later.
   'ui.premise': "You're going home. Your father is in the hospital.",
+  // The level list, once an ending is seen (LevelStep). Names and lines are level.<id>.title and .blurb.
+  'ui.level': 'Crossing',
+  'ui.pickLevel': 'Choose a crossing',
+  'ui.levelNumber': 'Level {n}',
+  'level.arrival.title': 'Arrival',
+  'level.arrival.blurb': 'Home to your father in the hospital, before the last bus leaves.',
   'ui.traveler': 'Traveler',
   'ui.pickCharacter': 'Choose your traveler',
   'ui.continueAs': 'Continue as {name}',
