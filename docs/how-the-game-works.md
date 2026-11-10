@@ -52,7 +52,7 @@ Every question card offers 2-3 answers, and they are always built from the same 
 | Name someone | Exposes a contact | "Ask your mother to vouch" |
 | Advantage | Your once-per-run ability | Lena explains her job plainly |
 
-A no-cost answer spends no time, no scrutiny and no contact, and puts no new fact on file (it may still use a document card). Preparation earns one (the deed for your photo, the return ticket for your cash), and so does luck (a calm card, a lie nobody catches yet). `npm run autoplay` prints how many each bot style gets per run.
+A no-cost answer spends no time, no scrutiny and no contact, and puts no new fact on file (it may still use a document card). Preparation earns one (the deed's registered address for your photo, the return ticket for how long you stay), and so does luck (a calm card, a lie nobody catches yet). `npm run autoplay` prints how many each bot style gets per run.
 
 The rule that keeps it fair: every card has at least one answer that needs no document and no person, so you are never stuck. Missing options still show as greyed out ("Show a document - none packed"), so you can see what your packing cost you.
 

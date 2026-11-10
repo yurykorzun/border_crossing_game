@@ -57,8 +57,8 @@ export const CONTACTS: Record<ContactId, Contact> = {
   mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress' },
   // He can host.
   cousin: { id: 'cousin', abilities: ['accommodation'] },
-  // A job offer abroad.
-  brother: { id: 'brother', abilities: ['work'] },
+  // A job offer abroad. With his record on file, naming him lists him, not only questions him.
+  brother: { id: 'brother', abilities: ['work'], record: 'brotherAbroad' },
 };
 
 /** Facts that are a political risk: a second citizenship, a brother across the border, an old donation. */
@@ -125,10 +125,12 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
   },
   returnTicket: {
     id: 'returnTicket',
-    topics: ['stay', 'money'],
+    // A flight out answers how long you stay. It says nothing about the cash you
+    // carry: the employer letter (income) or a declaration answers that.
+    topics: ['stay'],
     onUse: [{ fact: 'departureDate' }],
-    // Asked how you are paying for the trip, a paid flight out is the whole answer.
-    settles: ['money'],
+    // Asked how long you are staying, the date on the ticket is the whole answer.
+    settles: ['stay'],
   },
   deed: {
     id: 'deed',

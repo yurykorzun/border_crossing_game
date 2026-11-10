@@ -76,8 +76,11 @@ export const en: Record<string, string> = {
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
   // The one line under each answer (src/game/consequence.ts), parts joined by " · ".
-  'ui.line.time.one': 'Costs {n} hour',
-  'ui.line.time.other': 'Costs {n} hours',
+  // A time cost names what the hours go on (<card>.<answer>.event, eventKey()): "Lab test: 2 hours".
+  'ui.line.event.one': '{event}: {n} hour',
+  'ui.line.event.other': '{event}: {n} hours',
+  // Hours spent only on checking someone you named earlier (calledIn.reaction).
+  'ui.event.calledIn': 'Statement check',
   'ui.line.scrutiny': 'Scrutiny +{n}',
   'ui.line.uses': 'Uses {cardShort}',
   'ui.line.medicine': 'Lose the medicine',
@@ -229,9 +232,9 @@ export const en: Record<string, string> = {
   'ev.hospitalNote.name': 'Hospital note',
   'ev.hospitalNote.desc': "Your father's admission, with his prescriptions. Answers medicine and purpose. Puts his condition on file.",
   'ev.returnTicket.name': 'Return ticket',
-  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay and money. Shown for money, nothing goes on file.',
+  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay. Shown for that, nothing goes on file.',
   'ev.deed.name': 'Apartment deed',
-  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Shown for identity, nothing goes on file.',
+  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Does not prove a photo. Shown for identity, nothing goes on file.',
   // Handed over: "Show your mother's letter". Used up: "Uses letter".
   // The packing screen's rows: a short name, then every topic it answers (topic.<t>.helps) and "Reveals ..." (fact.<id>.reveal).
   'ev.hotel.label': 'Hotel booking',
@@ -315,12 +318,14 @@ export const en: Record<string, string> = {
   'fact.relativeContact.reveal': 'Reveals another relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
-  'bulletin.customs': 'Medicine and cash are checked today.',
+  'bulletin.customs': 'Medicines require supporting paperwork today.',
+  // A second warning on the same day, on its own line under the first (bulletin.<id>.also).
+  'bulletin.customs.also': 'Cash is counted at customs today.',
   'bulletin.accommodation': 'Hosts are being phoned today.',
   'bulletin.records': 'IDs are checked against old records.',
   // The one cue above the packing list: what officers are doing today, in the words of
   // the topic the bulletin points at (BULLETIN_TOPICS), so the rows that answer it stand out.
-  'bulletin.customs.cue': 'Officers are testing medicine and counting cash.',
+  'bulletin.customs.cue': 'Officers are asking for medicine paperwork and counting cash.',
   'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
   'bulletin.records.cue': 'Officers are checking who you are against old files.',
 
@@ -384,18 +389,30 @@ export const en: Record<string, string> = {
   'enc.p_purpose.evidence.label': 'Show {cardThe}',
   'enc.p_purpose.evidence.reaction': 'She reads it twice and types for a while.',
   'enc.p_purpose.family.label': '"I\'m visiting family."',
-  'enc.p_purpose.family.check': 'Register check',
+  'enc.p_purpose.family.event': 'Register check',
   'enc.p_purpose.family.reaction': 'She runs your family through the register.',
   'enc.p_purpose.tourism.label': '"I\'m here as a tourist."',
   'enc.p_purpose.tourism.reaction': 'She stamps nothing. She just nods.',
 
   'enc.p_photo.q': '"This photo is eight years old. Is this you?"',
-  'enc.p_photo.evidence.label': 'Show {cardThe}',
-  'enc.p_photo.evidence.reaction': 'It matches what is on your file. She lets you through.',
   'enc.p_photo.scan.label': 'Offer a face scan',
+  'enc.p_photo.scan.event': 'Face scan',
   'enc.p_photo.scan.reaction': 'She matches the scan against the photo on file.',
-  'enc.p_photo.questions.label': 'Answer questions about yourself',
-  'enc.p_photo.questions.reaction': 'She reads out your old addresses one by one, and you confirm each.',
+  'enc.p_photo.evidence.label': 'Give the address on {cardThe}',
+  'enc.p_photo.evidence.reaction': 'She finds the address in the register. Your old ID photo is on the entry.',
+  'enc.p_photo.questions.label': 'Show another photo ID',
+  'enc.p_photo.questions.event': 'ID confirmation',
+  'enc.p_photo.questions.reaction': 'She copies the number from your driving licence and waits for the issuing office to confirm it.',
+
+  'enc.p_stay.q': '"How long are you staying?"',
+  'enc.p_stay.evidence.label': 'Show {cardThe}',
+  'enc.p_stay.evidence.reaction': 'She reads the date and hands it back.',
+  'enc.p_stay.father.label': '"Until my father is out of hospital."',
+  'enc.p_stay.father.event': 'Call to the hospital',
+  'enc.p_stay.father.reaction': 'She checks the reason with the hospital, then types it into your entry card.',
+  'enc.p_stay.unsure.label': '"I don\'t know yet."',
+  'enc.p_stay.unsure.event': 'Entry rules check',
+  'enc.p_stay.unsure.reaction': 'She enters an open stay and checks it against the entry rules.',
 
   'enc.p_secondPassport.q': '"You hold two passports. Is that correct?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
@@ -403,12 +420,14 @@ export const en: Record<string, string> = {
   'enc.p_secondPassport.evidence.label': 'Show {cardThe}',
   'enc.p_secondPassport.evidence.reaction': '"So you still own property here." She hands it back.',
   'enc.p_secondPassport.handOver.label': 'Hand over both passports',
+  'enc.p_secondPassport.handOver.event': 'Records check',
   'enc.p_secondPassport.handOver.reaction': 'She runs both passports through the records.',
 
   'enc.p_employer.q': '"A tourist with a foreign salary. Who pays you?"',
   'enc.p_employer.evidence.label': 'Show {cardThe}',
   'enc.p_employer.evidence.reaction': 'She copies the company name into a form.',
   'enc.p_employer.check.label': 'Let them look up the company',
+  'enc.p_employer.check.event': 'Company lookup',
   'enc.p_employer.check.reaction': 'She looks up the company in the register.',
 
   // ── Customs
@@ -416,15 +435,17 @@ export const en: Record<string, string> = {
   'enc.c_medicine.evidence.label': 'Show {cardThe}',
   'enc.c_medicine.evidence.reaction': 'He matches each box against the list.',
   'enc.c_medicine.declare.label': 'Declare it and wait',
+  'enc.c_medicine.declare.event': 'Prescription verification',
   'enc.c_medicine.declare.reaction': 'He takes the medicine away for testing.',
 
-  // Asked how you pay, not how much: a paid return ticket answers it (EVIDENCE.returnTicket settles money).
-  'enc.c_cash.q': '"How are you paying for this trip?"',
+  // Asked about the cash itself: income (the employer letter) or a declaration answers it, not a ticket.
+  'enc.c_cash.q': '"How much cash are you carrying, and where is it from?"',
   'enc.c_cash.evidence.label': 'Show {cardThe}',
-  'enc.c_cash.evidence.reaction': 'He glances at it and waves the question away.',
+  'enc.c_cash.evidence.reaction': 'He reads the salary line and writes down the company name.',
   'enc.c_cash.count.label': 'Let him count your cash',
+  'enc.c_cash.count.event': 'Cash count',
   'enc.c_cash.count.reaction': 'He counts it twice and writes the total on a form.',
-  'enc.c_cash.under.label': '"In cash. It\'s under the limit."',
+  'enc.c_cash.under.label': '"My savings. It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes down what you said and does not count it.',
   'enc.c_cash.under.bulletin.customs.reaction': 'Cash is counted today. He counts yours anyway and clips the total to your file.',
 
@@ -434,14 +455,16 @@ export const en: Record<string, string> = {
 
   'enc.c_tourist.q': '"Tourists don\'t usually carry a pensioner\'s prescriptions."',
   'enc.c_tourist.admit.label': '"I\'m visiting my father."',
+  'enc.c_tourist.admit.event': 'New entry form',
   'enc.c_tourist.admit.reaction': '"Why not say so at the desk?" A new form, with your mother\'s address on it.',
   'enc.c_tourist.evidence.label': 'Show {cardThe}',
   'enc.c_tourist.evidence.reaction': 'He reads it, then rereads your entry card.',
   'enc.c_tourist.mother.label': 'Ask him to call {contact}',
-  'enc.c_tourist.mother.reaction': 'Your mother answers on the second ring. She gives her address and names the rest of the family.',
+  'enc.c_tourist.mother.reaction': 'Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.',
 
   'enc.c_host.q': '"We need to confirm where you will stay."',
   'enc.c_host.call.label': 'Wait while they call',
+  'enc.c_host.call.event': 'Call to your host',
   'enc.c_host.call.reaction': "He dials your mother's number and waits.",
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
@@ -450,8 +473,10 @@ export const en: Record<string, string> = {
 
   'enc.c_phone.q': '"Unlock your phone, please."',
   'enc.c_phone.unlock.label': 'Unlock it',
+  'enc.c_phone.unlock.event': 'Phone copy',
   'enc.c_phone.unlock.reaction': 'He copies your phone in a gray box.',
   'enc.c_phone.refuse.label': '"No. It\'s private."',
+  'enc.c_phone.refuse.event': 'Supervisor called',
   'enc.c_phone.refuse.reaction': 'He writes "refused search" on your file and makes you wait for a supervisor.',
 
   // ── Security interview
@@ -473,9 +498,10 @@ export const en: Record<string, string> = {
   'enc.i_family.deny.label': '"I have no other relatives here."',
   'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
   'enc.i_family.deny.bulletin.records.reaction': 'The officer checks the old family register. Another relative of yours is listed.',
-  'enc.i_family.deny.bulletin.accommodation.reaction': 'Hosts are phoned today. Your mother picks up and names another relative.',
-  'enc.i_family.why.label': '"Why do you need to know?"',
-  'enc.i_family.why.reaction': '"Routine." The officer lets you sit until you answer.',
+  'enc.i_family.deny.bulletin.accommodation.reaction': 'Hosts are phoned today. Your mother is asked who else lives there, and names another relative.',
+  'enc.i_family.why.label': 'Ask why they need to know',
+  'enc.i_family.why.event': 'Supervisor called',
+  'enc.i_family.why.reaction': 'The officer does not answer. He calls a supervisor.',
   // Mark's brother lives across the border, not here, so the officer asks about that side.
   'enc.i_family.mark.q': '"Any family across the border?"',
   'enc.i_family.mark.name.label': '"{contactMine} lives across the border."',
@@ -491,6 +517,7 @@ export const en: Record<string, string> = {
 
   'enc.i_clarify.q': '"Your file does not quite match what you said."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
+  'enc.i_clarify.clarify.event': 'Call to passport control',
   'enc.i_clarify.clarify.reaction': 'The officer adds a line to your entry card, then phones the passport desk to check it.',
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
@@ -506,12 +533,14 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.apologise.label': '"I\'m sorry. I was scared."',
   'enc.i_contradiction.apologise.reaction': 'The officer underlines the entry in your file that disproves what you said.',
   'enc.i_contradiction.review.label': 'Ask for a formal review',
+  'enc.i_contradiction.review.event': 'Formal review',
   'enc.i_contradiction.review.reaction': 'A form, then another form, then a review of both.',
 
-  'enc.i_employer.q': '"Your company has an office in a hostile state. Do you report to it?"',
+  'enc.i_employer.q': '"Your employer is registered abroad. What exactly do you do for them?"',
   'enc.i_employer.perk.label': 'Explain your job plainly',
   'enc.i_employer.perk.reaction': 'You explain test plans. The officer stops writing.',
   'enc.i_employer.contract.label': 'Let them check your contract',
+  'enc.i_employer.contract.event': 'Contract check',
   'enc.i_employer.contract.reaction': 'Someone goes to find the contract.',
   'enc.i_employer.brother.label': 'Let them call {contact}',
   'enc.i_employer.brother.reaction': 'Tom explains the job offer. The officer writes his name down.',
@@ -520,11 +549,13 @@ export const en: Record<string, string> = {
   'enc.i_brother.honest.label': '"Last Sunday. He\'s fine."',
   'enc.i_brother.honest.reaction': 'Your brother across the border goes on file, and the officer flags it.',
   'enc.i_brother.calls.label': 'Let them check your call history',
+  'enc.i_brother.calls.event': 'Call history search',
   'enc.i_brother.calls.reaction': 'They go through your calls in the gray box.',
 
   // ── Follow-ups
   'enc.f_host.q': '"Your mother isn\'t answering."',
   'enc.f_host.again.label': 'Wait for another call',
+  'enc.f_host.again.event': 'Second call',
   'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up.',
   'enc.f_host.evidence.label': 'Show {cardThe}',
   'enc.f_host.evidence.reaction': 'He accepts it without looking up.',
@@ -535,16 +566,18 @@ export const en: Record<string, string> = {
   'enc.f_lab.evidence.label': 'Show {cardThe}',
   'enc.f_lab.evidence.reaction': 'The bag comes back sealed with tape.',
   'enc.f_lab.wait.label': 'Wait for the lab',
+  'enc.f_lab.wait.event': 'Lab test',
   'enc.f_lab.wait.reaction': 'You wait while the lab runs its tests.',
   'enc.f_lab.surrender.label': 'Let them keep it',
-  'enc.f_lab.surrender.reaction': 'You sign a form you cannot read.',
+  'enc.f_lab.surrender.reaction': 'You sign the receipt. They keep the medicine.',
 
   'enc.f_donation.q': '"Records show a payment to a fund now listed as extremist."',
   'enc.f_donation.explain.label': '"It was for a sick child."',
-  'enc.f_donation.explain.reaction': '"The fund\'s purpose is not your concern." The payment stays flagged on your file.',
+  'enc.f_donation.explain.reaction': '"The organisation is now on the list. Write down why you sent the money."',
   'enc.f_donation.deny.label': '"I never donated."',
-  'enc.f_donation.deny.reaction': 'A printout of the payment appears with your card number on it.',
+  'enc.f_donation.deny.reaction': '"You said you never donated. This payment carries your name."',
   'enc.f_donation.lawyer.label': 'Ask for a lawyer',
+  'enc.f_donation.lawyer.event': 'Waiting for a lawyer',
   'enc.f_donation.lawyer.reaction': 'You wait on a bench for the lawyer.',
 
   'enc.f_photo.q': '"This photo. Were you at this rally?"',
@@ -553,6 +586,7 @@ export const en: Record<string, string> = {
   'enc.f_photo.deny.label': '"That isn\'t me."',
   'enc.f_photo.deny.reaction': 'The officer zooms in on your face in the photo from your phone.',
   'enc.f_photo.law.label': 'Ask what law it breaks',
+  'enc.f_photo.law.event': 'Legal check',
   'enc.f_photo.law.reaction': 'Nobody knows. They go looking for someone who does.',
 
   // ── Secondary inspections
@@ -560,10 +594,12 @@ export const en: Record<string, string> = {
   'insp.none': 'A supervisor turns every page of your file. There is nothing left to ask. She sends you back to the desk.',
   'insp.s_bag.q': 'Secondary room. They empty your suitcase onto a steel table.',
   'insp.s_bag.wait.label': 'Wait while they search',
+  'insp.s_bag.wait.event': 'Full search',
   'insp.s_bag.wait.reaction': 'They count your cash and search every pocket.',
   'insp.s_bag.declare.label': 'Lay out the cash and the prescription',
   'insp.s_bag.declare.reaction': 'They write down the cash total and who the prescription is for. The search stops.',
   'insp.s_bag.contact.label': 'Ask them to call {contact}',
+  'insp.s_bag.contact.event': 'Phone call',
   // Why her word helps here: the search stops once the prescription checks out.
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
   'insp.s_bag.contact.reaction': 'They make the call, and the search stops early.',
@@ -574,6 +610,7 @@ export const en: Record<string, string> = {
   'insp.s_medicine.surrender.label': 'Leave without it',
   'insp.s_medicine.surrender.reaction': 'You watch the cool bag go behind a door.',
   'insp.s_medicine.wait.label': 'Wait to get it back',
+  'insp.s_medicine.wait.event': 'Shift change at the lab',
   'insp.s_medicine.wait.reaction': 'They test the medicine, then the bag comes back.',
   'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
   'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport.',
@@ -594,15 +631,17 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
   'insp.s_supervisor.evidence.reaction': 'She keeps it for the file and waves you on.',
   'insp.s_supervisor.accept.label': 'Let her phone the hospital',
+  'insp.s_supervisor.accept.event': 'Call to the hospital',
   'insp.s_supervisor.accept.reaction': 'She waits on hold for the ward. The hospital confirms your father is a patient, and she writes it down.',
   'insp.s_supervisor.contact.label': 'Ask her to call {contact}',
+  'insp.s_supervisor.contact.event': 'Phone call',
   'insp.s_supervisor.contact.reaction': 'She calls {contact}, who tells her about your father.',
   'insp.s_supervisor.withdraw.label': 'Withdraw your entry request',
   'insp.s_supervisor.withdraw.reaction': 'She closes your file and hands back your passport.',
 
   // ── Checks and the waiting room
   'check.hostCall.title': "They're calling your mother.",
-  'check.hostCall.clear': 'Your mother answers. The officer hangs up and nods.',
+  'check.hostCall.clear': 'Your mother answers. The officer asks who else lives there and writes it down.',
   'check.hostCall.noAnswer': 'The officer puts the phone down without speaking.',
   'check.hostCall.hint.clear': '"They are calling your host."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',
@@ -646,7 +685,7 @@ export const en: Record<string, string> = {
   'said.noOtherFamily': 'I have no other relatives here',
   'said.noOtherFamily.mark': 'No family across the border',
   'said.neverDonated': 'I never donated',
-  'said.cashUnderLimit': "In cash. It's under the limit",
+  'said.cashUnderLimit': "My savings. It's under the limit",
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',
@@ -693,9 +732,13 @@ export const en: Record<string, string> = {
   'exposure.mother.home': 'She has to leave the hospital to give a statement.',
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',
   'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out of it.',
-  'exposure.brother.protected.title': 'Tom is added to a border watch list',
-  'exposure.brother.protected': 'He cannot come home to visit. Your mother asked you to keep him out of it.',
+  // Tom's line says why: with his record already flagged on your file he is listed, else he is only questioned.
+  'exposure.brother.protected.title': 'Tom is contacted for questioning',
+  'exposure.brother.protected': 'An officer calls him across the border. Your mother asked you to keep him out of it.',
+  'exposure.brother.protected.record.title': 'Tom is added to a border watch list',
+  'exposure.brother.protected.record': 'His name now sits next to a flagged record on your file. He cannot come home to visit. Your mother asked you to keep him out of it.',
   // The protected contact's row in the run summary (protectedRow): the same result in a few words.
   'exposure.cousin.protected.row': 'Called in',
-  'exposure.brother.protected.row': 'Added to watch list',
+  'exposure.brother.protected.row': 'Contacted for questioning',
+  'exposure.brother.protected.record.row': 'Added to watch list',
 };

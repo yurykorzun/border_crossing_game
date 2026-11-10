@@ -219,6 +219,11 @@ export interface Contact {
   abilities: Topic[];
   /** The fact that puts their home on file. With it on file, a call-in becomes a visit (a worse exposure). */
   home?: FactId;
+  /**
+   * The flagged record that makes naming them worse: with it on file, the ending
+   * reads `exposure.<id>.protected.record` (listed), else `exposure.<id>.protected`.
+   */
+  record?: FactId;
 }
 
 /** How badly something on the ending's list hurts: 1 minor, 2 serious, 3 severe. It orders the list, and no tag shows it. */

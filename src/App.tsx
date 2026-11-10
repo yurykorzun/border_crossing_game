@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { own, t, tn } from './i18n';
+import { has, own, t, tn } from './i18n';
 import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -264,6 +264,13 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
           <Icon name="alert" />
           <span className="bulletin-text">{t(`bulletin.${bulletin}`)}</span>
         </p>
+        {/* A day with a second warning (cash on a customs day) gives it its own line. */}
+        {has(`bulletin.${bulletin}.also`) && (
+          <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
+            <Icon name="alert" />
+            <span className="bulletin-text">{t(`bulletin.${bulletin}.also`)}</span>
+          </p>
+        )}
         {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
         <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
         <ul className="cards pick" aria-label={t('ui.prepareDocuments')}>

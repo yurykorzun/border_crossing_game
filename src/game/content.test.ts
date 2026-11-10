@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import { has, t } from '../i18n';
 import { CHECKS, ENCOUNTERS, INSPECTIONS } from './content/encounters';
-import { EVIDENCE } from './content/world';
 import { lintContent } from './lint';
 import type { Content, Text } from './lint';
 import type { Approach, Encounter } from './types';
@@ -148,15 +147,4 @@ describe('content lint', () => {
   });
 });
 
-// The return ticket settles money, so the money card must be a question a paid
-// flight out can answer: how you pay for the trip, not how much cash you carry.
-describe('the cash question fits the return ticket', () => {
-  it('keeps money on the ticket and asks how you pay, not for an amount', () => {
-    expect(EVIDENCE.returnTicket.topics).toContain('money');
-    expect(EVIDENCE.returnTicket.settles).toContain('money');
-    expect(ENCOUNTERS.find((e) => e.id === 'c_cash')!.topic).toBe('money');
-    const q = t('enc.c_cash.q');
-    expect(q).not.toMatch(/how much cash/i);
-    expect(q).toMatch(/paying for this trip/);
-  });
-});
+// The return ticket now settles length of stay, not cash: src/game/copy.test.ts.

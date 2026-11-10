@@ -66,14 +66,14 @@ Background facts come from ordinary life and are the "My story" panel. Encounter
 | Letter from mother | Purpose, accommodation | The family address |
 | Employer letter | Work, money | Your employer |
 | Hospital note | Medicine, purpose | Your father's condition |
-| Return ticket | Length of stay, money | A fixed departure date |
-| Apartment deed | Identity, accommodation | Your property inside |
+| Return ticket | Length of stay (not cash: a ticket says when you leave, not what you carry) | A fixed departure date |
+| Apartment deed | Identity (its registered address, not the photo), accommodation | Your property inside |
 
-Each card covers two topics, so a "wrong" pick is never useless. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
+Each card but the return ticket covers two topics, so a "wrong" pick is rarely useless. The ticket answers one question, how long you stay (the passport clerk's `p_stay`), and answers it outright. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
 
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
-| Customs | "Medicine and cash are checked today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
+| Customs | "Medicines require supporting paperwork today." and, on its own line, "Cash is counted at customs today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
 | Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
 | Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
 
@@ -98,7 +98,7 @@ Rules:
 2. Randomness picks the problem, the chosen solution has a predictable result.
 3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
-5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for cash; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
+5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity, the return ticket for length of stay; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). The ticket used to settle the cash question (dhv.3); the realism review of 2026-11-10 (4qd.1) moved it to length of stay, because a flight out says nothing about the cash you carry, which the employer letter (income) or a declaration answers. Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
 
 ### Encounter checklist
 
@@ -115,7 +115,7 @@ The structural parts are machine-checked by the content lint (`lintContent()` in
 
 - Why now: every related or follow-up card has a `when` or a check result that queues it.
 - Why each option: no two answers on a card do the same thing (same effects, same check and same spend). Say and verify spend nothing of their own, so a say and a verify with the same effects count as twins.
-- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on and leaves the count to the "N hours lost" line.
+- How officials know: every scrutiny effect has a reason the card can point at (a fact it files or a condition puts on file, or the check that dealt it), and every time cost has a reaction (or, for a check result, an outcome line) that says what the hours are spent on and leaves the count to the "N hours lost" line. The answer line names the same event before you pick ("Lab test: 2 hours", `<card>.<answer>.event`).
 - What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card with exactly one answer is the one exception, because its job is the pause (the free answer from rule 5).
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
@@ -128,7 +128,7 @@ Cut on 2026-11-10: `c_medicine.leave` (nobody is short of time at the first cust
 
 Kept, because a person picks them even though the bots don't:
 
-- `p_photo.questions` - the safe slow answer on a records day for someone with something in the records. Making it as fast as the scan there let the memorised script win 89.5% (rule 10 caps it at 80%), so it stays an hour slower.
+- `p_photo.questions` - another photo ID, the safe slow answer on a records day for someone with something in the records. Making it as fast as the scan there let the memorised script win 89.5% (rule 10 caps it at 80%), so it stays an hour slower.
 - `c_phone.refuse` - keeps the phone's contents (a relative, the donation, the brother) off file for 1 scrutiny. The bots pay the hour to unlock because they don't count what the search will find.
 - `i_family.name`, `f_host.cousin`, `i_employer.brother` - the truthful answer that puts the protected person on file to save an hour. That is the central decision ("put someone else at risk"), and the bots never trade a person for time.
 - `f_lab.surrender` - the way out of a 2-hour lab wait when the hours are gone. The medicine for time, the same trade the confiscation inspection asks for.

@@ -265,7 +265,7 @@ describe('too late endings', () => {
   });
 
   it('arriving too late: through the border with hours left, but fewer than the trip', () => {
-    const { final } = honest(3);
+    const { final } = honest(8);
     expect(final.ending).toBe('tooLate');
     expect(final.time).toBeGreaterThan(0);
     expect(final.time).toBeLessThan(travelOf(final));
@@ -274,7 +274,7 @@ describe('too late endings', () => {
 
   it('gives the two runs different ending text', () => {
     const a = honest(18).final;
-    const b = honest(3).final;
+    const b = honest(8).final;
     for (const part of ['title', 'body']) {
       const ka = `ending.${endingText(a)}.${part}`;
       const kb = `ending.${endingText(b)}.${part}`;
@@ -290,8 +290,8 @@ describe('contact results', () => {
   it('a vouch that passes: the beat alone, then a verified row and an on-file row naming the desk', () => {
     const s = at(newRun(lena), 'c_tourist', { checkpoint: 1, claims: ['tourism'] });
     const n = playStep(s, { type: 'choose', approach: 'mother' });
-    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. She gives her address and names the rest of the family.']);
-    // She also gives her address and names the family (2op.12); on a records day both reach the desks ahead.
+    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.']);
+    // Asked, she also gives her address and who else lives there (2op.12); on a records day both reach the desks ahead.
     expect(rows(n)).toEqual([
       'Visit verified.', "On file at Customs: your mother's number.",
       "Your mother's address is now on file.", 'Another relative of yours is now on file.',

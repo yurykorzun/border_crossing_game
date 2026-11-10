@@ -11,7 +11,7 @@
 // counted in onceWords(), not in the run's play time. When a screen there
 // changes, change it here too, or the transcript stops being what the player reads.
 
-import { andList, own, t, tn } from '../i18n';
+import { andList, has, own, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { messagesSoFar, queueBeats } from './content/queues';
@@ -187,6 +187,8 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
+  // A day with a second warning shows it on its own line (the packing screen in src/App.tsx).
+  if (has(`bulletin.${setup.bulletin}.also`)) p.add(`bulletin.${setup.bulletin}.also`);
   // The one cue above the list: what officers are doing today. It is read, so it counts.
   p.add(`bulletin.${setup.bulletin}.cue`);
   for (const id of EVIDENCE_IDS) {

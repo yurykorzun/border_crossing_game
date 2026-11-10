@@ -90,7 +90,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
       const option = page.locator('main.run .controls button:enabled').first();
       // The waiting screen swaps its skip hint for buttons; give the screen a moment.
       await expect(option).toBeVisible();
-      timeChips.push(...(await page.locator('main.run .consequence .part', { hasText: /^Costs / }).allInnerTexts()));
+      timeChips.push(...(await page.locator('main.run .consequence .part', { hasText: /: \d+ hours?$/ }).allInnerTexts()));
       cards.push(...(await answerCards(page)).map((c) => ({ ...c, step: steps })));
       previous = 'option';
       await option.click();
@@ -99,7 +99,8 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   expect(steps, 'run did not end').toBeLessThan(MAX_STEPS);
   expect(timeChips.length, 'time costs seen').toBeGreaterThan(0);
-  for (const chip of timeChips) expect(chip).toMatch(/^Costs \d+ hours?$/);
+  // Each time cost names its event: "Lab test: 2 hours".
+  for (const chip of timeChips) expect(chip).toMatch(/^\S.*: \d+ hours?$/);
   // Every answer card: the action row, then one consequence row, and no answer
   // outweighs another (colour marks the protected contact, never bold).
   expect(cards.length, 'answer cards seen').toBeGreaterThan(0);

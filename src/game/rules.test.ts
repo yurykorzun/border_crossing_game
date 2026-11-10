@@ -45,12 +45,12 @@ describe('relatives question (i_family)', () => {
     expect(opts.map((o) => label(o))).toEqual([
       '"My cousin Ilya lives here."',
       '"I have no other relatives here."',
-      '"Why do you need to know?"',
+      'Ask why they need to know',
     ]);
     // A records day: the old register lists relatives, so the denial shows it puts one on file.
-    expect(opts.map((o) => line(s, o))).toEqual(['His name goes on file', 'Reveals another relative', 'Costs 1 hour']);
+    expect(opts.map((o) => line(s, o))).toEqual(['His name goes on file', 'Reveals another relative', 'Supervisor called: 1 hour']);
     const customs = at(newRun({ ...lena, bulletin: 'customs' }), 'i_family');
-    expect(options(customs).map((o) => line(customs, o))).toEqual(['His name goes on file', 'Recorded as a denial', 'Costs 1 hour']);
+    expect(options(customs).map((o) => line(customs, o))).toEqual(['His name goes on file', 'Recorded as a denial', 'Supervisor called: 1 hour']);
   });
 
   it('the day decides whether a denial holds: disproved on a records or hosts day, not on a customs day (2op.12)', () => {

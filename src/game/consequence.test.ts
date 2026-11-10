@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS } from './content/world';
-import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, eventKey, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -68,7 +68,7 @@ describe('consequence line', () => {
       expect(parts.length, `${name}: ${line}`).toBeLessThanOrEqual(MAX_PARTS);
       const time = o.effects.reduce((n, e) => n + ('time' in e ? e.time : 0), 0);
       const scrutiny = o.effects.reduce((n, e) => n + ('scrutiny' in e ? e.scrutiny : 0), 0);
-      if (time) expect(line, name).toContain(tn('ui.line.time', Math.abs(time)));
+      if (time) expect(line, name).toContain(tn('ui.line.event', Math.abs(time), { event: eventKey(o, cardKey) }));
       if (scrutiny) expect(line, name).toContain(t('ui.line.scrutiny', { n: scrutiny }));
       // A card can say it in its own words ("His name goes on file"); the part is still there.
       const contactKey = has(`${cardKey}.contact`) ? `${cardKey}.contact` : `contact.${o.contact}.shares`;
@@ -129,7 +129,7 @@ describe('consequence line', () => {
     expect(t('enc.p_purpose.evidence.label', { cardThe: 'motherLetter' })).toBe("Show your mother's letter");
     expect(line('evidence', 'motherLetter').text).toBe('Uses letter · Reveals her address');
     expect(t('enc.p_purpose.family.label')).toBe('"I\'m visiting family."');
-    expect(line('family').text).toBe('Costs 1 hour · Register check');
+    expect(line('family').text).toBe('Register check: 1 hour');
     expect(t('enc.p_purpose.tourism.label')).toBe('"I\'m here as a tourist."');
     expect(line('tourism')).toEqual({ icon: 'check', text: 'Recorded as your reason for visiting' });
   });
@@ -186,9 +186,9 @@ describe('the last bus, on the answer line', () => {
 
   it('the bag search answers lead with the cost, then what goes on file', () => {
     const s = at('s_bag', 8);
-    expect(line(s, 'wait').map(text).join(SEPARATOR)).toBe('Costs 3 hours · Cash total recorded');
+    expect(line(s, 'wait').map(text).join(SEPARATOR)).toBe('Full search: 3 hours · Cash total recorded');
     // The mother says what calling her shares, and why her word helps end the search.
-    expect(line(s, 'contact').map(text).join(SEPARATOR)).toBe('Costs 1 hour · Shares her number · May verify the prescription, ending the search');
+    expect(line(s, 'contact').map(text).join(SEPARATOR)).toBe('Phone call: 1 hour · Shares her number · May verify the prescription, ending the search');
     expect(line(s, 'contact').find((p) => p.kind === 'contact')?.tone).toBe('plain');
   });
 
@@ -201,7 +201,7 @@ describe('the last bus, on the answer line', () => {
 
   it('an answer that keeps the bus possible shows neither line', () => {
     const parts = line(at('s_bag', 8), 'wait');
-    expect(parts.map(text)).toContain('Costs 3 hours');
+    expect(parts.map(text)).toContain('Full search: 3 hours');
     expect(parts.some((p) => p.kind === 'miss' || p.key === 'ui.line.need')).toBe(false);
     expect(line(at('s_bag', 3), 'withdraw').some((p) => p.kind === 'miss')).toBe(false);
   });
@@ -249,7 +249,7 @@ describe('the protected contact on the ending card', () => {
       const clean = { ...s, exposed: [] };
       expect(protectedRow(clean)).toEqual({ key: 'ui.notNamed', tone: 'plain' });
     }
-    expect(rows).toEqual({ cousin: 'Called in', brother: 'Added to watch list' });
+    expect(rows).toEqual({ cousin: 'Called in', brother: 'Contacted for questioning' });
   });
 
   it('says what you kept under the title: the medicine, the protected contact, or the passport', () => {

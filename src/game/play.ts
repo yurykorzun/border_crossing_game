@@ -15,7 +15,7 @@ import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, Evidenc
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 11;
+export const CONTENT_VERSION = 12;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }

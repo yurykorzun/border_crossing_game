@@ -40,7 +40,7 @@ const KEEP: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'scrutiny', '
 /**
  * Reading order on the line: the cost most likely to change the decision first (the
  * bus, time, the medicine, scrutiny, a check), then what goes on file and what it may
- * gain: "Costs 3 hours · Cash total recorded".
+ * gain: "Full search: 3 hours · Cash total recorded".
  */
 const ORDER: PartKind[] = ['miss', 'time', 'travel', 'medicine', 'scrutiny', 'check', 'card', 'contact', 'vouch', 'fact', 'claim', 'withdraw', 'perk', 'free', 'blocked'];
 
@@ -62,13 +62,25 @@ const ICON: Record<PartKind, IconKind> = {
   blocked: 'document',
 };
 
+/**
+ * The key of what an answer's hours are spent on, shown in place of a bare "Costs 1 hour":
+ * the answer's own `<cardKey>.event` ("Lab test"). An answer whose hours only come from
+ * checking someone you called in earlier (callInsDue() in src/game/engine.ts) reads
+ * `ui.event.calledIn`. The hours themselves are the engine's, so the text never counts them.
+ */
+export function eventKey(o: Option, cardKey: string): string {
+  const own = `${cardKey}.event`;
+  return has(own) && o.approach.effects.some((e) => 'time' in e) ? own : 'ui.event.calledIn';
+}
+
 /** The run's clock as consequence() needs it: hours left and the trip they must cover. */
 export type Clock = Pick<RunState, 'time' | 'travel'>;
 
 /**
  * The parts for one answer. `cardKey` is the answer's key without `.label`
- * (`enc.p_purpose.family`): a `<cardKey>.check` text, when there is one, names the
- * check ("Register check"), and a `<cardKey>.contact` text replaces "Puts {contact} on file".
+ * (`enc.p_purpose.family`): a `<cardKey>.event` text names what its hours are spent on
+ * ("Register check: 1 hour", eventKey()), a `<cardKey>.check` text, when there is one, names
+ * the check, and a `<cardKey>.contact` text replaces "Puts {contact} on file".
  * With the run's `clock`, the line says what the answer does to the last bus: a later
  * connection reads as the hours it will then need, and an answer that leaves fewer
  * hours than the trip takes reads "You will miss the last bus" in place of its cost.
@@ -89,7 +101,7 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   // your address"), or a `<cardKey>.vouch` text that says why it helps on this card.
   const vouchKey = `${cardKey}.vouch`;
   if (o.contact && o.vouches) all.push({ kind: 'vouch', key: has(vouchKey) ? vouchKey : `contact.${o.contact}.can.${o.vouches}`, tone: 'plain' });
-  // Time and scrutiny are summed, so a weakness reads "Costs 2 hours", not two parts.
+  // Time and scrutiny are summed, so a weakness reads "Company lookup: 2 hours", not two parts.
   let time = 0;
   let scrutiny = 0;
   let travel = 0;
@@ -112,7 +124,7 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   const misses = !!clock && a.kind !== 'withdraw' && (time < 0 || travel > 0) && Math.max(0, clock.time + time) < need;
   if (misses) all.push({ kind: 'miss', key: 'ui.line.miss', tone: 'red' });
   else {
-    if (time) all.push({ kind: 'time', key: 'ui.line.time', n: Math.abs(time), tone: 'plain' });
+    if (time) all.push({ kind: 'time', key: 'ui.line.event', n: Math.abs(time), vars: { event: eventKey(o, cardKey) }, tone: 'plain' });
     // A later connection: the trip to the bus grows, so the run needs more hours left.
     if (travel) all.push(clock
       ? { kind: 'travel', key: 'ui.line.need', n: need, tone: 'amber' }
@@ -205,7 +217,10 @@ export function consequences(s: RunState): EndingLine[] {
   const protectedContact = CHARACTERS[s.character].protectedContact;
   for (const c of s.exposed) {
     const home = CONTACTS[c].home;
-    if (c === protectedContact) out.push({ kind: 'contact', key: `exposure.${c}.protected`, vars: { contact: c }, severity: 3 });
+    // The protected contact's line states its reason: a flagged record already on file, or none.
+    const record = CONTACTS[c].record;
+    const listed = !!record && facts.includes(record);
+    if (c === protectedContact) out.push({ kind: 'contact', key: `exposure.${c}.protected${listed ? '.record' : ''}`, vars: { contact: c }, severity: 3 });
     else if (home && facts.includes(home)) out.push({ kind: 'contact', key: `exposure.${c}.home`, vars: { contact: c }, severity: 2 });
     else out.push({ kind: 'contact', key: `exposure.${c}.call`, vars: { contact: c }, severity: 1 });
   }
