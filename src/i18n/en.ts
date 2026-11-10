@@ -379,6 +379,8 @@ export const en: Record<string, string> = {
   'enc.p_photo.evidence.reaction': 'It matches what is on your file. She lets you through.',
   'enc.p_photo.scan.label': 'Offer a face scan',
   'enc.p_photo.scan.reaction': 'She matches the scan against the photo on file.',
+  'enc.p_photo.questions.label': 'Answer questions about yourself',
+  'enc.p_photo.questions.reaction': 'She reads out your old addresses one by one, and you confirm each.',
 
   'enc.p_secondPassport.q': '"You hold two passports. Is that correct?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
@@ -472,7 +474,7 @@ export const en: Record<string, string> = {
   'enc.i_phone.wait.label': 'Wait for him',
   'enc.i_phone.wait.reaction': '"Sorry. Where were we?"',
 
-  'enc.i_clarify.q': '"You said you came as a tourist, but your family\'s details are in your file."',
+  'enc.i_clarify.q': '"Your file does not quite match what you said."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
   'enc.i_clarify.clarify.reaction': 'The officer adds a line to your entry card, then phones the passport desk to check it.',
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
@@ -480,7 +482,7 @@ export const en: Record<string, string> = {
   'enc.i_clarify.accept.label': '"I came as a tourist."',
   'enc.i_clarify.accept.reaction': '"With your family\'s details on file?" The officer marks it as unexplained.',
 
-  'enc.i_contradiction.q': '"What you told us is disproved by your file."',
+  'enc.i_contradiction.q': '"Your file says otherwise."',
   'enc.i_contradiction.apologise.label': '"I\'m sorry. I was scared."',
   'enc.i_contradiction.apologise.reaction': 'The officer underlines the entry in your file that disproves what you said.',
   'enc.i_contradiction.review.label': 'Ask for a formal review',
@@ -612,6 +614,21 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'calledIn.reaction': 'Earlier you named {contact}. The officer checks that statement first.',
+  'spot.clear': 'Before you go, the officer checks one thing you said against your file: "{claim}". It fits.',
+  'spot.flaw': 'Before you go, the officer checks one thing you said against your file: "{claim}". It does not fit.',
+  'spot.answered': 'Before you go, the officer checks one thing you said against your file: "{claim}". You have already answered for it.',
+  // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
+  'spot.explained': 'Before you go, a spot-check. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
+  // Under a clarify or contradiction card's question (caughtLine() in src/game/consequence.ts):
+  // your own words, the desk where you said them, the fact that catches them.
+  'caught.line': 'You said: "{said}" ({desk}). On file: {fact}.',
+  // A claim in the words you said it, as the answer that made it reads (minus its quotes).
+  'said.tourism': "I'm here as a tourist",
+  'said.hotelStay': 'Here is my hotel booking',
+  'said.noOtherFamily': 'I have no other relatives here',
+  'said.noOtherFamily.mark': 'No family across the border',
+  'said.neverDonated': 'I never donated',
+  'said.cashUnderLimit': "In cash. It's under the limit",
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',

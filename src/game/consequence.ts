@@ -3,10 +3,10 @@
 // src/ui/parts.tsx renders it and src/game/transcript.ts writes it down, so both
 // read the same parts.
 
-import { has } from '../i18n';
+import { has, own } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
-import { factIds, travelOf } from './engine';
+import { caught, factIds, travelOf } from './engine';
 import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
@@ -236,4 +236,18 @@ export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red' 
   const c = CHARACTERS[s.character].protectedContact;
   const line = consequences(s).find((l) => l.kind === 'contact' && l.vars?.contact === c);
   return line ? { key: `${line.key}.row`, tone: 'red' } : { key: 'ui.notNamed', tone: 'plain' };
+}
+
+/**
+ * The line a challenge card shows under its question (caught() in
+ * src/game/engine.ts): your own words in quotes, the desk where you said them,
+ * and the fact on file that catches them. The words are the traveler's own
+ * wording of `said.<claim>` (Mark's denial is about the border, Lena's about
+ * relatives here). Undefined on any other card.
+ */
+export function caughtLine(s: RunState, card: string): { key: string; vars: Record<string, string> } | undefined {
+  const c = caught(s, card);
+  if (!c) return undefined;
+  const said = own(`said.${c.claim}`, s.character).slice('said.'.length);
+  return { key: 'caught.line', vars: { said, desk: c.desk, fact: c.fact } };
 }

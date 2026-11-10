@@ -7,9 +7,9 @@ import type {
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
-import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
@@ -39,6 +39,7 @@ export function newRun(setup: RunSetup): RunState {
     facts: {},
     claims: [],
     logged: {},
+    saidAt: {},
     medicine: true,
     perkUsed: false,
     withdrew: false,
@@ -94,7 +95,7 @@ export const loggedAt = (s: RunState, c: ClaimId): Checkpoint[] => s.logged?.[c]
 /** `s` after claiming `c` here: on the record of what you said, and written down if this officer does (writesDown). */
 function claim(s: RunState, c: ClaimId): RunState {
   const desk = deskOf(s);
-  const n = s.claims.includes(c) ? s : { ...s, claims: [...s.claims, c] };
+  const n = s.claims.includes(c) ? s : { ...s, claims: [...s.claims, c], saidAt: { ...s.saidAt, [c]: desk } };
   const had = loggedAt(n, c);
   if (!writesDown(desk, c) || had.includes(desk)) return n;
   return { ...n, logged: { ...n.logged, [c]: CHECKPOINTS.filter((d) => had.includes(d) || d === desk) } };
@@ -473,10 +474,6 @@ function relatedCard(s: RunState): Encounter | undefined {
 /** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
 function escalatesNext(s: RunState): boolean {
   if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id))) return true;
-  if (s.slot === 2 && quiet(s)) {
-    const extra = extraCard(s);
-    if (extra) return extra.kind !== 'routine';
-  }
   if (s.slot >= 2) return !!pendingChallenge(s);
   return s.slot === 1 && !!relatedCard(s);
 }
@@ -513,7 +510,8 @@ function advance(s: RunState, dealer: Dealer): RunState {
     s = { ...s, pending: rest };
     if (!s.seen.includes(id)) return show(s, id);
   }
-  if (s.slot >= 2 && !(s.slot === 2 && quiet(s) && extraCard(s))) {
+  if (s.slot >= 2) {
+    if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer), dealer);
     const challenge = pendingChallenge(s);
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
@@ -572,28 +570,73 @@ function pendingChallenge(s: RunState): string | undefined {
 }
 
 /**
- * The run has been quiet so far: every decision was a checkpoint card, with no
- * follow-up, no inspection and no question asked in a waiting room. Only such a
- * run gets a third card, so a short run grows and a long one does not.
+ * What a spot-check of claim `c` finds at this desk. clear: no fact this desk
+ * knows speaks against it. Otherwise there is a flaw, a disproof before an
+ * inconsistency, and the check decides: answered when its challenge card was
+ * already put to you; explained when it is an inconsistency and you have since
+ * said what the clarify answer says (CLARIFIED_BY), so checking that takes
+ * SPOT_CHECK_HOURS; else flaw, and `card` is the challenge to answer.
  */
-function quiet(s: RunState): boolean {
-  if (s.inspections || s.decisions !== s.seen.filter((id) => !isCalm(id)).length) return false;
-  return s.seen.every((id) => {
-    const kind = ENCOUNTER_BY_ID.get(id)?.kind;
-    return kind === 'routine' || kind === 'related';
-  });
+export type SpotResult = { result: 'clear' | 'answered' | 'explained' } | { result: 'flaw'; card: (typeof CHALLENGES)[number] };
+
+export function spotCheckOf(s: RunState, c: ClaimId): SpotResult {
+  const card = CHALLENGES.find((id) => CHALLENGE_PAIRS[id].some(([claim, f]) => claim === c && knows(s, f)));
+  if (!card) return { result: 'clear' };
+  if (s.seen.includes(card)) return { result: 'answered' };
+  if (card === 'i_clarify' && s.claims.includes(CLARIFIED_BY)) return { result: 'explained' };
+  return { result: 'flaw', card };
 }
 
 /**
- * The third card for a quiet run: the routine question not asked yet, so
- * everyone hears both, else the related card that fits best. Nothing new to
- * read, only one more decision. Never a calm card: those are kept for breathers.
+ * What a challenge card puts to you: the claim, the desk where you first said
+ * it, and the fact on file that catches it. The pair is the first that holds
+ * here, the one an answer is charged for (firstCaught). Undefined on any other
+ * card. A save from before saidAt existed names the first desk that wrote the
+ * claim down, else this one.
  */
-function extraCard(s: RunState): Encounter | undefined {
-  const cp = CHECKPOINTS[s.checkpoint];
-  const fits = ENCOUNTERS.filter((e) => e.checkpoint === cp && !e.calm && eligible(s, e));
-  return fits.find((e) => e.kind === 'routine')
-    ?? fits.filter((e) => e.kind === 'related').sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
+export function caught(s: RunState, card: string): { claim: ClaimId; desk: Checkpoint; fact: FactId } | undefined {
+  const pairs = (CHALLENGE_PAIRS as Record<string, readonly (readonly [ClaimId, FactId])[]>)[card];
+  const pair = pairs?.find(([c, f]) => s.claims.includes(c) && knows(s, f));
+  if (!pair) return undefined;
+  const [claim, fact] = pair;
+  return { claim, desk: saidDesk(s, claim), fact };
+}
+
+/** Where you first said `c`; a save from before saidAt existed names the first desk that wrote it down, else this one. */
+const saidDesk = (s: RunState, c: ClaimId): Checkpoint => s.saidAt?.[c] ?? loggedAt(s, c)[0] ?? deskOf(s);
+
+/**
+ * Each desk spot-checks one claim you made before you leave it, once: the
+ * dealer picks which, among the claims on file (written down at some desk, so
+ * one only said aloud to an officer who does not write it down is never
+ * checked). A claim that fits what this desk has on file passes
+ * cleanly, at no cost. A flaw opens a check and the check decides
+ * (spotCheckOf()): the challenge card is queued like a follow-up, so the pacing
+ * rule still puts a routine card first, and its answers keep the price they
+ * show. Randomness picks the problem; the answer is a known cost. A challenge
+ * that applies at the interview is still always dealt there (pendingChallenge()).
+ */
+function spotCheck(s: RunState, dealer: Dealer): RunState {
+  const n: RunState = { ...s, spotChecked: [...(s.spotChecked ?? []), deskOf(s)] };
+  // After a secondary inspection the whole file has been read, so the desks stop
+  // spot-checking. It also keeps a long run inside the decision budget.
+  const onFile = s.claims.filter((c) => loggedAt(s, c).length);
+  if (!onFile.length || s.inspections) return n;
+  const r = dealer(s.rng, onFile.length);
+  const claimed = onFile[r.index];
+  const found = spotCheckOf(s, claimed);
+  const vars: Record<string, string> = { claim: claimed, hours: String(SPOT_CHECK_HOURS) };
+  if (found.result === 'explained') {
+    // Like a challenge card (caught()): your words, where you said them, and the fact
+    // that makes them look odd. No inconsistency claim has a traveler's own wording,
+    // so `said` is the claim id (spotcheck.test.ts checks that).
+    const [, fact] = CHALLENGE_PAIRS.i_clarify.find(([c, f]) => c === claimed && knows(s, f))!;
+    Object.assign(vars, { said: claimed, desk: saidDesk(s, claimed), fact });
+  }
+  const checked = say({ ...n, rng: r.rng }, [{ key: `spot.${found.result}`, vars }]);
+  if (found.result === 'explained') return { ...checked, time: Math.max(0, checked.time - SPOT_CHECK_HOURS) };
+  if (found.result === 'flaw') return { ...checked, pending: [...checked.pending, found.card] };
+  return checked;
 }
 
 function deal(s: RunState, dealer: Dealer): RunState {
@@ -602,7 +645,6 @@ function deal(s: RunState, dealer: Dealer): RunState {
   const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && !e.calm && eligible(s, e));
   let chosen: Encounter | undefined;
   let rng = s.rng;
-  if (s.slot === 2) return show({ ...s, slot: 3 }, extraCard(s)!.id);
   if (s.slot === 0) chosen = routine.find((e) => e.opening);
   if (s.slot === 1) chosen = relatedCard(s);
   if (!chosen) {
@@ -660,11 +702,12 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   if (s.screen.kind !== 'wait') return [];
   const done = s.screen.shown >= s.screen.beats.length;
   if (!done) return [];
-  // Every check can be waited out or asked about. Someone can vouch only when a
+  // Every check can be waited out, and asked about once: the hint comes before
+  // you decide whether to wait or call someone. Someone can vouch only when a
   // free contact can confirm what the check is about; nobody vouches away data.
   const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] = [
     { action: 'wait', blocked: null },
-    { action: 'ask', blocked: null },
+    ...(s.screen.asked ? [] : [{ action: 'ask' as const, blocked: null }]),
   ];
   const contact = assistContact(s);
   // vouches: the check's topic, so the option can say what the contact may confirm.
@@ -684,9 +727,11 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
   const w = s.screen;
   let result = w.resolved;
   let n = s;
+  // Asking puts your urgency on file and tells you how it is going. You stay in
+  // the waiting room, so the hint can decide whether to wait or call someone.
   if (how === 'ask') {
-    n = apply(n, [{ fact: 'urgency' }]);
-    n = say(n, [{ key: `check.${w.check}.hint.${result.result}` }]);
+    n = say(apply(n, [{ fact: 'urgency' }]), [{ key: `check.${w.check}.hint.${result.result}` }]);
+    return { ...n, decisions: n.decisions + 1, screen: { ...w, asked: true } };
   }
   if (how === 'assist') {
     const c = assistContact(n);
@@ -751,7 +796,8 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
       return { ...s, reaction: null, screen: { ...s.screen, shown: s.screen.shown + 1 } };
     case 'waitAction': {
       const a = waitActions(s).find((w) => w.action === action.action);
-      if (!a || a.blocked) return s;
+      // After an ask, its hint is read (ack) before anything else is chosen.
+      if (!a || a.blocked || s.reaction) return s;
       return resolveWait({ ...s, reaction: null }, action.action, dealer);
     }
     case 'ack':

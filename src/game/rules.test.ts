@@ -247,7 +247,8 @@ describe('claim-versus-fact pairs from real procedure', () => {
   }
 
   it("Lena's denial on i_family is disproved in a real run: the phone search finds Ilya, and the interview deals the contradiction", () => {
-    const setup: RunSetup = { character: 'lena', loadout: ['employerLetter', 'returnTicket', 'deed'], bulletin: 'customs', seed: 7 };
+    // A seed whose dealer gives the interview i_family as its routine card.
+    const setup: RunSetup = { character: 'lena', loadout: ['employerLetter', 'returnTicket', 'deed'], bulletin: 'customs', seed: 2 };
     const s = play(setup, { p_purpose: 'family', c_phone: 'unlock', i_family: 'deny' });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
     expect(s.claims).toContain('noOtherFamily');
@@ -331,8 +332,8 @@ describe('no scrutiny without a reason', () => {
 });
 
 describe('a challenge is dealt even when the last interview answer creates it', () => {
-  // Slot 3: the third interview card a quiet run gets, so nothing else would follow it.
-  const last = (s: RunState, id: string, extra: Partial<RunState>): RunState => ({ ...at(s, id), slot: 3, ...extra });
+  // Slot 2: the second and last interview card, so nothing else would follow it.
+  const last = (s: RunState, id: string, extra: Partial<RunState>): RunState => ({ ...at(s, id), slot: 2, ...extra });
 
   it('denying relatives on the final card, with the brother on file, deals the disproof card', () => {
     const s = last(newRun(mark), 'i_family', { facts: known('brotherAbroad') });
@@ -399,6 +400,39 @@ describe('contacts confirm only what they know', () => {
       expect(waitActions(s).map((w) => w.action)).toEqual(['wait', 'ask']);
       expect(tryStep(s, { type: 'waitAction', action: 'assist' }).ok).toBe(false);
     }
+  });
+
+  it('asking shows the hint before the decision: you stay in the room, and only wait or vouch is left', () => {
+    const resolved = CHECKS.hostCall.cases[0];
+    const s: RunState = { ...waitRoom(lena, 'hostCall', [], 'accommodation'), screen: { kind: 'wait', check: 'hostCall', beats: [0], shown: 1, resolved, asked: false } };
+    expect(waitActions(s).map((w) => w.action)).toEqual(['wait', 'ask', 'assist']);
+    const r = tryStep(s, { type: 'waitAction', action: 'ask' });
+    if (!r.ok) throw new Error('ask is offered');
+    expect(r.state.reaction?.map((l) => l.key)).toEqual([`check.hostCall.hint.${resolved.result}`]);
+    expect(factIds(r.state)).toContain('urgency');
+    expect(r.state.decisions).toBe(s.decisions + 1);
+    // Nothing else is chosen until the hint is read, and then the result is still to come.
+    expect(legalActions(r.state)).toEqual([{ type: 'ack' }]);
+    const read = step(r.state, { type: 'ack' });
+    expect(read.screen).toMatchObject({ kind: 'wait', check: 'hostCall', asked: true });
+    expect(waitActions(read).map((w) => w.action)).toEqual(['wait', 'assist']);
+    const done = step(read, { type: 'waitAction', action: 'wait' });
+    expect(done.reaction?.map((l) => l.key)).toContain(`check.hostCall.${resolved.result}`);
+  });
+
+  it('the photo card has two open answers for every packing, so the deed is never the only way out', () => {
+    const photo = ENCOUNTERS.find((e) => e.id === 'p_photo')!;
+    const ids = Object.keys(EVIDENCE) as (keyof typeof EVIDENCE)[];
+    // Every packing (a full set of documents), each bulletin, both travelers.
+    for (let mask = 0; mask < 1 << ids.length; mask++)
+      for (const bulletin of ['customs', 'accommodation', 'records'] as const)
+        for (const character of ['lena', 'mark'] as const) {
+          const loadout = ids.filter((_, i) => mask & (1 << i));
+          if (loadout.length !== CHARACTERS[character].evidenceSlots) continue;
+          const s = at(newRun({ character, loadout, bulletin, seed: 1 }), photo.id);
+          const open = options(s).filter((o) => !o.blocked).map((o) => o.approach.id);
+          expect(open.length, `${character} ${bulletin} ${loadout}`).toBeGreaterThanOrEqual(2);
+        }
   });
 
   it('the records check offers no assist either: nobody vouches away data', () => {

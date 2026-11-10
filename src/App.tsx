@@ -18,7 +18,7 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
+import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -532,7 +532,9 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   const question = t(own(`${prefix}.${id}.q`, s.character));
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
-  const short = question.length <= SHORT_QUESTION;
+  // A challenge card quotes what you said and the fact that catches it, so it always gets the card.
+  const caught = sc.kind === 'encounter' ? caughtLine(s, id) : undefined;
+  const short = !caught && question.length <= SHORT_QUESTION;
   // On reaching a desk, one line says what this officer cares about.
   const desk = deskIntro(s);
   // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
@@ -543,6 +545,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
         {finishing && <p className="priority doomed">{t('ui.doomed')}</p>}
         {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         <h2 className="question">{question}</h2>
+        {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
       </section>
       <div className="controls stack">
         {options(s).map((o) => (

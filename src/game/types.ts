@@ -310,6 +310,12 @@ export interface RunState {
    * A claim in `claims` with no desk here was only said aloud. Unset in saves from before it existed.
    */
   logged?: Partial<Record<ClaimId, Checkpoint[]>>;
+  /**
+   * The desk where each claim was first said, written down or not, so a card that
+   * catches it can name where you said it (caughtLine() in src/game/engine.ts).
+   * Unset in saves from before it existed.
+   */
+  saidAt?: Partial<Record<ClaimId, Checkpoint>>;
   medicine: boolean;
   perkUsed: boolean;
   withdrew: boolean;
@@ -322,6 +328,11 @@ export interface RunState {
    * (breather() in src/game/engine.ts). Unset in saves from before it existed.
    */
   streak?: number;
+  /**
+   * The desks that have spot-checked one of your claims (spotCheck() in
+   * src/game/engine.ts), once each before you leave. Unset in saves from before it existed.
+   */
+  spotChecked?: Checkpoint[];
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;
