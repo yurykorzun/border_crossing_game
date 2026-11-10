@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { own, t } from './i18n';
+import { own, t, tn } from './i18n';
 import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -13,10 +13,11 @@ import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
-import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS } from './game/content/levels';
+import { DEFAULT_LEVEL, LEVELS, levelRows } from './game/content/levels';
 import { browserStore, load, openQuestions, save } from './game/save';
+import { recordRun } from './game/carry';
 import type { SaveData } from './game/save';
-import type { Action, BulletinId, CharacterId, EvidenceId, LevelId, RunState } from './game/types';
+import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
 import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
@@ -47,11 +48,7 @@ function Game() {
     if (!run) return;
     if (a.type === 'choose') sound.stamp();
     const next = playStep(run, a);
-    setData((d) => ({
-      ...d,
-      run: next,
-      endingsSeen: next.ending && !d.endingsSeen.includes(next.ending) ? [...d.endingsSeen, next.ending] : d.endingsSeen,
-    }));
+    setData((d) => recordRun(d, next));
   };
 
   const startSetup = () => {
@@ -67,7 +64,7 @@ function Game() {
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
-          firstRun={data.endingsSeen.length === 0}
+          endingsSeen={data.endingsSeen}
           onStart={(level, character, loadout) => {
             setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
             setSetup(null);
@@ -159,11 +156,12 @@ type SetupStep = (typeof SETUP_STEPS)[number];
 
 // Before the first ending (firstRun) there are no choices yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1, with no way back to the picks.
-function Setup({ bulletin, firstRun, onStart }: {
+function Setup({ bulletin, endingsSeen, onStart }: {
   bulletin: BulletinId;
-  firstRun: boolean;
+  endingsSeen: readonly EndingId[];
   onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
 }) {
+  const firstRun = endingsSeen.length === 0;
   const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'level');
   const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
@@ -174,7 +172,7 @@ function Setup({ bulletin, firstRun, onStart }: {
     return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => onStart(level, character, picked)} />;
   }
   if (at === 'level') {
-    return <LevelStep onPick={(id) => { setLevel(id); move(1); }} />;
+    return <LevelStep endingsSeen={endingsSeen} onPick={(id) => { setLevel(id); move(1); }} />;
   }
   if (at === 'traveler' || !character) {
     return (
@@ -200,7 +198,7 @@ function Setup({ bulletin, firstRun, onStart }: {
  * Setup 1, once an ending is seen: the level list. Each level is one button, so
  * a tap starts it and the traveler screen follows. Level 1 Arrival is today's mission.
  */
-function LevelStep({ onPick }: { onPick: (id: LevelId) => void }) {
+function LevelStep({ endingsSeen, onPick }: { endingsSeen: readonly EndingId[]; onPick: (id: LevelId) => void }) {
   const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('level') + 1, total: SETUP_STEPS.length });
   return (
     <main className="setup setup-step level-step">
@@ -211,12 +209,12 @@ function LevelStep({ onPick }: { onPick: (id: LevelId) => void }) {
           <h2 className="on-dark">{t('ui.pickLevel')}</h2>
         </header>
         <ul className="levels" aria-label={t('ui.pickLevel')}>
-          {LEVEL_IDS.map((id) => (
-            <li key={id}>
-              <button type="button" className="level" data-level={id} onClick={() => onPick(id)}>
-                <span className="mono level-number">{t('ui.levelNumber', { n: LEVELS[id].number })}</span>
-                <strong className="level-name">{t(LEVELS[id].title)}</strong>
-                <span className="level-line">{t(LEVELS[id].blurb)}</span>
+          {levelRows(endingsSeen).map(({ level: l, open, opensAt }) => (
+            <li key={l.id}>
+              <button type="button" className="level" data-level={l.id} disabled={!open} onClick={() => onPick(l.id)}>
+                <span className="mono level-number">{t('ui.levelNumber', { n: l.number })}</span>
+                <strong className="level-name">{t(l.title)}</strong>
+                <span className="level-line">{opensAt ? tn(opensAt.key, opensAt.n) : t(l.blurb)}</span>
               </button>
             </li>
           ))}
