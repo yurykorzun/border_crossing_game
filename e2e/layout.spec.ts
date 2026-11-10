@@ -6,6 +6,7 @@ import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME }
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
+import { openReturning } from './returning';
 
 // The run screen at 390x844, a border counter: the header says where you stand, the
 // scene and the question sit in the middle with the question right on top of the
@@ -49,7 +50,7 @@ async function expectFits(page: Page, where: string, card = false) {
 test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('./');
+  await openReturning(page);
   await page.locator('.title-screen button.primary').click();
 
   // Mark starts with 1 scrutiny.
@@ -103,7 +104,7 @@ test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', asy
 test('the run header, the tray and its pixel icons, at the first checkpoint', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('./');
+  await openReturning(page);
   await page.locator('.title-screen button.primary').click();
 
   // Lena starts with no scrutiny.
@@ -331,7 +332,7 @@ test('each checkpoint has its own named scene, and so do the traveler, packing a
   page.on('pageerror', (err) => errors.push(err.message));
   const requests: string[] = [];
   page.on('request', (r) => requests.push(r.url()));
-  await page.goto('./');
+  await openReturning(page);
 
   await page.locator('.title-screen button.primary').click();
   await expect(page.locator('.traveler-scene svg[role="img"]')).toBeVisible();
@@ -407,7 +408,7 @@ test.describe('on a 1280x800 desktop window', () => {
   test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false });
 
   test('Continue sits within 48 px under the last card on every setup screen', async ({ page }) => {
-    await page.goto('./');
+    await openReturning(page);
     await page.locator('.title-screen button.primary').click();
 
     const gaps: Record<string, number> = {};
@@ -432,7 +433,7 @@ test.describe('on a 1280x800 desktop window', () => {
 });
 
 test('at 390x844 Continue stays pinned in view while the packing list scrolls', async ({ page }) => {
-  await page.goto('./');
+  await openReturning(page);
   await page.locator('.title-screen button.primary').click();
   await page.getByRole('radio').first().click();
   await page.locator('.traveler-step .controls button.primary').click();

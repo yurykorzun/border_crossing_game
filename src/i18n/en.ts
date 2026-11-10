@@ -45,6 +45,7 @@ export const en: Record<string, string> = {
   // Setup 3: the heading and the one strong button.
   'ui.beginCrossing': 'Begin the crossing',
   'ui.yourDocuments': 'Your documents',
+  'ui.yourTraveler': 'Your traveler',
   'ui.picked': '{picked} of {count} packed',
   'ui.bulletin': "Today's bulletin",
   'ui.mission': 'Mission',
@@ -130,7 +131,13 @@ export const en: Record<string, string> = {
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
-  'ui.endingsSeen': 'Endings seen: {n} of 4',
+  // Open questions (openQuestions in src/game/save.ts): one per ending not seen yet, on the title and the ending card.
+  // Each hints where an ending might be. None says what to feel or counts harm to the family.
+  'ui.openQuestions': 'Still to find out',
+  'question.homeInTime': 'Can you get home with everything you carried?',
+  'question.homeAtCost': 'What if something stays behind?',
+  'question.tooLate': 'What if the last bus leaves without you?',
+  'question.turnedBack': 'What happens if you stop waiting?',
   // Ending card (Ending in src/App.tsx)
   'ui.crossingComplete': 'Crossing complete',
   'ui.crossingRefused': 'Request withdrawn',
@@ -391,8 +398,6 @@ export const en: Record<string, string> = {
   'enc.p_secondPassport.handOver.reaction': 'She runs both passports through the records.',
 
   'enc.p_employer.q': '"A tourist with a foreign salary. Who pays you?"',
-  'enc.p_employer.perk.label': 'Explain your job plainly',
-  'enc.p_employer.perk.reaction': 'You describe a normal day. She loses interest.',
   'enc.p_employer.evidence.label': 'Show {cardThe}',
   'enc.p_employer.evidence.reaction': 'She copies the company name into a form.',
   'enc.p_employer.check.label': 'Let them look up the company',
@@ -404,8 +409,6 @@ export const en: Record<string, string> = {
   'enc.c_medicine.evidence.reaction': 'He matches each box against the list.',
   'enc.c_medicine.declare.label': 'Declare it and wait',
   'enc.c_medicine.declare.reaction': 'He takes the medicine away for testing.',
-  'enc.c_medicine.leave.label': 'Leave it behind',
-  'enc.c_medicine.leave.reaction': 'The bag goes into a bin marked SURRENDERED.',
 
   // Asked how you pay, not how much: a paid return ticket answers it (EVIDENCE.returnTicket settles money).
   'enc.c_cash.q': '"How are you paying for this trip?"',
@@ -500,8 +503,6 @@ export const en: Record<string, string> = {
   'enc.i_employer.q': '"Your company has an office in a hostile state. Do you report to it?"',
   'enc.i_employer.perk.label': 'Explain your job plainly',
   'enc.i_employer.perk.reaction': 'You explain test plans. The officer stops writing.',
-  'enc.i_employer.evidence.label': 'Show {cardThe}',
-  'enc.i_employer.evidence.reaction': 'The officer photographs the letterhead.',
   'enc.i_employer.contract.label': 'Let them check your contract',
   'enc.i_employer.contract.reaction': 'Someone goes to find the contract.',
   'enc.i_employer.brother.label': 'Let them call {contact}',

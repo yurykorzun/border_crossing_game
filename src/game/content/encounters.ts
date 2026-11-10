@@ -109,9 +109,10 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'p_employer', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'work',
     // A tourist paid by a foreign company: the clerk wants to know who pays.
+    // No perk here: the clerk wants paper or the register, not an explanation,
+    // so Lena's plain answer is kept for the interview (i_employer).
     when: { background: 'foreignEmployer', claims: ['tourism'] },
     approaches: [
-      { id: 'perk', kind: 'perk', effects: [] },
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       { id: 'check', kind: 'verify', effects: [{ time: -1 }] },
     ],
@@ -123,7 +124,6 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'medicine', effects: [] },
       { id: 'declare', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'customs' } }], check: 'medicineLab' },
-      { id: 'leave', kind: 'say', effects: [{ loseMedicine: true }] },
     ],
   },
   {
@@ -271,9 +271,10 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'i_employer', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'work',
     when: { any: [{ facts: ['employer'] }, { background: 'foreignEmployer' }] },
+    // No paper answer: Mark's only work paper is the letter that put his employer
+    // on file, and Lena's plain answer settles this for free.
     approaches: [
       { id: 'perk', kind: 'perk', effects: [] },
-      { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       { id: 'contract', kind: 'verify', effects: [{ time: -2 }] },
       { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],

@@ -388,6 +388,19 @@ export interface WarningSplit {
   ignoredCount: number;
 }
 
+/**
+ * Answers the walk offered somewhere that no style of play picked, as
+ * `card.approach`, sorted. `picked` holds the same keys for what the bots chose
+ * (pickedAnswers() in src/game/bots.ts). An answer listed here never changes
+ * play, so it is cut, reworked or named in docs/design.md with why it stays.
+ */
+export function neverPicked(offered: WalkReport['offered'], picked: ReadonlySet<string>): string[] {
+  const out: string[] = [];
+  for (const [card, approaches] of offered)
+    for (const approach of approaches.keys()) if (!picked.has(`${card}.${approach}`)) out.push(`${card}.${approach}`);
+  return out.sort();
+}
+
 /** Per bulletin: do packings that heed its warning get home in time more often? */
 export function warningShares(setups: SetupResult[]): WarningShare[] {
   const mean = (list: SetupResult[]) => list.reduce((a, s) => a + s.homeChance, 0) / (list.length || 1);

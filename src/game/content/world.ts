@@ -162,6 +162,18 @@ export const coversWarning = (loadout: readonly EvidenceId[], bulletin: Bulletin
   loadout.some((id) => EVIDENCE[id].topics.includes(BULLETIN_TOPICS[bulletin]));
 export const CHARACTER_IDS = Object.keys(CHARACTERS) as CharacterId[];
 
+/**
+ * The first run, while no ending is seen yet: Start goes straight to the begin
+ * screen as Lena with this packing, so the player crosses once before choosing
+ * anything (Setup in src/App.tsx). It covers every bulletin's warning
+ * (coversWarning), so the random bulletin never leaves a first run unwarned.
+ * Bots in npm run walk and npm run autoplay still pick their own setups.
+ */
+export const FIRST_RUN: { character: CharacterId; loadout: readonly EvidenceId[] } = {
+  character: 'lena',
+  loadout: ['motherLetter', 'hospitalNote', 'deed'],
+};
+
 /** Ordinary procedural beats per checkpoint, keyed beat.<checkpoint>.<n> in i18n. */
 export const BEAT_COUNT = 6;
 

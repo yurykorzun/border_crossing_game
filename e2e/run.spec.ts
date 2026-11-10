@@ -8,6 +8,7 @@ import { own, t } from '../src/i18n';
 import { en } from '../src/i18n/en';
 import type { CheckId, RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
+import { openReturning } from './returning';
 
 // One full run on a phone-size screen: title → character → documents → begin → play by
 // always taking the first enabled option → ending card.
@@ -27,7 +28,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('./');
+  await openReturning(page);
 
   // Title
   await expect(page.locator('.title-screen')).toBeVisible();

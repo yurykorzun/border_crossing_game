@@ -12,8 +12,8 @@ import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { messagesSoFar, queueBeats } from './game/content/queues';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
-import { browserStore, load, save } from './game/save';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
+import { browserStore, load, openQuestions, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
@@ -66,13 +66,14 @@ function Game() {
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
+          firstRun={data.endingsSeen.length === 0}
           onStart={(character, loadout) => {
             setData((d) => ({ ...d, run: newRun({ character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
             setSetup(null);
           }}
         />
       ) : (
-        <Title onStart={startSetup} seen={data.endingsSeen.length} />
+        <Title onStart={startSetup} questions={openQuestions(data)} />
       )}
     </div>
   );
@@ -120,7 +121,7 @@ function Autoplay({ style }: { style: BotStyle }) {
   );
 }
 
-function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
+function Title({ onStart, questions }: { onStart: () => void; questions: string[] }) {
   return (
     <main className="title-screen">
       <div className="paper title-card">
@@ -129,10 +130,23 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
         <p>{t('ui.tagline')}</p>
       </div>
       <div className="controls">
-        {seen > 0 && <p className="muted-dark">{t('ui.endingsSeen', { n: seen })}</p>}
+        <OpenQuestions questions={questions} />
         <button className="primary" onClick={onStart}>{t('ui.start')}</button>
       </div>
     </main>
+  );
+}
+
+/** What the player has not found out yet, one question per ending not seen (openQuestions). Nothing once all are seen. */
+function OpenQuestions({ questions }: { questions: string[] }) {
+  if (questions.length === 0) return null;
+  return (
+    <section className="open-questions" aria-labelledby="open-questions-title">
+      <h2 id="open-questions-title" className="mono">{t('ui.openQuestions')}</h2>
+      <ul>
+        {questions.map((q) => <li key={q}>{t(q)}</li>)}
+      </ul>
+    </section>
   );
 }
 
@@ -142,12 +156,17 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
 const SETUP_STEPS = ['traveler', 'documents', 'begin'] as const;
 type SetupStep = (typeof SETUP_STEPS)[number];
 
-function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
-  const [at, setAt] = useState<SetupStep>('traveler');
-  const [character, setCharacter] = useState<CharacterId | null>(null);
-  const [picked, setPicked] = useState<EvidenceId[]>([]);
+// Before the first ending (firstRun) there are no choices yet: Setup opens on the
+// begin screen as FIRST_RUN's traveler and packing, with no way back to the picks.
+function Setup({ bulletin, firstRun, onStart }: { bulletin: BulletinId; firstRun: boolean; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
+  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'traveler');
+  const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
+  const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
 
+  if (firstRun && character) {
+    return <BeginStep picked={picked} traveler={character} onBegin={() => onStart(character, picked)} />;
+  }
   if (at === 'traveler' || !character) {
     return (
       <TravelerStep
@@ -255,16 +274,25 @@ function useMoreBelow() {
   return { ref, more, onScroll: check };
 }
 
-/** Setup 3. The mission, the rest of the premise and what you packed, then the one strong button. */
-function BeginStep({ picked, onBack, onBegin }: { picked: EvidenceId[]; onBack: () => void; onBegin: () => void }) {
+/**
+ * Setup 3. The mission, the rest of the premise and what you packed, then the one strong button.
+ * On the first run there is no Back, and `traveler` names who you cross as, since nobody picked.
+ */
+function BeginStep({ picked, traveler, onBack, onBegin }: { picked: EvidenceId[]; traveler?: CharacterId; onBack?: () => void; onBegin: () => void }) {
   const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
   return (
     <main className="setup setup-step begin-step">
       <div className="setup-body">
         <header className="step-head">
-          <BackButton onBack={onBack} />
+          {onBack && <BackButton onBack={onBack} />}
           <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
         </header>
+        {traveler && (
+          <section className="packed-list begin-traveler">
+            <h3 className="mono">{t('ui.yourTraveler')}</h3>
+            <p>{t(`char.${traveler}.name`)}{SEPARATOR}{t(`char.${traveler}.role`)}</p>
+          </section>
+        )}
         <section className="paper mission">
           <p className="mono">{t('ui.mission')}</p>
           {/* The title says whose care it is, so "his care" in the body reads right. */}
@@ -379,7 +407,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
   // The last officer line still shows before the ending card.
-  if (s.ending && !s.reaction) return <Ending s={s} seen={data.endingsSeen.length} onRestart={onRestart} />;
+  if (s.ending && !s.reaction) return <Ending s={s} questions={openQuestions(data)} onRestart={onRestart} />;
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
@@ -647,7 +675,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * and the other stats. Then "See border records", which opens the records alone, and
  * "Play again".
  */
-function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: () => void }) {
+function Ending({ s, questions, onRestart }: { s: RunState; questions: string[]; onRestart: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
   const text = endingText(s);
@@ -686,7 +714,7 @@ function Ending({ s, seen, onRestart }: { s: RunState; seen: number; onRestart: 
               </div>
             ))}
           </dl>
-          <p className="mono muted seen">{t('ui.endingsSeen', { n: seen })}</p>
+          <OpenQuestions questions={questions} />
         </div>
       </section>
       {/* Sticky, so Play again stays in view however long the story above runs (pfi.9). */}

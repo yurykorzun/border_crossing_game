@@ -55,7 +55,7 @@ At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny dr
 
 Background facts come from ordinary life and are the "My story" panel. Encounters key off them.
 
-- Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work or money question without spending evidence. Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
+- Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
 - Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
 
 ## Evidence cards (pick 3)
@@ -119,6 +119,24 @@ The structural parts are machine-checked by the content lint (`lintContent()` in
 - What changes: every card has an answer that changes something (a resource, a fact, a claim or an option). A calm card with exactly one answer is the one exception, because its job is the pause (the free answer from rule 5).
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
+
+## Answers no style picks
+
+`npm run walk` lists every answer the walk offers that no bot style with a purpose (honest, liar, cautious, situational) picks over every setup and seeds 1-10 (`neverPicked()` in `src/game/walk.ts`). The random style is left out, because over enough runs it picks everything once. An answer on that list never changes how the bots play, so it is cut, reworked, or named here with why it stays (`src/game/walk.test.ts` fails on one that is not).
+
+Cut on 2026-11-10: `c_medicine.leave` (nobody is short of time at the first customs card, and the confiscation inspection still asks for the medicine), `i_employer.evidence` (Lena's plain answer settles it for free, and Mark's only work paper is the letter that put his employer on file). Reworked: Lena's plain answer left the passport card (`p_employer`), so the clerk wants the letter or the register and `p_employer.evidence` and `.check` now get picked.
+
+Kept, because a person picks them even though the bots don't:
+
+- `p_photo.questions` - the safe slow answer on a records day for someone with something in the records. Making it as fast as the scan there let the memorised script win 89.5% (rule 10 caps it at 80%), so it stays an hour slower.
+- `c_phone.refuse` - keeps the phone's contents (a relative, the donation, the brother) off file for 1 scrutiny. The bots pay the hour to unlock because they don't count what the search will find.
+- `i_family.name`, `f_host.cousin`, `i_employer.brother` - the truthful answer that puts the protected person on file to save an hour. That is the central decision ("put someone else at risk"), and the bots never trade a person for time.
+- `f_lab.surrender` - the way out of a 2-hour lab wait when the hours are gone. The medicine for time, the same trade the confiscation inspection asks for.
+- `f_host.evidence`, `f_lab.evidence` - a paper saved at the first card (the call, the declaration) can still settle the follow-up. Every bot spends its paper at the first card, so it never gets here holding one.
+- `f_donation.explain`, `f_photo.honest`, `i_brother.honest` - the truth for 1 scrutiny instead of 2-3 hours. The honest bot prefers the slower check and the cautious one avoids scrutiny, and the liar and situational bots rarely get these cards, because they don't unlock the phone or scan on a records day.
+- `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
+- `s_bag.withdraw` - turning back is one of the four endings, and every inspection offers it as the way out.
+- `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
 
 ## Screen rules
 

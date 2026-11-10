@@ -4,6 +4,7 @@ import { ENCOUNTERS, INSPECTIONS, CHECKS } from '../game/content/encounters';
 import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, OFFICERS } from '../game/content/world';
 import { QUEUES } from '../game/content/queues';
 import { CHECKPOINTS } from '../game/types';
+import { openQuestions, freshSave } from '../game/save';
 
 /** Every key the content can ask for. */
 function contentKeys(): string[] {
@@ -42,6 +43,8 @@ function contentKeys(): string[] {
     keys.push(`queue.${n}.go`);
     for (const b of beats) keys.push(b.key, ...(b.from ? [`msg.from.${b.from}`] : []));
   });
+  // One open question per ending, on the title and the ending card.
+  keys.push('ui.openQuestions', ...openQuestions(freshSave()));
   return keys;
 }
 
