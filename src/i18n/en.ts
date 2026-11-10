@@ -612,6 +612,10 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'calledIn.reaction': 'Earlier you named {contact}. The officer checks that statement first.',
+  'spot.clear': 'Before you go, the officer checks one thing you said against your file: "{claim}". It fits.',
+  'spot.flaw': 'Before you go, the officer checks one thing you said against your file: "{claim}". It does not fit.',
+  'spot.answered': 'Before you go, the officer checks one thing you said against your file: "{claim}". You have already answered for it.',
+  'spot.explained': 'Before you go, the officer checks one thing you said against your file: "{claim}". It does not fit, but you have since said why you came. Phoning to square the two takes {hours} hours.',
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',

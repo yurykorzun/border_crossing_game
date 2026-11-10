@@ -15,6 +15,12 @@ export const SCRUTINY_AFTER_INSPECTION = 1;
  * belongings, a disclosure or a person (Cond.lastHours).
  */
 export const LAST_HOURS = 2;
+/**
+ * Hours a desk's spot-check takes to square a claim with a fact that makes it
+ * look odd, when you have since told them the real reason (spotCheckOf() in
+ * src/game/engine.ts): the officer phones the desk that wrote it down.
+ */
+export const SPOT_CHECK_HOURS = 2;
 
 export const CHARACTERS: Record<CharacterId, Character> = {
   lena: {

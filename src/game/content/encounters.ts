@@ -28,6 +28,8 @@ export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
 ];
+/** What the clarify answer says. Once you have said it, a spot-check finds an inconsistency explained (spotCheckOf()). */
+export const CLARIFIED_BY: ClaimId = 'familyVisit';
 /** In this order, which also picks the one an apology is charged for (firstCaught). */
 export const DISPROOFS: readonly [ClaimId, FactId][] = [
   ['noOtherFamily', 'brotherAbroad'],
@@ -46,6 +48,12 @@ export const DISPROOFS: readonly [ClaimId, FactId][] = [
  * answer still has to be answered.
  */
 export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
+
+/** The claim and fact pairs each challenge card puts to you. */
+export const CHALLENGE_PAIRS: Record<(typeof CHALLENGES)[number], readonly [ClaimId, FactId][]> = {
+  i_contradiction: DISPROOFS,
+  i_clarify: INCONSISTENCIES,
+};
 
 const anyPair =(pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
 
@@ -218,7 +226,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'i_clarify', checkpoint: 'interview', kind: 'related', priority: 3, topic: 'purpose',
     when: anyPair(INCONSISTENCIES),
     approaches: [
-      { id: 'clarify', kind: 'say', effects: [{ claim: 'familyVisit' }, { time: -1 }] },
+      { id: 'clarify', kind: 'say', effects: [{ claim: CLARIFIED_BY }, { time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
       { id: 'accept', kind: 'say', effects: firstCaught(INCONSISTENCIES, 1) },
     ],

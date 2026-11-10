@@ -7,9 +7,9 @@ import type {
 } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, EVIDENCE, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, START_TIME, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
-import { CHALLENGES, CHECKS, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
 import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
@@ -514,6 +514,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (!s.seen.includes(id)) return show(s, id);
   }
   if (s.slot >= 2 && !(s.slot === 2 && quiet(s) && extraCard(s))) {
+    if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer), dealer);
     const challenge = pendingChallenge(s);
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
@@ -569,6 +570,48 @@ function pendingChallenge(s: RunState): string | undefined {
     const e = ENCOUNTER_BY_ID.get(id);
     return !!e && e.checkpoint === cp && eligible(s, e);
   });
+}
+
+/**
+ * What a spot-check of claim `c` finds at this desk. clear: no fact this desk
+ * knows speaks against it. Otherwise there is a flaw, a disproof before an
+ * inconsistency, and the check decides: answered when its challenge card was
+ * already put to you; explained when it is an inconsistency and you have since
+ * said what the clarify answer says (CLARIFIED_BY), so checking that takes
+ * SPOT_CHECK_HOURS; else flaw, and `card` is the challenge to answer.
+ */
+export type SpotResult = { result: 'clear' | 'answered' | 'explained' } | { result: 'flaw'; card: (typeof CHALLENGES)[number] };
+
+export function spotCheckOf(s: RunState, c: ClaimId): SpotResult {
+  const card = CHALLENGES.find((id) => CHALLENGE_PAIRS[id].some(([claim, f]) => claim === c && knows(s, f)));
+  if (!card) return { result: 'clear' };
+  if (s.seen.includes(card)) return { result: 'answered' };
+  if (card === 'i_clarify' && s.claims.includes(CLARIFIED_BY)) return { result: 'explained' };
+  return { result: 'flaw', card };
+}
+
+/**
+ * Each desk spot-checks one claim you made before you leave it, once: the
+ * dealer picks which. A claim that fits what this desk has on file passes
+ * cleanly, at no cost. A flaw opens a check and the check decides
+ * (spotCheckOf()): the challenge card is queued like a follow-up, so the pacing
+ * rule still puts a routine card first, and its answers keep the price they
+ * show. Randomness picks the problem; the answer is a known cost. A challenge
+ * that applies at the interview is still always dealt there (pendingChallenge()).
+ */
+function spotCheck(s: RunState, dealer: Dealer): RunState {
+  const n: RunState = { ...s, spotChecked: [...(s.spotChecked ?? []), deskOf(s)] };
+  // After a secondary inspection the whole file has been read, so the desks stop
+  // spot-checking. It also keeps a long run inside the decision budget.
+  if (!s.claims.length || s.inspections) return n;
+  const r = dealer(s.rng, s.claims.length);
+  const claimed = s.claims[r.index];
+  const found = spotCheckOf(s, claimed);
+  const vars = { claim: claimed, hours: String(SPOT_CHECK_HOURS) };
+  const checked = say({ ...n, rng: r.rng }, [{ key: `spot.${found.result}`, vars }]);
+  if (found.result === 'explained') return { ...checked, time: Math.max(0, checked.time - SPOT_CHECK_HOURS) };
+  if (found.result === 'flaw') return { ...checked, pending: [...checked.pending, found.card] };
+  return checked;
 }
 
 /**

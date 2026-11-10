@@ -247,7 +247,8 @@ describe('claim-versus-fact pairs from real procedure', () => {
   }
 
   it("Lena's denial on i_family is disproved in a real run: the phone search finds Ilya, and the interview deals the contradiction", () => {
-    const setup: RunSetup = { character: 'lena', loadout: ['employerLetter', 'returnTicket', 'deed'], bulletin: 'customs', seed: 7 };
+    // A seed whose dealer gives the interview i_family as its routine card.
+    const setup: RunSetup = { character: 'lena', loadout: ['employerLetter', 'returnTicket', 'deed'], bulletin: 'customs', seed: 2 };
     const s = play(setup, { p_purpose: 'family', c_phone: 'unlock', i_family: 'deny' });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
     expect(s.claims).toContain('noOtherFamily');

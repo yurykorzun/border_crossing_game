@@ -66,9 +66,10 @@ console.log(`autoplay: ${RUNS} runs per style, setups ${SEED}..${SEED + RUNS - 1
 // ── 1. One row per style
 // no-cost/run: answers that spent no time, scrutiny or contact and put no new fact on file (noCost() in src/game/engine.ts).
 // lies/run: untrue claims made plus photo denials. lies caught: the share of those lies a challenge card put to the player (caughtLies()).
+// challenged: the share of runs where a challenge card put at least one lie to the player (the liar target is 30-60%).
 console.log('\nEndings (% of runs) and run stats per style');
 // inspected: the share of runs with at least one secondary inspection (the balance target is 25-33% across all styles).
-console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'inspected', 'no-cost/run', 'lies/run', 'lies caught'], 12)}`);
+console.log(`  ${'style'.padEnd(12)}${cells(ENDINGS, 11)}${cells(['time mean', 'time min', 'decisions', 'inspect/run', 'inspected', 'no-cost/run', 'lies/run', 'lies caught', 'challenged'], 12)}`);
 for (const [style, list] of rows) {
   const counts = ENDINGS.map((e) => list.filter((r) => r.final.ending === e).length);
   const times = list.map((r) => r.final.time);
@@ -76,6 +77,7 @@ for (const [style, list] of rows) {
     mean(times), Math.min(...times), mean(list.map((r) => r.final.decisions)), mean(list.map((r) => r.final.inspections)),
     pct(list.filter(inspected).length, list.length), mean(list.map((r) => r.noCost)), mean(list.map((r) => r.lies)),
     pct(list.reduce((n, r) => n + r.caught, 0), list.reduce((n, r) => n + r.lies, 0)),
+    pct(list.filter((r) => r.caught > 0).length, list.length),
   ], 12)}`);
 }
 console.log(`  runs with an inspection, all styles: ${pct(all.filter(inspected).length, all.length)} (memorised not counted)`);

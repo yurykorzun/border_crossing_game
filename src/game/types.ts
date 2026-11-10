@@ -322,6 +322,11 @@ export interface RunState {
    * (breather() in src/game/engine.ts). Unset in saves from before it existed.
    */
   streak?: number;
+  /**
+   * The desks that have spot-checked one of your claims (spotCheck() in
+   * src/game/engine.ts), once each before you leave. Unset in saves from before it existed.
+   */
+  spotChecked?: Checkpoint[];
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;
