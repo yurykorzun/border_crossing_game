@@ -6,6 +6,7 @@ import type { BotRun } from './bots';
 import { legalActions, newRun, step } from './engine';
 import { tryStep } from './play';
 import { allSetups } from './walk';
+import { BULLETINS, FIRST_RUN, coversWarning } from './content/world';
 
 const SETUP_COUNT = allSetups().length;
 
@@ -125,5 +126,20 @@ describe('autoplay bots', () => {
     const liar = playRun('liar', setupFor(0));
     expect(liar.choices[0]).toEqual({ card: 'p_purpose', pick: 'tourism' });
     for (let i = 0; i < SETUP_COUNT; i++) expect(playRun('honest', setupFor(i)).final.claims).not.toContain('tourism');
+  });
+});
+
+// The first run (FIRST_RUN in src/game/content/world.ts) skips the setup screens,
+// so its packing must be one the setup screens could have made for Lena.
+describe('first run', () => {
+  it('is Lena with one of her valid setups, under every bulletin', () => {
+    expect(FIRST_RUN.character).toBe('lena');
+    const sorted = [...FIRST_RUN.loadout].sort().join();
+    for (const bulletin of BULLETINS) {
+      const valid = allSetups().filter((s) => s.character === 'lena' && s.bulletin === bulletin);
+      expect(valid.map((s) => [...s.loadout].sort().join())).toContain(sorted);
+      expect(() => newRun({ character: 'lena', loadout: [...FIRST_RUN.loadout], bulletin, seed: 1 })).not.toThrow();
+      expect(coversWarning(FIRST_RUN.loadout, bulletin)).toBe(true);
+    }
   });
 });

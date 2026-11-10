@@ -12,7 +12,7 @@ import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { messagesSoFar, queueBeats } from './game/content/queues';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, MISSION_MIN_TIME, START_TIME, beatDelayMs } from './game/content/world';
 import { browserStore, load, save } from './game/save';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EvidenceId, RunState } from './game/types';
@@ -66,6 +66,7 @@ function Game() {
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
+          firstRun={data.endingsSeen.length === 0}
           onStart={(character, loadout) => {
             setData((d) => ({ ...d, run: newRun({ character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
             setSetup(null);
@@ -142,12 +143,17 @@ function Title({ onStart, seen }: { onStart: () => void; seen: number }) {
 const SETUP_STEPS = ['traveler', 'documents', 'begin'] as const;
 type SetupStep = (typeof SETUP_STEPS)[number];
 
-function Setup({ bulletin, onStart }: { bulletin: BulletinId; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
-  const [at, setAt] = useState<SetupStep>('traveler');
-  const [character, setCharacter] = useState<CharacterId | null>(null);
-  const [picked, setPicked] = useState<EvidenceId[]>([]);
+// Before the first ending (firstRun) there are no choices yet: Setup opens on the
+// begin screen as FIRST_RUN's traveler and packing, with no way back to the picks.
+function Setup({ bulletin, firstRun, onStart }: { bulletin: BulletinId; firstRun: boolean; onStart: (c: CharacterId, l: EvidenceId[]) => void }) {
+  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'traveler');
+  const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
+  const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
 
+  if (firstRun && character) {
+    return <BeginStep picked={picked} traveler={character} onBegin={() => onStart(character, picked)} />;
+  }
   if (at === 'traveler' || !character) {
     return (
       <TravelerStep
@@ -255,16 +261,25 @@ function useMoreBelow() {
   return { ref, more, onScroll: check };
 }
 
-/** Setup 3. The mission, the rest of the premise and what you packed, then the one strong button. */
-function BeginStep({ picked, onBack, onBegin }: { picked: EvidenceId[]; onBack: () => void; onBegin: () => void }) {
+/**
+ * Setup 3. The mission, the rest of the premise and what you packed, then the one strong button.
+ * On the first run there is no Back, and `traveler` names who you cross as, since nobody picked.
+ */
+function BeginStep({ picked, traveler, onBack, onBegin }: { picked: EvidenceId[]; traveler?: CharacterId; onBack?: () => void; onBegin: () => void }) {
   const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
   return (
     <main className="setup setup-step begin-step">
       <div className="setup-body">
         <header className="step-head">
-          <BackButton onBack={onBack} />
+          {onBack && <BackButton onBack={onBack} />}
           <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
         </header>
+        {traveler && (
+          <section className="packed-list begin-traveler">
+            <h3 className="mono">{t('ui.yourTraveler')}</h3>
+            <p>{t(`char.${traveler}.name`)}{SEPARATOR}{t(`char.${traveler}.role`)}</p>
+          </section>
+        )}
         <section className="paper mission">
           <p className="mono">{t('ui.mission')}</p>
           {/* The title says whose care it is, so "his care" in the body reads right. */}

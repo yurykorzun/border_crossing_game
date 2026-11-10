@@ -45,6 +45,7 @@ export const en: Record<string, string> = {
   // Setup 3: the heading and the one strong button.
   'ui.beginCrossing': 'Begin the crossing',
   'ui.yourDocuments': 'Your documents',
+  'ui.yourTraveler': 'Your traveler',
   'ui.picked': '{picked} of {count} packed',
   'ui.bulletin': "Today's bulletin",
   'ui.mission': 'Mission',

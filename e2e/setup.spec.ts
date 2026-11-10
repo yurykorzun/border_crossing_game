@@ -1,9 +1,42 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
-import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN } from '../src/game/content/world';
+import { openReturning } from './returning';
 
 // The three setup screens at 390x844: Choose your traveler, Pack your documents, Begin the crossing.
+// They show once an ending is seen (openReturning); a fresh save skips to Begin as Lena.
+
+test('fresh save: Start opens the begin screen as Lena with the fixed packing, no traveler or documents screen', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  await page.locator('.title-screen button.primary').click();
+
+  const begin = page.locator('main.begin-step');
+  await expect(begin).toBeVisible();
+  await expect(page.locator('main.traveler-step')).toHaveCount(0);
+  await expect(page.locator('main.documents-step')).toHaveCount(0);
+  await expect(begin.locator('button.back')).toHaveCount(0);
+  await expect(begin.locator('.begin-traveler')).toContainText(`${en['char.lena.name']} · ${en['char.lena.role']}`);
+  const packed = EVIDENCE_IDS.filter((id) => FIRST_RUN.loadout.includes(id)).map((id) => en[`ev.${id}.name`]);
+  await expect(begin.locator('.packed-list:not(.begin-traveler) li')).toHaveText(packed);
+
+  await begin.locator('.controls button.primary').click();
+  await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('purpose-of-visit-save') ?? '{}'));
+  expect(saved.run.character).toBe('lena');
+  expect([...saved.run.loadout].sort()).toEqual([...FIRST_RUN.loadout].sort());
+  expect(errors).toEqual([]);
+});
+
+test('one ending seen: Start shows the traveler screen first', async ({ page }) => {
+  await openReturning(page);
+  await page.locator('.title-screen button.primary').click();
+  await expect(page.locator('main.traveler-step')).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
+  await expect(page.locator('main.begin-step')).toHaveCount(0);
+});
 
 /** The traveler screen: no page scroll, and Continue in view. `bodyMayScroll` for the open history. */
 async function fits(page: Page, where: string, bodyMayScroll = false) {
@@ -26,7 +59,7 @@ async function fits(page: Page, where: string, bodyMayScroll = false) {
 test('choose your traveler: premise heading, role lines, history link, Continue as the pick', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('./');
+  await openReturning(page);
   await page.locator('.title-screen button.primary').click();
 
   const screen = page.locator('main.traveler-step');
@@ -136,7 +169,7 @@ async function stepFits(page: Page, where: string) {
 test('prepare your documents, begin the crossing, and Back keeps the picks', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await page.goto('./');
+  await openReturning(page);
 
   // Title, then each setup heading in order, into the first queue.
   await expect(page.locator('.title-screen h1')).toHaveText('Purpose of Visit');
@@ -240,7 +273,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
 });
 
 test('packing at large text: a "more below" cue until the list is scrolled to the end', async ({ page }) => {
-  await page.goto('./');
+  await openReturning(page);
   await page.locator('.title-screen button.primary').click();
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
@@ -267,7 +300,7 @@ for (const [n, bulletin] of BULLETINS.entries()) {
   test(`packing under the ${bulletin} bulletin: one cue above the list, no row tags, readable rows`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
-    await page.goto('./');
+    await openReturning(page);
     await page.evaluate((seed) => {
       const w = window as unknown as { __now: () => number; __random: () => number };
       w.__now = Date.now; w.__random = Math.random;
