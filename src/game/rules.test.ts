@@ -47,7 +47,19 @@ describe('relatives question (i_family)', () => {
       '"I have no other relatives here."',
       '"Why do you need to know?"',
     ]);
-    expect(opts.map((o) => line(s, o))).toEqual(['His name goes on file', 'Recorded as a denial', 'Costs 1 hour']);
+    // A records day: the old register lists relatives, so the denial shows it puts one on file.
+    expect(opts.map((o) => line(s, o))).toEqual(['His name goes on file', 'Reveals another relative', 'Costs 1 hour']);
+    const customs = at(newRun({ ...lena, bulletin: 'customs' }), 'i_family');
+    expect(options(customs).map((o) => line(customs, o))).toEqual(['His name goes on file', 'Recorded as a denial', 'Costs 1 hour']);
+  });
+
+  it('the day decides whether a denial holds: disproved on a records or hosts day, not on a customs day (2op.12)', () => {
+    for (const bulletin of ['records', 'accommodation', 'customs'] as const) {
+      const r = tryStep(at(newRun({ ...lena, bulletin }), 'i_family'), { type: 'choose', approach: 'deny' });
+      expect(r.ok).toBe(true);
+      if (!r.ok) continue;
+      expect(knows(r.state, 'relativeContact'), bulletin).toBe(bulletin !== 'customs');
+    }
   });
 
   it('names the relation from the character, not a fixed word', () => {
@@ -589,11 +601,12 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(named.exposed).toEqual(['mother']);
     expect(named.calledIn).toEqual(['mother']);
     // The same evasive answer at the interview, with and without her called in.
+    // Her call sent her address on, so the interview has it and the evasion is the on-file one.
     const free = at(newRun(lena), 'i_stay');
     const after = at(named, 'i_stay');
     expect(cost(free, 'undecided').time).toBe(0);
-    expect(cost(after, 'undecided').time).toBe(1);
-    const r = tryStep(after, { type: 'choose', approach: 'undecided' });
+    expect(cost(after, 'undecidedOnFile').time).toBe(1);
+    const r = tryStep(after, { type: 'choose', approach: 'undecidedOnFile' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.state.time).toBe(after.time - 1);
@@ -753,7 +766,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     expect(drive.time).toBe(s.time);
   });
 
-  it('extra verification: spend the document, name your mother, or the call costs an hour and a fact', () => {
+  it('extra verification: spend the document, or name your mother or let her phone the hospital, each for an hour', () => {
     const s = inspection('s_supervisor');
     const shown = play(s, 'evidence');
     expect(shown.used).toEqual(['motherLetter']);
@@ -767,7 +780,8 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     const noPaper = inspection('s_supervisor', { loadout: ['hotel', 'employerLetter', 'deed'] });
     const named = play(noPaper, 'contact');
     expect(named.exposed).toEqual(['mother']);
-    expect(named.time).toBe(s.time);
+    // Her call is no free exit either (2op.12).
+    expect(named.time).toBe(s.time - 1);
   });
 
   it('shows at most two answers and a way out: the conditions pick which two', () => {
@@ -863,13 +877,15 @@ describe('before admission, scrutiny is a risk', () => {
     expect(lastAnswer(start + 1, 0, {}, mark).n.screen.kind).toBe('inspection');
   });
 
-  it('lets a paper on the bulletin topic, shown on the way, settle her on one draw of 2', () => {
+  it('lets a paper on the bulletin topic, shown on the way, settle her on two draws of 3', () => {
     // The records bulletin warns about identity, and the deed covers it.
     const shown: Partial<RunState> = { loadout: ['deed', 'hotel', 'employerLetter'], used: ['deed'] };
-    const pass = lastAnswer(1, 0, shown);
-    expect(pass.draws).toEqual([2]);
-    expect(pass.n.ending).toBe('homeInTime');
-    expect(lastAnswer(1, 1, shown).n.screen.kind).toBe('inspection');
+    for (const pick of [1, 2]) {
+      const pass = lastAnswer(1, pick, shown);
+      expect(pass.draws).toEqual([3]);
+      expect(pass.n.ending).toBe('homeInTime');
+    }
+    expect(lastAnswer(1, 0, shown).n.screen.kind).toBe('inspection');
   });
 
   it('inspects on the bulletin topic when an inspection takes such a paper', () => {

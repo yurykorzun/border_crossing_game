@@ -271,7 +271,7 @@ export const en: Record<string, string> = {
   'fact.noBooking': 'No booking to show',
   'fact.hostStatement': 'Your mother says you stay with her',
   'fact.bankNotice': 'A bank notice for your donation',
-  'fact.relativeContact': 'Another relative, in your contacts',
+  'fact.relativeContact': 'Another relative, on record',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for visiting',
   'claim.tourism.recorded': 'Recorded as your reason for visiting',
@@ -300,12 +300,12 @@ export const en: Record<string, string> = {
   'fact.relativeContact.reveal': 'Reveals another relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
-  'bulletin.customs': 'Medicines are lab-tested today.',
+  'bulletin.customs': 'Medicine and cash are checked today.',
   'bulletin.accommodation': 'Hosts are being phoned today.',
   'bulletin.records': 'IDs are checked against old records.',
   // The one cue above the packing list: what officers are doing today, in the words of
   // the topic the bulletin points at (BULLETIN_TOPICS), so the rows that answer it stand out.
-  'bulletin.customs.cue': 'Officers are testing any medicine you carry.',
+  'bulletin.customs.cue': 'Officers are testing medicine and counting cash.',
   'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
   'bulletin.records.cue': 'Officers are checking who you are against old files.',
 
@@ -415,6 +415,7 @@ export const en: Record<string, string> = {
   'enc.c_cash.count.reaction': 'He counts it twice and writes the total on a form.',
   'enc.c_cash.under.label': '"In cash. It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes down what you said and does not count it.',
+  'enc.c_cash.under.bulletin.customs.reaction': 'Cash is counted today. He counts yours anyway and clips the total to your file.',
 
   'enc.c_pen.q': '"Long queue today. Need a pen for the form?"',
   'enc.c_pen.yes.label': '"Yes, thanks."',
@@ -422,11 +423,11 @@ export const en: Record<string, string> = {
 
   'enc.c_tourist.q': '"Tourists don\'t usually carry a pensioner\'s prescriptions."',
   'enc.c_tourist.admit.label': '"I\'m visiting my father."',
-  'enc.c_tourist.admit.reaction': '"Why not say so at the desk?" Changing your purpose means a new form.',
+  'enc.c_tourist.admit.reaction': '"Why not say so at the desk?" A new form, with your mother\'s address on it.',
   'enc.c_tourist.evidence.label': 'Show {cardThe}',
   'enc.c_tourist.evidence.reaction': 'He reads it, then rereads your entry card.',
   'enc.c_tourist.mother.label': 'Ask him to call {contact}',
-  'enc.c_tourist.mother.reaction': 'Your mother answers on the second ring.',
+  'enc.c_tourist.mother.reaction': 'Your mother answers on the second ring. She gives her address and names the rest of the family.',
 
   'enc.c_host.q': '"We need to confirm where you will stay."',
   'enc.c_host.call.label': 'Wait while they call',
@@ -450,6 +451,7 @@ export const en: Record<string, string> = {
   'enc.i_stay.mother.reaction': 'The officer writes down her address and number.',
   'enc.i_stay.undecided.label': '"I haven\'t decided yet."',
   'enc.i_stay.undecided.reaction': '"You came all this way without a place to sleep?" The officer moves on.',
+  'enc.i_stay.undecided.bulletin.accommodation.reaction': '"Hosts are phoned today, and you have none to name?" The officer flags it.',
   'enc.i_stay.undecidedOnFile.label': '"I haven\'t decided yet."',
   'enc.i_stay.undecidedOnFile.reaction': '"Your mother\'s address is in your file, and you haven\'t decided?" The officer flags it.',
 
@@ -459,6 +461,8 @@ export const en: Record<string, string> = {
   'enc.i_family.name.reaction': 'The officer writes his name in capitals.',
   'enc.i_family.deny.label': '"I have no other relatives here."',
   'enc.i_family.deny.reaction': 'The officer nods and turns the page.',
+  'enc.i_family.deny.bulletin.records.reaction': 'The officer checks the old family register. Another relative of yours is listed.',
+  'enc.i_family.deny.bulletin.accommodation.reaction': 'Hosts are phoned today. Your mother picks up and names another relative.',
   'enc.i_family.why.label': '"Why do you need to know?"',
   'enc.i_family.why.reaction': '"Routine." The officer lets you sit until you answer.',
   // Mark's brother lives across the border, not here, so the officer asks about that side.

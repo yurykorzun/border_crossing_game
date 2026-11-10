@@ -512,6 +512,74 @@ export function playTimeRule(range: PlayTimeRange): Rule {
 /** Rule 6: the dealer's pacing rule (breather() in src/game/engine.ts). */
 export const MAX_ESCALATIONS = 2;
 
+/**
+ * Rules 7-9, the balance targets from the review (docs/research/2026-11-09-balance-and-levels.md).
+ * Honesty is not punished, lying does not always win, and an inspection is a
+ * real risk without being every run. Shares are percent of runs. They are only
+ * checked with at least minRuns runs per style, because a handful of seeds
+ * cannot say anything about a share; with fewer the summary says so.
+ */
+export const BALANCE = { honestHomeMin: 50, liarHomeMax: 80, memorisedHomeMax: 80, inspected: { min: 25, max: 33 }, minRuns: 100 } as const;
+
+/**
+ * Rule 10: one fixed answer per card, learned from a first pass of every style
+ * (firstPassScript() in src/game/bots.ts), gets home in time in at most
+ * BALANCE.memorisedHomeMax percent of runs, so the game is not solved by heart.
+ * The script plays outside the per-style transcripts, so tools/eval.ts counts
+ * its wins and this only judges the share. 60 percent is the next step, after a playtest.
+ */
+export const MEMORISED_RULE = { id: 10, name: `the memorised script gets home in time in at most ${BALANCE.memorisedHomeMax}% of runs` } as const;
+
+export function memorisedSummary(won: number, runs: number): Summary {
+  const pct = runs ? (won * 100) / runs : 0;
+  const text = `memorised homeInTime ${pct.toFixed(1)}% of ${runs} runs`;
+  if (runs < BALANCE.minRuns) return { rule: MEMORISED_RULE.id, ok: true, text: `${text} (not checked: ${runs} runs, needs ${BALANCE.minRuns})` };
+  return { rule: MEMORISED_RULE.id, ok: pct <= BALANCE.memorisedHomeMax, text };
+}
+
+/** True when the run dealt at least one secondary inspection. */
+export const inspected = (tr: Transcript) => tr.happenings.some((h) => h.type === 'cardDealt' && INSPECTION_BY_ID.has(h.id));
+
+/** The fewest runs any style in `trs` played. */
+function fewestPerStyle(trs: Transcript[]): number {
+  const n = new Map<string, number>();
+  for (const tr of trs) n.set(tr.style, (n.get(tr.style) ?? 0) + 1);
+  return Math.min(...n.values());
+}
+
+/**
+ * A whole-eval rule over a share of runs: `pick` is the runs it counts, `hit`
+ * the runs that score, and `within` says whether the share in percent passes.
+ */
+function shareRule(id: number, name: string, label: string, pick: (tr: Transcript) => boolean, hit: (tr: Transcript) => boolean,
+  within: (pct: number) => boolean): Rule {
+  return {
+    id,
+    name,
+    check: () => [],
+    summary: (trs) => {
+      const runs = trs.filter(pick);
+      if (!runs.length) return undefined;
+      const pct = (runs.filter(hit).length * 100) / runs.length;
+      const text = `${label} ${pct.toFixed(1)}% of ${runs.length} runs`;
+      const fewest = fewestPerStyle(runs);
+      if (fewest < BALANCE.minRuns) return { ok: true, text: `${text} (not checked: ${fewest} runs per style, needs ${BALANCE.minRuns})` };
+      return { ok: within(pct), text };
+    },
+  };
+}
+
+const home = (tr: Transcript) => tr.ending === 'homeInTime';
+
+export const BALANCE_RULES: Rule[] = [
+  shareRule(7, `honest play gets home in time in at least ${BALANCE.honestHomeMin}% of runs`, 'honest homeInTime',
+    (tr) => tr.style === 'honest', home, (p) => p >= BALANCE.honestHomeMin),
+  shareRule(8, `the liar bot gets home in time in at most ${BALANCE.liarHomeMax}% of runs`, 'liar homeInTime',
+    (tr) => tr.style === 'liar', home, (p) => p <= BALANCE.liarHomeMax),
+  shareRule(9, `an inspection happens in ${BALANCE.inspected.min}-${BALANCE.inspected.max}% of runs across all styles`, 'runs with an inspection',
+    () => true, inspected, (p) => p >= BALANCE.inspected.min && p <= BALANCE.inspected.max),
+];
+
 /** An inspection, or an encounter card that is not routine. */
 const escalating = (id: string) => INSPECTION_BY_ID.has(id) || ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
 
@@ -589,6 +657,7 @@ export const RULES: Rule[] = [
       return out;
     },
   },
+  ...BALANCE_RULES,
 ];
 
 /** A failure already filed elsewhere. It still counts, but does not fail the command. */

@@ -132,8 +132,16 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'evidence', kind: 'evidence', topic: 'money', effects: [] },
       // The count puts the real total on file. Saying it is under the limit is
       // free until someone counts it (the bag search), then it is a disproof.
+      // On a customs day the cash is counted anyway, and the total goes with your file.
       { id: 'count', kind: 'verify', effects: [{ time: -1 }, { fact: 'cashCount' }] },
-      { id: 'under', kind: 'say', effects: [{ claim: 'cashUnderLimit' }] },
+      {
+        id: 'under', kind: 'say',
+        effects: [
+          { claim: 'cashUnderLimit' },
+          { fact: 'cashCount', when: { bulletin: 'customs' } },
+          { send: 'printout', facts: ['cashCount'], when: { bulletin: 'customs' } },
+        ],
+      },
     ],
   },
   {
@@ -146,10 +154,15 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'c_tourist', checkpoint: 'customs', kind: 'related', priority: 3, topic: 'purpose',
     when: { claims: ['tourism'] },
     approaches: [
-      // Changing the purpose means re-entering it, which takes an hour. Nothing on file disproves anything yet.
-      { id: 'admit', kind: 'say', effects: [{ claim: 'familyVisit' }, { time: -1 }] },
+      // Changing the purpose means re-entering it, which takes an hour, and the new form has her address.
+      // Every answer here puts the family on file at customs, so a spot-check of "tourist" finds it.
+      { id: 'admit', kind: 'say', effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }] },
+      // She confirms the visit and names the rest of the family, which goes with your file.
+      {
+        id: 'mother', kind: 'contact', contacts: ['mother'],
+        effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { fact: 'relativeContact' }, { send: 'printout', facts: ['familyAddress', 'relativeContact'] }],
+      },
     ],
   },
   {
@@ -191,7 +204,15 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }, { claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
       // An evasion is free unless something on file makes it odd: her address is right there.
       // A tourist who has not decided has no booking to show.
-      { id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] }, effects: [{ fact: 'noBooking', when: { claims: ['tourism'] } }] },
+      // On a day hosts are phoned, having no host to name is itself flagged.
+      {
+        id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] },
+        effects: [
+          { fact: 'noBooking', when: { claims: ['tourism'] } },
+          { fact: 'noBooking', when: { bulletin: 'accommodation' } },
+          { scrutiny: 1, reason: 'noBooking', when: { bulletin: 'accommodation' } },
+        ],
+      },
       {
         id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] },
         effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['tourism'] } }],
@@ -207,7 +228,12 @@ export const ENCOUNTERS: Encounter[] = [
         id: 'name', kind: 'contact', contacts: ['cousin', 'brother'], namesOnly: true,
         effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
       },
-      { id: 'deny', kind: 'say', effects: [{ claim: 'noOtherFamily' }] },
+      // The day decides whether a denial holds: the old register lists relatives on a
+      // records day, and your mother is phoned on a hosts day. Either way it is disproved.
+      {
+        id: 'deny', kind: 'say',
+        effects: [{ claim: 'noOtherFamily' }, { fact: 'relativeContact', when: { any: [{ bulletin: 'records' }, { bulletin: 'accommodation' }] } }],
+      },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
   },
@@ -426,7 +452,7 @@ export const INSPECTIONS: Inspection[] = [
     when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
-      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [] },
+      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
       { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],

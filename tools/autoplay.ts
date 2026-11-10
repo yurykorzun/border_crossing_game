@@ -8,7 +8,7 @@
 // The memorised row is the harshest probe: a first pass of every style over the
 // same setups picks, per card id, the answer that won most often (buildScript()),
 // and that script then plays the setups again without reading state. It is
-// reported, not enforced, and stays out of the all-styles tables below.
+// enforced by eval rule 10 (at most 80% homeInTime), and stays out of the all-styles tables below.
 import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor } from '../src/game/bots';
 import type { BotRun, BotStyle } from '../src/game/bots';
 import { CHARACTERS } from '../src/game/content/world';

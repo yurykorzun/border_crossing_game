@@ -37,7 +37,7 @@ Every ending also lists, scored by severity, the medicine, each person exposed a
 
 Prepare → passport control → customs → security interview → result. Between checkpoints, 1-2 phone messages (your mother, your employer, a fellow passenger) carry the wider story and hint at what's next.
 
-Each checkpoint deals two encounter cards: one routine, one related to your background or earlier answers. That is 6 decisions, plus follow-ups from checks and 0-2 secondary inspections.
+Each checkpoint deals two encounter cards: one routine, one related to your background or earlier answers. Before you leave, the desk spot-checks one claim you made (see Claims and On file). Follow-ups from checks, a challenge card when a spot-check finds a flaw, and 0-2 secondary inspections come on top. A run is about 7-11 decisions: packing, then usually 6-10 at the desks (`npm run autoplay` prints the mean per style).
 
 ## Resources
 
@@ -73,9 +73,11 @@ Each card covers two topics, so a "wrong" pick is never useless. History questio
 
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
-| Customs | "Medicines are lab-tested today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file |
-| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call |
-| Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once |
+| Customs | "Medicine and cash are checked today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
+| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
+| Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
+
+So the day decides which answer is safe: the same denial or evasion is free on one day and caught on another, and a memorised script cannot tell the days apart.
 
 Under the bulletin, one plain cue says what officers are doing today in the words of that topic ("Officers are calling hosts to check where you'll stay.", `bulletin.<id>.cue`). It replaced a Relevant today tag on each row, so the rows stay clean and the player matches the cue to the topics line.
 
@@ -150,8 +152,20 @@ The engine keeps these separate. Content can only key off claims and On file fac
 A claim is in one of three tiers:
 
 1. Unchallenged: nothing on file speaks against it. The claim stands and you saved the time, card or contact a true answer would have cost. "It's under the limit" is free while nobody has counted the cash.
-2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said tourist, and your family's address or your father's condition is on file). The interview deals the cheap clarify card (`i_clarify`): clarify for free with a new claim, show a document, or accept +1 scrutiny.
-3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad is on file; said under the limit, and the cash count is on file). The interview deals the expensive card (`i_contradiction`): 3 hours for a formal review, +2 scrutiny, or a contact.
+2. Inconsistency: a fact makes the claim look odd, but does not disprove it (said tourist, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
+3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
+
+Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).
+
+Spot-checks (`spotCheck()` in `src/game/engine.ts`): before you leave each desk, the officer checks one claim you made against what that desk knows. The dealer picks which, among the claims written down at some desk. The check decides (`spotCheckOf()`):
+- clear: nothing this desk knows speaks against it, so it passes at no cost.
+- flaw: a disproof (checked first) or an inconsistency, so its challenge card is dealt at this desk, queued like a follow-up so the pacing rule still holds.
+- answered: that challenge card was already put to you, so it passes.
+- explained: an inconsistency you have since explained with the clarify answer's claim, so checking it takes 3 hours (`SPOT_CHECK_HOURS`).
+
+Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection, and a paper on the bulletin's warned topic settles her on two draws of 3.
+
+No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things plus a way out.
 
 The pairs live in `INCONSISTENCIES` and `DISPROOFS` in `src/game/content/encounters.ts`, and eval rule 3 and the walk both check a card is only dealt when its pair holds.
 

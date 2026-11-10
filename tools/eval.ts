@@ -1,7 +1,9 @@
 // Plays the autoplay bots over many seeds and checks every run's transcript
 // against the story rules in src/game/transcript.ts. Exits 1 on any failure no
 // known entry covers, on a known entry that no longer happens, or on a
-// whole-eval check that is not ok (rule 4 only reports the median full run).
+// whole-eval check that is not ok (rule 4 only reports the median full run;
+// rules 7-9 check balance shares once every style has 100 runs, rule 10 the
+// memorised script's homeInTime once it has 100 runs).
 // `npm run eval -- [--seeds 200] [--seed 0] [--no-known] [--min-minutes 4.5] [--out dir]`
 //
 // Run i uses setupFor(seed + i), like `npm run autoplay`, so a failure's
@@ -9,17 +11,16 @@
 // as plain text, for reading.
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { playRun, setupFor } from '../src/game/bots';
+import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor } from '../src/game/bots';
 import type { BotStyle } from '../src/game/bots';
-import { KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
+import { KNOWN_FAILURES, MEMORISED_RULE, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
 import type { Transcript } from '../src/game/transcript';
 
 /**
- * The four player styles the plan asks for (4 styles, 12 sample transcripts).
- * The situational bot is the balance probe for `npm run autoplay`; adding it
- * here is one more entry.
+ * Every bot style `npm run autoplay` plays, so rule 9's share of runs with an
+ * inspection across all styles is the number autoplay prints.
  */
-const STYLES: BotStyle[] = ['honest', 'liar', 'cautious', 'random'];
+const STYLES: readonly BotStyle[] = BOT_STYLES;
 const SAMPLES_PER_STYLE = 3;
 const SHOW = 20;
 
@@ -81,10 +82,18 @@ for (const k of r.known)
   console.log(k.count
     ? `  known: rule ${k.entry.rule} ${k.entry.key}${k.entry.character ? ` (${k.entry.character})` : ''}, ${k.count} failures, fixed by ${k.entry.bead}`
     : `  STALE known entry: rule ${k.entry.rule} ${k.entry.key} no longer fails; remove it (${k.entry.bead})`);
+// Rule 10, the memorised script (see tools/autoplay.ts): played here, judged by memorisedSummary().
+const script = firstPassScript(SEEDS, START);
+let memorisedHome = 0;
+for (let i = 0; i < SEEDS; i++) if (playScript(script, setupFor(START + i)).final.ending === 'homeInTime') memorisedHome++;
+const memorised = memorisedSummary(memorisedHome, SEEDS);
+console.log(`  ${(memorised.ok ? 'ok' : 'FAIL').padEnd(6)}rule ${MEMORISED_RULE.id}: ${MEMORISED_RULE.name}`);
+console.log(`        ${memorised.ok ? '' : 'FAIL '}${formatSummary(memorised)}`);
+const exitCode = r.exitCode || (memorised.ok ? 0 : 1);
 if (r.fresh.length) {
   console.log(`\n${r.fresh.length} failures${r.fresh.length > SHOW ? `, first ${SHOW}` : ''}:`);
   for (const f of r.fresh.slice(0, SHOW)) console.log(`  ${formatFailure(f)}`);
 }
 console.log(`\n${written} transcripts in ${OUT}/`);
-console.log(r.exitCode ? 'eval: FAIL' : 'eval: PASS');
-process.exit(r.exitCode);
+console.log(exitCode ? 'eval: FAIL' : 'eval: PASS');
+process.exit(exitCode);
