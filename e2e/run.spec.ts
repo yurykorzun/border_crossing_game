@@ -197,9 +197,9 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   // Her address and the family go on file too; on a records day both reach the desks ahead.
   await expect(rows).toHaveText([
     'Your reason verified.', "On file at Customs: your mother's number.",
-    'Found in the old records: Your registered family address.', 'Confirmed and on file: Another relative of yours.',
+    'Found in the old records: Your registered family address.', 'Confirmed and on file: Your mother names another relative.',
     'Into the shared records for the desks ahead: Your registered family address.',
-    'Into the shared records for the desks ahead: Another relative of yours.',
+    'Into the shared records for the desks ahead: Your mother names another relative.',
   ]);
   // Separate elements: the beat holds no result text, and the rows sit under it.
   await expect(beat).not.toContainText('verified');

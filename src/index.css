@@ -653,13 +653,15 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 /* The ending's name is the one amber word on the card: amber marks attention (docs/plan.md "UI rules"). */
 .ending-card h1 { font-size: 1.6rem; margin: 0 0 4px; color: var(--amber-paper); }
 /* The story reads at body size in the sans face: what you kept, what it cost, the epilogue. */
-.ending-card .kept, .ending-card .cost-line, .ending-card .epilogue { font-size: 1.0625rem; line-height: 1.4; font-weight: 400; }
+.ending-card .kept, .ending-card .cost-line, .ending-card .cost-reason, .ending-card .epilogue { font-size: 1.0625rem; line-height: 1.4; font-weight: 400; }
 .ending-card .kept { margin: 0 0 10px; }
 /* What it cost, worst first: a short heading and one line each, with no severity tag. */
 .costs { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
 .cost { padding-top: 8px; border-top: 1px solid var(--paper-2); }
 .cost-title { font-size: 1.0625rem; font-weight: 700; margin: 0 0 2px; }
 .cost-line { margin: 0; }
+/* Why naming them did this, before what it did (EndingLine.reason). */
+.cost-reason { margin: 0 0 2px; color: var(--muted); }
 .ending-card .epilogue { margin: 0; padding-top: 8px; border-top: 1px solid var(--paper-2); }
 /* The run summary under the story: hours left and the other stats. */
 .run-summary { margin-top: 12px; }
