@@ -3,7 +3,7 @@ import {
   BOT_STYLES, botAction, botSeed, buildScript, caughtLies, firstPassScript, playRun, playScript, setupFor,
 } from './bots';
 import type { BotRun } from './bots';
-import { legalActions, newRun } from './engine';
+import { legalActions, newRun, step } from './engine';
 import { tryStep } from './play';
 import { allSetups } from './walk';
 
@@ -91,8 +91,21 @@ describe('autoplay bots', () => {
   it('counts the liar lies and catches only claims a dealt challenge card covers', () => {
     const liar = playRun('liar', setupFor(0));
     expect(liar.lies).toBeGreaterThan(0);
-    expect(liar.caught).toBe(caughtLies(liar.final));
     expect(liar.caught).toBeLessThanOrEqual(liar.lies);
+    for (let i = 0; i < SETUP_COUNT; i++) {
+      const r = playRun('liar', setupFor(i));
+      // Replay: only claims on file while a challenge card was up count, never one told after it.
+      let s = newRun(setupFor(i));
+      const caught = new Set<string>();
+      for (const a of r.actions) {
+        const now = caughtLies(s);
+        if (now.length) expect(['i_clarify', 'i_contradiction']).toContain(s.screen.kind === 'encounter' && s.screen.id);
+        for (const c of now) caught.add(c);
+        s = step(s, a);
+      }
+      expect(r.caught, `run ${i}`).toBe(caught.size);
+      expect(r.caught).toBeLessThanOrEqual(r.lies);
+    }
     for (let i = 0; i < SETUP_COUNT; i++) expect(playRun('honest', setupFor(i)).lies).toBe(0);
   });
 

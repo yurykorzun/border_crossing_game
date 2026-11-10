@@ -183,16 +183,19 @@ export interface BotRun {
   caught: number;
 }
 
+const CHALLENGE_PAIRS: Record<string, readonly (readonly [ClaimId, FactId])[]> = { i_clarify: INCONSISTENCIES, i_contradiction: DISPROOFS };
+
 /**
- * Lie claims on file that a challenge card was dealt for: i_clarify for a claim
- * a fact makes look odd, i_contradiction for one a fact disproves. Denying the
- * photo adds no claim, so no card can catch it.
+ * Lie claims the challenge card on screen puts to the player: i_clarify for a
+ * claim a fact makes look odd, i_contradiction for one a fact disproves. Read
+ * while the card is up, so a lie told after it was answered is not counted as
+ * caught. Denying the photo adds no claim, so no card can catch it.
  */
-export function caughtLies(s: RunState): number {
+export function caughtLies(s: RunState): ClaimId[] {
+  const pairs = s.screen.kind === 'encounter' ? CHALLENGE_PAIRS[s.screen.id] : undefined;
+  if (!pairs) return [];
   const onFile = (f: FactId) => (s.facts[f] ?? []).length > 0;
-  const hit = (pairs: readonly (readonly [ClaimId, FactId])[], card: string) =>
-    s.seen.includes(card) ? pairs.filter(([c, f]) => s.claims.includes(c) && onFile(f)).map(([c]) => c) : [];
-  return new Set([...hit(INCONSISTENCIES, 'i_clarify'), ...hit(DISPROOFS, 'i_contradiction')]).size;
+  return pairs.filter(([c, f]) => s.claims.includes(c) && onFile(f)).map(([c]) => c);
 }
 
 type Picker = (s: RunState, botRng: number) => BotPick | null;
@@ -204,7 +207,9 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
   const choices: BotRun['choices'] = [];
   let free = 0;
   let lies = 0;
+  const caught = new Set<ClaimId>();
   while (!s.ending) {
+    for (const c of caughtLies(s)) caught.add(c);
     if (actions.length >= MAX_RUN_STEPS) throw new Error(`${style} run did not end in ${MAX_RUN_STEPS} steps`);
     const pick = pickFor(s, botRng);
     if (!pick) break;
@@ -221,7 +226,7 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
     botRng = pick.botRng;
     actions.push(pick.action);
   }
-  return { style, final: s, actions, choices, noCost: free, lies, caught: caughtLies(s) };
+  return { style, final: s, actions, choices, noCost: free, lies, caught: caught.size };
 }
 
 export function playRun(style: BotStyle, setup: RunSetup): BotRun {
