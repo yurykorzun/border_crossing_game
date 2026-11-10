@@ -49,10 +49,16 @@ console.log(`\nSetups where homeInTime is reachable at all: ${r.setups.filter((s
 
 // Random answers against a random dealer, so a packing's documents show in the number.
 console.log('\nBulletin warnings: homeInTime chance with random answers and deals, packings that cover the warned topic vs ignore it');
+console.log('  (the verdict compares within one character, because characters differ in difficulty)');
 for (const w of warningShares(r.setups)) {
   const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
-  const verdict = w.covered > w.ignored ? 'ok' : 'WARNING MEANS NOTHING';
+  const compared = w.byCharacter.filter((c) => c.coveredCount * c.ignoredCount > 0);
+  const verdict = compared.length && compared.every((c) => c.covered > c.ignored) ? 'ok' : 'WARNING MEANS NOTHING';
   console.log(`  ${w.bulletin.padEnd(14)} ${BULLETIN_TOPICS[w.bulletin].padEnd(14)} covered ${pct(w.covered)} (${w.coveredCount})   ignored ${pct(w.ignored)} (${w.ignoredCount})   ${verdict}`);
+  for (const c of w.byCharacter) {
+    const side = (x: number, n: number) => (n ? `${pct(x)} (${n})` : '-');
+    console.log(`    ${c.character.padEnd(27)} covered ${side(c.covered, c.coveredCount)}   ignored ${side(c.ignored, c.ignoredCount)}`);
+  }
 }
 console.log(`\nEnd states by ending (share of branches, not of players), ${total} total:`);
 for (const [e, n] of Object.entries(r.endings)) console.log(`  ${e.padEnd(12)} ${n} (${((n / total) * 100).toFixed(1)}%)`);

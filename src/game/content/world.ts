@@ -145,7 +145,8 @@ export const BULLETINS: BulletinId[] = ['customs', 'accommodation', 'records'];
 /**
  * The topic each bulletin's warning (bulletin.<id> in i18n) points at, without
  * naming a document. A packing covers it with any document on that topic, and
- * the walk checks those packings get home in time more often (warningShares).
+ * the walk checks those packings get home in time more often than the same
+ * character's packings that ignore it (warningShares).
  */
 export const BULLETIN_TOPICS: Record<BulletinId, Topic> = {
   // The medicine lab: a medical note saves the wait.

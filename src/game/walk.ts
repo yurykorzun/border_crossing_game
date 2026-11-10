@@ -371,16 +371,35 @@ export interface WarningShare {
   /** The same for packings without one. */
   ignored: number;
   ignoredCount: number;
+  /**
+   * The same split within each character. Characters differ in difficulty
+   * (Mark starts with scrutiny and faces more scrutiny cards), so when one of
+   * them always covers a topic the pooled numbers put that difficulty on the
+   * covered side. A character whose packings all fall on one side has a zero count.
+   */
+  byCharacter: WarningSplit[];
+}
+
+export interface WarningSplit {
+  character: CharacterId;
+  covered: number;
+  coveredCount: number;
+  ignored: number;
+  ignoredCount: number;
 }
 
 /** Per bulletin: do packings that heed its warning get home in time more often? */
 export function warningShares(setups: SetupResult[]): WarningShare[] {
   const mean = (list: SetupResult[]) => list.reduce((a, s) => a + s.homeChance, 0) / (list.length || 1);
+  const split = (bulletin: BulletinId, list: SetupResult[]) => {
+    const covered = list.filter((s) => coversWarning(s.setup.loadout, bulletin));
+    const ignored = list.filter((s) => !coversWarning(s.setup.loadout, bulletin));
+    return { covered: mean(covered), coveredCount: covered.length, ignored: mean(ignored), ignoredCount: ignored.length };
+  };
   return BULLETINS.map((bulletin) => {
     const today = setups.filter((s) => s.setup.bulletin === bulletin);
-    const covered = today.filter((s) => coversWarning(s.setup.loadout, bulletin));
-    const ignored = today.filter((s) => !coversWarning(s.setup.loadout, bulletin));
-    return { bulletin, covered: mean(covered), coveredCount: covered.length, ignored: mean(ignored), ignoredCount: ignored.length };
+    const byCharacter = CHARACTER_IDS.map((character) => ({ character, ...split(bulletin, today.filter((s) => s.setup.character === character)) }));
+    return { bulletin, ...split(bulletin, today), byCharacter };
   });
 }
 
