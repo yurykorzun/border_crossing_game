@@ -73,7 +73,7 @@ Each card but the return ticket covers two topics, so a "wrong" pick is rarely u
 
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
-| Customs | "Medicines require supporting paperwork today." and, on its own line, "Cash is counted at customs today." | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
+| Customs | "Medicines require supporting paperwork today." followed in the same bar by "Cash is counted at customs today." (`bulletin.customs.also`) | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
 | Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
 | Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
 
