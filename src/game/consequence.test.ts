@@ -130,7 +130,7 @@ describe('consequence line', () => {
     expect(line('evidence', 'motherLetter').text).toBe('Uses letter · Reveals her address');
     expect(t('enc.p_purpose.family.label')).toBe('"My family needs me here."');
     expect(line('family').text).toBe('Register check: 1 hour');
-    expect(t('enc.p_purpose.shortTrip.label')).toBe('"Just a short trip home."');
+    expect(t('enc.p_purpose.shortTrip.label')).toBe('"No reason, a short trip."');
     expect(line('shortTrip')).toEqual({ icon: 'check', text: 'Recorded as your reason for coming back' });
   });
 

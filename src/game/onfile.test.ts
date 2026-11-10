@@ -70,11 +70,11 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
       return t(line.key, line.vars);
     };
     expect(facing('i_clarify', 'shortTrip', 'familyAddress'))
-      .toBe('You said: "Just a short trip home" (Passport control). In the old records: Your registered family address.');
+      .toBe('You said: "No reason, a short trip" (Passport control). In the old records: Your registered family address.');
     expect(facing('i_contradiction', 'noOtherFamily', 'relativeContact'))
       .toBe('You said: "I have no other relatives here" (Passport control). Confirmed on file: Another relative of yours.');
     expect(facing('i_clarify', 'shortTrip', 'familyAddress', { flagged: ['familyAddress'] }))
-      .toBe('You said: "Just a short trip home" (Passport control). Flagged on file: Your registered family address.');
+      .toBe('You said: "No reason, a short trip" (Passport control). Flagged on file: Your registered family address.');
   });
 });
 

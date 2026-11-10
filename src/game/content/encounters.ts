@@ -21,6 +21,8 @@ import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspecti
  * Disproof: a fact on file says the opposite. Expensive (i_contradiction).
  */
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
+  // "No reason, a short trip" answers "Why now?" with no reason, so a
+  // fact on file that gives one (the family here, your father's condition) looks odd.
   ['shortTrip', 'familyAddress'],
   ['shortTrip', 'fatherCondition'],
   // A short trip home with nowhere booked (i_stay).

@@ -82,7 +82,7 @@ describe('a caught claim quotes your own words next to the fact', () => {
     expect(s.saidAt).toEqual({ shortTrip: 'passport' });
     const later: RunState = { ...s, reaction: null, checkpoint: 2, facts: { noBooking: ['interview'] }, screen: { kind: 'encounter', id: 'i_clarify' } };
     const line = caughtLine(later, 'i_clarify')!;
-    expect(t(line.key, line.vars)).toBe('You said: "Just a short trip home" (Passport control). Confirmed on file: No booking to show.');
+    expect(t(line.key, line.vars)).toBe('You said: "No reason, a short trip" (Passport control). Confirmed on file: No booking to show.');
     // An old save without saidAt names the desk that wrote it down, else this one.
     expect(caughtLine({ ...later, saidAt: undefined, logged: {} }, 'i_clarify')!.vars.desk).toBe('interview');
     expect(caughtLine({ ...later, saidAt: undefined, logged: { shortTrip: ['customs'] } }, 'i_clarify')!.vars.desk).toBe('customs');

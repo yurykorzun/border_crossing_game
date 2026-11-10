@@ -22,7 +22,7 @@ const ID_VARS: Record<string, (id: string) => string> = {
   cardThe: (id) => `ev.${id}.the`,
   fact: (id) => `fact.${id}`,
   claim: (id) => `claim.${id}`,
-  /** A claim in your own words, "Just a short trip home". The id may carry a traveler: `noOtherFamily.mark`. */
+  /** A claim in your own words, "No reason, a short trip". The id may carry a traveler: `noOtherFamily.mark`. */
   said: (id) => `said.${id}`,
   /** A checkpoint id, by its name: "Customs". */
   desk: (id) => `checkpoint.${id}`,

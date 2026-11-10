@@ -259,7 +259,7 @@ export const en: Record<string, string> = {
 
   // ── What you said / what they know
   'claim.familyVisit': 'Back for family',
-  'claim.shortTrip': 'Just a short trip home',
+  'claim.shortTrip': 'No reason, a short trip',
   'claim.hotelStay': 'Staying at a hotel',
   'claim.noOtherFamily': 'No other relatives',
   'claim.noOtherFamily.mark': 'No family across the border',
@@ -312,12 +312,12 @@ export const en: Record<string, string> = {
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicines require supporting paperwork today.',
   // A second warning on the same day, on its own line under the first (bulletin.<id>.also).
-  'bulletin.customs.also': 'Cash is counted at customs today.',
+  'bulletin.customs.also': 'Cash is checked at customs today.',
   'bulletin.accommodation': 'Hosts are being phoned today.',
   'bulletin.records': 'IDs are checked against old records.',
   // The one cue above the packing list: what officers are doing today, in the words of
   // the topic the bulletin points at (BULLETIN_TOPICS), so the rows that answer it stand out.
-  'bulletin.customs.cue': 'Officers check medicine papers and count cash.',
+  'bulletin.customs.cue': 'Officers check medicine papers and cash.',
   'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
   'bulletin.records.cue': 'Officers are checking who you are against old files.',
 
@@ -385,7 +385,7 @@ export const en: Record<string, string> = {
   'enc.p_purpose.family.label': '"My family needs me here."',
   'enc.p_purpose.family.event': 'Register check',
   'enc.p_purpose.family.reaction': 'She runs your family through the register.',
-  'enc.p_purpose.shortTrip.label': '"Just a short trip home."',
+  'enc.p_purpose.shortTrip.label': '"No reason, a short trip."',
   'enc.p_purpose.shortTrip.reaction': 'She stamps nothing. She just nods.',
 
   'enc.p_photo.q': '"This photo is eight years old. Is this you?"',
@@ -433,7 +433,7 @@ export const en: Record<string, string> = {
   'enc.c_medicine.declare.reaction': 'He takes the medicine away for testing.',
 
   // Asked about the cash itself: income (the employer letter) or a declaration answers it, not a ticket.
-  'enc.c_cash.q': '"How much cash are you carrying, and where is it from?"',
+  'enc.c_cash.q': '"Where is the cash in your bag from?"',
   'enc.c_cash.evidence.label': 'Show {cardThe}',
   'enc.c_cash.evidence.reaction': 'He reads the salary line and writes down the company name.',
   'enc.c_cash.count.label': 'Let him count your cash',
@@ -441,13 +441,13 @@ export const en: Record<string, string> = {
   'enc.c_cash.count.reaction': 'He counts it twice and writes the total on a form.',
   'enc.c_cash.under.label': '"My savings. It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes down what you said and does not count it.',
-  'enc.c_cash.under.bulletin.customs.reaction': 'Cash is counted today. He counts yours anyway and clips the total to your file.',
+  'enc.c_cash.under.bulletin.customs.reaction': 'Cash is checked today. He counts yours anyway and clips the total to your file.',
 
   'enc.c_pen.q': '"Long queue today. Need a pen for the form?"',
   'enc.c_pen.yes.label': '"Yes, thanks."',
   'enc.c_pen.yes.reaction': 'He lends you his and shows you where to sign.',
 
-  'enc.c_shortTrip.q': '"A short trip home, with a pensioner\'s prescriptions in the bag?"',
+  'enc.c_shortTrip.q': '"No reason, and a pensioner\'s prescriptions in the bag?"',
   'enc.c_shortTrip.admit.label': '"I came back for my father."',
   'enc.c_shortTrip.admit.event': 'New entry form',
   'enc.c_shortTrip.admit.reaction': '"Why not say so at the desk?" A new form, with your mother\'s address on it.',
@@ -518,9 +518,9 @@ export const en: Record<string, string> = {
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
   'enc.i_clarify.accept.label': '"It\'s just a short trip."',
-  'enc.i_clarify.accept.reaction': '"With your family\'s address on file?" The officer marks it as unexplained.',
+  'enc.i_clarify.accept.reaction': '"No reason, with your family\'s address on file?" The officer marks it as unexplained.',
   // The accept answer stands by the claim the file caught, so it is worded per pair (answerKey()).
-  'enc.i_clarify.shortTrip.fatherCondition.accept.reaction': '"With your father\'s condition on file?" The officer marks it as unexplained.',
+  'enc.i_clarify.shortTrip.fatherCondition.accept.reaction': '"No reason, with your father\'s condition on file?" The officer marks it as unexplained.',
   'enc.i_clarify.shortTrip.noBooking.accept.reaction': '"A short trip with no booking?" The officer marks it as unexplained.',
   'enc.i_clarify.hotelStay.familyAddress.accept.label': '"I booked a hotel."',
   'enc.i_clarify.hotelStay.familyAddress.accept.reaction': '"With your family\'s address on file?" The officer marks it as unexplained.',
@@ -679,7 +679,7 @@ export const en: Record<string, string> = {
   'caught.line.confirmed': 'You said: "{said}" ({desk}). Confirmed on file: {fact}.',
   'caught.line.flagged': 'You said: "{said}" ({desk}). Flagged on file: {fact}.',
   // A claim in the words you said it, as the answer that made it reads (minus its quotes).
-  'said.shortTrip': 'Just a short trip home',
+  'said.shortTrip': 'No reason, a short trip',
   'said.hotelStay': 'Here is my hotel booking',
   'said.noOtherFamily': 'I have no other relatives here',
   'said.noOtherFamily.mark': 'No family across the border',
