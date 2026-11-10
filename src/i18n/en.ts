@@ -405,8 +405,8 @@ export const en: Record<string, string> = {
   'enc.p_stay.father.event': 'Call to the hospital',
   'enc.p_stay.father.reaction': 'She checks the reason with the hospital, then types it into your entry card.',
   'enc.p_stay.unsure.label': '"I don\'t know yet."',
-  'enc.p_stay.unsure.event': 'Entry rules check',
-  'enc.p_stay.unsure.reaction': 'She enters an open stay and checks it against the entry rules.',
+  'enc.p_stay.unsure.event': 'Residence register check',
+  'enc.p_stay.unsure.reaction': 'She enters an open stay and checks whether you are still registered at an address here.',
 
   'enc.p_secondPassport.q': '"You left on a foreign passport last time. You hold two. Is that correct?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',

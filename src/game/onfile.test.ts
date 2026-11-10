@@ -94,7 +94,9 @@ describe('Lena and Mark come home as citizens', () => {
     }
   });
 
-  it('no line frames them as tourists or visa holders', () => {
-    expect(Object.entries(en).filter(([k, v]) => /touris|\bvisa\b/i.test(`${k} ${v}`))).toEqual([]);
+  it('no line frames them as tourists, visa holders or visitors under entry rules', () => {
+    // The game's own title, "Purpose of Visit", is the only visitor word left.
+    const lines = Object.entries(en).filter(([k]) => k !== 'ui.title');
+    expect(lines.filter(([k, v]) => /touris|\bvisa\b|\bvisitors?\b|entry rules|permitted stay|purpose of (your )?visit/i.test(`${k} ${v}`))).toEqual([]);
   });
 });

@@ -113,7 +113,7 @@ export const ENCOUNTERS: Encounter[] = [
         id: 'father', kind: 'verify',
         effects: [{ claim: 'familyVisit' }, { fact: 'fatherCondition' }, { time: -2, when: { noFacts: ['fatherCondition'] } }],
       },
-      // No date to give: she enters an open stay and checks it against the entry rules.
+      // No date to give: she enters an open stay and checks your residence registration.
       { id: 'unsure', kind: 'verify', effects: [{ time: -1 }] },
     ],
   },
