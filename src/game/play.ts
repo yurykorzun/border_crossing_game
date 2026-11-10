@@ -79,7 +79,8 @@ const added = <T>(before: T[], after: T[]) => after.filter((x) => !before.includ
 /** What changed from `s` to `n`, in the order a player would notice it. */
 export function eventsBetween(s: RunState, n: RunState, action: Action): GameEvent[] {
   const ev: GameEvent[] = [];
-  if (action.type === 'waitAction' && s.screen.kind === 'wait')
+  // An ask only brings a hint: the check is still running.
+  if (action.type === 'waitAction' && action.action !== 'ask' && s.screen.kind === 'wait')
     ev.push({ type: 'checkResolved', id: s.screen.check, result: action.action === 'assist' ? 'clear' : s.screen.resolved.result });
   for (const id of added(s.used, n.used)) ev.push({ type: 'documentUsed', id });
   for (const id of added(s.exposed, n.exposed)) ev.push(exposedEvent(s, n, action, id));

@@ -30,7 +30,6 @@ Each checkpoint (passport, customs, interview) has its own deck. At each one the
 
 1. A routine card, which is a question everybody gets. The first checkpoint always opens with "Purpose of your visit?".
 2. A related card, which is the highest-priority card whose condition matches what you have done so far. If none match, you get another routine card.
-3. Only while the run is quiet: a third card. Quiet means every decision so far was a checkpoint card, with no follow-up, no inspection and no question asked in a waiting room. The third card is the routine question you have not had yet, else the best related card that fits, else nothing. It is existing content, so it adds a decision and very little reading. It exists because a quick, clean run was too short (eval rule 4), while a run full of checks and inspections is long enough already.
 
 Two more rules give the run some relief, so escalation lands harder:
 
@@ -74,7 +73,7 @@ Some answers start a check, like a records scan, a call to your host, a lab test
 
 Every check names itself ("Medicine check"), says what is happening, and shows "Verification in progress" with three dots. Once the beats are done you choose:
 - Wait for the result: free.
-- Ask for an update: you learn what is happening, and "you're in a hurry" goes on file.
+- Ask for an update, once: you learn what is happening before you decide, and "you're in a hurry" goes on file. You stay in the waiting room and then wait or ask a contact.
 - Ask a contact to vouch, only when a free contact can confirm what the check is about. Today that is the host call, which your mother or Ilya can settle. It clears the check and exposes them, but anything the check found stays on file. The phone search and the records check have no vouching, because nobody can vouch away data.
 
 After every answer the officer's reaction shows with one line per change ("Your mother's address is now on file.", "1 hour lost.", "Scrutiny 2/3."). The button says what comes next: Continue within a checkpoint, then "Proceed to customs", "Proceed to the interview" or "See how it ends".
@@ -108,7 +107,7 @@ A script (`npm run walk`) plays every possible choice and every card the dealer 
 - Every reaction line has English text.
 - All 4 endings can be reached, every card is dealt and every answer offered somewhere.
 - Every bulletin warning pays: with random answers and deals, packings with a document on the warned topic get home in time more often (customs, medicine: 35.9% vs 21.1%; accommodation: 44.1% vs 42.9%, against the one packing with no accommodation document; records, identity: 30.5% vs 28.4%).
-- The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.8 minutes and the median 5.7 (eval rule 4 asks for 4-8 and a median of 5 or more).
+- The longest run is 14 decisions (the limit is 14). In the eval the shortest full run is 4.8 minutes and the median 5.7 (eval rule 4 asks for 4-8 and only reports the median).
 
 Any broken rule comes with a replay (setup, moves, dealer picks), so it can be reproduced in a test.
 

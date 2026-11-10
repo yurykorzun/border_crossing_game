@@ -131,29 +131,26 @@ describe('scenario evals', () => {
     expect(only(4, [at(4)]).fresh).toEqual([]);
   });
 
-  it('rule 4: the median full run must reach 5 minutes', () => {
+  it('rule 4: the median full run is reported, and a median under 5 minutes no longer fails', () => {
     const tr = run(LENA);
     const at = (minutes: number, ending = tr.ending) =>
       ({ ...tr, ending, beatSeconds: tr.beatSeconds + (minutes - playMinutes(tr)) * 60 });
-    // Every run is within 4-8, so only the median decides.
-    const below = only(4, [at(4.6), at(4.8), at(5.5)]);
+    // Every run is within 4-8, and a median of 4.2 passes: only the floor and the ceiling decide.
+    const below = only(4, [at(4.1), at(4.2), at(5.5)]);
     expect(below.fresh).toEqual([]);
-    expect(below.exitCode).toBe(1);
-    expect(below.summaries.map(formatSummary)).toEqual(['rule 4: median full run 4.8 min, target 5, longest 5.50 of 8 (3 runs)']);
-    const atTarget = only(4, [at(4.6), at(5), at(5.5)]);
-    expect(atTarget.summaries[0].ok).toBe(true);
-    expect(atTarget.exitCode).toBe(0);
+    expect(below.exitCode).toBe(0);
+    expect(below.summaries.map(formatSummary)).toEqual(['rule 4: median full run 4.2 min (aim 5, not checked), longest 5.50 of 8 (3 runs)']);
     // Even count: the median is the mean of the middle two (4.8 and 5.2 = 5).
-    expect(only(4, [at(4.6), at(4.8), at(5.2), at(6)]).exitCode).toBe(0);
+    expect(only(4, [at(4.6), at(4.8), at(5.2), at(6)]).summaries.map(formatSummary)[0]).toContain('median full run 5.0 min');
     // A run you withdraw from does not count toward the median.
     const withdrawn = only(4, [at(4.6), at(5.5), at(1, 'turnedBack'), at(1, 'turnedBack')]);
     expect(withdrawn.exitCode).toBe(0);
-    expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min, target 5, longest 5.50 of 8 (2 runs)']);
+    expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min (aim 5, not checked), longest 5.50 of 8 (2 runs)']);
     // With only withdrawn runs there is no median to check.
     expect(only(4, [at(1, 'turnedBack')]).summaries).toEqual([]);
   });
 
-  it('rule 4: the default range is a 4 floor, 5-minute median and 8 ceiling', () => {
+  it('rule 4: the default range is a 4 floor and 8 ceiling, with 5 minutes as the reported aim', () => {
     expect(PLAY_MINUTES).toEqual({ floor: 4, target: 5, max: 8 });
     expect(RULES.find((r) => r.id === 4)!.name).toBe(playTimeRule(PLAY_MINUTES).name);
   });

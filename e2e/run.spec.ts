@@ -262,9 +262,14 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
     await expect(page.locator('.strip .scrutiny')).toContainText('Scrutiny');
 
     if (check === 'medicineLab') {
-      // Asking puts the urgency on file, and the reaction says so.
+      // Asking puts the urgency on file and gives the hint, and the reaction says both.
       await buttons.nth(1).click();
       await expect(page.locator('main.run .panel.reaction')).toContainText('Your urgency is now on file.');
+      await expect(page.locator('main.run .panel.reaction')).toContainText(en['check.medicineLab.hint.clear']);
+      // The hint comes before the decision: back in the waiting room, with the result still to come.
+      await page.locator('main.run .controls button.primary').click();
+      await expect(buttons.nth(0)).toHaveText('Wait for the result');
+      await expect(page.locator('main.run .controls')).not.toContainText('Ask for an update');
     }
     expect(errors).toEqual([]);
   });

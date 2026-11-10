@@ -413,10 +413,9 @@ export function transcriptOf(run: BotRun, setup: RunSetup): Transcript {
 export const WORDS_PER_MINUTE = 200;
 export const SECONDS_PER_DECISION = 3;
 /**
- * Rule 4. Every full run is floor-max minutes, and across the eval the median
- * full run reaches target. A run you withdraw from (turnedBack) only has the
- * ceiling. Yury's call on 2026-11-09, after the short packing screen (67a.16)
- * put some runs just under 5 minutes.
+ * Rule 4. Every full run is floor-max minutes. A run you withdraw from
+ * (turnedBack) only has the ceiling. target is what the median full run is
+ * reported against, not checked: the balance review (2op.6) dropped that floor.
  */
 export const PLAY_MINUTES = { floor: 4, target: 5, max: 8 } as const;
 
@@ -481,13 +480,13 @@ export function medianFullMinutes(trs: Transcript[]): { runs: number; median: nu
 /**
  * Rule 4 for a range. The floor is for a run that goes the whole way. A run you
  * withdraw from (turnedBack) only has the ceiling, because you chose to stop early
- * and the game should not make you read more for it. The summary asks that the
- * median full run reaches the target, so the floor is a margin and not the aim.
+ * and the game should not make you read more for it. The summary only reports
+ * the median full run next to the target; it never fails the eval.
  */
 export function playTimeRule(range: PlayTimeRange): Rule {
   return {
     id: 4,
-    name: `estimated play time is ${range.floor}-${range.max} minutes and the median full run reaches ${range.target} (a run you withdraw from can be shorter)`,
+    name: `estimated play time is ${range.floor}-${range.max} minutes (a run you withdraw from can be shorter)`,
     check: (tr) => {
       const m = playMinutes(tr);
       if (m <= range.max && (m >= range.floor || tr.ending === 'turnedBack')) return [];
@@ -503,8 +502,8 @@ export function playTimeRule(range: PlayTimeRange): Rule {
       // The longest full run, so the room left under the ceiling shows (pfi.11).
       const longest = Math.max(...trs.filter((tr) => tr.ending !== 'turnedBack').map(playMinutes));
       return {
-        ok: median >= range.target,
-        text: `median full run ${median.toFixed(1)} min, target ${range.target}, longest ${longest.toFixed(2)} of ${range.max} (${runs} runs)`,
+        ok: true,
+        text: `median full run ${median.toFixed(1)} min (aim ${range.target}, not checked), longest ${longest.toFixed(2)} of ${range.max} (${runs} runs)`,
       };
     },
   };
@@ -617,7 +616,7 @@ export interface EvalResult {
   fresh: Failure[];
   /** Known entries with how many failures each covered. One that covered none is stale and fails too. */
   known: { entry: KnownFailure; count: number }[];
-  /** Whole-eval checks (rule 4's median full run). One that is not ok fails the command. */
+  /** Whole-eval checks. One that is not ok fails the command. Rule 4's median full run is only reported. */
   summaries: Summary[];
   exitCode: 0 | 1;
 }

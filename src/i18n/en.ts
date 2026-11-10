@@ -379,6 +379,8 @@ export const en: Record<string, string> = {
   'enc.p_photo.evidence.reaction': 'It matches what is on your file. She lets you through.',
   'enc.p_photo.scan.label': 'Offer a face scan',
   'enc.p_photo.scan.reaction': 'She matches the scan against the photo on file.',
+  'enc.p_photo.questions.label': 'Answer questions about yourself',
+  'enc.p_photo.questions.reaction': 'She reads out your old addresses one by one, and you confirm each.',
 
   'enc.p_secondPassport.q': '"You hold two passports. Is that correct?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',

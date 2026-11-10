@@ -186,21 +186,12 @@ describe('scenarios', () => {
       slot: 2, decisions: 1, seen: ['p_purpose', 'p_employer'], claims: ['tourism'], ...extra,
     });
 
-  it('a quiet run gets a third card: the routine question not asked yet', () => {
-    const s = step(quietPassport({ bulletin: 'customs' }), { type: 'choose', approach: 'perk' });
-    expect(s.screen).toEqual({ kind: 'encounter', id: 'p_photo' });
-    expect(s.checkpoint).toBe(0);
-    let after = step(s, { type: 'choose', approach: 'scan' });
-    while (after.screen.kind === 'wait' && after.screen.shown < after.screen.beats.length) after = step(after, { type: 'beat' });
-    after = step(step(after, { type: 'waitAction', action: 'wait' }), { type: 'ack' });
-    expect(after.screen).toEqual({ kind: 'between', next: 1 });
-  });
-
-  it('a run that asked in a waiting room or met an inspection gets only 2 cards', () => {
-    const asked = step(quietPassport({ decisions: 2 }), { type: 'choose', approach: 'perk' });
-    expect(asked.screen).toEqual({ kind: 'between', next: 1 });
-    const inspected = step(quietPassport({ inspections: 1 }), { type: 'choose', approach: 'perk' });
-    expect(inspected.screen).toEqual({ kind: 'between', next: 1 });
+  it('every desk deals 2 cards, a quiet run too: no third card (2op.6)', () => {
+    for (const extra of [{ bulletin: 'customs' as const }, { decisions: 2 }, { inspections: 1 }]) {
+      const s = step(quietPassport(extra), { type: 'choose', approach: 'perk' });
+      expect(s.screen, JSON.stringify(extra)).toEqual({ kind: 'between', next: 1 });
+      expect(s.seen).not.toContain('p_photo');
+    }
   });
 });
 

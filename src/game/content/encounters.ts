@@ -92,6 +92,8 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'scan', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
+      // No deed and no records check: an hour longer than the scan, but nothing new can come up.
+      { id: 'questions', kind: 'verify', effects: [{ time: -2 }, { time: -1, when: { bulletin: 'records' } }] },
     ],
   },
   {

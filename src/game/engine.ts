@@ -474,10 +474,6 @@ function relatedCard(s: RunState): Encounter | undefined {
 /** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
 function escalatesNext(s: RunState): boolean {
   if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id))) return true;
-  if (s.slot === 2 && quiet(s)) {
-    const extra = extraCard(s);
-    if (extra) return extra.kind !== 'routine';
-  }
   if (s.slot >= 2) return !!pendingChallenge(s);
   return s.slot === 1 && !!relatedCard(s);
 }
@@ -514,7 +510,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     s = { ...s, pending: rest };
     if (!s.seen.includes(id)) return show(s, id);
   }
-  if (s.slot >= 2 && !(s.slot === 2 && quiet(s) && extraCard(s))) {
+  if (s.slot >= 2) {
     if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer), dealer);
     const challenge = pendingChallenge(s);
     if (challenge) return show(s, challenge);
@@ -630,38 +626,12 @@ function spotCheck(s: RunState, dealer: Dealer): RunState {
   return checked;
 }
 
-/**
- * The run has been quiet so far: every decision was a checkpoint card, with no
- * follow-up, no inspection and no question asked in a waiting room. Only such a
- * run gets a third card, so a short run grows and a long one does not.
- */
-function quiet(s: RunState): boolean {
-  if (s.inspections || s.decisions !== s.seen.filter((id) => !isCalm(id)).length) return false;
-  return s.seen.every((id) => {
-    const kind = ENCOUNTER_BY_ID.get(id)?.kind;
-    return kind === 'routine' || kind === 'related';
-  });
-}
-
-/**
- * The third card for a quiet run: the routine question not asked yet, so
- * everyone hears both, else the related card that fits best. Nothing new to
- * read, only one more decision. Never a calm card: those are kept for breathers.
- */
-function extraCard(s: RunState): Encounter | undefined {
-  const cp = CHECKPOINTS[s.checkpoint];
-  const fits = ENCOUNTERS.filter((e) => e.checkpoint === cp && !e.calm && eligible(s, e));
-  return fits.find((e) => e.kind === 'routine')
-    ?? fits.filter((e) => e.kind === 'related').sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
-}
-
 function deal(s: RunState, dealer: Dealer): RunState {
   const cp = CHECKPOINTS[s.checkpoint];
   // Calm cards are kept for breathers, so a desk always has one when the pacing rule needs it.
   const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && !e.calm && eligible(s, e));
   let chosen: Encounter | undefined;
   let rng = s.rng;
-  if (s.slot === 2) return show({ ...s, slot: 3 }, extraCard(s)!.id);
   if (s.slot === 0) chosen = routine.find((e) => e.opening);
   if (s.slot === 1) chosen = relatedCard(s);
   if (!chosen) {
@@ -719,11 +689,12 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   if (s.screen.kind !== 'wait') return [];
   const done = s.screen.shown >= s.screen.beats.length;
   if (!done) return [];
-  // Every check can be waited out or asked about. Someone can vouch only when a
+  // Every check can be waited out, and asked about once: the hint comes before
+  // you decide whether to wait or call someone. Someone can vouch only when a
   // free contact can confirm what the check is about; nobody vouches away data.
   const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] = [
     { action: 'wait', blocked: null },
-    { action: 'ask', blocked: null },
+    ...(s.screen.asked ? [] : [{ action: 'ask' as const, blocked: null }]),
   ];
   const contact = assistContact(s);
   // vouches: the check's topic, so the option can say what the contact may confirm.
@@ -743,9 +714,11 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
   const w = s.screen;
   let result = w.resolved;
   let n = s;
+  // Asking puts your urgency on file and tells you how it is going. You stay in
+  // the waiting room, so the hint can decide whether to wait or call someone.
   if (how === 'ask') {
-    n = apply(n, [{ fact: 'urgency' }]);
-    n = say(n, [{ key: `check.${w.check}.hint.${result.result}` }]);
+    n = say(apply(n, [{ fact: 'urgency' }]), [{ key: `check.${w.check}.hint.${result.result}` }]);
+    return { ...n, decisions: n.decisions + 1, screen: { ...w, asked: true } };
   }
   if (how === 'assist') {
     const c = assistContact(n);
@@ -810,7 +783,8 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
       return { ...s, reaction: null, screen: { ...s.screen, shown: s.screen.shown + 1 } };
     case 'waitAction': {
       const a = waitActions(s).find((w) => w.action === action.action);
-      if (!a || a.blocked) return s;
+      // After an ask, its hint is read (ack) before anything else is chosen.
+      if (!a || a.blocked || s.reaction) return s;
       return resolveWait({ ...s, reaction: null }, action.action, dealer);
     }
     case 'ack':

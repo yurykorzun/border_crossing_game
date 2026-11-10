@@ -1,7 +1,7 @@
 // Plays the autoplay bots over many seeds and checks every run's transcript
 // against the story rules in src/game/transcript.ts. Exits 1 on any failure no
 // known entry covers, on a known entry that no longer happens, or on a
-// whole-eval check (rule 4: the median full run under 5 minutes).
+// whole-eval check that is not ok (rule 4 only reports the median full run).
 // `npm run eval -- [--seeds 200] [--seed 0] [--no-known] [--min-minutes 4.5] [--out dir]`
 //
 // Run i uses setupFor(seed + i), like `npm run autoplay`, so a failure's
