@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { t, tn } from '../i18n';
 import { en } from '../i18n/en';
-import { caughtLine } from './consequence';
+import { caughtLine, questionKey } from './consequence';
 import { FACT_TIERS } from './content/world';
 import { factTier, newRun } from './engine';
 import type { RunSetup } from './engine';
@@ -82,6 +82,16 @@ describe('Lena and Mark come home as citizens', () => {
   it('passport control asks about the years away, not the purpose of a visit', () => {
     expect(en['enc.p_purpose.q']).toBe('"You haven\'t been back for six years. Why now?"');
     expect(en['enc.p_purpose.mark.q']).toBe('"You haven\'t been back for four years. Why now?"');
+  });
+
+  it('the host card names the registered address only when customs has it on file', () => {
+    const host = (facts: RunState['facts']) => t(questionKey({ ...at(newRun({ ...lena, bulletin: 'accommodation' }), 'c_host', 1), facts }, 'enc', 'c_host'));
+    expect(host({ familyAddress: ['passport', 'customs'] })).toMatch(/registered address/);
+    // An accommodation day deals the card with nothing on file, or the address left at passport control.
+    for (const facts of [{}, { familyAddress: ['passport'] }] as RunState['facts'][]) {
+      expect(host(facts)).not.toMatch(/address/);
+      expect(host(facts)).toMatch(/phone every host/);
+    }
   });
 
   it('no line frames them as tourists or visa holders', () => {

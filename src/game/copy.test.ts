@@ -98,7 +98,9 @@ describe('the realism review lines in src/i18n/en.ts', () => {
     const questioned = line({ ...mark, exposed: ['brother'] });
     expect(questioned.key).toBe('exposure.brother.protected');
     expect(t(`${questioned.key}.title`)).toBe('Tom is contacted for questioning');
-    const listed = line({ ...mark, exposed: ['brother'], facts: { brotherAbroad: ['interview'] } });
+    // On file but never flagged (a phone search found him): questioned, not listed.
+    expect(line({ ...mark, exposed: ['brother'], facts: { brotherAbroad: ['customs'] } }).key).toBe('exposure.brother.protected');
+    const listed = line({ ...mark, exposed: ['brother'], facts: { brotherAbroad: ['interview'] }, flagged: ['brotherAbroad'] });
     expect(listed.key).toBe('exposure.brother.protected.record');
     expect(t(listed.key)).toMatch(/flagged record/);
   });

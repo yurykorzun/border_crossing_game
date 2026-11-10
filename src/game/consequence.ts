@@ -6,7 +6,7 @@
 import { has, own } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, factIds, factTier, travelOf } from './engine';
+import { caught, factIds, factTier, knows, travelOf } from './engine';
 import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
@@ -219,9 +219,10 @@ export function consequences(s: RunState): EndingLine[] {
   const protectedContact = CHARACTERS[s.character].protectedContact;
   for (const c of s.exposed) {
     const home = CONTACTS[c].home;
-    // The protected contact's line states its reason: a flagged record already on file, or none.
+    // The protected contact's line states its reason: their record on file and flagged
+    // (factTier()), or none. On file but never flagged, they are only questioned.
     const record = CONTACTS[c].record;
-    const listed = !!record && facts.includes(record);
+    const listed = !!record && facts.includes(record) && factTier(s, record) === 'flagged';
     if (c === protectedContact) out.push({ kind: 'contact', key: `exposure.${c}.protected${listed ? '.record' : ''}`, vars: { contact: c }, severity: 3 });
     else if (home && facts.includes(home)) out.push({ kind: 'contact', key: `exposure.${c}.home`, vars: { contact: c }, severity: 2 });
     else out.push({ kind: 'contact', key: `exposure.${c}.call`, vars: { contact: c }, severity: 1 });
@@ -267,4 +268,14 @@ export function caughtLine(s: RunState, card: string): { key: string; vars: Reco
   if (!c) return undefined;
   const said = own(`said.${c.claim}`, s.character).slice('said.'.length);
   return { key: `caught.line.${factTier(s, c.fact)}`, vars: { said, desk: c.desk, fact: c.fact } };
+}
+
+/**
+ * The key of the officer's question on card `id`, in the traveler's own words (own()).
+ * The host card is also dealt on an accommodation day with no address on file at the
+ * desk, and then it cannot say the officer found one: it reads `enc.c_host.phoned.q`.
+ */
+export function questionKey(s: RunState, prefix: 'enc' | 'insp', id: string): string {
+  const base = prefix === 'enc' && id === 'c_host' && !knows(s, 'familyAddress') ? 'enc.c_host.phoned' : `${prefix}.${id}`;
+  return own(`${base}.q`, s.character);
 }

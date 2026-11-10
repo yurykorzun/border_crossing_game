@@ -457,6 +457,8 @@ export const en: Record<string, string> = {
   'enc.c_shortTrip.mother.reaction': 'Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.',
 
   'enc.c_host.q': 'He finds your registered address and asks whether your mother still lives there. "Is that where you will stay?"',
+  // An accommodation day with no address on file at customs (questionKey()): every host is phoned.
+  'enc.c_host.phoned.q': '"Today we phone every host. Where will you stay, and with whom?"',
   'enc.c_host.call.label': 'Wait while they call',
   'enc.c_host.call.event': 'Call to your host',
   'enc.c_host.call.reaction': "He dials your mother's number and waits.",

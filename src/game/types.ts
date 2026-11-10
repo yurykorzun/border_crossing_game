@@ -229,7 +229,7 @@ export interface Contact {
   /** The fact that puts their home on file. With it on file, a call-in becomes a visit (a worse exposure). */
   home?: FactId;
   /**
-   * The flagged record that makes naming them worse: with it on file, the ending
+   * The record that makes naming them worse: on file and flagged (factTier()), the ending
    * reads `exposure.<id>.protected.record` (listed), else `exposure.<id>.protected`.
    */
   record?: FactId;

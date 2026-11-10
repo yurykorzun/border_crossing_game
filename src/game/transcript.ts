@@ -17,7 +17,7 @@ import { CHECKS, DISPROOFS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID }
 import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
-import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
+import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
 import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -328,7 +328,7 @@ function screenLines(s: RunState, p: Page): void {
     // Once the bus is out of reach, the line saying so sits above the priority line.
     if (finishing) p.add('ui.doomed');
     if (desk) p.add(`officer.${desk}.priority`);
-    p.add(own(`${prefix}.${sc.id}.q`, s.character));
+    p.add(questionKey(s, prefix, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);

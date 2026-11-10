@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { has, own, t, tn } from './i18n';
+import { has, t, tn } from './i18n';
 import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -20,7 +20,7 @@ import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow } from './game/consequence';
+import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -609,7 +609,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
   const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
   const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
-  const question = t(own(`${prefix}.${id}.q`, s.character));
+  const question = t(questionKey(s, prefix, id));
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
   // A challenge card quotes what you said and the fact that catches it, so it always gets the card.

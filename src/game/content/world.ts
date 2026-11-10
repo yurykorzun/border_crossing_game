@@ -57,7 +57,7 @@ export const CONTACTS: Record<ContactId, Contact> = {
   mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress' },
   // He can host.
   cousin: { id: 'cousin', abilities: ['accommodation'] },
-  // A job offer abroad. With his record on file, naming him lists him, not only questions him.
+  // A job offer abroad. With his record on file and flagged, naming him lists him, not only questions him.
   brother: { id: 'brother', abilities: ['work'], record: 'brotherAbroad' },
 };
 
