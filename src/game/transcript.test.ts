@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 import appSource from '../App.tsx?raw';
 import partsSource from '../ui/parts.tsx?raw';
 import { playRun, setupFor } from './bots';
-import { KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, playMinutes, playTimeRule, transcriptOf } from './transcript';
+import type { BotStyle } from './bots';
+import { INSPECTIONS } from './content/encounters';
+import { BALANCE, KNOWN_FAILURES, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, playMinutes, playTimeRule, transcriptOf } from './transcript';
 import type { KnownFailure, Transcript } from './transcript';
 
 // setupFor() cycles Lena's setups first, then Mark's; 60 is Mark's first.
@@ -148,6 +150,50 @@ describe('scenario evals', () => {
     expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min (aim 5, not checked), longest 5.50 of 8 (2 runs)']);
     // With only withdrawn runs there is no median to check.
     expect(only(4, [at(1, 'turnedBack')]).summaries).toEqual([]);
+  });
+
+  describe('rules 7-9: balance shares', () => {
+    const base = run(LENA);
+    const inspection = { step: 1, type: 'cardDealt' as const, id: INSPECTIONS[0].id, claims: [], facts: [], routinesLeft: [] };
+    /** n runs of `style`, the first `hits` of them home in time (or, with `insp`, inspected). */
+    const runs = (style: BotStyle, n: number, hits: number, insp = false): Transcript[] =>
+      Array.from({ length: n }, (_, i) => ({
+        ...base, style,
+        ending: !insp && i < hits ? 'homeInTime' as const : 'tooLate' as const,
+        happenings: insp && i < hits ? [inspection] : [],
+      }));
+
+    it('rule 7: honest under 50% fails, 50% passes', () => {
+      expect(only(7, runs('honest', 100, 49)).exitCode).toBe(1);
+      const ok = only(7, runs('honest', 100, 50));
+      expect(ok.exitCode).toBe(0);
+      expect(ok.summaries.map(formatSummary)).toEqual(['rule 7: honest homeInTime 50.0% of 100 runs']);
+    });
+
+    it('rule 8: liar over 80% fails, 80% passes', () => {
+      expect(only(8, runs('liar', 100, 81)).exitCode).toBe(1);
+      expect(only(8, runs('liar', 100, 80)).exitCode).toBe(0);
+    });
+
+    it('rule 9: inspections outside 25-33% of all runs fail', () => {
+      const all = (hits: number) => [...runs('honest', 100, hits, true), ...runs('liar', 100, 0, true)];
+      expect(only(9, all(48)).exitCode).toBe(1);
+      expect(only(9, all(50)).exitCode).toBe(0);
+      expect(only(9, all(66)).exitCode).toBe(0);
+      expect(only(9, all(67)).exitCode).toBe(1);
+    });
+
+    it('a share over fewer than 100 runs per style is reported, not checked', () => {
+      const few = only(7, runs('honest', 3, 0));
+      expect(few.exitCode).toBe(0);
+      expect(few.summaries.map(formatSummary)).toEqual(['rule 7: honest homeInTime 0.0% of 3 runs (not checked: 3 runs per style, needs 100)']);
+      // Rule 9 counts the smallest style, so one short style keeps it unchecked.
+      expect(only(9, [...runs('honest', 100, 0, true), ...runs('liar', 3, 0, true)]).exitCode).toBe(0);
+    });
+
+    it('the targets are the balance review numbers', () => {
+      expect(BALANCE).toEqual({ honestHomeMin: 50, liarHomeMax: 80, inspected: { min: 25, max: 33 }, minRuns: 100 });
+    });
   });
 
   it('rule 4: the default range is a 4 floor and 8 ceiling, with 5 minutes as the reported aim', () => {
