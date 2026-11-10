@@ -61,7 +61,8 @@ function traits(s: RunState, o: Option): Traits {
       if (e.fact === 'familyAddress' || e.fact === 'fatherCondition') t.revealsFamily = true;
     } else if ('loseMedicine' in e) t.losesMedicine = true;
   }
-  if (o.approach.kind === 'say' && LYING_SAYS.has(o.approach.id)) t.lies++;
+  // A deny that already added a lie claim (i_family, f_donation) is that one lie, not two.
+  if (o.approach.kind === 'say' && LYING_SAYS.has(o.approach.id) && t.lies === 0) t.lies++;
   return t;
 }
 

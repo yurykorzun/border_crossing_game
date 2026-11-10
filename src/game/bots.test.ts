@@ -96,6 +96,18 @@ describe('autoplay bots', () => {
     for (let i = 0; i < SETUP_COUNT; i++) expect(playRun('honest', setupFor(i)).lies).toBe(0);
   });
 
+  it('counts each lie once: a deny that adds a claim is one lie, the photo deny is one', () => {
+    const lieClaims = ['tourism', 'hotelStay', 'noOtherFamily', 'neverDonated', 'cashUnderLimit'];
+    let denies = 0;
+    for (let i = 0; i < SETUP_COUNT; i++) {
+      const r = playRun('liar', setupFor(i));
+      const photoDenies = r.choices.filter((c) => c.card === 'f_photo' && c.pick === 'deny').length;
+      denies += r.choices.filter((c) => (c.card === 'i_family' || c.card === 'f_donation') && c.pick === 'deny').length;
+      expect(r.lies, `run ${i}`).toBe(r.final.claims.filter((c) => lieClaims.includes(c)).length + photoDenies);
+    }
+    expect(denies).toBeGreaterThan(0);
+  });
+
   it('the liar hides the family visit and the honest bot never claims tourism', () => {
     const liar = playRun('liar', setupFor(0));
     expect(liar.choices[0]).toEqual({ card: 'p_purpose', pick: 'tourism' });
