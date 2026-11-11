@@ -879,9 +879,10 @@ export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () =>
         </div>
         {(cost.length > 0 || later) && (
           <section className="later">
+            {/* One time heading over whatever follows, a cost or only the later beat. */}
+            <h2 className="mono later-heading">{t('ending.later.heading')}</h2>
             {cost.length > 0 && (
               <>
-                <h2 className="mono later-heading">{t('ending.later.heading')}</h2>
                 {/* Worst first, a heading and one line each, no severity tag (pfi.13 notes). */}
                 <ul className="costs">
                   {cost.map((l, i) => (

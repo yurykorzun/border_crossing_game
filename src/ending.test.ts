@@ -57,6 +57,22 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
     expect(en['ending.later.heading']).toBe('The following morning');
   });
 
+  it('puts a later beat under "The following morning" when the crossing had no cost', () => {
+    // Medicine kept, nobody exposed, only a claim disproved: the beat is all that follows.
+    const html = markup('homeInTime', {
+      time: 5, claims: ['cashUnderLimit'], logged: { cashUnderLimit: ['customs'] },
+      facts: { cashCount: ['customs'] }, disproved: ['cashUnderLimit'],
+    });
+    expect(html).not.toContain('class="costs"');
+    const order = [
+      at(html, en['ending.homeInTime.body']),
+      at(html, `>${en['ending.later.heading']}<`),
+      at(html, 'class="beat-line"'),
+      at(html, 'class="run-summary"'),
+    ];
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
   it('keeps the crossing result and shows the later beat as its own line after it', () => {
     const html = markup('homeInTime', withBoth);
     expect(html).toContain('<h1>Home in time</h1>');
