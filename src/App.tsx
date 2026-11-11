@@ -854,9 +854,12 @@ function Ending({ s, questions, onRestart, onSame }: { s: RunState; questions: s
       </section>
       {/* Sticky, so Play again stays in view however long the story above runs (pfi.9). */}
       <div className="controls">
-        <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
+        {/* The two quiet buttons share one row, so the ending still fits the phone with all three. */}
+        <div className="ending-row">
+          <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
+          {onSame && <button className="choice play-same" onClick={onSame}>{t('ui.playSameSetup')}</button>}
+        </div>
         <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
-        {onSame && <button className="choice play-same" onClick={onSame}>{t('ui.playSameSetup')}</button>}
       </div>
       {/* The records alone: the epilogue and the consequences stay on the ending screen above. */}
       <Sheet open={story} onClose={() => setStory(false)} title={t('ui.borderRecords')}>

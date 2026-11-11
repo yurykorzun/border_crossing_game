@@ -698,7 +698,9 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .result-row dd { margin: 0; font-weight: 600; text-align: end; }
 /* Red only for a confirmed serious consequence: the medicine lost, the protected contact called in. */
 .result-row dd.red { color: var(--danger-paper); }
-.ending .controls .see-file, .ending .controls .play-same {background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
+.ending-row { display: flex; gap: var(--gap); }
+.ending-row > button { flex: 1 1 0; min-width: 0; text-align: center; padding: 6px 10px; line-height: 1.25; }
+.ending .controls .see-file, .ending .controls .play-same { background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
 .ending .controls .play-again { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 /* Open questions: what the player has not found out yet. Light on the title (dark ground), muted on the ending card (paper). */
 .open-questions h2 { margin: 0 0 4px; font-size: 0.72rem; }
