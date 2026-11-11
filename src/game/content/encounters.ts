@@ -282,8 +282,9 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'c_phone', checkpoint: 'customs', kind: 'related', priority: 1, topic: 'history',
     when: { any: [{ background: 'protestPhoto' }, { background: 'donation' }] },
-    // Something on your file is flagged, so the inspector wants the phone.
-    issue: { flagged: true },
+    // Something on your file is flagged, or a salary from abroad is on file here,
+    // so the inspector wants the phone to see where the money goes.
+    issue: { any: [{ flagged: true }, { facts: ['employer'] }] },
     approaches: [
       {
         id: 'unlock', kind: 'verify', check: 'phoneSearch',
