@@ -12,7 +12,8 @@
     "walk": "tsx tools/walk.ts",
     "e2e": "playwright test",
     "autoplay": "tsx tools/autoplay.ts",
-    "eval": "tsx tools/eval.ts"
+    "eval": "tsx tools/eval.ts",
+    "map": "tsx tools/map.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
