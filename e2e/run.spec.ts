@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { knownLine, newRun, options } from '../src/game/engine';
+import { SAMPLE_FILES } from '../src/game/carry';
 import { CHECKS, ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
+import { LEVELS, LEVEL_IDS, dealsCard } from '../src/game/content/levels';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 import { freshSave } from '../src/game/save';
 import { own, t } from '../src/i18n';
@@ -592,18 +594,24 @@ test('with three answers, every card keeps every answer on screen, and the scene
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
   const cards: { run: RunState; name: string }[] = [];
-  for (const id of CHARACTER_IDS) {
-    const base = newRun({ character: id, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[id].evidenceSlots), bulletin: 'records', seed: 7 });
+  // Each level's own cards, and Departure's with a carried file, so the file line under
+  // the question (fileLine()) takes its room as it does in play.
+  for (const level of LEVEL_IDS) for (const id of CHARACTER_IDS) {
+    const file = LEVELS[level].readsFile ? SAMPLE_FILES[id] : undefined;
+    const base = newRun({ level, character: id, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[id].evidenceSlots), bulletin: 'records', seed: 7, file });
     const screens: [Screen, number][] = [
       ...ENCOUNTERS.map((e): [Screen, number] => [{ kind: 'encounter', id: e.id }, e.checkpoint === 'followup' ? 2 : CHECKPOINTS.indexOf(e.checkpoint)]),
       ...INSPECTIONS.map((i): [Screen, number] => [{ kind: 'inspection', id: i.id }, 2]),
     ];
     for (const [screen, checkpoint] of screens) {
-      const run: RunState = { ...base, reaction: null, screen, checkpoint, slot: 1 };
-      if (options(run).length === 3) cards.push({ run, name: `${id} ${(screen as { id: string }).id}` });
+      const card = (screen as { id: string }).id;
+      if (!dealsCard(base, card)) continue;
+      const run: RunState = { ...base, reaction: null, screen, checkpoint, slot: 1, seen: [card] };
+      if (options(run).length === 3) cards.push({ run, name: `${level} ${id} ${card}` });
     }
   }
   expect(cards.length, 'cards with three answers').toBeGreaterThan(0);
+  expect(cards.filter((c) => c.run.file).length, 'Departure cards with three answers').toBeGreaterThan(0);
 
   // At the default text size, and at a larger one where the answers wrap more.
   const viewport = page.viewportSize()!.height;
