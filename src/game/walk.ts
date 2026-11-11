@@ -25,7 +25,7 @@ import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
 } from './content/world';
-import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
 import { DEFAULT_LEVEL, levelOf } from './content/levels';
 import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
@@ -38,12 +38,17 @@ export function combinations<T>(list: readonly T[], k: number): T[][] {
   return [...combinations(rest, k - 1).map((c) => [head, ...c]), ...combinations(rest, k)];
 }
 
-/** Every character x packing x bulletin in one level. The seed only moves cosmetic beats here. */
+/**
+ * Every character x packing x bulletin in one level, and every contact statement
+ * in a level that has them (Level.statements). The seed only moves cosmetic beats here.
+ */
 export function allSetups(level: LevelId = DEFAULT_LEVEL): RunSetup[] {
   const out: RunSetup[] = [];
   for (const character of CHARACTER_IDS as CharacterId[])
     for (const loadout of combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots))
-      for (const bulletin of BULLETINS) out.push({ level, character, loadout, bulletin, seed: 1 });
+      for (const bulletin of BULLETINS)
+        for (const statement of levelOf({ level }).statements ?? [undefined])
+          out.push({ level, character, loadout, bulletin, seed: 1, ...(statement ? { statement } : {}) });
   return out;
 }
 
@@ -125,8 +130,23 @@ export interface WalkReport {
 const factsKey = (s: RunState) =>
   factIds(s).sort().map((f) => `${f}:${(s.facts[f] ?? []).filter((d) => CHECKPOINTS.indexOf(d) >= s.checkpoint)}`).join();
 
-const key = (s: RunState) =>
-  JSON.stringify({
+/**
+ * The contact statement on file and the stay you claimed, as how they relate:
+ * whether you agreed with it. Both statements play the same apart from their
+ * words, so runs that differ only in which one the setup picked merge.
+ */
+function statementKey(s: RunState): RunState {
+  const said = STATEMENTS.find((x) => s.facts[x.fact]);
+  if (!said) return s;
+  const as = (c: string) => (c === said.agrees ? 'agrees' : c === said.disproves ? 'disagrees' : c) as ClaimId;
+  const rename = <T>(o: Partial<Record<ClaimId, T>> | undefined) => o && Object.fromEntries(Object.entries(o).map(([c, v]) => [as(c), v]));
+  const { [said.fact]: desks, ...facts } = s.facts;
+  return { ...s, facts: { ...facts, statement: desks } as RunState['facts'], claims: s.claims.map(as), logged: rename(s.logged), saidAt: rename(s.saidAt) };
+}
+
+const key = (state: RunState) => {
+  const s = statementKey(state);
+  return JSON.stringify({
     ...s,
     facts: factsKey(s),
     seed: 0,
@@ -135,6 +155,7 @@ const key = (s: RunState) =>
     reaction: s.reaction ? 1 : 0,
     screen: s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
   });
+};
 
 const unique = <T>(list: T[]) => new Set(list).size === list.length;
 /** A claim and a fact that catches it, the fact known by the official at this desk. */
@@ -229,6 +250,11 @@ export function checkState(s: RunState): string[] {
   if (insp && insp.kind !== 'search' && !choices(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
     bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
   for (const d of noFreeExits(s)) bad.push(d);
+  // A level with contact statements has exactly one on file, at every desk, from the start.
+  const statements = levelOf(s).statements ?? [];
+  const onFile = statements.filter((f) => s.facts[f]);
+  if (statements.length && (onFile.length !== 1 || s.facts[onFile[0]]!.length !== CHECKPOINTS.length))
+    bad.push(`statements on file: [${onFile.map((f) => `${f} at ${s.facts[f]}`)}]`);
   // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !s.reaction && options(s).length > 3)
     bad.push(`${s.screen.id} shows ${options(s).length} answers`);
@@ -433,9 +459,15 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     chanceNodes: 0,
   };
 
+  // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
+  // Setups that differ only in the contact statement share one map, because
+  // their runs merge (statementKey()).
+  let memo = new Map<string, [number, number, number] | null>();
+  let group = '';
   for (const setup of setups) {
-    // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored
-    const memo = new Map<string, [number, number, number] | null>();
+    const same = JSON.stringify({ ...setup, statement: 0 });
+    if (same !== group) memo = new Map();
+    group = same;
     const path: Move[] = [];
     const problem = (rule: string, detail: string, extra?: Move) => {
       if (report.problems.length >= 50) return;

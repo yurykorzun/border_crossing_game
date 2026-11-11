@@ -4,7 +4,11 @@
 
 import type { Level, LevelId } from '../types';
 import { MISSION_MIN_TIME, START_TIME } from './world';
-import { ENCOUNTERS, INSPECTIONS } from './encounters';
+import { ENCOUNTERS, INSPECTIONS, STATEMENTS } from './encounters';
+
+/** Cards only a later level deals. Arrival deals every other card. */
+const LATER_CARDS: readonly string[] = ['p_days'];
+const ALL_CARDS = [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)];
 
 export const LEVELS: Record<LevelId, Level> = {
   // Level 1, today's mission: every card, no new rule.
@@ -17,8 +21,27 @@ export const LEVELS: Record<LevelId, Level> = {
     goalBody: 'mission.body',
     startTime: START_TIME,
     minTripTime: MISSION_MIN_TIME,
-    cards: [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)],
+    cards: ALL_CARDS.filter((id) => !LATER_CARDS.includes(id)),
     rules: [],
+  },
+  // The funeral (Level 3 in docs/research/2026-11-09-balance-and-levels.md,
+  // numbered 2 until Departure, border_crossing_game-rwf.3, takes that place).
+  // An old friend's funeral; your father is still in care. Her sister has told
+  // the border how long you stay, and the setup picks what she said. A stay you
+  // claim that disagrees with her is a contradiction, caught like any other.
+  funeral: {
+    id: 'funeral',
+    number: 2,
+    title: 'level.funeral.title',
+    blurb: 'level.funeral.blurb',
+    goalTitle: 'funeral.title',
+    goalBody: 'funeral.body',
+    startTime: START_TIME,
+    minTripTime: MISSION_MIN_TIME,
+    cards: ALL_CARDS,
+    asks: ['p_days'],
+    rules: [{ id: 'statements', heeds: [], against: STATEMENTS.map((x) => [x.fact, x.disproves] as const) }],
+    statements: STATEMENTS.map((x) => x.fact),
   },
 };
 

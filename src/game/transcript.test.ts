@@ -17,7 +17,8 @@ const MARK = 60;
 
 function run(i: number, style: 'honest' | 'liar' = 'honest'): Transcript {
   const setup = setupFor(i);
-  return transcriptOf(playRun(style, setup), setup);
+  // Arrival on its own, so the other levels' rows on the level list stay out of these numbers.
+  return transcriptOf(playRun(style, setup), setup, [LEVELS.arrival]);
 }
 
 /** Evaluates one rule only, so the other rules' findings don't decide the exit code. */

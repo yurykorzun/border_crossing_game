@@ -30,12 +30,16 @@ export type FactId =
   | 'bankNotice'
   | 'relativeContact'
   /** Your mother named another relative on the phone: her account, not a record (TESTIMONY). */
-  | 'relativeNamed';
+  | 'relativeNamed'
+  /** Contact statements (STATEMENTS in src/game/content/encounters.ts): what your friend's sister told the border before you came. */
+  | 'sisterSaysDays'
+  | 'sisterSaysWeeks';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
   'noBooking', 'hostStatement', 'bankNotice', 'relativeContact', 'relativeNamed',
+  'sisterSaysDays', 'sisterSaysWeeks',
 ];
 
 /**
@@ -49,7 +53,10 @@ export const FACT_IDS: readonly FactId[] = [
 export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 
 /** What the player has said. Can be contradicted by facts. */
-export type ClaimId = 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
+export type ClaimId =
+  | 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
+  /** How long you stay (p_days, The funeral). */
+  | 'stayDays' | 'stayWeeks';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -349,7 +356,7 @@ export interface EvidenceCard {
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
-export type LevelId = 'arrival';
+export type LevelId = 'arrival' | 'funeral';
 
 /**
  * The one new rule a level adds (docs/research/2026-11-09-balance-and-levels.md,
@@ -362,6 +369,13 @@ export type LevelId = 'arrival';
 export interface LevelRule {
   id: string;
   heeds: readonly string[];
+  /**
+   * Picks that go against what is on file, as [fact, claim]: an answer that makes
+   * the claim while this desk knows the fact. On a card that offers one, every
+   * other answer heeds the rule. For a rule whose right answer depends on the run
+   * (the contact statement the setup picked), so no fixed `card.approach` can name it.
+   */
+  against?: readonly (readonly [FactId, ClaimId])[];
 }
 
 export interface Level {
@@ -383,6 +397,19 @@ export interface Level {
   cards: readonly string[];
   /** The rules this level adds. Level 1 adds none. */
   rules: readonly LevelRule[];
+  /**
+   * Contact statements, one of them on file at every desk before you arrive. The
+   * setup picks which (statementOf() in src/game/engine.ts), so the walk tries
+   * each and one memorised answer list cannot learn the run. A phone message in
+   * the first queue says it (QueueBeat.fact).
+   */
+  statements?: readonly FactId[];
+  /**
+   * Cards the first desk asks right after its opening card (coreLeft() in
+   * src/game/engine.ts). Each one takes one of the run's follow-ups
+   * (MAX_FOLLOW_UPS), so the run is no longer for it.
+   */
+  asks?: readonly string[];
 }
 
 /**

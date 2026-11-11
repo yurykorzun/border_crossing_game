@@ -22,12 +22,29 @@ export interface RunSetup {
   loadout: EvidenceId[];
   bulletin: BulletinId;
   seed: number;
+  /**
+   * In a level with contact statements (Level.statements), the one given to the
+   * border before you came. Unset: drawn from the seed, the way the app draws the bulletin.
+   */
+  statement?: FactId;
+}
+
+/** The contact statement a run starts with, or undefined in a level that has none. */
+export function statementOf(setup: RunSetup): FactId | undefined {
+  const level = levelOf(setup);
+  const statements = level.statements ?? [];
+  if (!statements.length) return undefined;
+  if (setup.statement && !statements.includes(setup.statement)) throw new Error(`${setup.statement} is not a statement in ${level.id}`);
+  return setup.statement ?? statements[Math.abs(Math.floor(setup.seed / 3)) % statements.length];
 }
 
 export function newRun(setup: RunSetup): RunState {
   const ch = CHARACTERS[setup.character];
   if (setup.loadout.length !== ch.evidenceSlots) throw new Error(`${ch.id} takes ${ch.evidenceSlots} evidence cards`);
   const level = levelOf(setup);
+  const statement = statementOf(setup);
+  // Old records the passport desk has at once (Character.onFile).
+  const onFile = (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {});
   return {
     v: 2,
     level: setup.level ?? DEFAULT_LEVEL,
@@ -42,8 +59,8 @@ export function newRun(setup: RunSetup): RunState {
     time: level.startTime,
     travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
-    // Old records the passport desk has at once (Character.onFile).
-    facts: (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {}),
+    // A contact statement was given before you came, so every desk has it.
+    facts: statement ? { ...onFile, [statement]: [...CHECKPOINTS] } : onFile,
     claims: [],
     logged: {},
     saidAt: {},
@@ -75,7 +92,11 @@ export const setupOf = (s: RunState): RunSetup => ({
   loadout: [...s.loadout],
   bulletin: s.bulletin,
   seed: s.seed,
+  ...(statementIn(s) ? { statement: statementIn(s) } : {}),
 });
+
+/** The contact statement on this run's file, if its level has them. */
+const statementIn = (s: RunState): FactId | undefined => levelOf(s).statements?.find((f) => s.facts[f]);
 
 // ── What each official knows
 
@@ -669,9 +690,20 @@ function eligible(s: RunState, e: Encounter): boolean {
 /** Whether the open issue a follow-up or related card is about is still on the file (Encounter.issue). */
 export const issueOpen = (s: RunState, id: string): boolean => check(ENCOUNTER_BY_ID.get(id)?.issue, s);
 
-/** The next of this desk's two core cards still to be asked, in CORE_CARDS order. */
+/**
+ * This desk's core cards in the order they are asked: its two CORE_CARDS, and
+ * at the first desk the level's asks (Level.asks) right after the opening card.
+ */
+export function coreCards(s: RunState): readonly string[] {
+  const desk = deskOf(s);
+  const [first, second] = CORE_CARDS[desk];
+  const asks = desk === CHECKPOINTS[0] ? levelOf(s).asks ?? [] : [];
+  return [first, ...asks, second];
+}
+
+/** The next of this desk's core cards still to be asked, in coreCards() order. */
 export function coreLeft(s: RunState): Encounter | undefined {
-  const id = CORE_CARDS[deskOf(s)].find((c) => !s.seen.includes(c) && dealsCard(s, c));
+  const id = coreCards(s).find((c) => !s.seen.includes(c) && dealsCard(s, c));
   return id ? ENCOUNTER_BY_ID.get(id) : undefined;
 }
 
@@ -704,10 +736,14 @@ export function routinesLeft(s: RunState): Encounter[] {
  */
 export const MAX_FOLLOW_UPS = 2;
 
-/** How many follow-ups this run has dealt so far. */
+/** How many follow-ups this run has dealt so far. A level's ask takes one too (Level.asks). */
 export function followUpsDealt(s: RunState): number {
   const challenges: readonly string[] = CHALLENGES;
-  return s.seen.filter((id) => { const k = ENCOUNTER_BY_ID.get(id)?.kind; return (k === 'related' || k === 'followup') && !challenges.includes(id); }).length;
+  const asks = levelOf(s).asks ?? [];
+  return s.seen.filter((id) => {
+    const k = ENCOUNTER_BY_ID.get(id)?.kind;
+    return asks.includes(id) || ((k === 'related' || k === 'followup') && !challenges.includes(id));
+  }).length;
 }
 
 /** Checks a run can have run and still be dealt a follow-up that starts one. */
@@ -758,7 +794,7 @@ function breather(s: RunState): Encounter | undefined {
 function restCard(s: RunState): Encounter | undefined {
   const left = routinesLeft(s);
   const calm = left.filter((e) => e.calm);
-  const core: readonly string[] = CORE_CARDS[deskOf(s)];
+  const core = coreCards(s);
   return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left.find((e) => !core.includes(e.id)) ?? coreLeft(s);
 }
 

@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { has, t, tn } from './i18n';
+import { has, setStory, t, tn } from './i18n';
 import { answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -47,6 +47,8 @@ function Game() {
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
 
   const run = data.run;
+  // Text in the wording of the level on screen (setStory()); Picks sets the one being picked.
+  setStory(run && resumed ? run.level : undefined);
   const dispatch = (a: Action) => {
     if (!run) return;
     if (a.type === 'choose') sound.stamp();
@@ -201,6 +203,7 @@ function Setup({ bulletin, same, endingsSeen, levelsFinished, onExit, onStart }:
 }) {
   if (same) {
     const level = same.level ?? DEFAULT_LEVEL;
+    setStory(level);
     return <BeginStep level={level} picked={same.loadout} traveler={same.character} bulletin={bulletin}
       onBegin={() => onStart(level, same.character, same.loadout)} />;
   }
@@ -222,6 +225,8 @@ function Picks({ bulletin, endingsSeen, levelsFinished, onExit, onStart }: {
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(steps[steps.indexOf(at) + delta]);
+  // On the level list every level shows in its own words; past it, the picked level's (the premise, the goal).
+  setStory(at === 'level' && !firstRun ? undefined : level);
 
   if (firstRun && character) {
     // No traveler screen yet, so packing goes back and forward to the begin screen.

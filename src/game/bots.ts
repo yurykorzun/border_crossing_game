@@ -5,10 +5,10 @@
 // A bot keeps its own random stream (botRng), separate from the run's, so the
 // random style never moves the dealer's picks.
 
-import { CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
+import { CONTRADICTIONS, INCONSISTENCIES, STATEMENTS } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import { DEFAULT_LEVEL, LEVEL_IDS } from './content/levels';
-import { chooseAction, documentsOf, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
+import { chooseAction, documentsOf, knows, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, Level, LevelId, LevelRule, RunState } from './types';
@@ -40,13 +40,15 @@ interface Traits {
   exposesProtected: boolean;
   contact: boolean;
   withdraw: boolean;
+  /** New claims that a contact statement this desk knows says otherwise (STATEMENTS), so they will be caught. */
+  against: number;
 }
 
 function traits(s: RunState, o: Option): Traits {
   const t: Traits = {
     time: 0, scrutiny: 0, lies: 0, hides: 0, revealsFamily: false, losesMedicine: false,
     exposesProtected: o.contact === CHARACTERS[s.character].protectedContact,
-    contact: !!o.contact, withdraw: o.approach.kind === 'withdraw',
+    contact: !!o.contact, withdraw: o.approach.kind === 'withdraw', against: 0,
   };
   for (const e of o.effects) {
     if ('time' in e) t.time -= e.time;
@@ -58,6 +60,7 @@ function traits(s: RunState, o: Option): Traits {
       if (LIES.includes(e.claim)) t.lies++;
       if (HIDES_FAMILY.includes(e.claim)) t.hides++;
       if (e.claim === 'familyVisit') t.revealsFamily = true;
+      if (STATEMENTS.some((x) => x.disproves === e.claim && knows(s, x.fact))) t.against++;
     } else if ('fact' in e) {
       if (e.fact === 'familyAddress' || e.fact === 'fatherCondition') t.revealsFamily = true;
     } else if ('loseMedicine' in e) t.losesMedicine = true;
@@ -74,18 +77,18 @@ const SCORE: Record<'honest' | 'liar' | 'cautious', (s: RunState, o: Option) => 
   // Evidence first, then answers that cost time but are true; never a lie if a true answer exists.
   honest: (s, o) => {
     const t = traits(s, o);
-    return KIND_RANK[o.approach.kind] + 10 * t.lies + (t.losesMedicine ? 4 : 0) + (t.exposesProtected ? 3 : 0) + 0.1 * t.time;
+    return KIND_RANK[o.approach.kind] + 10 * (t.lies + t.against) + (t.losesMedicine ? 4 : 0) + (t.exposesProtected ? 3 : 0) + 0.1 * t.time;
   },
   // Hides the family behind shortTrip and the hotel; keeps contacts out of it; else the cheapest answer.
   liar: (s, o) => {
     const t = traits(s, o);
     return -10 * t.hides + (t.revealsFamily ? 6 : 0) + (t.contact ? 3 : 0) + (t.withdraw ? 50 : 0)
-      + (t.losesMedicine ? 4 : 0) + t.time + t.scrutiny;
+      + (t.losesMedicine ? 4 : 0) + t.time + t.scrutiny + 5 * t.against;
   },
   // The lowest scrutiny, then the least time, then the plainest kind of answer.
   cautious: (s, o) => {
     const t = traits(s, o);
-    return 100 * t.scrutiny + (t.withdraw ? 1000 : 0) + (t.losesMedicine ? 5 : 0) + (t.exposesProtected ? 5 : 0)
+    return 100 * (t.scrutiny + 2 * t.against) + (t.withdraw ? 1000 : 0) + (t.losesMedicine ? 5 : 0) + (t.exposesProtected ? 5 : 0)
       + t.time + 0.1 * KIND_RANK[o.approach.kind];
   },
 };
@@ -109,6 +112,7 @@ export function stateValue(s: RunState): number {
   if (s.claims.includes('shortTrip') && familyOnFile) v -= 20;
   if (s.claims.includes('noOtherFamily') && ahead('brotherAbroad')) v -= 20;
   if (s.claims.includes('cashUnderLimit') && ahead('cashCount')) v -= 20;
+  for (const x of STATEMENTS) if (s.claims.includes(x.disproves) && ahead(x.fact)) v -= 20;
   if (s.screen.kind === 'encounter' && s.screen.id.startsWith('f_')) v -= 8;
   return v;
 }
@@ -143,8 +147,24 @@ export function pickKey(s: RunState, a: Action): string | undefined {
 function allowed(s: RunState, rule: LevelRule | undefined): Action[] {
   const legal = legalActions(s);
   if (!rule) return legal;
-  const rest = legal.filter((a) => !rule.heeds.includes(pickKey(s, a) ?? ''));
+  const rest = legal.filter((a) => !heeds(rule, s, a));
   return rest.length ? rest : legal;
+}
+
+/**
+ * Whether taking `a` on `s` is a pick the rule's heeders make: one it names as
+ * `card.approach`, or, on a card offering an answer that goes against what is on
+ * file (LevelRule.against), any other answer. A bot ignoring the rule is left
+ * with the answer that goes against it.
+ */
+export function heeds(rule: LevelRule, s: RunState, a: Action): boolean {
+  if (rule.heeds.includes(pickKey(s, a) ?? '')) return true;
+  const against = rule.against ?? [];
+  if (!against.length || a.type !== 'choose' || s.reaction) return false;
+  const goesAgainst = (o: Option) => o.effects.some((e) => 'claim' in e && !s.claims.includes(e.claim) && against.some(([f, c]) => c === e.claim && knows(s, f)));
+  const open = options(s).filter((o) => !o.blocked);
+  const o = open.find((x) => x.approach.id === a.approach);
+  return !!o && open.some(goesAgainst) && !goesAgainst(o);
 }
 
 /**
@@ -230,7 +250,8 @@ export function caughtLies(s: RunState): ClaimId[] {
   const pairs = s.screen.kind === 'encounter' ? CHALLENGE_PAIRS[s.screen.id] : undefined;
   if (!pairs) return [];
   const onFile = (f: FactId) => (s.facts[f] ?? []).length > 0;
-  return pairs.filter(([c, f]) => s.claims.includes(c) && onFile(f)).map(([c]) => c);
+  // A stay against a contact statement is caught too, but it is not a lie (LIES).
+  return pairs.filter(([c, f]) => s.claims.includes(c) && onFile(f) && LIES.includes(c)).map(([c]) => c);
 }
 
 type Picker = (s: RunState, botRng: number) => BotPick | null;
