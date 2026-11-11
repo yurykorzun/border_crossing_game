@@ -425,7 +425,11 @@ export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Leve
         : action.type === 'turnBack' && sc.kind === 'between' ? `queue.${sc.next}.turnBack`
         : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`
         : s.reaction ? nextActionKey(s) : 'ui.continue';
-    const picked = page.lines.find((l) => l.key === pickedKey) ?? page.lines.find((l) => l.key === 'ui.continue');
+    // Two documents can answer with the same label key, so a document pick matches its own text.
+    const card = action.type === 'choose' ? action.card : undefined;
+    const pickedText = card && render(() => t(pickedKey, { card, cardThe: card }), pickedKey).text;
+    const picked = page.lines.find((l) => l.key === pickedKey && (!pickedText || l.text === pickedText))
+      ?? page.lines.find((l) => l.key === 'ui.continue');
     if (picked && action.type !== 'beat') picked.picked = true;
     lines.push(...page.lines);
     // A calm card's one answer is a tap, not a decision (isCalm() in src/game/engine.ts).

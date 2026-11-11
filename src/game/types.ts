@@ -561,7 +561,7 @@ export interface RunState {
 }
 
 export type Action =
-  | { type: 'choose'; approach: string }
+  | { type: 'choose'; approach: string; card?: EvidenceId }
   | { type: 'beat' }
   | { type: 'waitAction'; action: WaitAction }
   | { type: 'ack' }

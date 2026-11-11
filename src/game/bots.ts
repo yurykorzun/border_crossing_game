@@ -8,7 +8,7 @@
 import { CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import { DEFAULT_LEVEL, LEVEL_IDS } from './content/levels';
-import { legalActions, newRun, noCost, options, step, travelOf } from './engine';
+import { chooseAction, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, Level, LevelId, LevelRule, RunState } from './types';
@@ -168,7 +168,7 @@ export function botAction(style: BotStyle, s: RunState, botRng: number, ignore?:
   const open = new Set(legal.map((a) => (a.type === 'choose' ? a.approach : '')));
   const opts = options(s).filter((o) => !o.blocked && (!ignore || open.has(o.approach.id)));
   const scored = best(opts, (o) => SCORE[style](s, o));
-  return { action: { type: 'choose', approach: scored.approach.id }, botRng };
+  return { action: chooseAction(scored), botRng };
 }
 
 /** In the waiting room the honest and cautious bots wait it out; the liar asks around. */
@@ -247,7 +247,7 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
     if (pick.action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) {
       const id = pick.action.approach;
       choices.push({ card: sc.id, pick: id });
-      const o = options(s).find((x) => x.approach.id === id);
+      const o = optionFor(s, pick.action);
       if (o && noCost(s, o)) free++;
       if (o) lies += traits(s, o).lies;
     }
