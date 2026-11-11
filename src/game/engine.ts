@@ -1001,7 +1001,12 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   // On the day the bulletin orders that point checked (every host phoned), a name given at a
   // desk is not yet a confirmation: the check is what confirms it, so it settles nothing here.
   const vouched = opt.contact && opt.vouches !== BULLETIN_TOPICS[s.bulletin] ? opt.vouches : undefined;
-  if (s.screen.kind === 'encounter') n = verifyPoints(n, pointsResolved(opt.card, vouched, topic));
+  if (s.screen.kind === 'encounter') {
+    const points = pointsResolved(opt.card, vouched, topic);
+    // A record check that confirmed the point (Approach.confirms) settles it like a document.
+    if (opt.approach.confirms && topic && !points.includes(topic)) points.push(topic);
+    n = verifyPoints(n, points);
+  }
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;

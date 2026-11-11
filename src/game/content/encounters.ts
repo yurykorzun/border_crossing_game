@@ -212,7 +212,8 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       // The register confirms who pays you. That is a fact; what the clerk reads into a
       // foreign salary stays her suspicion (Officer.readings), never a fact on file.
-      { id: 'check', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }] },
+      // What the register confirmed stays verified, so the interview reads that entry.
+      { id: 'check', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }], confirms: true },
     ],
   },
 

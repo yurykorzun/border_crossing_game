@@ -138,6 +138,11 @@ export interface Approach {
    */
   ifVerified?: Effect[];
   /**
+   * A record check that confirms the card's point at the desk (the employer register):
+   * like a document shown, it verifies the point for the later desks (RunState.verified).
+   */
+  confirms?: boolean;
+  /**
    * An answer the officer holds against you (it adds scrutiny) outside a challenge card:
    * which of three the reaction is. A disproof records the answer's claim as disproved
    * (reactionOf() in src/game/engine.ts). Challenge cards say it for every answer (catchKind()).

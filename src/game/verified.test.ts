@@ -71,6 +71,19 @@ describe('a point verified at passport is not charged again later', () => {
     expect(choose(hers, 'contract').reaction?.map((l) => l.key)).not.toContain('weak.work.reaction');
   });
 
+  it('who pays you, confirmed by the register at passport, is not checked again at the interview', () => {
+    const lenaTrip = lena;
+    const checked = choose(at(newRun(lenaTrip), 'p_employer', 'passport'), 'check');
+    expect(checked.facts.employer).toContain('passport');
+    expect(pointVerified(checked, 'work')).toBe(true);
+    const interview = at(checked, 'i_employer', 'interview');
+    // No contract hour and no weakness hour: she points to the register entry.
+    expect(hours(option(interview, 'contract'))).toBe(0);
+    expect(choose(interview, 'contract').time).toBe(interview.time);
+    // Unchecked, the contract takes its hour and her weakness hour.
+    expect(hours(option(at(newRun(lenaTrip), 'i_employer', 'interview'), 'contract'))).toBe(2);
+  });
+
   it('a new reason since (a fact flagged after the point was verified) opens the check again', () => {
     const shown = choose(at(newRun(lena), 'p_purpose', 'passport'), 'evidence');
     const flagged: RunState = { ...shown, flagged: [...(shown.flagged ?? []), 'cashCount'] };
