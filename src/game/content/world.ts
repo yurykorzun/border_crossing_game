@@ -162,6 +162,8 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     id: 'hospitalNote',
     topics: ['medicine', 'purpose'],
     onUse: [{ fact: 'fatherCondition' }, { claim: 'familyVisit' }],
+    // Shown for why you came, it verifies the prescription too: customs uses its details.
+    forwards: ['medicine'],
   },
   returnTicket: {
     id: 'returnTicket',

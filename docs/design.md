@@ -73,6 +73,17 @@ Both are citizens returning after years abroad (see Setting).
 - Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
 - Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
 
+### What the people around you want
+
+Each person wants something ordinary, and that is what pulls on you, not a score. Nobody's harm is counted.
+
+- Your mother wants your father cared for and the family together. She volunteers what she thinks proves you innocent (on the host call she names the rest of the family unasked), and what she says is her account: testimony you can explain, never a disproof (`TESTIMONY` in `src/game/content/encounters.ts`).
+- Ilya wants to help without getting involved. He plays a problem down so you don't worry.
+- Your employer wants a return date. Work writes before you pack ("Do you know when you'll be back? The client meeting is Monday."), which pulls against the passport clerk's stay question.
+- The officer wants a complete file before the shift ends. Sometimes that means a small kindness, like showing the woman ahead which copy is missing.
+
+Your mother, Ilya and Tom each say one ordinary thing in the passport queue before any card can offer to name them (`PERSONAL_LINES` in `src/game/content/queues.ts`). The packing screen shows one message, from work. Between desks your mother's message follows what happened at the desk just left (`queueMood()` in `src/game/engine.ts`): after a call she says the officer asked about your relative, after a delay of 2 hours or more she asks if you are through, else she writes something ordinary about the hospital or food. Queues offer no choice, because nothing in them changes what comes next. A beat read on an earlier run can be skipped with one tap.
+
 ## Evidence cards (pick 3)
 
 | Card | Useful against | Puts on file |
@@ -169,6 +180,7 @@ Kept, because a person picks them even though the bots don't:
 - `f_host.evidence`, `f_lab.evidence` - a paper saved at the first card (the call, the declaration) can still settle the follow-up. Every bot spends its paper at the first card, so it never gets here holding one.
 - `f_donation.explain`, `f_photo.honest`, `i_brother.honest` - the truth for 1 scrutiny instead of 2-3 hours. The honest bot prefers the slower check and the cautious one avoids scrutiny, and the liar and situational bots rarely get these cards, because they don't unlock the phone or scan on a records day.
 - `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
+- `c_host.mother` - giving your mother's number at customs yourself instead of waiting for the host call. Once she confirmed the address at passport the officer reads it off the file for nothing, and on a day every host is phoned the bots wait for the call. It stays for the person who would rather she hears it from them first.
 - `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
 
 ## Screen rules
@@ -246,12 +258,14 @@ Rules that keep it fair:
 Each desk knows only its own facts (`RunState.facts` maps each fact to the desks that know it). A fact is known at the desk where it came out. It travels on only through a named channel:
 
 1. The shared records system: with the records bulletin, a fact reaches every later desk at once.
-2. A phone call between desks: a `{ send: 'call' }` effect passes facts this desk knows to the next desk. Today the passport clerk phones customs about your mother's address on the accommodation bulletin, and about your father's condition on the customs bulletin.
+2. A phone call between desks: a `{ send: 'call' }` effect passes facts this desk knows to the next desk. Today the passport clerk phones customs about your mother's address on the accommodation bulletin, and passes on your father's condition whenever a medical note answers why you came.
 3. A printout handed over after a check: `{ send: 'printout' }` on a check result or inspection. The address check note, the phone search report and the bag search report go on to the next desk.
 
 A call or printout reaches only the next desk, so a fact from passport control needs two hops to reach the interview without the records bulletin. Every condition on facts (cards, effects, scrutiny reasons, the clarify and contradiction cards) reads what the current desk knows, never the whole crossing. My story's On file column tags each fact with the desks that know it, and the reaction says when a fact is sent on ("Sent on to Customs: Family address."). The walk checks every move: a desk learns a fact only where it came out or through one of these channels.
 
 Claims stay one shared list for now.
+
+Verified once, asked once. A point resolved at one desk stays resolved (`RunState.verified`, `pointVerified()` in `src/game/engine.ts`): a document that answered it, or a contact who confirmed it. A document can verify more than the question it answered (`EvidenceCard.forwards`): the hospital note shown for why you came verifies the prescription too. A contact called in earlier adds no hour on a later card about a verified point. On a desk's own card about a verified point, an answer with `ifVerified` uses what is on file instead: declaring the medicine at customs costs nothing and opens no lab check, and the interview reads the employer the clerk confirmed instead of checking the contract. The answer keeps its place and reads `<key>.verified.label`. The host card at customs keeps its call, because a free answer there made the accommodation warning not worth heeding (the walk's warning check). The point stays resolved until a new reason appears: any fact flagged since it was verified opens it again. An inspection is the supervisor's, so what it settles stays there and verifies nothing for the desks.
 
 ## Director
 

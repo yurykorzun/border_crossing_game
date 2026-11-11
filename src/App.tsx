@@ -11,7 +11,7 @@ import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
-import { messagesSoFar, queueBeats } from './game/content/queues';
+import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
 import { DEFAULT_LEVEL, LEVELS, levelRows } from './game/content/levels';
 import { browserStore, load, openQuestions, save } from './game/save';
@@ -251,7 +251,14 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
   return (
     <main className="setup setup-step documents-step">
       <div className="setup-body" ref={bodyRef} onScroll={onScroll}>
-        <div className="pack-scene"><Desk /></div>
+        <div className="pack-scene">
+          <Desk />
+          {/* One message before you choose what to carry, on the phone on the desk: work wants a return date (PREPARATION_MESSAGE). */}
+          <p className="msg prep-message" data-msg={PREPARATION_MESSAGE.key}>
+            <span className="msg-from">{t(`msg.from.${PREPARATION_MESSAGE.from}`)}</span>
+            {t(PREPARATION_MESSAGE.key)}
+          </p>
+        </div>
         <header className="step-head">
           <div className="step-nav">
             <BackButton onBack={onBack} />
@@ -458,6 +465,7 @@ function Run({ s, dispatch, data, setData, onRestart }: {
   const [sheet, setSheet] = useState<'story' | 'evidence' | 'scrutiny' | 'settings' | null>(null);
   const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
+  const readBefore = useReadBefore(s.seed, data.beatsSeen);
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} questions={openQuestions(data)} onRestart={onRestart} />;
 
@@ -482,7 +490,8 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       <TopStrip s={s} onScrutiny={() => setSheet('scrutiny')} />
       {queue !== null ? (
         // Keyed by run and checkpoint, so each queue starts again from its first beat.
-        <Queue key={queueAt} next={queue} character={s.character} still={data.settings.reduceMotion}
+        <Queue key={queueAt} next={queue} s={s} still={data.settings.reduceMotion} readBefore={readBefore}
+          onRead={(key) => setData((d) => (d.beatsSeen.includes(key) ? d : { ...d, beatsSeen: [...d.beatsSeen, key] }))}
           shown={queueShown} setShown={(n) => setBeats({ at: queueAt, n })} onDone={() => dispatch({ type: 'ack' })}
           onTurnBack={canTurnBack(s) ? () => dispatch({ type: 'turnBack' }) : undefined} />
       ) : (
@@ -516,6 +525,21 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       </Sheet>
     </main>
   );
+}
+
+/**
+ * The queue beats read in earlier runs: the save's list as it was when this run
+ * began, so a beat first read on this run is not offered as skippable on it.
+ */
+function useReadBefore(seed: number, beatsSeen: readonly string[]): ReadonlySet<string> {
+  const [read, setRead] = useState<{ seed: number; keys: ReadonlySet<string> }>(() => ({ seed, keys: new Set(beatsSeen) }));
+  // Adjusting state while rendering, as React allows for values derived from earlier renders.
+  if (read.seed !== seed) {
+    const next = { seed, keys: new Set(beatsSeen) };
+    setRead(next);
+    return next.keys;
+  }
+  return read.keys;
 }
 
 /**
@@ -563,16 +587,24 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
  * The last beat (the clerk's "Next.") swaps Continue for the walk up to the officer, which is the engine's ack.
  * In the passport queue the last beat also offers to leave the queue (onTurnBack), the one
  * early point to turn back before any desk decides (canTurnBack() in src/game/engine.ts).
+ * A beat read in an earlier run (readBefore) offers one tap past every read beat in a row,
+ * up to the next new one or the last.
  */
-function Queue({ next, character, still, shown, setShown, onDone, onTurnBack }: {
-  next: number; character: CharacterId; still: boolean; shown: number; setShown: (n: number) => void; onDone: () => void;
-  onTurnBack?: () => void;
+function Queue({ next, s, still, readBefore, onRead, shown, setShown, onDone, onTurnBack }: {
+  next: number; s: RunState; still: boolean; readBefore: ReadonlySet<string>; onRead: (key: string) => void;
+  shown: number; setShown: (n: number) => void; onDone: () => void; onTurnBack?: () => void;
 }) {
-  const beats = queueBeats(next, character);
+  const character = s.character;
+  const beats = queueBeats(next, s);
   const done = shown >= beats.length;
   const seen = beats.slice(0, shown);
   const current = seen[seen.length - 1];
   const advance = () => { if (!done) setShown(shown + 1); };
+  useEffect(() => onRead(current.key), [current.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Past the read beats in a row after this one: to the next new beat, or the last.
+  const fresh = beats.findIndex((b, i) => i >= shown && !readBefore.has(b.key));
+  const skipTo = fresh === -1 ? beats.length : fresh + 1;
+  const canSkip = !done && readBefore.has(current.key) && skipTo > shown + 1;
   // In the passport queue the booth light turns green on the clerk's "Next.".
   const art = next === 0 ? <QueueScene light={seen.some((b) => b.light === 'green') ? 'green' : 'red'} character={character} />
     : next === 1 ? <CustomsQueueScene character={character} />
@@ -594,6 +626,7 @@ function Queue({ next, character, still, shown, setShown, onDone, onTurnBack }: 
         <button className="primary" autoFocus onClick={done ? onDone : advance}>
           {done ? t(`queue.${next}.go`) : t('ui.continue')}
         </button>
+        {canSkip && <button className="turn-back skip-read" onClick={() => setShown(skipTo)}>{t('ui.skipRead')}</button>}
         {done && onTurnBack && <button className="turn-back" onClick={onTurnBack}>{t(`queue.${next}.turnBack`)}</button>}
       </div>
     </>

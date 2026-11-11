@@ -14,7 +14,7 @@
 import { andList, has, own, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
-import { messagesSoFar, queueBeats } from './content/queues';
+import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
@@ -184,6 +184,9 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.preparation');
   p.add('ui.progress', { count, name: t('ui.preparation') });
   p.add('ui.prepareDocuments');
+  // The one message on the packing screen, before you choose (PREPARATION_MESSAGE).
+  p.add(`msg.from.${PREPARATION_MESSAGE.from}`);
+  p.add(PREPARATION_MESSAGE.key);
   p.add('ui.picked', { picked: slots, count: slots });
   p.add('ui.bulletin');
   p.add(`bulletin.${setup.bulletin}`);
@@ -297,7 +300,7 @@ function screenLines(s: RunState, p: Page): void {
   const sc = s.screen;
   if (sc.kind === 'between') {
     // Queue in src/App.tsx: every beat, tap by tap, then the walk up to the officer.
-    const beats = queueBeats(sc.next, s.character);
+    const beats = queueBeats(sc.next, s);
     for (const b of beats) {
       if (b.from) p.add(`msg.from.${b.from}`);
       p.add(b.key);

@@ -3,7 +3,7 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -290,9 +290,9 @@ export function documentEffects(ev: EvidenceId, topic: Topic | undefined): Effec
 function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev: EvidenceId | undefined): Effect[] {
   const list: Effect[] = [];
   if (ev) list.push(...documentEffects(ev, topic));
-  list.push(...a.effects);
+  list.push(...answerEffects(s, a, topic));
   const weak = topic && CHARACTERS[s.character].weakTopics.includes(topic);
-  if (a.kind === 'verify' && weak) list.push({ time: -1 });
+  if (a.kind === 'verify' && weak && !usesVerified(s, a, topic)) list.push({ time: -1 });
   // Checking a statement from someone called in earlier takes an hour each.
   for (let i = callInsDue(s, a, topic).length; i > 0; i--) list.push({ time: -1 });
   const card = s.screen.kind === 'encounter' ? s.screen.id : undefined;
@@ -411,8 +411,54 @@ export function deskIntro(s: RunState): Checkpoint | undefined {
  * later card.
  */
 export function callInsDue(s: RunState, a: Approach, topic: Topic | undefined): ContactId[] {
-  if (a.kind === 'withdraw' || s.screen.kind === 'inspection') return [];
+  // A point already verified has nothing left to check, so it takes no hour.
+  if (a.kind === 'withdraw' || s.screen.kind === 'inspection' || (topic && pointVerified(s, topic))) return [];
   return (s.calledIn ?? []).filter((c) => canConfirm(c, topic));
+}
+
+/**
+ * Whether `topic` was verified at a desk and still stands. A point stays
+ * resolved until a new reason appears: any fact flagged since it was verified
+ * (a reason scrutiny rose) gives the next officer something to point at, so
+ * they check it again.
+ */
+export function pointVerified(s: Pick<RunState, 'verified' | 'flagged'>, topic: Topic): boolean {
+  const v = s.verified?.[topic];
+  return !!v && v.flags === (s.flagged ?? []).length;
+}
+
+/**
+ * The points an answer resolves: the card's question when a document answers it
+ * or a contact confirms it, and the points the document forwards (EvidenceCard.forwards).
+ */
+export function pointsResolved(card: EvidenceId | undefined, vouches: Topic | undefined, topic: Topic | undefined): Topic[] {
+  const out = new Set<Topic>();
+  if (card) {
+    if (topic) out.add(topic);
+    for (const t of EVIDENCE[card].forwards ?? []) out.add(t);
+  }
+  if (vouches) out.add(vouches);
+  return [...out];
+}
+
+/**
+ * Whether answer `a` uses a point verified earlier (Approach.ifVerified): on a
+ * desk's own card about that point, it takes its verified effects and opens no
+ * check. An inspection is the supervisor's, so it never does.
+ */
+export const usesVerified = (s: RunState, a: Approach, topic: Topic | undefined): boolean =>
+  !!a.ifVerified && s.screen.kind === 'encounter' && !!topic && pointVerified(s, topic);
+
+/** The answer's own effects, or its verified ones when it uses a verified point. */
+const answerEffects = (s: RunState, a: Approach, topic: Topic | undefined): Effect[] =>
+  usesVerified(s, a, topic) ? a.ifVerified! : a.effects;
+
+/** Marks `points` verified at this desk, as of the facts flagged now. */
+function verifyPoints(s: RunState, points: Topic[]): RunState {
+  if (!points.length) return s;
+  const verified = { ...s.verified };
+  for (const t of points) verified[t] = { desk: deskOf(s), flags: (s.flagged ?? []).length };
+  return { ...s, verified };
 }
 
 /** `calledIn` after `c` is exposed: anyone but the protected contact waits to be checked. */
@@ -634,6 +680,27 @@ function restCard(s: RunState): Encounter | undefined {
   return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left.find((e) => !core.includes(e.id)) ?? coreLeft(s);
 }
 
+/** Hours a desk takes, at least, for the queue after it to read as a delay (QueueMood). */
+export const DELAY_HOURS = 2;
+
+/**
+ * How the desk just finished went, for your mother's next message: an officer
+ * phoned her (you named her to vouch for you, or the host call reached her; a
+ * lift you arranged with her is not a call), it took
+ * DELAY_HOURS or more, or neither. Only the message changes: nothing here
+ * costs time or adds a choice.
+ */
+export function queueMood(s: RunState): QueueMood {
+  const start = s.deskStart;
+  if (!start) return 'smooth';
+  const answered = s.log.slice(start.log).some((l) => l.key === 'check.hostCall.clear');
+  if (start.phoned || answered) return 'call';
+  return start.time - s.time >= DELAY_HOURS ? 'delay' : 'smooth';
+}
+
+/** Marks that an officer phoned your mother at this desk (queueMood). */
+const phoned = (s: RunState): RunState => (s.deskStart ? { ...s, deskStart: { ...s.deskStart, phoned: true } } : s);
+
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
 function advance(s: RunState, dealer: Dealer): RunState {
   if (s.withdrew) return finish(s);
@@ -652,7 +719,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
     if (next >= CHECKPOINTS.length) return admission(s, dealer);
-    return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
+    return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next }, after: { ...s.after, [next]: queueMood(s) } };
   }
   return deal(s);
 }
@@ -755,6 +822,10 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   const pair = sc.kind === 'encounter' ? caught(s, id) : undefined;
   const paired = pair && `${prefix}.${id}.${pair.claim}.${pair.fact}.${approach}.${part}`;
   if (paired && has(paired)) return paired;
+  // An answer that uses a point verified earlier says so (Approach.ifVerified).
+  const a = currentCard(s)?.approaches.find((x) => x.id === approach);
+  const verified = `${prefix}.${id}.${approach}.verified.${part}`;
+  if (a && usesVerified(s, a, topicOf(currentCard(s))) && has(verified)) return verified;
   const daily = `${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`;
   if (has(daily)) return daily;
   return own(`${prefix}.${id}.${approach}.${part}`, s.character);
@@ -896,10 +967,14 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     const c = assistContact(n);
     if (!c) return s;
     n = { ...n, exposed: [...n.exposed, c], calledIn: callIn(n, c) };
+    if (c === 'mother') n = phoned(n);
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
     // The finding stays on file; the contact only settles what it means, so
     // the check clears with no follow-up and no scrutiny from it.
     n = apply(n, checkFindings(n, w.check, result));
+    // What the contact confirmed stays verified for the desks after this one.
+    const vouched = CHECKS[w.check].topic;
+    if (vouched) n = verifyPoints(n, [vouched]);
     result = { result: 'clear' };
   }
   n = apply(n, checkEffects(n, w.check, result));
@@ -923,8 +998,21 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
+  // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
+  if (opt.contact === 'mother' && !opt.approach.namesOnly) n = phoned(n);
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
   n = apply(n, opt.effects);
+  // A document shown or a contact who confirmed the point at a desk settles it for the later
+  // desks. An inspection is the supervisor's: what it settles is the inspection, not the desk's question.
+  // On the day the bulletin orders that point checked (every host phoned), a name given at a
+  // desk is not yet a confirmation: the check is what confirms it, so it settles nothing here.
+  const vouched = opt.contact && opt.vouches !== BULLETIN_TOPICS[s.bulletin] ? opt.vouches : undefined;
+  if (s.screen.kind === 'encounter') {
+    const points = pointsResolved(opt.card, vouched, topic);
+    // A record check that confirmed the point (Approach.confirms) settles it like a document.
+    if (opt.approach.confirms && topic && !points.includes(topic)) points.push(topic);
+    n = verifyPoints(n, points);
+  }
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
@@ -939,12 +1027,12 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   // The call-in hour is a real cost too, so the reaction names whose statement it checks.
   for (const c of due) n = say(n, [{ key: 'calledIn.reaction', vars: { contact: c } }]);
   // The weakness hour is a real cost, so the reaction says what it is spent on.
-  if (opt.approach.kind === 'verify' && topic && CHARACTERS[s.character].weakTopics.includes(topic)) {
+  if (opt.approach.kind === 'verify' && topic && CHARACTERS[s.character].weakTopics.includes(topic) && !usesVerified(s, opt.approach, topic)) {
     n = say(n, [{ key: `weak.${topic}.reaction` }]);
   }
   if (opt.approach.kind === 'withdraw') return finish({ ...n, withdrew: true });
   if (s.screen.kind === 'inspection') n = { ...n, scrutiny: SCRUTINY_AFTER_INSPECTION };
-  if (opt.approach.check) return startWait(n, opt.approach.check);
+  if (opt.approach.check && !usesVerified(s, opt.approach, topic)) return startWait(n, opt.approach.check);
   return advance(n, dealer);
 }
 
@@ -967,7 +1055,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     }
     case 'ack':
       if (s.reaction) return { ...s, reaction: null };
-      if (s.screen.kind === 'between') return deal(s);
+      if (s.screen.kind === 'between') return deal({ ...s, deskStart: { time: s.time, log: s.log.length } });
       return s;
     case 'turnBack':
       if (!canTurnBack(s)) return s;
