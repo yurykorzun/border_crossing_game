@@ -934,6 +934,7 @@ export const en: Record<string, string> = {
   'departure:mission.title': 'Your father needs another week of care.',
   'departure:mission.body': 'On the way in you said five days. It has been twelve.',
   'departure:ui.goal': 'Catch your flight',
+  'departure:ui.travelReserve': '{hours} to the airport',
   'departure:ui.lastBus.one': 'Last bus to the airport leaves in {n} hour.',
   'departure:ui.lastBus.other': 'Last bus to the airport leaves in {n} hours.',
   'departure:ui.allowTravel.one': 'Allow {n} hour to reach the airport after the border.',

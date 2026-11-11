@@ -307,11 +307,13 @@ function RecordStep({ count, traveler, saved, onBack, onPick }: {
       <div className="setup-body">
         <p className="setup-title">{t('ui.title')}</p>
         <header className="step-head">
-          <BackButton onBack={onBack} />
-          <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.record.title') })} part={count} /></p>
+          <div className="step-nav">
+            <BackButton onBack={onBack} />
+            <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.record.title') })} part={count} /></p>
+          </div>
         </header>
         {saved ? (
-          <section className="paper record" data-record>
+          <section className="paper file-record" data-record>
             <h2>{t(title.key)}</h2>
             <ul>{lines.map((l, i) => <li key={i}>{t(l.key, l.vars)}</li>)}</ul>
           </section>
