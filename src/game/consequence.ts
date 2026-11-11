@@ -88,6 +88,8 @@ export type Clock = Pick<RunState, 'time' | 'travel'>;
 export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint, clock?: Clock): Consequence {
   const a = o.approach;
   if (o.blocked) return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, tone: 'plain' }] };
+  // "Show a document" costs nothing yet: each document in its list has its own line.
+  if (o.documents) return { icon: 'document', parts: [{ kind: 'card', key: 'ui.line.documents', n: o.documents.length, tone: 'plain' }] };
 
   const all: Part[] = [];
   if (o.card) all.push({ kind: 'card', key: 'ui.line.uses', vars: { cardShort: o.card }, tone: 'plain' });

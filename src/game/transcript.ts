@@ -18,7 +18,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
-import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, options, observation, routinesLeft, shownCheckpoint, waitActions, waitKey } from './engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
@@ -333,17 +333,20 @@ function screenLines(s: RunState, p: Page): void {
     // Panel in src/App.tsx: the officer's priority line above the first question at a desk.
     const desk = deskIntro(s);
     const finishing = canFinish(s);
+    // The list behind "Show a document" keeps only the question over the documents.
+    const list = !!s.documentList;
     // Once the bus is out of reach, the line saying so sits above the priority line.
-    if (finishing) p.add('ui.doomed');
-    if (desk) p.add(`officer.${desk}.priority`);
+    if (finishing && !list) p.add('ui.doomed');
+    if (desk && !list) p.add(`officer.${desk}.priority`);
     // What this officer already knows, on every desk card (knownLine()).
-    for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
+    if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
     p.add(questionKey(s, prefix, sc.id));
+    if (list) p.add('ui.whichDocument');
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);
     for (const o of options(s)) {
-      if (o.blocked === 'noCard') p.add('ui.showDocument');
+      if (o.blocked === 'noCard' || o.documents) p.add('ui.showDocument');
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
       else {
         const vars: Record<string, string> = {};
@@ -353,6 +356,7 @@ function screenLines(s: RunState, p: Page): void {
       }
       consequenceLine(o, `${prefix}.${sc.id}.${o.approach.id}`, s, p);
     }
+    if (list) p.add('ui.backToAnswers');
     if (finishing) p.add('ui.finishQuickly');
   }
 }
@@ -419,7 +423,7 @@ export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Leve
     const sc = s.screen;
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
-        ? answerKey(s, action.approach, 'label')
+        ? (optionFor(s, action)?.documents ? 'ui.showDocument' : answerKey(s, action.approach, 'label'))
         : action.type === 'waitAction' && sc.kind === 'wait' ? waitKey(sc.check, action.action, 'label')
         : action.type === 'finish' ? 'ui.finishQuickly'
         : action.type === 'turnBack' && sc.kind === 'between' ? `queue.${sc.next}.turnBack`

@@ -212,6 +212,11 @@ export interface Option {
   effects: Effect[];
   /** Facts this answer brings out that the officer here reacts to (officerFlags()). */
   flagged?: FactId[];
+  /**
+   * A "Show a document" row: the packed documents that answer, in packing order.
+   * Choosing it opens their list (documentsOf()) and spends nothing yet.
+   */
+  documents?: EvidenceId[];
 }
 
 /**
@@ -229,6 +234,28 @@ export const vouchTopic = (a: Approach, topic: Topic | undefined): Topic | null 
  * is visible.
  */
 export function options(s: RunState): Option[] {
+  const all = choices(s);
+  // The list behind "Show a document": only the packed documents that answer, each with its own cost.
+  if (s.documentList) return all.filter((o) => o.approach.id === s.documentList && o.card);
+  const out: Option[] = [];
+  for (const o of all) {
+    const docs = o.card && o.approach.kind === 'evidence' ? all.filter((x) => x.approach.id === o.approach.id).map((x) => x.card!) : [];
+    if (docs.length < 2) out.push(o);
+    // Two or more packed documents answer: one "Show a document" row opens them (documentsOf()).
+    else if (docs[0] === o.card) out.push({ approach: o.approach, blocked: null, documents: docs, effects: [] });
+  }
+  return out;
+}
+
+/** The answers behind a "Show a document" row, one per packed document, or [] for any other answer. */
+export const documentsOf = (s: RunState, o: Option): Option[] =>
+  o.documents ? options({ ...s, documentList: o.approach.id }) : [];
+
+/**
+ * Every answer the card has, with one per packed document that fits, before
+ * options() puts two or more documents behind one "Show a document" row.
+ */
+export function choices(s: RunState): Option[] {
   const card = currentCard(s);
   if (!card) return [];
   const ch = CHARACTERS[s.character];
@@ -263,12 +290,16 @@ export function options(s: RunState): Option[] {
 }
 
 /**
- * The option a choose action picks: its approach, with its document when the
- * action names one. Without a document it is the first that fits, the way a
- * scripted pick of 'evidence' shows the first packed document.
+ * The option a choose action picks. Naming a document picks that document's
+ * answer (step() takes it straight from the card; legalActions() offers it only
+ * from the open list). Without a document it is the answer on screen, so a
+ * scripted pick of 'evidence' shows the one packed document, or opens the list
+ * when two or more fit. With the list open, an answer that names no document
+ * picks nothing, so a double tap on "Show a document" never spends one.
  */
 export function optionFor(s: RunState, action: { approach: string; card?: EvidenceId }): Option | undefined {
-  return options(s).find((o) => o.approach.id === action.approach && (!action.card || o.card === action.card));
+  if (action.card) return choices(s).find((o) => o.approach.id === action.approach && o.card === action.card);
+  return s.documentList ? undefined : options(s).find((o) => o.approach.id === action.approach);
 }
 
 /** The choose action for `o`, naming its document when it shows one. */
@@ -1058,13 +1089,15 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   const card = currentCard(s);
   const opt = optionFor(s, { approach: approachId, card: cardId });
   if (!card || !opt || opt.blocked) return s;
+  // "Show a document" only opens the list: nothing is said, spent or decided yet.
+  if (opt.documents) return { ...s, documentList: opt.approach.id };
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
   const reacted = reactionOf(s, opt);
   const readings = officerReadings(s, opt.effects);
   const decided = s.screen.kind === 'encounter' && isCalm(s.screen.id) ? 0 : 1;
-  let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
+  let n: RunState = { ...s, documentList: undefined, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
   // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
@@ -1117,6 +1150,9 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
   switch (action.type) {
     case 'choose':
       return choose(s, action.approach, dealer, action.card);
+    case 'back':
+      // Back from the document list to the card's answers.
+      return s.documentList ? { ...s, documentList: undefined } : s;
     case 'beat':
       if (s.screen.kind !== 'wait' || s.screen.shown >= s.screen.beats.length) return s;
       return { ...s, reaction: null, screen: { ...s.screen, shown: s.screen.shown + 1 } };
@@ -1137,7 +1173,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     case 'finish':
       if (!canFinish(s)) return s;
       // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
-      return say(finish({ ...s, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
+      return say(finish({ ...s, documentList: undefined, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
   }
 }
 

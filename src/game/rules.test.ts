@@ -6,7 +6,7 @@ import { own, t, tn } from '../i18n';
 import { CHALLENGES, CHECKS, CONTRADICTIONS, CORE_CARDS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS, TESTIMONY, catchKind } from './content/encounters';
 import { CHARACTERS, CONTACTS, EVIDENCE, LAST_HOURS, MISSION_MIN_TIME, OFFICERS } from './content/world';
 import { changeLines, consequence, consequences, SEPARATOR } from './consequence';
-import { FOLLOW_UP_SLOT, cardFor, costsOf, deskIntro, endingFor, factIds, factTier, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
+import { FOLLOW_UP_SLOT, cardFor, chooseAction, choices, costsOf, deskIntro, endingFor, factIds, factTier, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { hoursOf, unexplained } from './lint';
 import { tryStep } from './play';
@@ -754,7 +754,11 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
   const play = (s: RunState, approach: string): RunState => {
     const r = tryStep(s, { type: 'choose', approach });
     expect(r.ok, approach).toBe(true);
-    return r.state;
+    // "Show a document" opens the list: show the first packed document in it.
+    if (!r.state.documentList) return r.state;
+    const first = tryStep(r.state, chooseAction(options(r.state)[0]));
+    expect(first.ok, approach).toBe(true);
+    return first.state;
   };
 
   it('has one inspection of each kind that changes the problem', () => {
@@ -830,7 +834,8 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
 
   it('with LAST_HOURS left, an inspection offers no wait, only a sacrifice', () => {
     const atLast = (id: string, extra: Partial<RunState> = {}) => inspection(id, { time: LAST_HOURS, ...extra });
-    const answers = (s: RunState) => options(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
+    // Every answer, one per packed document behind "Show a document" (choices()).
+    const answers = (s: RunState) => choices(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
     for (const id of ['s_bag', 's_medicine', 's_connection', 's_supervisor']) {
       const s = atLast(id);
       expect(answers(s).length, id).toBeGreaterThan(0);

@@ -699,14 +699,18 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   const known = knownLine(s);
   // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
   const finishing = canFinish(s);
+  // The list behind "Show a document" keeps only the question over the documents,
+  // and a way back to the other answers under them.
+  const list = !!s.documentList;
   return (
     <>
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
-        {finishing && <p className="priority doomed">{t('ui.doomed')}</p>}
-        {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
-        {known.length > 0 && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
+        {finishing && !list && <p className="priority doomed">{t('ui.doomed')}</p>}
+        {desk && !list && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
+        {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
+        {list && <p className="which-document" data-which-document>{t('ui.whichDocument')}</p>}
       </section>
       <div className="controls stack">
         {options(s).map((o) => (
@@ -720,6 +724,9 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
             <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
+        {list && (
+          <button className="turn-back back-to-answers" onClick={() => dispatch({ type: 'back' })}>{t('ui.backToAnswers')}</button>
+        )}
         {finishing && (
           <button className="primary finish" onClick={() => dispatch({ type: 'finish' })}>{t('ui.finishQuickly')}</button>
         )}
@@ -730,7 +737,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
 /** A blocked option has no card or person to name, so it gets a generic label. */
 function optionLabel(s: RunState, o: Option): string {
-  if (o.blocked === 'noCard') return t('ui.showDocument');
+  if (o.blocked === 'noCard' || o.documents) return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;

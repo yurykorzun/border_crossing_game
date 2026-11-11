@@ -8,7 +8,7 @@
 import { CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import { DEFAULT_LEVEL, LEVEL_IDS } from './content/levels';
-import { chooseAction, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
+import { chooseAction, documentsOf, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, Level, LevelId, LevelRule, RunState } from './types';
@@ -115,6 +115,9 @@ export function stateValue(s: RunState): number {
 
 /** Mean value over every card the dealer could deal next, so it does not peek at the seed. */
 function lookahead(s: RunState, a: Action): number {
+  // "Show a document" opens a list and spends nothing: it is worth the best document in it.
+  const list = a.type === 'choose' ? optionFor(s, a) : undefined;
+  if (list?.documents) return Math.max(...documentsOf(s, list).map((o) => lookahead({ ...s, documentList: o.approach.id }, chooseAction(o))));
   const all = outcomes(s, a).filter((o) => !o.rejected);
   if (!all.length) return -Infinity;
   return all.reduce((sum, o) => sum + stateValue(o.state), 0) / all.length;
@@ -167,7 +170,9 @@ export function botAction(style: BotStyle, s: RunState, botRng: number, ignore?:
   if (legal[0].type === 'waitAction') return { action: waitPick(style, legal), botRng };
   const open = new Set(legal.map((a) => (a.type === 'choose' ? a.approach : '')));
   const opts = options(s).filter((o) => !o.blocked && (!ignore || open.has(o.approach.id)));
-  const scored = best(opts, (o) => SCORE[style](s, o));
+  // "Show a document" scores as the best document behind it, which the bot then picks from the list.
+  const score = (o: Option): number => (o.documents ? Math.min(...documentsOf(s, o).map(score)) : SCORE[style](s, o));
+  const scored = best(opts, score);
   return { action: chooseAction(scored), botRng };
 }
 
@@ -246,9 +251,10 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
     const sc = s.screen;
     if (pick.action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) {
       const id = pick.action.approach;
-      choices.push({ card: sc.id, pick: id });
       const o = optionFor(s, pick.action);
-      if (o && noCost(s, o)) free++;
+      // Opening the list behind "Show a document" is not the pick: the document chosen from it is.
+      if (!o?.documents) choices.push({ card: sc.id, pick: id });
+      if (o && !o.documents && noCost(s, o)) free++;
       if (o) lies += traits(s, o).lies;
     }
     if (pick.action.type === 'waitAction' && sc.kind === 'wait') choices.push({ card: sc.check, pick: pick.action.action });

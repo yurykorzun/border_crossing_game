@@ -15,7 +15,7 @@
 
 import {
   callInsDue, check, checkEffects, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
-  optionFor, options, routinesLeft, topicOf, travelOf,
+  choices, optionFor, options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
 import type { Option, RunSetup } from './engine';
@@ -172,7 +172,7 @@ export function changesProblem(s: RunState, o: Option): boolean {
 export function noFreeExits(s: RunState): string[] {
   if (s.reaction || (s.screen.kind !== 'inspection' && !(s.screen.kind === 'encounter' && s.screen.id in CHALLENGES))) return [];
   const id = s.screen.id;
-  const open = options(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
+  const open = choices(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
   const bad = open.filter((o) => !costsOf(s, o).length).map((o) => `${id}.${o.approach.id} is free`);
   if (s.screen.kind !== 'inspection' || doomed(s)) return bad;
   const sets = new Set(open.map((o) => costsOf(s, o).sort().join('+')));
@@ -226,7 +226,7 @@ export function checkState(s: RunState): string[] {
   // An inspection that changes the problem offers an answer that changes something
   // besides time: the medicine, the trip, a fact on file, a document or a contact.
   const insp = s.screen.kind === 'inspection' && !s.reaction ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
-  if (insp && insp.kind !== 'search' && !options(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
+  if (insp && insp.kind !== 'search' && !choices(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
     bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
   for (const d of noFreeExits(s)) bad.push(d);
   // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
@@ -270,7 +270,8 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     if (c !== CHARACTERS[s.character].protectedContact && !after.includes(c)) bad.push(`${c} exposed but not called in`);
   if (action.type === 'choose') {
     const o = optionFor(s, action);
-    const due = o ? callInsDue(s, o.approach, topicOf(currentCard(s))) : [];
+    // Opening the list behind "Show a document" answers nothing yet, so it checks no call-in.
+    const due = o && !o.documents ? callInsDue(s, o.approach, topicOf(currentCard(s))) : [];
     if (due.some((c) => after.includes(c))) bad.push(`${due} checked on ${(s.screen as { id: string }).id} but still called in`);
     if (s.time - n.time < Math.min(due.length, s.time)) bad.push(`${due} checked on ${(s.screen as { id: string }).id} for less than an hour each`);
     if (before.some((c) => !due.includes(c) && !after.includes(c))) bad.push('a call-in disappeared without being checked');
