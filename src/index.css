@@ -516,6 +516,10 @@ p { margin: 0 0 var(--gap); }
 .settings { display: flex; flex-direction: column; margin-top: 8px; }
 .setting { display: flex; align-items: center; gap: 12px; min-height: var(--tap); border-bottom: 1px solid var(--paper-2); cursor: pointer; }
 .setting input { width: 22px; height: 22px; accent-color: var(--navy); }
+/* Start over, under the settings toggles: a plain button and what it keeps. */
+.start-over { margin-top: 16px; }
+.start-over-button { width: 100%; justify-content: center; font-weight: 600; border: 1px solid var(--ink); }
+.start-over p { margin: 8px 0 0; font-size: 0.9rem; }
 
 /* ── Bottom sheet on <dialog> */
 .sheet {
@@ -694,7 +698,7 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .result-row dd { margin: 0; font-weight: 600; text-align: end; }
 /* Red only for a confirmed serious consequence: the medicine lost, the protected contact called in. */
 .result-row dd.red { color: var(--danger-paper); }
-.ending .controls .see-file { background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
+.ending .controls .see-file, .ending .controls .play-same {background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
 .ending .controls .play-again { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 /* Open questions: what the player has not found out yet. Light on the title (dark ground), muted on the ending card (paper). */
 .open-questions h2 { margin: 0 0 4px; font-size: 0.72rem; }

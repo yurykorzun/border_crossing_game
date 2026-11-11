@@ -64,6 +64,19 @@ export function newRun(setup: RunSetup): RunState {
   };
 }
 
+/**
+ * The setup a run was started from: its level, traveler, packing, bulletin and seed.
+ * "Play again with the same setup" starts newRun() from it, so the deal comes out the
+ * same and only the player's answers differ.
+ */
+export const setupOf = (s: RunState): RunSetup => ({
+  level: s.level ?? DEFAULT_LEVEL,
+  character: s.character,
+  loadout: [...s.loadout],
+  bulletin: s.bulletin,
+  seed: s.seed,
+});
+
 // ── What each official knows
 
 /** The desk the run is at: where a fact that comes out now is known. */

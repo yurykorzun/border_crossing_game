@@ -166,6 +166,10 @@ export const en: Record<string, string> = {
   'ui.seeOnFile': 'See border records',
   'ui.borderRecords': 'Border records',
   'ui.playAgain': 'Play again',
+  'ui.playSameSetup': 'Play again with the same setup',
+  'ui.sameSetup': 'Same traveler, same documents, same day. Try another approach.',
+  'ui.startOver': 'Start over',
+  'ui.startOverNote': 'Ends this crossing. Your endings and settings stay.',
   'ui.yourCrossing': 'Your crossing',
   'ui.missionRule': 'Get through with at least {n} hours left to reach the bus.',
 

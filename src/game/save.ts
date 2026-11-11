@@ -50,6 +50,13 @@ export const openQuestions = (data: Pick<SaveData, 'endingsSeen'>): string[] =>
 export const distinctEndings = (endingsSeen: readonly EndingId[]): number =>
   new Set(endingsSeen.filter((e) => ENDINGS.includes(e))).size;
 
+/**
+ * Start over from the settings sheet: the current run is dropped, and everything kept
+ * across runs (endings seen, the carried file, beats read, settings) stays. Without it a
+ * reload only resumes the saved run.
+ */
+export const startOver = (d: SaveData): SaveData => ({ ...d, run: null });
+
 const isList = (x: unknown): x is string[] => Array.isArray(x) && x.every((v) => typeof v === 'string');
 
 /** A saved file, or null when it is missing or broken, so a bad file never costs the rest of the save. */

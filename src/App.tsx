@@ -5,16 +5,16 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t, tn } from './i18n';
-import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, options, setupOf, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
-import type { Option } from './game/engine';
+import type { Option, RunSetup } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
 import { DEFAULT_LEVEL, LEVELS, levelRows } from './game/content/levels';
-import { browserStore, load, openQuestions, save } from './game/save';
+import { browserStore, load, openQuestions, save, startOver } from './game/save';
 import { recordRun } from './game/carry';
 import type { SaveData } from './game/save';
 import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
@@ -38,7 +38,8 @@ export default function App() {
 
 function Game() {
   const [data, setData] = useState<SaveData>(() => load(store));
-  const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number } | null>(null);
+  // `same` is set by "Play again with the same setup": the begin screen for that setup, no picks.
+  const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number; same?: RunSetup } | null>(null);
 
   useEffect(() => save(store, data), [data]);
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
@@ -54,16 +55,25 @@ function Game() {
   const startSetup = () => {
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
     setSetup({ seed, bulletin: BULLETINS[Math.abs(seed) % BULLETINS.length] });
-    setData((d) => ({ ...d, run: null }));
+    setData(startOver);
+  };
+
+  // The ended run's traveler, packing, bulletin and seed, so the deal comes out the same.
+  const startSame = () => {
+    if (!run) return;
+    const same = setupOf(run);
+    setSetup({ seed: same.seed, bulletin: same.bulletin, same });
+    setData(startOver);
   };
 
   return (
     <div className="shell" onPointerDown={() => sound.wakeAudio()}>
       {run ? (
-        <Run s={run} dispatch={dispatch} data={data} setData={setData} onRestart={startSetup} />
+        <Run s={run} dispatch={dispatch} data={data} setData={setData} onRestart={startSetup} onSame={startSame} onStartOver={startSetup} />
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
+          same={setup.same}
           endingsSeen={data.endingsSeen}
           onStart={(level, character, loadout) => {
             setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
@@ -156,7 +166,21 @@ type SetupStep = (typeof SETUP_STEPS)[number];
 
 // Before the first ending (firstRun) there are no choices yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1, with no way back to the picks.
-function Setup({ bulletin, endingsSeen, onStart }: {
+function Setup({ bulletin, same, endingsSeen, onStart }: {
+  bulletin: BulletinId;
+  same?: RunSetup;
+  endingsSeen: readonly EndingId[];
+  onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
+}) {
+  if (same) {
+    const level = same.level ?? DEFAULT_LEVEL;
+    return <BeginStep level={level} picked={same.loadout} traveler={same.character} bulletin={bulletin}
+      onBegin={() => onStart(level, same.character, same.loadout)} />;
+  }
+  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} onStart={onStart} />;
+}
+
+function Picks({ bulletin, endingsSeen, onStart }: {
   bulletin: BulletinId;
   endingsSeen: readonly EndingId[];
   onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
@@ -267,14 +291,7 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
           <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
           <p className="pack-count" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
         </header>
-        <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
-          <Icon name="alert" />
-          <span className="bulletin-text">
-            <span className="bulletin-line">{t(`bulletin.${bulletin}`)}</span>
-            {/* A day with a second warning (cash on a customs day) gives it its own line in the same bar. */}
-            {has(`bulletin.${bulletin}.also`) && <span className="bulletin-line">{t(`bulletin.${bulletin}.also`)}</span>}
-          </span>
-        </p>
+        <Bulletin bulletin={bulletin} />
         {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
         <p className="pack-cue">{t(`bulletin.${bulletin}.cue`)}</p>
         <ul className="cards pick" aria-label={t('ui.prepareDocuments')}>
@@ -303,6 +320,20 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
   );
 }
 
+/** The day's bulletin bar: what officers are watching for today. */
+function Bulletin({ bulletin }: { bulletin: BulletinId }) {
+  return (
+    <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
+      <Icon name="alert" />
+      <span className="bulletin-text">
+        <span className="bulletin-line">{t(`bulletin.${bulletin}`)}</span>
+        {/* A day with a second warning (cash on a customs day) gives it its own line in the same bar. */}
+        {has(`bulletin.${bulletin}.also`) && <span className="bulletin-line">{t(`bulletin.${bulletin}.also`)}</span>}
+      </span>
+    </p>
+  );
+}
+
 /** True while a scroll box has content below its fold: on at large text, off once scrolled to the end. */
 function useMoreBelow() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -326,23 +357,27 @@ function useMoreBelow() {
 /**
  * Setup 4. The mission, the rest of the premise and what you packed, then the one strong button.
  * On the first run there is no Back, and `traveler` names who you cross as, since nobody picked.
+ * A same-setup retry also has no Back, and shows the day's `bulletin` again, since it is the same day.
  */
-function BeginStep({ level, picked, traveler, onBack, onBegin }: {
+function BeginStep({ level, picked, traveler, bulletin, onBack, onBegin }: {
   level: LevelId;
   picked: EvidenceId[];
   traveler?: CharacterId;
+  bulletin?: BulletinId;
   onBack?: () => void;
   onBegin: () => void;
 }) {
   const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
   const goal = LEVELS[level];
   return (
-    <main className="setup setup-step begin-step">
+    <main className={`setup setup-step begin-step ${bulletin ? 'same-setup' : ''}`}>
       <div className="setup-body">
         <header className="step-head">
           {onBack && <BackButton onBack={onBack} />}
           <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
+          {bulletin && <p className="muted-dark">{t('ui.sameSetup')}</p>}
         </header>
+        {bulletin && <Bulletin bulletin={bulletin} />}
         {traveler && (
           <section className="packed-list begin-traveler">
             <h3 className="mono">{t('ui.yourTraveler')}</h3>
@@ -455,19 +490,23 @@ function TravelerStep({ initial, onBack, onContinue }: { initial: CharacterId | 
   );
 }
 
-function Run({ s, dispatch, data, setData, onRestart }: {
+function Run({ s, dispatch, data, setData, onRestart, onSame, onStartOver }: {
   s: RunState;
   dispatch: (a: Action) => void;
   data: SaveData;
   setData: React.Dispatch<React.SetStateAction<SaveData>>;
   onRestart: () => void;
+  /** "Play again with the same setup" on the ending. Unset in autoplay. */
+  onSame?: () => void;
+  /** Start over in the settings sheet. Unset in autoplay. */
+  onStartOver?: () => void;
 }) {
   const [sheet, setSheet] = useState<'story' | 'evidence' | 'scrutiny' | 'settings' | null>(null);
   const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
   const readBefore = useReadBefore(s.seed, data.beatsSeen);
   // The last officer line still shows before the ending card.
-  if (s.ending && !s.reaction) return <Ending s={s} questions={openQuestions(data)} onRestart={onRestart} />;
+  if (s.ending && !s.reaction) return <Ending s={s} questions={openQuestions(data)} onRestart={onRestart} onSame={onSame} />;
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
@@ -521,7 +560,8 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       <Sheet open={sheet === 'evidence'} onClose={close} title={t('ui.evidence')}><EvidenceContent s={s} /></Sheet>
       <Sheet open={sheet === 'scrutiny'} onClose={close} title={t('ui.scrutiny')}><ScrutinyContent s={s} /></Sheet>
       <Sheet open={sheet === 'settings'} onClose={close} title={t('ui.settings')}>
-        <SettingsContent settings={data.settings} onChange={(settings) => setData((d) => ({ ...d, settings }))} />
+        <SettingsContent settings={data.settings} onChange={(settings) => setData((d) => ({ ...d, settings }))}
+          onStartOver={onStartOver && (() => { close(); onStartOver(); })} />
       </Sheet>
     </main>
   );
@@ -766,9 +806,9 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * and the ending's name in amber, one line on what you kept, the worst consequence as a
  * heading and a line (then any others), the epilogue, and a run summary with hours left
  * and the other stats. Then "See border records", which opens the records alone, and
- * "Play again".
+ * "Play again", with "Play again with the same setup" under it (onSame).
  */
-function Ending({ s, questions, onRestart }: { s: RunState; questions: string[]; onRestart: () => void }) {
+function Ending({ s, questions, onRestart, onSame }: { s: RunState; questions: string[]; onRestart: () => void; onSame?: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
   const text = endingText(s);
@@ -816,6 +856,7 @@ function Ending({ s, questions, onRestart }: { s: RunState; questions: string[];
       <div className="controls">
         <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
         <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
+        {onSame && <button className="choice play-same" onClick={onSame}>{t('ui.playSameSetup')}</button>}
       </div>
       {/* The records alone: the epilogue and the consequences stay on the ending screen above. */}
       <Sheet open={story} onClose={() => setStory(false)} title={t('ui.borderRecords')}>
