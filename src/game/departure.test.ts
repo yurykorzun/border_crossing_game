@@ -194,6 +194,21 @@ describe('Lena\'s file never opens Mark\'s Departure', () => {
   });
 });
 
+describe('the hold at the exit desk quotes the disproved claim with its crossing, date, desk and question', () => {
+  it('Lena said it was a short trip at passport control, and the register showed otherwise', () => {
+    const file = SAMPLE_FILES.lena;
+    const c = file.said!.find((x) => file.disproved!.includes(x.claim))!;
+    const s = { ...newRun(setupOf('lena', file)), seen: ['d_hold'], screen: { kind: 'encounter', id: 'd_hold' } } as RunState;
+    const line = text(fileLine(s, 'd_hold'));
+    expect(line).toContain(t('level.arrival.title'));
+    expect(line).toContain(t('checkpoint.' + c.desk));
+    expect(line).toContain(t(`file.context.${c.context}`));
+    expect(line).toContain(`"${t(own(`said.${c.claim}`, 'lena'))}"`);
+    expect(line).toMatch(/\d{1,2} [A-Z][a-z]+/);
+    expect(line).not.toMatch(/[{}—]/);
+  });
+});
+
 describe('a file saved before claims kept their desk and date still carries its claims', () => {
   // A save from Arrival before CarriedFile.said existed has only `claims`.
   const old = (file: CarriedFile): CarriedFile => {

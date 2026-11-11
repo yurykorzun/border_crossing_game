@@ -856,7 +856,7 @@ export const en: Record<string, string> = {
   // ── Departure (rwf.3): the desks open with your file from the way in.
   // A file line under a question quotes what the file holds (fileLine() in src/game/consequence.ts).
   'file.said': '{crossing}, {date}, {desk}. Asked {context}: "{said}".',
-  'file.disproved': '{crossing}, {date}: a record did not match "{said}".',
+  'file.disproved': '{crossing}, {date}, {desk}, {context}: "{said}". A record did not match.',
   'file.said.undated': '{crossing}: "{said}".',
   'file.disproved.undated': '{crossing}: a record did not match "{said}".',
   'file.declared.under': 'Kept from {crossing}: "Under the limit."',
@@ -902,7 +902,7 @@ export const en: Record<string, string> = {
   'enc.d_hold.sign.label': 'Sign a statement about it',
   'enc.d_hold.sign.event': 'Written statement',
   'enc.d_hold.sign.reaction': 'You write it out. She clips it to your record.',
-  'enc.d_hold.leave.label': 'Withdraw and leave your passport',
+  'enc.d_hold.leave.label': 'Withdraw, leave the passport',
   'enc.d_hold.leave.reaction': 'She gives you a slip with a number and keeps the passport.',
   'enc.d_declared.q': '"How much cash are you taking out?"',
   'enc.d_declared.evidence.label': 'Show {cardThe}',
