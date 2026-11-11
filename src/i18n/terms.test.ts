@@ -41,6 +41,12 @@ const TIME_AS_UNIT = [
   /\b(time|minutes?)\s*:/i,
 ];
 
+/**
+ * Labels Yury worded himself, whose value is shown in hours next to them: the ending's
+ * "Time left at border exit" over "5 hours" (ending review, 2026-11-10). Only these keys.
+ */
+const TIME_LABELS = ['ui.timeLeftRow'];
+
 /** The value with each {var} filled, so "{contact} has..." is checked as the player reads it. */
 function rendered(value: string): string {
   return value
@@ -55,7 +61,7 @@ function rendered(value: string): string {
 /** Every term-rule problem in one string. Empty means clean. */
 function termProblems(key: string, value: string): string[] {
   const out: string[] = [];
-  for (const re of TIME_AS_UNIT) if (re.test(value)) out.push(`time used as a unit (${re})`);
+  for (const re of TIME_AS_UNIT) if (!TIME_LABELS.includes(key) && re.test(value)) out.push(`time used as a unit (${re})`);
 
   for (const w of ['Noticed', 'Watchful']) if (new RegExp(`\\b${w}\\b`, 'i').test(value)) out.push(`old scrutiny word "${w}"`);
   for (const m of value.matchAll(/(\{\w+\}|\d+)\/(\{max\}|3)(?!\d)/g))

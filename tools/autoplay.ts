@@ -15,6 +15,8 @@
 import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor } from '../src/game/bots';
 import type { BotRun, BotStyle } from '../src/game/bots';
 import { CHARACTERS } from '../src/game/content/world';
+import { laterBeat } from '../src/game/consequence';
+import { LATER_IDS } from '../src/game/types';
 import { LEVELS, LEVEL_IDS, isLevelId } from '../src/game/content/levels';
 import type { LevelId } from '../src/game/types';
 import { ENDING_RANK } from '../src/game/walk';
@@ -100,6 +102,11 @@ for (const level of PLAYED) {
   const back = all.filter((r) => r.final.ending === 'turnedBack');
   const atQueue = back.filter((r) => r.actions.some((a) => a.type === 'turnBack')).length;
   console.log(`  turnedBack reached, all styles: ${pct(back.length, all.length)} of runs (${atQueue} in the passport queue, ${back.length - atQueue} asking to return at an inspection)`);
+  // The later beat (laterBeat() in src/game/consequence.ts): only a run that got home can have one.
+  const home = all.filter((r) => r.final.ending === 'homeInTime' || r.final.ending === 'homeAtCost');
+  const beats = home.map((r) => laterBeat(r.final)).filter((b) => !!b);
+  const byBeat = LATER_IDS.map((id) => `${id} ${beats.filter((b) => b.id === id).length}`).join(', ');
+  console.log(`  later beat fires, all styles: ${pct(beats.length, home.length)} of ${home.length} runs that got home (${byBeat})`);
 
   // ── 2. Success by setup
   console.log('\nhomeInTime by character x packing x bulletin (won/played per style)');

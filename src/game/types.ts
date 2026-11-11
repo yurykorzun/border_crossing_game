@@ -409,8 +409,25 @@ export interface CarriedFile {
   spent: EvidenceId[];
   /** Whether the medicine came through. */
   medicine: boolean;
+  /** What came back days after you got home (laterBeat() in src/game/consequence.ts), so the next crossing opens with it. */
+  later?: LaterBeat;
   /** Set when no crossing was saved and the file was built from a seed (defaultFile()). */
   seeded?: true;
+}
+
+/**
+ * What comes back after a crossing that got you home, days later and somewhere
+ * else (docs/research/2026-11-10-present-day-accounts.md): a statement a record
+ * disproved, another relative flagged, an old donation on file, or a stay with
+ * family the local office checks. Mechanisms only, no real case.
+ */
+export type LaterId = 'statement' | 'relative' | 'donation' | 'registration';
+export const LATER_IDS: readonly LaterId[] = ['statement', 'relative', 'donation', 'registration'];
+
+/** One later beat: its text is `later.<id>` with its time at `later.<id>.when` and the choice that caused it at `later.<id>.reason`. */
+export interface LaterBeat {
+  id: LaterId;
+  vars: Record<string, string>;
 }
 
 export type WaitAction = 'wait' | 'ask' | 'assist' | 'explain';

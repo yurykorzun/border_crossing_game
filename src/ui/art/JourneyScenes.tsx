@@ -1,5 +1,6 @@
 // The scenes around the run: the border post on the traveler screen, the desk you
-// pack at, and the ending (the night bus, the empty stop if the bus left without
+// pack at, and the ending (the hospital ward when you get home, the night bus when you
+// arrive too late, the empty stop if the bus left without
 // you, or the border post again if you turned back). Same pixel grid and palette as the checkpoint scenes; each fills its
 // box with `slice`, anchored at the bottom, so a short box crops the sky first.
 
@@ -238,6 +239,60 @@ export function NightBus({ medicine, character }: { medicine: boolean; character
       <rect className="art-seat" x="4" y="20" width="56" height="10" />
       <rect className="art-seat-edge" x="4" y="20" width="56" height="1" />
       <Pixels rows={medicine ? HAND_BOX : HAND_EMPTY} palette={{ w: 'art-box', g: 'art-box-band', s: 'art-skin', c: `art-coat-${character}` }} x={27} y={20} />
+    </Scene>
+  );
+}
+
+/** City lights through the ward window, fixed. */
+const WARD_LIGHTS: readonly [number, number][] = [[5, 13], [8, 12], [13, 13], [15, 11]];
+
+// You asleep across the two chairs in your coat, your head toward the bed.
+const ASLEEP = [
+  '.......hhh',
+  '.......sss',
+  'ccccccccss',
+  'cccccccc..',
+];
+
+/**
+ * The ending at the hospital (Home in time, Home at a cost): the ward at night, your
+ * father in bed under the reading lamp, two chairs pushed together beside him with you
+ * asleep across them, and the window lit by the town. Same 64x30 box as NightBus.
+ */
+export function Ward({ character }: { character: CharacterId }) {
+  return (
+    <Scene label={t('scene.ward')} w={64} h={30} name="ward">
+      <rect className="art-wall" x="0" y="0" width="64" height="23" />
+      <rect className="art-floor" x="0" y="23" width="64" height="7" />
+      {/* The window: the town at night, its lights, the frame and the bar across it. */}
+      <rect className="art-booth" x="3" y="7" width="15" height="10" />
+      <rect className="art-night" x="4" y="8" width="13" height="8" />
+      <rect className="art-hill" x="4" y="14" width="13" height="2" />
+      {WARD_LIGHTS.map(([x, y]) => <rect key={`${x}.${y}`} className="art-window-lit" x={x} y={y} width="1" height="1" />)}
+      <rect className="art-booth" x="10" y="8" width="1" height="8" />
+      {/* The reading lamp over the bed and its warm pool. */}
+      <rect className="art-lamp-wash" x="38" y="8" width="26" height="15" />
+      <rect className="art-lamp-wash" x="44" y="10" width="20" height="13" />
+      <rect className="art-steel-leg" x="61" y="5" width="1" height="18" />
+      <rect className="art-steel-leg" x="57" y="5" width="4" height="1" />
+      <rect className="art-lamp" x="56" y="6" width="3" height="2" />
+      {/* The bed: the frame at the head, the blanket, your father asleep on the pillow. */}
+      <rect className="art-steel" x="58" y="12" width="2" height="12" />
+      <rect className="art-paper-shade" x="34" y="16" width="18" height="2" />
+      <rect className="art-paper" x="34" y="18" width="24" height="2" />
+      <rect className="art-paper" x="51" y="16" width="7" height="2" />
+      <rect className="art-steam" x="53" y="13" width="3" height="1" />
+      <rect className="art-skin" x="53" y="14" width="3" height="2" />
+      <rect className="art-steel" x="34" y="20" width="24" height="1" />
+      <rect className="art-steel-leg" x="35" y="21" width="1" height="4" />
+      <rect className="art-steel-leg" x="56" y="21" width="1" height="4" />
+      {/* Two chairs pushed together beside the bed, their backs at either end. */}
+      <rect className="art-seat" x="20" y="17" width="1" height="6" />
+      <rect className="art-seat" x="32" y="17" width="1" height="6" />
+      <rect className="art-seat" x="20" y="22" width="13" height="1" />
+      <rect className="art-seat-edge" x="20" y="23" width="13" height="1" />
+      {[21, 26, 27, 31].map((x) => <rect key={x} className="art-steel-leg" x={x} y="24" width="1" height="3" />)}
+      <Pixels rows={ASLEEP} palette={{ h: `art-hair-${character}`, s: 'art-skin', c: `art-coat-${character}` }} x={21} y={18} />
     </Scene>
   );
 }

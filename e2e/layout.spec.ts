@@ -366,7 +366,7 @@ test('each checkpoint has its own named scene, and so do the traveler, packing a
   expect(labels[2]).toMatch(/interview room/);
   expect(new Set(labels).size).toBe(3);
 
-  // The ending: the night bus, or the border post if you were turned back.
+  // The ending: the hospital ward when you get home, or the border post if you were turned back.
   for (const ending of ['homeInTime', 'turnedBack'] as const) {
     const run: RunState = { ...base, reaction: null, screen: { kind: 'ending' }, ending };
     await openSaved(page, { ...freshSave(), run });

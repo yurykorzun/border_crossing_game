@@ -7,7 +7,7 @@ import { has, own, t } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
 import { caught, factIds, factTier, knows, travelOf } from './engine';
-import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState, Severity } from './types';
+import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -266,16 +266,33 @@ export function consequences(s: RunState): EndingLine[] {
   return out.sort((a, b) => b.severity - a.severity);
 }
 
+
 /**
- * The line under the ending's title: what you kept. The medicine, the protected contact
- * kept out of the file, or, with neither, the passport. One or two keys, read in order.
+ * What comes back days after a crossing that got you home (rwf.10), or nothing. It
+ * never changes the ending: Home in time stays Home in time, and the beat is its own
+ * line after it. The run's record decides it, first match wins, worst first:
+ * - statement: a claim a desk wrote down that a record then disproved (RunState.disproved).
+ * - relative: another relative flagged at a desk (relativeNamed or relativeContact).
+ * - donation: the old donation on file, by the record or the bank notice. A truthful answer can put it there.
+ * - registration: you said at a desk that you stay with family and the family address is on
+ *   file. All truthful. Not when officers already go to your mother's address (consequences()).
+ * Each beat names the desk and the choice in its reason (`later.<id>.reason`).
  */
-export function keptLines(s: RunState): { key: string; vars?: Record<string, string> }[] {
-  const c = CHARACTERS[s.character].protectedContact;
-  const out: { key: string; vars?: Record<string, string> }[] = [];
-  if (s.medicine) out.push({ key: 'ending.kept.medicine' });
-  if (!s.exposed.includes(c)) out.push({ key: 'ending.kept.contact', vars: { contact: c } });
-  return out.length ? out : [{ key: 'ending.kept.none' }];
+export function laterBeat(s: RunState): LaterBeat | undefined {
+  if (s.ending !== 'homeInTime' && s.ending !== 'homeAtCost') return undefined;
+  const facts = factIds(s);
+  const first = (f: FactId) => s.flaggedAt?.[f] ?? s.facts[f]?.[0];
+  const statement = (s.disproved ?? []).find((c) => s.logged?.[c]?.length);
+  if (statement)
+    return { id: 'statement', vars: { desk: s.logged![statement]![0], said: own(`said.${statement}`, s.character).slice('said.'.length) } };
+  const relative = (['relativeNamed', 'relativeContact'] as const).find((f) => facts.includes(f) && factTier(s, f) === 'flagged');
+  if (relative && first(relative)) return { id: 'relative', vars: { desk: first(relative)! } };
+  const donation = (['donationRecord', 'bankNotice'] as const).find((f) => facts.includes(f));
+  if (donation && first(donation)) return { id: 'donation', vars: { desk: first(donation)! } };
+  const stay = s.logged?.stayingWithFamily?.[0];
+  const visited = consequences(s).some((l) => l.key === 'exposure.mother.home');
+  if (stay && facts.includes('familyAddress') && !visited) return { id: 'registration', vars: { desk: stay } };
+  return undefined;
 }
 
 /**

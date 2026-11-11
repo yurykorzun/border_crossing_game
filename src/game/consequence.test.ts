@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { has, t, tn } from '../i18n';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE, EVIDENCE_IDS, FACT_TIERS } from './content/world';
-import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, eventKey, keptLines, nextActionKey, packDetail, protectedRow } from './consequence';
+import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, consequences, eventKey, nextActionKey, packDetail, protectedRow } from './consequence';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -250,15 +250,6 @@ describe('the protected contact on the ending card', () => {
       expect(protectedRow(clean)).toEqual({ key: 'ui.notNamed', tone: 'plain' });
     }
     expect(rows).toEqual({ cousin: 'Called in', brother: 'Contacted for questioning' });
-  });
-
-  it('says what you kept under the title: the medicine, the protected contact, or the passport', () => {
-    const kept = (extra: Partial<RunState>) => keptLines({ ...newRun(setupFor(0)), character: 'lena', ...extra }).map((k) => t(k.key, k.vars)).join(' ');
-    expect(kept({})).toBe("Your father's medicine is still in the cool bag. You keep your cousin Ilya out of the file.");
-    expect(kept({ medicine: false })).toBe('You keep your cousin Ilya out of the file.');
-    expect(kept({ exposed: ['mother', 'cousin'] })).toBe("Your father's medicine is still in the cool bag.");
-    expect(kept({ medicine: false, exposed: ['cousin'] })).toBe('You still have your passport.');
-    expect(keptLines({ ...newRun(setupFor(0)), character: 'mark' }).map((k) => t(k.key, k.vars))[1]).toBe('You keep your brother Tom out of the file.');
   });
 
   it('the turned-back epilogue reads as a withdrawal, not a refusal stamp', () => {

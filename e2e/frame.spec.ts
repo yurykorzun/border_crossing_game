@@ -131,6 +131,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
       const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
       const endings: [string, Partial<RunState>][] = [
         ['Home in time', { time: 5, ending: 'homeInTime' }],
+        // A beat days later (rwf.10): the cash declaration a record disproved.
+        ['Home in time, a beat later', {
+          time: 5, ending: 'homeInTime', claims: ['cashUnderLimit'], logged: { cashUnderLimit: ['customs'] },
+          facts: { cashCount: ['customs'] }, disproved: ['cashUnderLimit'],
+        }],
         ['Home at a cost', { time: 4, ending: 'homeAtCost', medicine: false, exposed: ['cousin'] }],
         ['Too late', { time: 1, ending: 'tooLate' }],
         ['missed bus', { time: 0, ending: 'tooLate' }],
@@ -141,7 +146,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
         const run: RunState = { ...base, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ...patch };
         await openSaved(page, { ...freshSave(), run, endingsSeen: [run.ending!] });
         await expect(page.locator('.ending-card')).toBeVisible();
-        widths.add(await expectFrame(page, `the ${name} ending`, '.ending-card .kept, .ending-card .cost-line, .ending-card .epilogue'));
+        widths.add(await expectFrame(page, `the ${name} ending`, '.ending-card .cost-line, .ending-card .epilogue, .ending-card .beat-line'));
       }
       expect([...widths], 'one content width on every ending').toEqual([viewport.width - 32]);
       expect(errors).toEqual([]);

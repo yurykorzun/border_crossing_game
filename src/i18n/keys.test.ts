@@ -78,7 +78,10 @@ describe('English text', () => {
   // "1 extra time" and "time left" all fail. "Home in time" is not a unit and passes.
   it('counts time in hours, never as a unit', () => {
     const unit = /(\d|\})\s+(extra\s+|more\s+)?time\b|\btime\s+(left|remaining)\b|\btokens?\b/i;
-    expect(Object.entries(en).filter(([, v]) => unit.test(v))).toEqual([]);
+    // The one exception is the ending's row label Yury worded (ending review, 2026-11-10),
+    // whose value beside it reads in hours: "Time left at border exit" over "5 hours".
+    expect(en['ui.timeLeftRow']).toBe('Time left at border exit');
+    expect(Object.entries(en).filter(([k, v]) => k !== 'ui.timeLeftRow' && unit.test(v))).toEqual([]);
   });
 
   // One clock only: the mission card sets up the last bus, not days of leave (BeginStep).

@@ -72,7 +72,7 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
     expect(facing('i_clarify', 'shortTrip', 'familyAddress'))
       .toBe('You said: "No reason, a short trip" (Passport control). In the old records: Your registered family address.');
     expect(facing('i_contradiction', 'noOtherFamily', 'relativeContact'))
-      .toBe('You said: "I have no other relatives here" (Passport control). Confirmed on file: Another relative of yours.');
+      .toBe('You said: "I have no other relatives here" (Passport control). Confirmed: Another relative.');
     expect(facing('i_clarify', 'shortTrip', 'familyAddress', { flagged: ['familyAddress'] }))
       .toBe('You said: "No reason, a short trip" (Passport control). Flagged on file: Your registered family address.');
   });
@@ -81,7 +81,7 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
 describe('Lena and Mark come home as citizens', () => {
   it('passport control asks about the years away, not the purpose of a visit', () => {
     expect(en['enc.p_purpose.q']).toBe('"You haven\'t been back for six years. Why now?"');
-    expect(en['enc.p_purpose.mark.q']).toBe('"You haven\'t been back for four years. Why now?"');
+    expect(en['enc.p_purpose.mark.q']).toBe('"Four years away. Why now?"');
   });
 
   it('the host card names the registered address only when customs has it on file', () => {

@@ -20,12 +20,12 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './game/consequence';
+import { SEPARATOR, caughtLine, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
 import type { SceneState } from './ui/art/CheckpointScene';
-import { BorderPost, Desk, EmptyStop, NightBus } from './ui/art/JourneyScenes';
+import { BorderPost, Desk, EmptyStop, NightBus, Ward } from './ui/art/JourneyScenes';
 import { CustomsQueueScene, InterviewQueueScene, QueueScene } from './ui/art/QueueScene';
 import { Icon } from './ui/art/icons';
 
@@ -848,43 +848,63 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 }
 
 /**
- * The ending as a result card (Yury's design review, 2026-11-09): the scene, the outcome
- * and the ending's name in amber, one line on what you kept, the worst consequence as a
- * heading and a line (then any others), the epilogue, and a run summary with hours left
- * and the other stats. Then "See border records", which opens the records alone, and
- * "Play again", with "Play again with the same setup" under it (onSame).
+ * The ending (Yury's ending review, 2026-11-10), in this order: the outcome and the
+ * ending's name, a short arrival scene (the picture and one paragraph), then what
+ * happened after, under one time heading ("The following morning"): each cost worst
+ * first, and the later beat (laterBeat()) as its own line with the choice that caused it.
+ * Then the run summary, where the medicine and the protected contact show (and only
+ * there), and the buttons: "See border records", which opens the records alone, and
+ * "Play again", with "Play again with the same setup" beside it (onSame).
  */
 export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () => void; onSame?: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
   const text = endingText(s);
   const cost = consequences(s);
+  const later = laterBeat(s);
   return (
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
-      <div className="ending-scene">
-        {ending === 'turnedBack' ? <BorderPost closed />
-          : text === 'missedBus' ? <EmptyStop medicine={s.medicine} character={s.character} />
-          : <NightBus medicine={s.medicine} character={s.character} />}
-      </div>
       <section className="paper ending-card">
         <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
         <h1>{t(`ending.${text}.title`)}</h1>
-        <p className="kept">{keptLines(s).map((k) => t(k.key, k.vars)).join(' ')}</p>
-        {/* Worst first, a heading and one line each, no severity tag (pfi.13 notes). */}
-        {cost.length > 0 && (
-          <ul className="costs">
-            {cost.map((l, i) => (
-              <li key={i} className={`cost ${l.kind}${i === 0 ? ' worst' : ''}`}>
-                <h2 className="cost-title">{t(`${l.key}.title`, l.vars)}</h2>
-                {/* Why naming them did this (EndingLine.reason), before what it did. */}
-                {l.reason && <p className="cost-reason">{t(l.reason, l.vars)}</p>}
-                <p className="cost-line">{t(l.key, l.vars)}</p>
-              </li>
-            ))}
-          </ul>
+        <div className="arrival">
+          <div className="ending-scene">
+            {ending === 'turnedBack' ? <BorderPost closed />
+              : text === 'missedBus' ? <EmptyStop medicine={s.medicine} character={s.character} />
+              : ending === 'tooLate' ? <NightBus medicine={s.medicine} character={s.character} />
+              : <Ward character={s.character} />}
+          </div>
+          <p className="epilogue">{t(`ending.${text}.body`)}</p>
+        </div>
+        {(cost.length > 0 || later) && (
+          <section className="later">
+            {/* One time heading over whatever follows, a cost or only the later beat. */}
+            <h2 className="mono later-heading">{t('ending.later.heading')}</h2>
+            {cost.length > 0 && (
+              <>
+                {/* Worst first, a heading and one line each, no severity tag (pfi.13 notes). */}
+                <ul className="costs">
+                  {cost.map((l, i) => (
+                    <li key={i} className={`cost ${l.kind}${i === 0 ? ' worst' : ''}`}>
+                      <h3 className="cost-title">{t(`${l.key}.title`, l.vars)}</h3>
+                      {/* Why naming them did this (EndingLine.reason), before what it did. */}
+                      {l.reason && <p className="cost-reason">{t(l.reason, l.vars)}</p>}
+                      <p className="cost-line">{t(l.key, l.vars)}</p>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {/* Days later, its own line after the crossing's result, which it never changes. */}
+            {later && (
+              <div className={`beat beat-${later.id}`}>
+                <p className="beat-line"><strong className="beat-when">{t(`later.${later.id}.when`)}:</strong> {t(`later.${later.id}`, later.vars)}</p>
+                <p className="beat-reason">{t(`later.${later.id}.reason`, later.vars)}</p>
+              </div>
+            )}
+          </section>
         )}
-        <p className="epilogue">{t(`ending.${text}.body`)}</p>
         <div className="run-summary">
           <h3 className="mono">{t('ui.runSummary')}</h3>
           <dl className="result-rows">
@@ -922,8 +942,8 @@ function resultRows(s: RunState): { label: string; value: string; tone: 'plain' 
   // The exact result ("Added to watch list"), from the same consequence heading.
   const contact = protectedRow(s);
   return [
-    // "Hours left", not the mockup's "Time remaining": time is counted in hours (src/i18n/terms.test.ts).
-    { label: t('ui.hoursLeftRow'), value: String(s.time), tone: 'plain' },
+    // The label is Yury's (ending review, 2026-11-10); the value reads in hours, as every clock in the game.
+    { label: t('ui.timeLeftRow'), value: tn('ui.hours', s.time), tone: 'plain' },
     // Red only for a confirmed serious consequence (docs/plan.md "UI rules").
     { label: t('ui.medicineRow'), value: t(s.medicine ? 'ui.kept' : 'ui.lost'), tone: s.medicine ? 'plain' : 'red' },
     {
