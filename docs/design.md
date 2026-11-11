@@ -86,14 +86,18 @@ Your mother, Ilya and Tom each say one ordinary thing in the passport queue befo
 
 ## Evidence cards (pick 3)
 
-| Card | Useful against | Puts on file |
+Each document answers named questions, so a decision is which problem to solve, not which penalty is cheapest. The second column is the contract: `src/game/documents.test.ts` reads it and fails when a document (`EVIDENCE` in `src/game/content/world.ts`) answers or settles a question its row does not list.
+
+| Card | Answers the question | Puts on file |
 |---|---|---|
-| Hotel booking | Accommodation, length of stay | You claim a hotel stay, can't back a family stay |
-| Letter from mother | Purpose, accommodation | The family address |
-| Employer letter | Work, money | Your employer |
-| Hospital note | Medicine, purpose | Your father's condition |
-| Return ticket | Length of stay (not cash: a ticket says when you leave, not what you carry) | A fixed departure date |
-| Apartment deed | Identity (its registered address, not the photo), accommodation | Your property inside |
+| Hotel booking (`hotel`) | Where you stay (`accommodation`), how long you stay (`stay`) | You claim a hotel stay, can't back a family stay |
+| Letter from mother (`motherLetter`) | Why you came (`purpose`), where you stay (`accommodation`) | The family address |
+| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`) | Your employer |
+| Hospital note (`hospitalNote`) | What the medicine is (`medicine`), why you came (`purpose`) | Your father's condition |
+| Return ticket (`returnTicket`) | How long you stay (`stay`), not the cash: a ticket says when you leave, not what you carry | A fixed departure date |
+| Apartment deed (`deed`) | Who you are (`identity`, its registered address, not the photo), where you stay (`accommodation`) | Your property inside |
+
+Nothing explains a donation, and no document answers your past (`history`). When two packed documents answer the same question, the card offers each one as its own answer with its own cost: at "Why now?" the hospital note puts his condition on file and the letter puts her address on file. Ordinary paperwork can reveal something that matters (the letter's address is what the customs host call dials), and not every disclosure is harmful: the departure date and the property stay off file when the document settles the question (`HARMLESS_FACTS`).
 
 Each card but the return ticket covers two topics, so a "wrong" pick is rarely useless. The ticket answers one question, how long you stay (the passport clerk's `p_stay`), and answers it outright. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
 

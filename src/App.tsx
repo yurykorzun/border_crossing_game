@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t, tn } from './i18n';
-import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, chooseAction, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -671,10 +671,10 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
       <div className="controls stack">
         {options(s).map((o) => (
           <button
-            key={o.approach.id}
+            key={o.card ? `${o.approach.id}.${o.card}` : o.approach.id}
             className="choice"
             disabled={!!o.blocked}
-            onClick={() => dispatch({ type: 'choose', approach: o.approach.id })}
+            onClick={() => dispatch(chooseAction(o))}
           >
             <span className="choice-label">{optionLabel(s, o)}</span>
             <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
