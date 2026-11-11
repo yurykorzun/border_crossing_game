@@ -701,7 +701,7 @@ export const en: Record<string, string> = {
   'check.phoneSearch.clear.explained': '"You should be more careful." He hands the phone back and calls the next person.',
   'check.phoneSearch.photo': 'A second officer looks at the screen, then at you.',
   'check.phoneSearch.donation': 'The officer prints out one payment and circles it.',
-  'check.phoneSearch.misread': 'He read your salary from abroad as money from a foreign fund. The payslips take an hour to explain.',
+  'check.phoneSearch.misread': 'He read your salary from abroad as money from a foreign fund. You go through your payslips with him.',
   'check.phoneSearch.hint.clear': '"They are reading your messages. Routine."',
   'check.phoneSearch.hint.photo': '"They are looking at your photos."',
   'check.phoneSearch.hint.donation': '"They are looking at an old payment to a fund."',
