@@ -22,7 +22,7 @@ const at = (s: RunState, id: string, desk: Checkpoint): RunState => ({
 });
 const choose = (s: RunState, approach: string): RunState => step(s, { type: 'choose', approach });
 const option = (s: RunState, id: string): Option | undefined => options(s).find((o) => o.approach.id === id);
-const hours = (s: RunState, o: Option | undefined): number =>
+const hours = (o: Option | undefined): number =>
   (o?.effects ?? []).reduce((n, e) => n + ('time' in e && e.time < 0 ? -e.time : 0), 0);
 
 describe('a point verified at passport is not charged again later', () => {
@@ -49,7 +49,7 @@ describe('a point verified at passport is not charged again later', () => {
 
     // Not verified: the same answer takes the medicine to the lab, with its hours.
     const fresh = at(newRun(lena), 'c_medicine', 'customs');
-    expect(hours(fresh, option(fresh, 'declare'))).toBe(1);
+    expect(hours(option(fresh, 'declare'))).toBe(1);
     expect(choose(fresh, 'declare').screen.kind).toBe('wait');
     expect(answerKey(fresh, 'declare', 'label')).toBe('enc.c_medicine.declare.label');
   });
@@ -63,11 +63,11 @@ describe('a point verified at passport is not charged again later', () => {
     expect(choose(interview, 'contract').time).toBe(interview.time);
     // Unverified, the contract check costs its hour.
     const fresh = at(newRun(mark), 'i_employer', 'interview');
-    expect(hours(fresh, option(fresh, 'contract'))).toBe(1);
+    expect(hours(option(fresh, 'contract'))).toBe(1);
     // Lena's weakness on work is in checking it, so a verified entry takes no extra hour either.
     const lenaLetter: RunSetup = { ...lena, loadout: ['hospitalNote', 'employerLetter', 'deed'] };
     const hers = at(choose(at(newRun(lenaLetter), 'p_employer', 'passport'), 'evidence'), 'i_employer', 'interview');
-    expect(hours(hers, option(hers, 'contract'))).toBe(0);
+    expect(hours(option(hers, 'contract'))).toBe(0);
     expect(choose(hers, 'contract').reaction?.map((l) => l.key)).not.toContain('weak.work.reaction');
   });
 
@@ -76,7 +76,7 @@ describe('a point verified at passport is not charged again later', () => {
     const flagged: RunState = { ...shown, flagged: [...(shown.flagged ?? []), 'cashCount'] };
     expect(pointVerified(flagged, 'medicine')).toBe(false);
     const customs = at(flagged, 'c_medicine', 'customs');
-    expect(hours(customs, option(customs, 'declare'))).toBe(1);
+    expect(hours(option(customs, 'declare'))).toBe(1);
     expect(choose(customs, 'declare').screen.kind).toBe('wait');
   });
 
@@ -166,8 +166,8 @@ describe('a contact who confirmed a point is not charged again for it', () => {
 
     const customs = at(named, 'c_host', 'customs');
     // Her statement about where you stay was already checked: no call-in hour on any answer.
-    expect(hours(customs, option(customs, 'evidence'))).toBe(0);
-    expect(hours(customs, option(customs, 'call'))).toBe(1);
+    expect(hours(option(customs, 'evidence'))).toBe(0);
+    expect(hours(option(customs, 'call'))).toBe(1);
     const after = choose(customs, 'evidence');
     expect(after.time).toBe(customs.time);
     expect(after.reaction?.map((l) => l.key)).not.toContain('calledIn.reaction');
@@ -176,13 +176,13 @@ describe('a contact who confirmed a point is not charged again for it', () => {
 
     // Without the point verified, the same card charges her hour.
     const unverified = at({ ...named, verified: {} }, 'c_host', 'customs');
-    expect(hours(unverified, option(unverified, 'evidence'))).toBe(1);
-    expect(hours(unverified, option(unverified, 'call'))).toBe(2);
+    expect(hours(option(unverified, 'evidence'))).toBe(1);
+    expect(hours(option(unverified, 'call'))).toBe(2);
   });
 
   it('a card about something else she can confirm still takes the hour', () => {
     const named = choose(at(newRun(lena), 'p_host', 'passport'), 'mother');
     const medicine = at(named, 'c_medicine', 'customs');
-    expect(hours(medicine, option(medicine, 'evidence'))).toBe(1);
+    expect(hours(option(medicine, 'evidence'))).toBe(1);
   });
 });
