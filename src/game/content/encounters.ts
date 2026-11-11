@@ -166,17 +166,6 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
-    // The funeral asks this right after the opening card (Level.asks). Your
-    // friend's sister has already told the border how long you stay (STATEMENTS),
-    // and the known-facts line says so. Neither answer costs anything here: the
-    // price is the contradiction, if your answer disagrees with hers.
-    id: 'p_days', checkpoint: 'passport', kind: 'routine', topic: 'stay',
-    approaches: [
-      { id: 'days', kind: 'say', effects: [{ claim: 'stayDays' }] },
-      { id: 'weeks', kind: 'say', effects: [{ claim: 'stayWeeks' }] },
-    ],
-  },
-  {
     // A deed proves who owns a flat, not whose face is in the photo. What it gives
     // is a registered address: the clerk looks it up and finds your old ID photo
     // on the entry. Or a face scan, or another photo ID. Asked on a records day,
@@ -225,6 +214,21 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'both', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
+    ],
+  },
+  {
+    // The funeral's stay question, the clerk's follow-up there in the place of
+    // p_stay and p_employer (Level.cards). Only a records-day photo (p_photo, listed
+    // first at the same priority) or a second passport comes before it. Your friend's
+    // sister has already told the border how long you stay (STATEMENTS), and the
+    // known-facts line says so. Neither answer costs anything here: the price is the
+    // contradiction, if your answer disagrees with hers.
+    id: 'p_days', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'stay',
+    // Open while her statement is on file, which is the whole of The funeral.
+    issue: { any: [{ facts: ['sisterSaysDays'] }, { facts: ['sisterSaysWeeks'] }] },
+    approaches: [
+      { id: 'days', kind: 'say', effects: [{ claim: 'stayDays' }] },
+      { id: 'weeks', kind: 'say', effects: [{ claim: 'stayWeeks' }] },
     ],
   },
   {

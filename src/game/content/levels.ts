@@ -9,6 +9,8 @@ import { ENCOUNTERS, INSPECTIONS, STATEMENTS } from './encounters';
 /** Cards only a later level deals. Arrival deals every other card. */
 const LATER_CARDS: readonly string[] = ['p_days'];
 const ALL_CARDS = [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)];
+/** Passport follow-ups The funeral asks how long you stay in place of (p_days). */
+const FUNERAL_SKIPS: readonly string[] = ['p_stay', 'p_employer'];
 
 export const LEVELS: Record<LevelId, Level> = {
   // Level 1, today's mission: every card, no new rule.
@@ -38,8 +40,10 @@ export const LEVELS: Record<LevelId, Level> = {
     goalBody: 'funeral.body',
     startTime: START_TIME,
     minTripTime: MISSION_MIN_TIME,
-    cards: ALL_CARDS,
-    asks: ['p_days'],
+    // How long you stay is the clerk's follow-up here (p_days), in the place of the
+    // other stay question (p_stay, the return ticket's date out) and of who pays you
+    // (p_employer), so the run keeps Arrival's length.
+    cards: ALL_CARDS.filter((id) => !FUNERAL_SKIPS.includes(id)),
     rules: [{ id: 'statements', heeds: [], against: STATEMENTS.map((x) => [x.fact, x.disproves] as const) }],
     statements: STATEMENTS.map((x) => x.fact),
   },

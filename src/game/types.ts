@@ -404,12 +404,6 @@ export interface Level {
    * the first queue says it (QueueBeat.fact).
    */
   statements?: readonly FactId[];
-  /**
-   * Cards the first desk asks right after its opening card (coreLeft() in
-   * src/game/engine.ts). Each one takes one of the run's follow-ups
-   * (MAX_FOLLOW_UPS), so the run is no longer for it.
-   */
-  asks?: readonly string[];
 }
 
 /**
