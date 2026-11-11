@@ -521,12 +521,12 @@ export interface RunState {
    */
   verified?: Partial<Record<Topic, VerifiedPoint>>;
   /**
-   * Where the current desk started: the hours left, how many contacts were named
-   * and how long the log was, so the queue after it can follow what happened
+   * Where the current desk started: the hours left and how long the log was, and
+   * whether an officer has phoned your mother there, so the queue after it can follow what happened
    * there (queueMood() in src/game/engine.ts). Unset before the first desk and in
    * saves from before it existed.
    */
-  deskStart?: { time: number; exposed: number; log: number };
+  deskStart?: { time: number; log: number; phoned?: boolean };
   /** How each desk went, by the index of the queue after it (QueueMood). Unset in saves from before it existed. */
   after?: Partial<Record<number, QueueMood>>;
   /** Follow-ups waiting to be dealt before the next slot. */

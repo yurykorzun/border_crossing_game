@@ -685,18 +685,21 @@ export const DELAY_HOURS = 2;
 
 /**
  * How the desk just finished went, for your mother's next message: an officer
- * phoned her (you named her, or the host call reached her), it took
+ * phoned her (you named her to vouch for you, or the host call reached her; a
+ * lift you arranged with her is not a call), it took
  * DELAY_HOURS or more, or neither. Only the message changes: nothing here
  * costs time or adds a choice.
  */
 export function queueMood(s: RunState): QueueMood {
   const start = s.deskStart;
   if (!start) return 'smooth';
-  const named = s.exposed.slice(start.exposed);
   const answered = s.log.slice(start.log).some((l) => l.key === 'check.hostCall.clear');
-  if (named.includes('mother') || answered) return 'call';
+  if (start.phoned || answered) return 'call';
   return start.time - s.time >= DELAY_HOURS ? 'delay' : 'smooth';
 }
+
+/** Marks that an officer phoned your mother at this desk (queueMood). */
+const phoned = (s: RunState): RunState => (s.deskStart ? { ...s, deskStart: { ...s.deskStart, phoned: true } } : s);
 
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
 function advance(s: RunState, dealer: Dealer): RunState {
@@ -964,6 +967,7 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     const c = assistContact(n);
     if (!c) return s;
     n = { ...n, exposed: [...n.exposed, c], calledIn: callIn(n, c) };
+    if (c === 'mother') n = phoned(n);
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
     // The finding stays on file; the contact only settles what it means, so
     // the check clears with no follow-up and no scrutiny from it.
@@ -994,6 +998,8 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
+  // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
+  if (opt.contact === 'mother' && !opt.approach.namesOnly) n = phoned(n);
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
   n = apply(n, opt.effects);
   // A document shown or a contact who confirmed the point at a desk settles it for the later
@@ -1049,7 +1055,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     }
     case 'ack':
       if (s.reaction) return { ...s, reaction: null };
-      if (s.screen.kind === 'between') return deal({ ...s, deskStart: { time: s.time, exposed: s.exposed.length, log: s.log.length } });
+      if (s.screen.kind === 'between') return deal({ ...s, deskStart: { time: s.time, log: s.log.length } });
       return s;
     case 'turnBack':
       if (!canTurnBack(s)) return s;

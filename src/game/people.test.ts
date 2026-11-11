@@ -77,6 +77,16 @@ describe("your mother's message between desks follows what happened", () => {
         }
   });
 
+  it('arranging a lift with her at an inspection is not a call', () => {
+    const run = newRun({ ...lena, loadout: ['hospitalNote', 'returnTicket', 'employerLetter'] });
+    const s: RunState = { ...run, reaction: null, deskStart: { time: run.time, log: run.log.length }, screen: { kind: 'inspection', id: 's_connection' } };
+    const drive = options(s).find((o) => o.approach.id === 'drive');
+    expect(drive?.contact).toBe('mother');
+    const after = step(s, { type: 'choose', approach: 'drive' });
+    expect(after.exposed).toContain('mother');
+    expect(queueMood(after)).toBe('smooth');
+  });
+
   it('a desk with no start recorded (an old save) reads as smooth', () => {
     expect(queueMood(newRun(lena))).toBe('smooth');
   });
