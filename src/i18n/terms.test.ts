@@ -6,7 +6,9 @@ import { en } from './en';
 
 /** Short words like "mark", "mother" or "and" (or "letter", "your mother's letter"), inserted mid-sentence, so they may start lowercase. */
 const isFragment = (key: string) =>
-  /^contact\.[^.]+$/.test(key) || /^ev\.[^.]+\.(short|the)$/.test(key) || ['ui.exposed', 'ui.protected', 'ui.used', 'ui.and'].includes(key);
+  /^contact\.[^.]+$/.test(key) || /^ev\.[^.]+\.(short|the)$/.test(key) || ['ui.exposed', 'ui.protected', 'ui.used', 'ui.and'].includes(key) ||
+  // The question a carried claim answered, quoted mid-line: "Asked why you came".
+  /^file\.context(\.|$)/.test(key);
 
 /** The names, from the contacts table (contact.* values) plus the one place name. */
 const NAMES: string[] = [

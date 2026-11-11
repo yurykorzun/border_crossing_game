@@ -168,13 +168,14 @@ describe('scenario evals', () => {
     const below = only(4, [at(4.1), at(4.2), at(5.5)]);
     expect(below.fresh).toEqual([]);
     expect(below.exitCode).toBe(0);
-    expect(below.summaries.map(formatSummary)).toEqual(['rule 4: median full run 4.2 min (aim 5, not checked), longest 5.50 of 8 (3 runs)']);
+    // Departure is a second level (rwf.3), so the list shows and its other row counts once.
+    expect(below.summaries.map(formatSummary)).toEqual([`rule 4: median full run 4.2 min (aim 5, not checked), longest 5.50 of 8 (3 runs), plus ${onceWords(tr)} words of the level list read once per session`]);
     // Even count: the median is the mean of the middle two (4.8 and 5.2 = 5).
     expect(only(4, [at(4.6), at(4.8), at(5.2), at(6)]).summaries.map(formatSummary)[0]).toContain('median full run 5.0 min');
     // A run you withdraw from does not count toward the median.
     const withdrawn = only(4, [at(4.6), at(5.5), at(1, 'turnedBack'), at(1, 'turnedBack')]);
     expect(withdrawn.exitCode).toBe(0);
-    expect(withdrawn.summaries.map(formatSummary)).toEqual(['rule 4: median full run 5.0 min (aim 5, not checked), longest 5.50 of 8 (2 runs)']);
+    expect(withdrawn.summaries.map(formatSummary)).toEqual([`rule 4: median full run 5.0 min (aim 5, not checked), longest 5.50 of 8 (2 runs), plus ${onceWords(tr)} words of the level list read once per session`]);
     // With only withdrawn runs there is no median to check.
     expect(only(4, [at(1, 'turnedBack')]).summaries).toEqual([]);
   });

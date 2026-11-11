@@ -11,13 +11,13 @@
 // counted in onceWords(), not in the run's play time. When a screen there
 // changes, change it here too, or the transcript stops being what the player reads.
 
-import { andList, has, own, t, tn } from '../i18n';
+import { andList, getStory, has, own, setStory, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
-import { SEPARATOR, caughtLine, consequence, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './consequence';
+import { SEPARATOR, caughtLine, consequence, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -150,8 +150,10 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   // this run. The other rows count once per session (Line.once), so the run does not get
   // longer as levels are added.
   const list = levels.length > 1;
-  const total = list ? 4 : 3;
-  const at = (n: number) => t('ui.progressCount', { n: list ? n : n - 1, total });
+  // A level that reads a file adds the record step after the traveler (RecordStep in src/App.tsx).
+  const record = !!(setup.file && levelOf(setup).readsFile);
+  const total = (list ? 4 : 3) + (record ? 1 : 0);
+  const at = (n: number) => t('ui.progressCount', { n: (list ? n : n - 1) + (record && n > 2 ? 1 : 0), total });
   if (list) {
     p.add('ui.title');
     p.add('ui.level');
@@ -187,6 +189,15 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.readHistory', { name });
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character, ...CHROME });
   p.add('ui.continueAs', { name });
+  if (record && setup.file) {
+    p.add('ui.title');
+    p.add('ui.back');
+    p.add('ui.progress', { count: t('ui.progressCount', { n: list ? 3 : 2, total }), name: t('ui.record.title') });
+    for (const l of recordLines(setup.file)) p.add(l.key, l.vars ?? {});
+    p.add('ui.record.continue', { traveler: name });
+    p.add('ui.record.standalone');
+    p.add('ui.record.standaloneNote');
+  }
   // Setup 3: Pack your documents (DocumentsStep)
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
@@ -355,7 +366,7 @@ function screenLines(s: RunState, p: Page): void {
     if (desk && !list) p.add(`officer.${desk}.priority`);
     // What this officer already knows, on every desk card (knownLine()).
     if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
-    p.add(questionKey(s, prefix, sc.id));
+    p.add(questionKey(s, prefix, sc.id), questionVars(s, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);
@@ -433,6 +444,17 @@ function endingLines(s: RunState, p: Page): void {
  * level list on the first setup screen: every level (LEVEL_IDS) unless a test passes its own.
  */
 export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): Transcript {
+  // The level's own wording, as the app shows it (setStory() in src/i18n/index.ts).
+  const before = getStory();
+  setStory(setup.level);
+  try {
+    return transcribe(run, setup, levels);
+  } finally {
+    setStory(before);
+  }
+}
+
+function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Transcript {
   let s = newRun(setup);
   const first = new Page(0);
   setupLines(setup, first, levels);

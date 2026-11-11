@@ -136,6 +136,7 @@ export const FACT_TIERS: Record<FactId, OnFileTier> = {
   bankNotice: 'confirmed',
   relativeContact: 'confirmed',
   relativeNamed: 'confirmed',
+  entryRecord: 'recorded',
   donationRecord: 'flagged',
   phoneRefused: 'flagged',
 };

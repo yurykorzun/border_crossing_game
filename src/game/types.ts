@@ -30,12 +30,14 @@ export type FactId =
   | 'bankNotice'
   | 'relativeContact'
   /** Your mother named another relative on the phone: her account, not a record (TESTIMONY). */
-  | 'relativeNamed';
+  | 'relativeNamed'
+  /** Departure: your entry record from the crossing in, open at every desk from the start (RunState.file). */
+  | 'entryRecord';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
-  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact', 'relativeNamed',
+  'noBooking', 'hostStatement', 'bankNotice', 'relativeContact', 'relativeNamed', 'entryRecord',
 ];
 
 /**
@@ -75,6 +77,14 @@ export interface Cond {
   any?: Cond[];
   /** This condition does not hold. */
   not?: Cond;
+  /** The carried file's quoted claim (fileClaim() in src/game/engine.ts) is one of these. Never holds with no file. */
+  fileSaid?: ClaimId[];
+  /** true: the carried file names a contact. false: it names none, or there is no file. */
+  fileNamed?: boolean;
+  /** true: the carried file has a claim a record showed false. false: it has none, or there is no file. */
+  fileDisproved?: boolean;
+  /** What customs kept of the carried file's cash declaration is one of these. Never holds with no file. */
+  fileDeclared?: Declaration[];
 }
 
 /**
@@ -349,7 +359,7 @@ export interface EvidenceCard {
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
-export type LevelId = 'arrival';
+export type LevelId = 'arrival' | 'departure';
 
 /**
  * The one new rule a level adds (docs/research/2026-11-09-balance-and-levels.md,
@@ -362,6 +372,11 @@ export type LevelId = 'arrival';
 export interface LevelRule {
   id: string;
   heeds: readonly string[];
+  /**
+   * Picks heeded only while `when` holds, for a rule whose right answer depends on
+   * the run: in Departure the answer that agrees with your carried file (Cond.fileSaid).
+   */
+  heedsWhen?: readonly { pick: string; when: Cond }[];
 }
 
 export interface Level {
@@ -383,6 +398,10 @@ export interface Level {
   cards: readonly string[];
   /** The rules this level adds. Level 1 adds none. */
   rules: readonly LevelRule[];
+  /** Each desk's two core cards here, when they differ from CORE_CARDS (src/game/content/encounters.ts). */
+  core?: Partial<Record<Checkpoint, readonly [string, string]>>;
+  /** The level opens with the file from your last crossing (RunSetup.file): Departure. */
+  readsFile?: true;
 }
 
 /**
@@ -396,6 +415,15 @@ export interface CarriedFile {
   character: CharacterId;
   ending: EndingId;
   claims: ClaimId[];
+  /**
+   * Each claim as it went on file: when, on which crossing, at which desk and on which
+   * card, so a later desk can quote it. Unset in files from before it existed.
+   */
+  said?: CarriedClaim[];
+  /** Claims a record showed false on that crossing (RunState.disproved). Unset in files from before it existed. */
+  disproved?: ClaimId[];
+  /** What customs kept of your cash declaration (Declaration). Unset in files from before it existed. */
+  declared?: Declaration;
   /** Contacts you named to an official. */
   named: ContactId[];
   /** Documents you packed and did not show. */
@@ -409,6 +437,22 @@ export interface CarriedFile {
   /** Set when no crossing was saved and the file was built from a seed (defaultFile()). */
   seeded?: true;
 }
+
+/** One claim on a carried file: the date of the crossing (YYYY-MM-DD), the crossing, the desk and the card it was said on. */
+export interface CarriedClaim {
+  claim: ClaimId;
+  date: string;
+  crossing: LevelId;
+  desk: Checkpoint;
+  /** The card it was said on: its question is the context the callback quotes. */
+  context: string;
+}
+
+/**
+ * The cash declaration customs kept: under (you said it was under the limit), counted
+ * (the total went on file), shown (a paper answered it), none (you never reached customs).
+ */
+export type Declaration = 'under' | 'counted' | 'shown' | 'none';
 
 /**
  * What comes back after a crossing that got you home, days later and somewhere
@@ -511,6 +555,10 @@ export interface RunState {
    * Unset in saves from before it existed.
    */
   saidAt?: Partial<Record<ClaimId, Checkpoint>>;
+  /** The card each claim was first said on, for the carried file (CarriedClaim.context). Unset in saves from before it existed. */
+  saidOn?: Partial<Record<ClaimId, string>>;
+  /** The file from the crossing before, in a level that reads one (Level.readsFile). */
+  file?: CarriedFile;
   /**
    * Facts that were the reason scrutiny rose, so they read as flagged on file
    * (factTier() in src/game/engine.ts). Unset in saves from before it existed.

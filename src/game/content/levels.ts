@@ -6,6 +6,12 @@ import type { Level, LevelId } from '../types';
 import { MISSION_MIN_TIME, START_TIME } from './world';
 import { ENCOUNTERS, INSPECTIONS } from './encounters';
 
+/** Cards only Departure deals: the desks open with your carried file (rwf.3). */
+const DEPARTURE_ONLY = ['d_entry', 'd_stay', 'd_hold', 'd_declared', 'd_named'];
+/** Arrival cards Departure asks in its own words, from the file: why you came, how long, your cash, your family. */
+const DEPARTURE_REPLACES = ['p_purpose', 'p_stay', 'c_cash', 'i_family'];
+const ALL_CARDS = [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)];
+
 export const LEVELS: Record<LevelId, Level> = {
   // Level 1, today's mission: every card, no new rule.
   arrival: {
@@ -17,8 +23,37 @@ export const LEVELS: Record<LevelId, Level> = {
     goalBody: 'mission.body',
     startTime: START_TIME,
     minTripTime: MISSION_MIN_TIME,
-    cards: [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)],
+    cards: ALL_CARDS.filter((id) => !DEPARTURE_ONLY.includes(id)),
     rules: [],
+  },
+  // Level 2: the return ticket. Your father needs another week of care, and on the way
+  // in you said five days. Every desk opens with the file from your last crossing
+  // (RunSetup.file): what you said, who you named, what customs kept.
+  departure: {
+    id: 'departure',
+    number: 2,
+    title: 'level.departure.title',
+    blurb: 'level.departure.blurb',
+    goalTitle: 'departure:mission.title',
+    goalBody: 'departure:mission.body',
+    startTime: START_TIME,
+    minTripTime: MISSION_MIN_TIME,
+    cards: ALL_CARDS.filter((id) => !DEPARTURE_REPLACES.includes(id)),
+    core: { passport: ['d_entry', 'p_host'], customs: ['c_medicine', 'd_declared'], interview: ['d_named', 'i_employer'] },
+    readsFile: true,
+    rules: [
+      // Giving the reason your file already holds, and explaining the longer stay.
+      // Ignoring the file puts your entry record against you or costs the longer check.
+      // A file that says "a short trip" has nothing true to agree with, so no pick there heeds it.
+      {
+        id: 'file',
+        heeds: ['d_stay.father', 'd_stay.evidence'],
+        heedsWhen: [
+          { pick: 'd_entry.family', when: { fileSaid: ['familyVisit'] } },
+          { pick: 'd_entry.evidence', when: { fileSaid: ['familyVisit'] } },
+        ],
+      },
+    ],
   },
 };
 

@@ -4,7 +4,7 @@
 // one bot run on screen, one step a second, and saves nothing. &seed=<n> picks the run.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { has, t, tn } from './i18n';
+import { has, setStory, t, tn } from './i18n';
 import { answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
@@ -15,12 +15,12 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './game/content/q
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
 import { DEFAULT_LEVEL, LEVELS, levelRows, showsLevelList } from './game/content/levels';
 import { browserStore, load, save, startOver } from './game/save';
-import { recordRun } from './game/carry';
+import { defaultFile, ownFile, recordRun } from './game/carry';
 import type { SaveData, Settings } from './game/save';
-import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
+import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, caughtLine, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './game/consequence';
+import { SEPARATOR, caughtLine, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -47,6 +47,8 @@ function Game() {
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
 
   const run = data.run;
+  // A run shows in its level's own wording; setup sets the level it is on (Picks).
+  setStory(run && resumed ? run.level : undefined);
   const dispatch = (a: Action) => {
     if (!run) return;
     if (a.type === 'choose') sound.stamp();
@@ -79,9 +81,11 @@ function Game() {
           same={setup.same}
           endingsSeen={data.endingsSeen}
           levelsFinished={data.levelsFinished}
+          savedFile={data.file}
+          seed={setup.seed}
           onExit={() => setSetup(null)}
-          onStart={(level, character, loadout) => {
-            setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
+          onStart={(level, character, loadout, file) => {
+            setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed, ...(file ? { file } : {}) }) }));
             setSetup(null);
           }}
         />
@@ -98,6 +102,7 @@ const AUTOPLAY_STEP_MS = 1000;
 interface AutoRun { s: RunState; botRng: number }
 
 function autoRun(index: number): AutoRun {
+  setStory(undefined);
   const setup = setupFor(index);
   return { s: newRun(setup), botRng: botSeed(setup.seed) };
 }
@@ -177,12 +182,18 @@ function Title({ saved, onStart, onResume, settings, onSettings }: {
 // Setup screens, in order. They are presentation state here, not engine phases.
 // Back and Continue walk this list, so a new screen (the destination briefing, 70r.3,
 // goes between traveler and documents) is one more entry and one more case below.
-const SETUP_STEPS = ['level', 'traveler', 'documents', 'begin'] as const;
+const SETUP_STEPS = ['level', 'traveler', 'record', 'documents', 'begin'] as const;
 type SetupStep = (typeof SETUP_STEPS)[number];
 
-/** The steps this player walks: the level list only when more than one level is open (showsLevelList). */
-const stepsFor = (levelsFinished: readonly LevelId[]): readonly SetupStep[] =>
-  showsLevelList(levelsFinished) ? SETUP_STEPS : SETUP_STEPS.filter((s) => s !== 'level');
+/**
+ * The steps this player walks: the level list only when more than one level is open
+ * (showsLevelList), and the traveler's record only in a level that reads one (Level.readsFile).
+ */
+const stepsFor = (levelsFinished: readonly LevelId[], level: LevelId): readonly SetupStep[] =>
+  SETUP_STEPS.filter((s) => (s !== 'level' || showsLevelList(levelsFinished)) && (s !== 'record' || !!LEVELS[level].readsFile));
+
+/** Starts a run: the level, traveler and packing, and the file a level that reads one opens with. */
+type OnStart = (level: LevelId, c: CharacterId, l: EvidenceId[], file?: CarriedFile) => void;
 
 /** "2 / 4" on a setup screen, counted over the steps this player walks. */
 const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
@@ -191,47 +202,57 @@ const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
 // Before the first ending (firstRun) there is no traveler to choose yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1. Back goes to the title, and
 // Change documents opens the packing screen with FIRST_RUN's picks kept.
-function Setup({ bulletin, same, endingsSeen, levelsFinished, onExit, onStart }: {
+function Setup({ bulletin, same, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
   bulletin: BulletinId;
   same?: RunSetup;
   endingsSeen: readonly EndingId[];
   levelsFinished: readonly LevelId[];
+  savedFile: CarriedFile | null;
+  seed: number;
   onExit: () => void;
-  onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
+  onStart: OnStart;
 }) {
   if (same) {
     const level = same.level ?? DEFAULT_LEVEL;
+    setStory(level);
     return <BeginStep level={level} picked={same.loadout} traveler={same.character} bulletin={bulletin}
-      onBegin={() => onStart(level, same.character, same.loadout)} />;
+      onBegin={() => onStart(level, same.character, same.loadout, same.file)} />;
   }
-  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} levelsFinished={levelsFinished} onExit={onExit} onStart={onStart} />;
+  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} levelsFinished={levelsFinished} savedFile={savedFile} seed={seed} onExit={onExit} onStart={onStart} />;
 }
 
-function Picks({ bulletin, endingsSeen, levelsFinished, onExit, onStart }: {
+function Picks({ bulletin, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
   bulletin: BulletinId;
   endingsSeen: readonly EndingId[];
   levelsFinished: readonly LevelId[];
+  savedFile: CarriedFile | null;
+  seed: number;
   /** Back from the first step: the title. */
   onExit: () => void;
-  onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
+  onStart: OnStart;
 }) {
   const firstRun = endingsSeen.length === 0;
-  const steps = stepsFor(levelsFinished);
-  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : steps[0]);
   const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
+  // The file the run opens with, picked on the record step (RecordStep).
+  const [file, setFile] = useState<CarriedFile | undefined>(undefined);
+  const steps = stepsFor(levelsFinished, level);
+  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : steps[0]);
+  setStory(level);
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(steps[steps.indexOf(at) + delta]);
+  const begin = (c: CharacterId) => onStart(level, c, picked, LEVELS[level].readsFile ? file : undefined);
 
   if (firstRun && character) {
     // No traveler screen yet, so packing goes back and forward to the begin screen.
     if (at === 'documents') {
       return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => setAt('begin')} onContinue={() => setAt('begin')} />;
     }
-    return <BeginStep level={level} picked={picked} traveler={character} onBack={onExit} onChangeDocuments={() => setAt('documents')} onBegin={() => onStart(level, character, picked)} />;
+    return <BeginStep level={level} picked={picked} traveler={character} onBack={onExit} onChangeDocuments={() => setAt('documents')} onBegin={() => begin(character)} />;
   }
   if (at === 'level') {
-    return <LevelStep steps={steps} levelsFinished={levelsFinished} onPick={(id) => { setLevel(id); move(1); }} />;
+    // The next step comes from the level picked, since only some levels have a record step.
+    return <LevelStep steps={steps} levelsFinished={levelsFinished} onPick={(id) => { setLevel(id); setAt('traveler'); }} />;
   }
   if (at === 'traveler' || !character) {
     return (
@@ -242,17 +263,69 @@ function Picks({ bulletin, endingsSeen, levelsFinished, onExit, onStart }: {
         onContinue={(c) => {
           // A traveler with fewer slots keeps only the first picks that still fit.
           setPicked((p) => p.slice(0, CHARACTERS[c].evidenceSlots));
+          // Another traveler's file never opens this one's crossing.
+          if (c !== character) setFile(undefined);
           setCharacter(c);
           move(1);
         }}
       />
     );
   }
+  if (at === 'record' || (steps.includes('record') && !file)) {
+    return (
+      <RecordStep count={stepCount(steps, 'record')} traveler={character} saved={ownFile(savedFile, character)}
+        onBack={() => setAt('traveler')}
+        onPick={(f) => { setFile(f ?? defaultFile(seed, character)); setAt('documents'); }} />
+    );
+  }
   if (at === 'documents') {
     return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
   }
   // Change documents is the way to packing, so Back goes one screen further, to the traveler.
-  return <BeginStep level={level} picked={picked} traveler={character} onBack={() => setAt('traveler')} onChangeDocuments={() => setAt('documents')} onBegin={() => onStart(level, character, picked)} />;
+  return <BeginStep level={level} picked={picked} traveler={character} onBack={() => setAt('traveler')} onChangeDocuments={() => setAt('documents')} onBegin={() => begin(character)} />;
+}
+
+/**
+ * Departure's record step, after the traveler: a short recap of this traveler's file
+ * from their last crossing, then a choice. Continue opens the crossing with that file;
+ * Play standalone opens it with a seeded default file (defaultFile()) and leaves the
+ * saved file as it is (recordRun()). Only the traveler's own file is offered, so
+ * Lena's file never opens Mark's crossing.
+ */
+function RecordStep({ count, traveler, saved, onBack, onPick }: {
+  count: string;
+  traveler: CharacterId;
+  saved: CarriedFile | null;
+  onBack: () => void;
+  /** The saved file to continue with, or undefined for a standalone run. */
+  onPick: (file: CarriedFile | undefined) => void;
+}) {
+  const name = t(`char.${traveler}.name`);
+  const [title, ...lines] = saved ? recordLines(saved) : [];
+  return (
+    <main className="setup setup-step record-step">
+      <div className="setup-body">
+        <p className="setup-title">{t('ui.title')}</p>
+        <header className="step-head">
+          <BackButton onBack={onBack} />
+          <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.record.title') })} part={count} /></p>
+        </header>
+        {saved ? (
+          <section className="paper record" data-record>
+            <h2>{t(title.key)}</h2>
+            <ul>{lines.map((l, i) => <li key={i}>{t(l.key, l.vars)}</li>)}</ul>
+          </section>
+        ) : (
+          <p className="muted-dark record-none" data-record-none>{t('ui.record.noFile', { traveler: name })}</p>
+        )}
+      </div>
+      <div className="controls stack">
+        {saved && <button className="primary record-continue" onClick={() => onPick(saved)}>{t('ui.record.continue', { traveler: name })}</button>}
+        <button className={`${saved ? 'quiet' : 'primary'} record-standalone`} onClick={() => onPick(undefined)}>{t('ui.record.standalone')}</button>
+        <p className="muted-dark record-note">{t('ui.record.standaloneNote')}</p>
+      </div>
+    </main>
+  );
 }
 
 /**
@@ -728,7 +801,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
   const id = sc.kind === 'encounter' || sc.kind === 'inspection' ? sc.id : '';
   const prefix = sc.kind === 'inspection' ? 'insp' : 'enc';
-  const question = t(questionKey(s, prefix, id));
+  const question = t(questionKey(s, prefix, id), questionVars(s, id));
   // The question sits right on top of the answers: a short one is a big heading on its
   // own, a longer one goes in a light card so it still reads as the officer speaking.
   // A challenge card quotes what you said and the fact that catches it, so it always gets the card.

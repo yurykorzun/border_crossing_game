@@ -10,6 +10,8 @@ import { FOLLOW_UP_SLOT, cardFor, chooseAction, choices, costsOf, deskIntro, end
 import type { Option, RunSetup } from './engine';
 import { hoursOf, unexplained } from './lint';
 import { tryStep } from './play';
+import { SAMPLE_FILES, defaultFile } from './carry';
+import { LEVELS } from './content/levels';
 import { FACT_IDS } from './types';
 import type { Action, CheckId, ClaimId, ContactId, Effect, FactId, FactMap, RunState } from './types';
 
@@ -1056,11 +1058,17 @@ describe('exposure needs a stated reason, and each reaction says which of three 
     expect(held.length).toBeGreaterThan(0);
     for (const [card, a] of held) expect(a.reacts, `${card}.${a.id}`).toMatch(/^(suspicion|testimony|disproof)$/);
     // Each one answered on every day, with her address or the donation record on file or neither: tagged exactly when it adds scrutiny.
+    // A Departure card (rwf.3) is answered in Departure, from a file that says "a short trip" and from one that
+    // says "family", with the entry record on file at every desk as newRun() puts it there.
     const tagged = new Set<string>();
+    const departureOnly = (card: string) => !LEVELS.arrival.cards.includes(card);
+    const files = [SAMPLE_FILES.lena, defaultFile(1, 'lena')];
     for (const [card, a] of held)
       for (const bulletin of ['records', 'accommodation', 'customs'] as const)
+        for (const file of departureOnly(card) ? files : [undefined])
         for (const facts of [known(), known('familyAddress'), known('donationRecord')]) {
-          const s = at({ ...newRun({ ...lena, bulletin }), facts }, card);
+          const base = newRun({ ...lena, bulletin, ...(file ? { level: 'departure' as const, file } : {}) });
+          const s = at({ ...base, facts: { ...base.facts, ...facts } }, card);
           const o = options(s).find((x) => x.approach.id === a.id);
           if (!o || o.blocked) continue;
           const r = tryStep(s, { type: 'choose', approach: a.id } as Action);

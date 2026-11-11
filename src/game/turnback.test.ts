@@ -29,6 +29,11 @@ function statesOf(setup: RunSetup, actions: ReturnType<typeof playRun>['actions'
   return out;
 }
 
+// The one desk card with a way out: Departure's exit desk holds your passport over a claim
+// your last crossing showed false, and leaving without it ends the crossing (d_hold, rwf.3).
+// It is dealt only from a file with a disproved claim, so you never choose to walk away from a desk.
+const HELD = ['d_hold'];
+
 describe('turning back is offered only at the early point', () => {
   it('is offered in the passport queue, before the first desk asks anything', () => {
     const s = newRun(lena);
@@ -54,7 +59,7 @@ describe('turning back is offered only at the early point', () => {
   });
 
   it('is gone once you walk up to the booth: no desk card has a way out', () => {
-    expect(ENCOUNTERS.filter((e) => e.approaches.some((a) => a.kind === 'withdraw')).map((e) => e.id)).toEqual([]);
+    expect(ENCOUNTERS.filter((e) => e.approaches.some((a) => a.kind === 'withdraw')).map((e) => e.id)).toEqual(HELD);
     const desk = step(newRun(lena), { type: 'ack' });
     expect(desk.screen.kind).toBe('encounter');
     expect(offersTurnBack(desk)).toBe(false);
@@ -98,7 +103,7 @@ describe('turning back is offered only at the early point', () => {
               if (!(sc.kind === 'between' && sc.next === TURN_BACK_QUEUE && s.decisions === 0)) bad.push(`turn back offered at ${where}`);
             }
             if (s.reaction) continue;
-            if (sc.kind === 'encounter' && offersWithdraw(s)) bad.push(`withdraw on desk card ${sc.id} (${where})`);
+            if (sc.kind === 'encounter' && offersWithdraw(s) && !HELD.includes(sc.id)) bad.push(`withdraw on desk card ${sc.id} (${where})`);
             if (sc.kind === 'inspection') {
               if (offersWithdraw(s)) returns++;
               if (offersWithdraw(s) !== RETURN_ALLOWED.includes(sc.id)) bad.push(`inspection ${sc.id} withdraw ${offersWithdraw(s)} (${where})`);

@@ -11,6 +11,16 @@ let locale: Locale = 'en';
 export const setLocale = (l: Locale) => { locale = l; };
 export const getLocale = () => locale;
 
+/**
+ * The level being played, whose own wording t() prefers: `departure:ui.goal` over
+ * `ui.goal` in Departure, because there you are leaving for your flight, not
+ * heading to the hospital. Set where a run is shown (src/App.tsx, transcriptOf());
+ * unset shows Arrival's.
+ */
+let story: string | undefined;
+export const setStory = (level: string | undefined) => { story = level; };
+export const getStory = () => story;
+
 const ID_VARS: Record<string, (id: string) => string> = {
   contact: (id) => `contact.${id}`,
   /** "My cousin Ilya", to open a spoken answer: "My cousin Ilya lives here." */
@@ -57,7 +67,8 @@ export function andList(items: readonly string[]): string {
 }
 
 export function t(key: string, vars: Record<string, string | number> = {}): string {
-  const s = LOCALES[locale][key] ?? en[key];
+  const told = story ? `${story}:${key}` : undefined;
+  const s = (told && (LOCALES[locale][told] ?? en[told])) || (LOCALES[locale][key] ?? en[key]);
   if (s === undefined) throw new Error(`missing text: ${key}`);
   return s.replace(/\{(\w+)\}/g, (_, name: string) => {
     const v = vars[name];

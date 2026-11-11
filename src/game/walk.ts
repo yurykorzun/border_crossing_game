@@ -18,9 +18,10 @@ import {
   choices, optionFor, options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
+import { SAMPLE_FILES, defaultFile } from './carry';
 import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, BulletinId, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, RunState } from './types';
+import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
@@ -38,12 +39,28 @@ export function combinations<T>(list: readonly T[], k: number): T[][] {
   return [...combinations(rest, k - 1).map((c) => [head, ...c]), ...combinations(rest, k)];
 }
 
-/** Every character x packing x bulletin in one level. The seed only moves cosmetic beats here. */
+const defaults = new Map<CharacterId, CarriedFile>();
+/** The seeded default file for a traveler (defaultFile(1) in src/game/carry.ts), built once. */
+const defaultFor = (c: CharacterId): CarriedFile => {
+  if (!defaults.has(c)) defaults.set(c, defaultFile(1, c));
+  return defaults.get(c)!;
+};
+
+/**
+ * Every character x packing x bulletin in one level. The seed only moves cosmetic beats here.
+ * A level that reads a file (Level.readsFile) gets the traveler's seeded default file and a
+ * played-looking one (SAMPLE_FILES) in a checkerboard over packing and bulletin, so both
+ * files meet every packing and every bulletin without doubling the walk.
+ */
 export function allSetups(level: LevelId = DEFAULT_LEVEL): RunSetup[] {
   const out: RunSetup[] = [];
+  const reads = levelOf({ level }).readsFile;
   for (const character of CHARACTER_IDS as CharacterId[])
-    for (const loadout of combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots))
-      for (const bulletin of BULLETINS) out.push({ level, character, loadout, bulletin, seed: 1 });
+    combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots).forEach((loadout, i) =>
+      BULLETINS.forEach((bulletin, j) => out.push({
+        level, character, loadout, bulletin, seed: 1,
+        ...(reads ? { file: (i + j) % 2 ? SAMPLE_FILES[character] : defaultFor(character) } : {}),
+      })));
   return out;
 }
 
@@ -132,6 +149,9 @@ const key = (s: RunState) =>
     seed: 0,
     rng: 0,
     log: 0,
+    // Fixed for the whole setup (the memo is per setup), or only read into the next file.
+    file: 0,
+    saidOn: 0,
     reaction: s.reaction ? 1 : 0,
     screen: s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
   });
