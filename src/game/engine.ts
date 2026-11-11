@@ -1049,7 +1049,8 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
   n = apply(n, opt.effects);
   // A document shown or a contact who confirmed the point at a desk settles it for the later
-  // desks. At an inspection the point settled is the open issue it is about (Inspection.issue).
+  // desks. At an inspection the point settled is the open issue it is about (Inspection.issue),
+  // and a check there that confirms it (the lab handing the medicine back) settles it too.
   // On the day the bulletin orders that point checked (every host phoned), a name given at a
   // desk is not yet a confirmation: the check is what confirms it, so it settles nothing here.
   const vouched = opt.contact && opt.vouches !== BULLETIN_TOPICS[s.bulletin] ? opt.vouches : undefined;
@@ -1058,7 +1059,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
     // A record check that confirmed the point (Approach.confirms) settles it like a document.
     if (opt.approach.confirms && topic && !points.includes(topic)) points.push(topic);
     n = verifyPoints(n, points);
-  } else if (opt.card || vouched) {
+  } else if (opt.card || vouched || opt.approach.confirms) {
     const issue = inspectionIssue(s);
     if (issue) n = verifyPoints(n, [issue]);
   }

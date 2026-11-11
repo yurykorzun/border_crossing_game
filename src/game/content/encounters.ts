@@ -528,7 +528,8 @@ export const INSPECTIONS: Inspection[] = [
     id: 's_medicine', kind: 'confiscation', issue: 'medicine', when: { bulletin: 'customs' },
     approaches: [
       { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
-      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }] },
+      // The lab looks at it and hands it back, so the prescription is verified (Approach.confirms).
+      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }], confirms: true },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
@@ -540,8 +541,9 @@ export const INSPECTIONS: Inspection[] = [
     approaches: [
       // A full search counts the cash, so the total goes on file.
       // The search report, cash total included, goes with you to the next desk.
+      // They find the prescription with the medicine, so it is verified (Approach.confirms).
       {
-        id: 'wait', kind: 'verify', requires: { lastHours: false },
+        id: 'wait', kind: 'verify', requires: { lastHours: false }, confirms: true,
         effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }],
       },
       { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },

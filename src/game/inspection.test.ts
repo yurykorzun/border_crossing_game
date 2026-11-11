@@ -8,7 +8,7 @@ import { t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { INSPECTIONS } from './content/encounters';
 import { CHECKPOINTS } from './types';
-import { inspectionIssue, knownLine, newRun, pointVerified, step } from './engine';
+import { inspectionIssue, knownLine, newRun, options, pointVerified, step } from './engine';
 import type { Action, RunState } from './types';
 
 const SEEDS = 200;
@@ -68,6 +68,39 @@ describe('an inspection names the open issue it is about', () => {
     const accepted = step(at, { type: 'choose', approach: 'accept' });
     expect(pointVerified(accepted, 'purpose')).toBe(false);
     expect(accepted.facts.fatherCondition).toBeDefined();
+  });
+
+  it('waiting for the lab at the medicine inspection verifies the prescription', () => {
+    const lena = { character: 'lena' as const, bulletin: 'customs' as const, seed: 3 };
+    const at: RunState = { ...newRun({ ...lena, loadout: ['hotel', 'motherLetter', 'employerLetter'] }), checkpoint: CHECKPOINTS.length - 1, screen: { kind: 'inspection', id: 's_medicine' }, inspections: 1, seen: ['s_medicine'] };
+    expect(at.medicine).toBe(true);
+    expect(pointVerified(at, 'medicine')).toBe(false);
+    const waited = step(at, { type: 'choose', approach: 'wait' });
+    expect(pointVerified(waited, 'medicine')).toBe(true);
+    expect(waited.medicine).toBe(true);
+  });
+
+  it(`over ${SEEDS} Arrival seeds per style, every answer offered at an inspection settles its issue or changes the file`, () => {
+    const answers = new Set<string>();
+    for (const style of BOT_STYLES)
+      for (let i = 0; i < SEEDS; i++)
+        for (const { s } of steps(style, i)) {
+          if (s.screen.kind !== 'inspection' || s.reaction) continue;
+          const issue = inspectionIssue(s)!;
+          for (const o of options(s)) {
+            if (o.blocked || o.approach.kind === 'withdraw') continue;
+            const where = `${style} seed ${i + 1} ${s.screen.id}.${o.approach.id}`;
+            answers.add(`${s.screen.id}.${o.approach.id}`);
+            const n = step(s, { type: 'choose', approach: o.approach.id });
+            const changed = pointVerified(n, issue)
+              || JSON.stringify(n.facts) !== JSON.stringify(s.facts)
+              || n.medicine !== s.medicine
+              || (n.travel ?? 0) !== (s.travel ?? 0)
+              || n.exposed.length > s.exposed.length;
+            expect(changed, where).toBe(true);
+          }
+        }
+    expect(answers.has('s_medicine.wait')).toBe(true);
   });
 });
 

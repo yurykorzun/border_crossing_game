@@ -140,6 +140,8 @@ export interface Approach {
   /**
    * A record check that confirms the card's point at the desk (the employer register):
    * like a document shown, it verifies the point for the later desks (RunState.verified).
+   * At an inspection it verifies the open issue the inspection is about (the lab
+   * handing the medicine back).
    */
   confirms?: boolean;
   /**
@@ -226,7 +228,8 @@ export interface Inspection {
    * The open issue on the file this inspection is about: a point no desk has
    * verified (pointVerified() in src/game/engine.ts). It is dealt only while that
    * point is open, and the screen names it (knownLine()). An answer that shows a
-   * paper or has a contact confirm it settles the point; any other answer
+   * paper, has a contact confirm it or runs a check that confirms it
+   * (Approach.confirms) settles the point; any other answer
    * changes it instead (a fact goes on file, the medicine is held, the trip is longer).
    */
   issue: Topic;
