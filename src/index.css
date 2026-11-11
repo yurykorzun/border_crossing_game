@@ -35,6 +35,18 @@
   --gap: 8px;
   --radius: 6px;
   --tap: 56px;
+  /* Type scale (checked in e2e/frame.spec.ts): main text 18 px on about 26 px, supporting text 16 px
+     and nothing smaller in the sans face (rules and consequences included), screen headings
+     24-28 px, the main title 32-36 px. Mono labels are captions, not text to read. */
+  --text: 1.125rem;
+  --leading: 1.45;
+  --text-small: 1rem;
+  --heading: 1.5rem;
+  --title: 2.125rem;
+  /* Every button is at least this tall; the strong ones use --tap. */
+  --tap-min: 52px;
+  /* Padding inside a paper card. */
+  --card-pad: 16px;
   color-scheme: dark;
 }
 
@@ -44,8 +56,9 @@ body {
   background: var(--bg);
   color: var(--paper);
   font-family: var(--sans);
-  font-size: 1.0625rem; /* 17px at the default 16px root, and it grows with the reader's text size */
-  line-height: 1.4;
+  /* Main text: 18px on 26px at the default 16px root, and it grows with the reader's text size. */
+  font-size: var(--text);
+  line-height: var(--leading);
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
 }
@@ -54,7 +67,7 @@ h1, h2, h3 { margin: 0 0 var(--gap); line-height: 1.2; }
 p { margin: 0 0 var(--gap); }
 .mono { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .muted { color: var(--muted); }
-.muted-dark { color: #c5cec9; margin: 0; font-size: 0.9rem; }
+.muted-dark { color: #c5cec9; margin: 0; font-size: var(--text-small); }
 
 /* ── Shell: fixed portrait column, safe areas, never wider than a phone */
 .shell {
@@ -70,12 +83,23 @@ p { margin: 0 0 var(--gap); }
     max(env(safe-area-inset-left), 16px);
 }
 .shell > main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+/* One frame on every screen: header, scene or content, decisions, then the utility tray right
+   under them, never pushed to the bottom of the window. On the title and setup screens the spare
+   height goes above and below that block; on a run screen it goes below the tray, so the header
+   and the scene stay put from one card to the next. When larger text needs more room the auto
+   margins drop to nothing and the screen scrolls. */
+.title-screen > :first-child,
+.setup-step > :first-child,
+.traveler-step > :first-child { margin-top: auto; }
+.title-screen > :last-child,
+.setup-step > :last-child,
+.traveler-step > :last-child { margin-bottom: auto; }
 
 .paper {
   background: var(--paper);
   color: var(--ink);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: var(--card-pad);
 }
 
 /* ── Controls: the bottom band, always on a paper-backed button */
@@ -110,36 +134,34 @@ p { margin: 0 0 var(--gap); }
 .choice {
   background: var(--paper);
   color: var(--navy);
-  padding: 10px 14px;
+  padding: 10px var(--card-pad);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   transition: transform 120ms ease-out;
 }
 .choice:active:not(:disabled) { transform: scale(0.98); }
 .choice:disabled { background: var(--paper-2); color: var(--muted); cursor: default; }
 .choice-label { font-weight: 600; }
-.choice-sub { font-size: 0.9rem; color: var(--muted); }
+.choice-sub { font-size: var(--text-small); color: var(--muted); }
 .primary:focus-visible, .choice:focus-visible, .tools button:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
 
 /* One icon and one plain line per answer. Colour (docs/plan.md "UI rules"): amber marks
    attention or escalation, red only a confirmed serious consequence. */
-.consequence { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: var(--muted); }
-.consequence .icon { margin-top: 2px; }
+.consequence { display: flex; align-items: flex-start; gap: 6px; font-size: var(--text-small); line-height: 1.35; color: var(--muted); }
+.consequence .icon { margin-top: 3px; }
 .consequence-text { min-width: 0; overflow-wrap: anywhere; }
 /* Colour only, no bold: every available answer carries the same weight. */
 .part.amber { color: var(--amber-paper); }
 .part.red { color: var(--danger-paper); }
 
 /* ── Title */
-.title-screen { justify-content: space-between; }
-.title-card { margin-top: 15svh; }
-.title-card h1 { font-size: 2.2rem; }
+.title-card h1 { font-size: var(--title); }
 .stamp-line { color: var(--danger-paper); }
 
 /* ── Setup */
 .setup { overflow-y: auto; }
-.on-dark { font-size: 1.1rem; margin-top: 4px; }
+.on-dark { font-size: var(--heading); margin-top: 4px; }
 .rule { font-weight: 600; }
 /* Today's bulletin: one amber bar, one sentence (a customs day adds a second, for cash, in the same bar). Amber marks attention (docs/plan.md "UI rules"). */
 .bulletin {
@@ -152,7 +174,7 @@ p { margin: 0 0 var(--gap); }
   border-radius: var(--radius);
   color: var(--amber-dark);
   padding: 8px 12px;
-  font-size: 0.9rem;
+  font-size: var(--text-small);
   line-height: 1.35;
 }
 .bulletin .icon { margin-top: 2px; }
@@ -169,7 +191,7 @@ p { margin: 0 0 var(--gap); }
   padding: 10px 12px;
   text-align: start;
 }
-.doc p { margin: 4px 0 0; font-size: 0.85rem; color: var(--muted); }
+.doc p { margin: 4px 0 0; font-size: var(--text-small); color: var(--muted); }
 .pick .doc { cursor: pointer; min-height: var(--tap); }
 .doc.picked { border-color: var(--navy); box-shadow: inset 6px 0 0 var(--navy); background: #fffaf0; }
 .doc.used { opacity: 0.55; }
@@ -178,15 +200,13 @@ p { margin: 0 0 var(--gap); }
 /* ── Setup screens: the body scrolls when it must (larger text, the packing list); the button stays put. */
 .traveler-step, .setup-step { overflow: hidden; }
 .setup-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-/* On a wide window the body only takes the height it needs, so Continue sits right under the
-   cards instead of at the bottom of the window. It still shrinks and scrolls when it must. */
-@media (min-width: 600px) {
-  .setup-body { flex: 0 1 auto; }
-}
+/* The body only takes the height it needs, so Continue sits right under the cards instead of at
+   the bottom of the window. It still shrinks and scrolls when it must. */
+.setup-body { flex: 0 1 auto; }
 .step-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .step-head h2 { margin: 0; }
 .back {
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 6px 4px;
   background: transparent;
   border: 0;
@@ -195,20 +215,25 @@ p { margin: 0 0 var(--gap); }
 }
 .back:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
 /* Packing (DocumentsStep): scene slot, stage, title and count, bulletin, the cue, six rows (topics, then Reveals), each line unwrapped.
-   The scene is decoration, so it gives up to 24px before the list has to scroll (a customs day's bulletin has a second line). */
+   The scene is decoration behind the one message, so it is only as tall as the message needs. */
 .pack-scene {
   position: relative;
-  flex: 0 1 72px;
-  min-height: 48px;
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  padding: 6px 8px;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--wall);
 }
 .step-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .stage-label { margin: 0; font-family: var(--mono); font-size: 0.9rem; letter-spacing: 0.06em; font-variant-caps: all-small-caps; color: #c5cec9; }
-.pack-count { margin: 0; font-size: 0.9rem; color: #c5cec9; }
+.pack-count { margin: 0; font-size: var(--text-small); color: #c5cec9; }
 .documents-step .setup-body { gap: 8px; }
-.documents-step .cards { gap: 6px; }
+.documents-step .cards { gap: 4px; }
+/* The count sits on the heading's line, so the list keeps the room. */
+.pack-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; width: 100%; }
+.pack-title .on-dark { margin: 0; }
 .pick .doc {
   display: flex;
   align-items: center;
@@ -218,11 +243,11 @@ p { margin: 0 0 var(--gap); }
 }
 .pick .doc.picked { box-shadow: none; border-color: var(--amber-dark); }
 .doc-text { display: flex; flex-direction: column; min-width: 0; }
-/* Names at 17px and both detail lines at 16px at the default text size (2026-11-09 design review). */
-.doc-text strong { color: var(--navy); font-size: 1.0625rem; line-height: 1.25; }
-.doc-detail { font-size: 1rem; color: var(--muted); line-height: 1.25; }
+/* Names at 18px and both detail lines at 16px at the default text size (2026-11-09 design review). */
+.doc-text strong { color: var(--navy); font-size: var(--text); line-height: 1.2; }
+.doc-detail { font-size: var(--text-small); color: var(--muted); line-height: 1.2; }
 /* The one cue above the list: plain text, no badge, because it explains the bulletin and promises nothing. */
-.pack-cue { margin: 0; font-size: 1rem; line-height: 1.35; color: var(--paper); }
+.pack-cue { margin: 0; font-size: var(--text-small); line-height: 1.35; color: var(--paper); }
 .checkbox {
   flex: none;
   width: 22px;
@@ -237,7 +262,7 @@ p { margin: 0 0 var(--gap); }
 .doc.picked .checkbox { background: var(--amber-dark); border-color: var(--amber-paper); }
 .checkbox .icon { width: 14px; height: 14px; }
 .pick .doc:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
-.more-below { margin: 0; text-align: center; font-size: 0.85rem; color: var(--amber-dark); }
+.more-below { margin: 0; text-align: center; font-size: var(--text-small); color: var(--amber-dark); }
 /* Continue is the one strong action here, so it is amber once you can take it. */
 .documents-step .controls .primary:enabled { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 .mission .rule { margin-top: 2px; }
@@ -266,8 +291,8 @@ p { margin: 0 0 var(--gap); }
 /* A locked level: still listed, with what opens it in place of its blurb. */
 .level:disabled { cursor: default; border-style: dashed; }
 .level-number { color: var(--muted); }
-.level-name { color: var(--navy); font-size: 1.1rem; line-height: 1.25; }
-.level-line { font-size: 0.85rem; color: var(--muted); line-height: 1.3; }
+.level-name { color: var(--navy); font-size: var(--text); line-height: 1.25; }
+.level-line { font-size: var(--text-small); color: var(--muted); line-height: 1.3; }
 .traveler-step .setup-body { gap: 10px; }
 .setup-title {
   margin: 8px 0 0;
@@ -289,7 +314,7 @@ p { margin: 0 0 var(--gap); }
 }
 /* A journey scene fills its slot (traveler, packing, ending). */
 .journey-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-.premise { margin: 0; font-size: 1.45rem; line-height: 1.25; }
+.premise { margin: 0; font-size: var(--heading); line-height: 1.25; }
 .travelers { display: grid; gap: var(--gap); }
 .traveler {
   display: grid;
@@ -321,9 +346,9 @@ p { margin: 0 0 var(--gap); }
 .portrait { width: 52px; height: auto; flex: none; }
 .traveler-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .traveler-name { color: var(--navy); line-height: 1.25; }
-.traveler-line { font-size: 0.85rem; color: var(--muted); line-height: 1.3; }
+.traveler-line { font-size: var(--text-small); color: var(--muted); line-height: 1.3; }
 .history-toggle {
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 6px 0;
   background: transparent;
   border: 0;
@@ -335,7 +360,7 @@ p { margin: 0 0 var(--gap); }
 .history-toggle::after { content: ' ▾'; text-decoration: none; display: inline-block; margin-inline-start: 4px; }
 .history-toggle[aria-expanded='true']::after { content: ' ▴'; }
 .history-toggle:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
-.history-detail { margin: 0; padding-inline-start: 18px; font-size: 0.9rem; display: grid; gap: 4px; }
+.history-detail { margin: 0; padding-inline-start: 18px; font-size: var(--text-small); display: grid; gap: 4px; }
 .history-detail[hidden] { display: none; }
 /* Continue is the one strong action here, so it is amber once you can take it. */
 .traveler-step .controls .primary:enabled { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
@@ -344,18 +369,18 @@ p { margin: 0 0 var(--gap); }
 .run { gap: 10px !important; }
 /* Where you stand: the goal, which checkpoint (and phase), then the clock with its time bar and scrutiny. */
 .strip { display: grid; gap: 2px; flex: none; }
-.goal { margin: 0; font-weight: 700; font-size: 1.05rem; }
+.goal { margin: 0; font-weight: 700; font-size: var(--text); line-height: 1.3; }
 .strip-stats { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .stat { display: flex; align-items: center; gap: 6px; }
 /* The clock group: hours left over the bar that shows them, so the bar reads as time and not progress. */
 .stat.time { flex: 1; min-width: 0; flex-direction: column; align-items: stretch; gap: 4px; }
 .clock-line { display: flex; align-items: center; gap: 6px; }
 /* "8 hours left" is a sentence, so it keeps its case. */
-.stat-label.hours { font-size: 0.9rem; color: var(--paper); white-space: nowrap; }
+.stat-label.hours { font-size: var(--text-small); color: var(--paper); white-space: nowrap; }
 .amber { color: var(--amber-dark); }
 .strip-divider { width: 1px; height: 16px; background: var(--bg-line); opacity: 0.4; }
 .scrutiny {
-  min-height: 44px;
+  min-height: var(--tap-min);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -367,7 +392,7 @@ p { margin: 0 0 var(--gap); }
   cursor: pointer;
 }
 /* Dotted underline: it opens the scrutiny sheet, so it should look tappable. */
-.scrutiny-text { font-size: 0.9rem; white-space: nowrap; text-decoration: underline dotted; text-underline-offset: 3px; }
+.scrutiny-text { font-size: var(--text-small); white-space: nowrap; text-decoration: underline dotted; text-underline-offset: 3px; }
 .scrutiny.lvl-3 .scrutiny-text { color: var(--danger-dark); }
 .time-bar { position: relative; display: block; height: 4px; background: var(--bg-2); border-radius: 2px; }
 .time-bar i { display: block; height: 100%; background: var(--amber-dark); border-radius: 2px; }
@@ -430,17 +455,17 @@ p { margin: 0 0 var(--gap); }
 
 /* The dialogue sits right under the scene. With larger text the panel scrolls; answers never shrink. */
 .panel { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
-.question { font-size: 1.15rem; font-weight: 600; margin: 0; }
+.question { font-size: 1.25rem; line-height: 1.3; font-weight: 600; margin: 0; }
 /* On a card the question sits right on top of the answers, the biggest text on screen. */
 .ask { flex: none; }
 .ask-short { padding: 2px 2px 0; }
-.ask-short .question { font-size: 1.4rem; line-height: 1.25; }
-.ask-card { padding: 12px 14px; }
+.ask-short .question { font-size: var(--heading); line-height: 1.25; }
+.ask-card { padding: 12px var(--card-pad); }
 /* What the officer at this desk cares about, once, above the first question there. */
-.priority { margin: 0 0 6px; font-size: 0.9rem; color: #c5cec9; }
+.priority { margin: 0 0 6px; font-size: var(--text-small); line-height: 1.35; color: #c5cec9; }
 .ask-card .priority { color: var(--muted); }
 /* What this officer already knows, from the file: one small line above every desk question. */
-.known { margin: 0 0 6px; font-size: 0.85rem; color: #c5cec9; }
+.known { margin: 0 0 6px; font-size: var(--text-small); line-height: 1.35; color: #c5cec9; }
 .ask-card .known { color: var(--muted); }
 .ask-short.inspection { padding-inline-start: 10px; }
 /* A caught claim: your own words and the fact that catches them, under the question. */
@@ -448,14 +473,14 @@ p { margin: 0 0 var(--gap); }
 .reaction .said { font-style: italic; }
 /* What changed: plain lines under the officer's words, amber for escalation, red only for a confirmed loss. */
 .changes { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px dashed var(--bg-line); display: flex; flex-direction: column; gap: 4px; }
-.change { font-size: 0.95rem; }
+.change { font-size: var(--text-small); }
 .change.amber { color: var(--amber-paper); font-weight: 600; }
 .change.red { color: var(--danger-paper); font-weight: 600; }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
 .waiting { cursor: pointer; }
 .waiting .beat { margin: 8px 0 0; color: var(--muted); }
 .controls .wait-go { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
-.skip { font-size: 0.8rem; margin: 10px 0 0; }
+.skip { font-size: var(--text-small); margin: 10px 0 0; }
 @media (prefers-reduced-motion: no-preference) {
   .waiting .beat, .reaction p, .change, .queue-beat .msg { animation: fade-in 400ms ease-out both; }
 }
@@ -483,22 +508,22 @@ p { margin: 0 0 var(--gap); }
 .queue-beat .msg[data-kind='narration'] { font-style: italic; color: #dfe5e1; }
 /* My story keeps every message so far, oldest first. */
 .messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.msg-from { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.msg-from { display: block; font-size: var(--text-small); font-weight: 600; color: var(--muted); }
 .msg {
   background: var(--paper);
   color: var(--ink);
   border-radius: 12px 12px 12px 2px;
   padding: 8px 12px;
-  font-size: 0.95rem;
+  font-size: var(--text-small);
   max-width: 92%;
 }
 
 /* Bottom tray, on every run screen: My story and Evidence share the width, Settings is a gear on the end. */
-.tools { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--gap); flex: none; margin-top: auto; }
-.tools .tool-settings { width: 44px; padding: 0; }
+.tools { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--gap); flex: none; }
+.tools .tool-settings { width: var(--tap-min); padding: 0; }
 .tools .tool-settings .icon { width: 20px; height: 20px; }
 .tools button {
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 6px 8px;
   display: flex;
   align-items: center;
@@ -519,7 +544,7 @@ p { margin: 0 0 var(--gap); }
 /* Start over, under the settings toggles: a plain button and what it keeps. */
 .start-over { margin-top: 16px; }
 .start-over-button { width: 100%; justify-content: center; font-weight: 600; border: 1px solid var(--ink); }
-.start-over p { margin: 8px 0 0; font-size: 0.9rem; }
+.start-over p { margin: 8px 0 0; font-size: var(--text-small); }
 
 /* ── Bottom sheet on <dialog> */
 .sheet {
@@ -540,17 +565,17 @@ p { margin: 0 0 var(--gap); }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; }
 .sheet h3 { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-top: 14px; }
 .close {
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 6px 14px;
   background: var(--navy);
   color: var(--paper);
   border: 0;
   border-radius: var(--radius);
 }
-ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0.92rem; }
+ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: var(--text-small); }
 .people { list-style: none; padding: 0; }
 .people li { padding: 6px 0; border-bottom: 1px solid var(--paper-2); }
-.people small { display: block; color: var(--muted); }
+.people small { display: block; font-size: var(--text-small); color: var(--muted); }
 .people li.exposed > span:first-child { text-decoration: underline wavy var(--danger-paper); }
 .tag {
   font-family: var(--mono);
@@ -565,10 +590,10 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .tag.risk { color: var(--danger-paper); border-color: var(--danger-paper); }
 /* My story: each section takes the sheet's full width, one under the other (2026-11-09 review). */
 .story-section { display: block; width: 100%; }
-.record { list-style: none; padding: 0; font-size: 1.05rem; }
+.record { list-style: none; padding: 0; font-size: var(--text); }
 .record li { padding: 6px 0; border-bottom: 1px solid var(--paper-2); }
 /* Who has each item, written out under it: "Recorded at Customs". */
-.record .desks, .record .tier { display: block; font-size: 0.95rem; color: var(--muted); }
+.record .desks, .record .tier { display: block; font-size: var(--text-small); color: var(--muted); }
 /* An answer only said aloud reads faint; one an officer wrote down reads firm. */
 .record li.said > span:first-child { font-style: italic; color: var(--muted); }
 .who { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
@@ -667,11 +692,12 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
   background: var(--booth);
 }
 .ending .setup-title { margin: 0; flex: none; }
-.ending-card { flex: none; padding: 14px 16px; }
+.ending-card { flex: none; padding: 14px var(--card-pad); }
 .ending-card .outcome { margin: 0 0 2px; color: var(--muted); }
 /* The ending's name is the one amber word on the card: amber marks attention (docs/plan.md "UI rules"). */
 .ending-card h1 { font-size: 1.6rem; margin: 0 0 4px; color: var(--amber-paper); }
 /* The story reads at body size in the sans face: what you kept, what it cost, the epilogue. */
+/* The ending keeps its own sizes for now, so the shortest card still fits a phone. */
 .ending-card .kept, .ending-card .cost-line, .ending-card .cost-reason, .ending-card .epilogue { font-size: 1.0625rem; line-height: 1.4; font-weight: 400; }
 .ending-card .kept { margin: 0 0 10px; }
 /* What it cost, worst first: a short heading and one line each, with no severity tag. */
@@ -704,7 +730,7 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .ending .controls .play-again { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 /* Open questions: what the player has not found out yet. Light on the title (dark ground), muted on the ending card (paper). */
 .open-questions h2 { margin: 0 0 4px; font-size: 0.72rem; }
-.open-questions ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 2px; font-size: 0.9rem; }
+.open-questions ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 2px; font-size: var(--text-small); }
 .title-screen .open-questions { color: #c5cec9; }
 /* Compact on the ending card, one line each, so a short card still fits a phone without scrolling. */
 .run-summary .open-questions { margin-top: 6px; color: var(--muted); }
@@ -713,9 +739,9 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .ending-turnedBack .ending-card { border-top: 6px solid var(--danger-paper); }
 .ending-tooLate .ending-card, .ending-homeAtCost .ending-card { border-top: 6px solid var(--amber-paper); }
 .ending-homeInTime .ending-card { border-top: 6px solid var(--navy); }
-/* The one message on the packing screen: a notification over the desk scene, so the list keeps its room. */
+/* The one message on the packing screen: a notification on the desk scene, so the list keeps its room. */
 .pack-scene .prep-message {
-  position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; max-width: none;
-  padding: 4px 10px; font-size: 0.8rem; line-height: 1.25;
+  position: relative; flex: 1; margin: 0; max-width: none;
+  padding: 4px 10px; font-size: var(--text-small); line-height: 1.25;
 }
 .pack-scene .prep-message .msg-from { display: inline; margin-right: 6px; }

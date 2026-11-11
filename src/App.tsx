@@ -288,8 +288,10 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
             <BackButton onBack={onBack} />
             <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.preparation') })} part={count} /></p>
           </div>
-          <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
-          <p className="pack-count" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
+          <div className="pack-title">
+            <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
+            <p className="pack-count" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
+          </div>
         </header>
         <Bulletin bulletin={bulletin} />
         {/* One cue for the whole list, in place of a tag on each row: what officers are doing today. */}
