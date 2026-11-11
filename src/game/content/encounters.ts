@@ -153,11 +153,12 @@ export const ENCOUNTERS: Encounter[] = [
     // A deed proves who owns a flat, not whose face is in the photo. What it gives
     // is a registered address: the clerk looks it up and finds your old ID photo
     // on the entry. Or a face scan, or another photo ID. Asked on a records day,
-    // while nothing on file confirms who you are: the land register entry would.
+    // once an address is on file: the clerk looks it up in the register.
     id: 'p_photo', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'identity',
     when: { bulletin: 'records' },
-    // Open until something names you: a property deed shown already did, as the registered owner.
-    issue: { not: { used: ['deed'] } },
+    // The address on file is not matched to your face yet. A property deed shown
+    // already did that, as the registered owner.
+    issue: { facts: ['familyAddress'], not: { used: ['deed'] } },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'scan', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
@@ -169,8 +170,12 @@ export const ENCOUNTERS: Encounter[] = [
   {
     // The clerk checks every date: how long you stay. A return ticket settles it.
     id: 'p_stay', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'stay',
-    // Open until a return ticket is shown: it is the only paper with a date out on it.
-    issue: { not: { used: ['returnTicket'] } },
+    // A reason for the trip is on the form with no date out. A return ticket
+    // closes it: it is the only paper with a date out on it.
+    issue: {
+      any: [{ claims: ['familyVisit'] }, { claims: ['shortTrip'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }],
+      not: { used: ['returnTicket'] },
+    },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
       // The honest answer gives the reason, and your father's condition goes on file. She

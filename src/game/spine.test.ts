@@ -80,6 +80,18 @@ describe('a follow-up is dealt only while its issue is open on the file', () => 
     expect(issueOpen(answered, 'p_stay')).toBe(false);
     expect(answered.screen).toEqual({ kind: 'between', next: 1 });
   });
+
+  it('an unused paper alone is not an open issue: the stay and photo cards need a claim or fact on file', () => {
+    // No reason for the trip on the form: nothing to ask a date out for.
+    const records = (extra: Partial<RunState>): RunState => ({ ...newRun({ character: 'lena', loadout: ['motherLetter', 'returnTicket', 'employerLetter'], bulletin: 'records', seed: 7 }), ...extra });
+    expect(issueOpen(records({}), 'p_stay')).toBe(false);
+    expect(issueOpen(records({ claims: ['shortTrip'] }), 'p_stay')).toBe(true);
+    // On a records day the photo card needs an address on file to look up, and the deed closes it.
+    expect(issueOpen(records({}), 'p_photo')).toBe(false);
+    const withAddress = records({ facts: { familyAddress: ['passport'] } });
+    expect(issueOpen(withAddress, 'p_photo')).toBe(true);
+    expect(issueOpen({ ...withAddress, used: ['deed'] }, 'p_photo')).toBe(false);
+  });
 });
 
 describe('every desk card says what the officer already knows', () => {
