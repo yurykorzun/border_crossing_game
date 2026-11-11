@@ -131,9 +131,10 @@ export function lintContent(content: Content, text: Text): string[] {
   for (const { card, prefix } of cards) {
     const kind = 'kind' in card && 'checkpoint' in card ? card.kind : 'inspection';
 
-    // 1. A reason to appear.
-    if ((kind === 'related' || kind === 'followup') && !card.when && !sources(content, card.id).length)
-      problems.push(`${card.id}: no reason to appear (a ${kind} card needs a \`when\` or a check result that queues it)`);
+    // 1. A reason to appear: a condition, an open issue on the file (Encounter.issue), or a check result that queues it.
+    const issue = 'issue' in card ? card.issue : undefined;
+    if ((kind === 'related' || kind === 'followup') && !card.when && !issue && !sources(content, card.id).length)
+      problems.push(`${card.id}: no reason to appear (a ${kind} card needs a \`when\`, an \`issue\` or a check result that queues it)`);
 
     // 2. Distinct answers.
     const seen = new Map<string, string>();

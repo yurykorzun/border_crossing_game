@@ -16,7 +16,7 @@ import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, Evidenc
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 15;
+export const CONTENT_VERSION = 16;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
@@ -106,6 +106,9 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
     ev.push({ type: 'claimChallenged', ...challenge, said });
   }
   for (const id of added(factIds(s), factIds(n))) ev.push({ type: 'factRecorded', id, tier: factTier(n, id) });
+  // A fact already on file (Mark's old exit record) that is now the reason scrutiny rises reads as flagged.
+  for (const id of added(s.flagged ?? [], n.flagged ?? []))
+    if (factIds(s).includes(id)) ev.push({ type: 'factRecorded', id, tier: 'flagged' });
   const here = deskOf(s);
   for (const id of factIds(n)) {
     const desks = added(s.facts[id] ?? [], n.facts[id] ?? []).filter((d) => d !== here);

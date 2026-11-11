@@ -41,6 +41,7 @@ export const CHARACTERS: Record<CharacterId, Character> = {
     protectedContact: 'brother',
     evidenceSlots: 4,
     startScrutiny: 1,
+    onFile: ['secondPassport'],
     perkTopics: [],
     weakTopics: [],
   },
@@ -175,8 +176,8 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     id: 'deed',
     topics: ['identity', 'accommodation'],
     onUse: [{ fact: 'property' }],
-    // Asked who you are, the registered owner's name is the whole answer.
-    settles: ['identity'],
+    // Asked who you are or where you will stay, the registered owner's name and house are the whole answer.
+    settles: ['identity', 'accommodation'],
   },
 };
 

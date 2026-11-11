@@ -67,6 +67,10 @@ export interface Cond {
   lastHours?: boolean;
   /** A held, unused card covers this topic. */
   holds?: Topic;
+  /** Every one of these cards has been shown on this crossing. */
+  used?: EvidenceId[];
+  /** true: a fact this desk knows is flagged (factTier() in src/game/engine.ts). */
+  flagged?: boolean;
   /** Any of these conditions holds. */
   any?: Cond[];
   /** This condition does not hold. */
@@ -152,6 +156,13 @@ export interface Encounter {
   /** related cards: higher wins. Consequences of answers beat background. */
   priority?: number;
   when?: Cond;
+  /**
+   * related and follow-up cards: the open issue on the file that this card is
+   * about, a fact this desk knows or a claim you made. It is dealt only while
+   * the issue holds, and a queued follow-up whose issue has closed is dropped
+   * (advance() in src/game/engine.ts). The content test checks every one has one.
+   */
+  issue?: Cond;
   approaches: Approach[];
 }
 
@@ -206,6 +217,11 @@ export interface Character {
   protectedContact: ContactId;
   evidenceSlots: number;
   startScrutiny: number;
+  /**
+   * Old records the passport desk has before you say a word (FACT_TIERS
+   * 'recorded'): Mark's exit record shows he left on his second passport.
+   */
+  onFile?: FactId[];
   /** Topics the once-per-run perk can answer for free. */
   perkTopics: Topic[];
   /** Topics that cost 1 extra time when verified. */
@@ -466,6 +482,8 @@ export interface RunState {
    * src/game/engine.ts), once each before you leave. Unset in saves from before it existed.
    */
   spotChecked?: Checkpoint[];
+  /** The desk of each check run so far (a wait screen), in order (relatedCard() in src/game/engine.ts). */
+  checkedAt?: Checkpoint[];
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;

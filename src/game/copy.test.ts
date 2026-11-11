@@ -146,7 +146,8 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.i_family.why': { always: 1, most: 1 },
     'enc.i_clarify.clarify': { always: 1, most: 1 },
     'enc.i_contradiction.review': { always: 3, most: 3 },
-    'enc.i_employer.contract': { always: 2, most: 2 },
+    // An hour since i_employer became a core card asked on every run (CORE_CARDS).
+    'enc.i_employer.contract': { always: 1, most: 1 },
     'enc.i_brother.calls': { always: 2, most: 2 },
     'enc.f_host.again': { always: 1, most: 1 },
     'enc.f_lab.wait': { always: 2, most: 2 },

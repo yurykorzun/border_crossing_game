@@ -18,7 +18,7 @@ import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
-import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
@@ -331,6 +331,8 @@ function screenLines(s: RunState, p: Page): void {
     // Once the bus is out of reach, the line saying so sits above the priority line.
     if (finishing) p.add('ui.doomed');
     if (desk) p.add(`officer.${desk}.priority`);
+    // What this officer already knows, on every desk card (knownLine()).
+    for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
     p.add(questionKey(s, prefix, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;

@@ -3,10 +3,10 @@
 
 import { describe, expect, it } from 'vitest';
 import { own, t, tn } from '../i18n';
-import { CHALLENGES, CHECKS, CONTRADICTIONS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS, TESTIMONY, catchKind } from './content/encounters';
+import { CHALLENGES, CHECKS, CONTRADICTIONS, CORE_CARDS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS, TESTIMONY, catchKind } from './content/encounters';
 import { CHARACTERS, CONTACTS, EVIDENCE, LAST_HOURS, MISSION_MIN_TIME, OFFICERS } from './content/world';
 import { changeLines, consequence, consequences, SEPARATOR } from './consequence';
-import { cardFor, costsOf, deskIntro, endingFor, factIds, factTier, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
+import { FOLLOW_UP_SLOT, cardFor, costsOf, deskIntro, endingFor, factIds, factTier, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { hoursOf, unexplained } from './lint';
 import { tryStep } from './play';
@@ -139,9 +139,17 @@ const cost = (s: RunState, approach: string) => {
   return { time, scrutiny, contact: o.contact, claims: o.effects.flatMap((e) => ('claim' in e ? [e.claim] : [])) };
 };
 
+/**
+ * The interview's last core card answered with the employer letter and its
+ * follow-up slot spent, so the next card is whatever the desk deals on leaving.
+ */
+const leavingInterview = (setup: RunSetup, extra: Partial<RunState>): RunState => {
+  const s: RunState = { ...at(newRun(setup), 'i_employer'), checkpoint: 2, slot: FOLLOW_UP_SLOT + 1, seen: [...CORE_CARDS.interview], ...extra };
+  return step(step(s, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
+};
+
 describe('claims: unchallenged, inconsistency, disproof', () => {
-  const interview = (extra: Partial<RunState>, setup = lena): RunState =>
-    step({ ...newRun(setup), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra }, { type: 'ack' });
+  const interview = (extra: Partial<RunState>, setup = lena): RunState => leavingInterview(setup, extra);
 
   it('an unchallenged lie stands for free: "under the limit" adds a claim and no scrutiny', () => {
     const s = at(newRun(lena), 'c_cash');
@@ -193,8 +201,7 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
 });
 
 describe('claim-versus-fact pairs from real procedure', () => {
-  const interview = (extra: Partial<RunState>, setup = lena): RunState =>
-    step({ ...newRun(setup), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra }, { type: 'ack' });
+  const interview = (extra: Partial<RunState>, setup = lena): RunState => leavingInterview(setup, extra);
   const challenge = (s: RunState) => (s.screen.kind === 'encounter' && ['i_clarify', 'i_contradiction'].includes(s.screen.id) ? s.screen.id : undefined);
 
   // The pairs the balance review asked for (docs/research/2026-11-09-balance-and-levels.md), each with the card that catches it.
@@ -221,9 +228,9 @@ describe('claim-versus-fact pairs from real procedure', () => {
   });
 
   it('a tourist who has not decided where to stay puts "no booking" on file, a family visitor does not', () => {
-    const tourist = tryStep(at({ ...newRun(lena), claims: ['shortTrip'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
+    const tourist = tryStep(at({ ...newRun(lena), claims: ['shortTrip'] }, 'p_host'), { type: 'choose', approach: 'undecided' });
     expect(tourist.ok && knows(tourist.state, 'noBooking', 'interview')).toBe(true);
-    const visitor = tryStep(at({ ...newRun(lena), claims: ['familyVisit'] }, 'i_stay'), { type: 'choose', approach: 'undecided' });
+    const visitor = tryStep(at({ ...newRun(lena), claims: ['familyVisit'] }, 'p_host'), { type: 'choose', approach: 'undecided' });
     expect(visitor.ok && factIds(visitor.state)).not.toContain('noBooking');
   });
 
@@ -245,8 +252,8 @@ describe('claim-versus-fact pairs from real procedure', () => {
   });
 
   /** Plays from the start: `pick` answers where it has a preference, else the first answer, and waits out every check. */
-  function play(setup: RunSetup, pick: Record<string, string>): RunState {
-    let s = newRun(setup);
+  function play(setup: RunSetup, pick: Record<string, string>, from: RunState = newRun(setup)): RunState {
+    let s = from;
     for (let n = 0; n < 200 && !s.ending; n++) {
       const legal = legalActions(s);
       const id = !s.reaction && (s.screen.kind === 'encounter' || s.screen.kind === 'inspection') ? s.screen.id : '';
@@ -261,9 +268,13 @@ describe('claim-versus-fact pairs from real procedure', () => {
   }
 
   it("Lena's denial on i_family is disproved in a real run: the phone search finds Ilya, and the interview deals the contradiction", () => {
-    // A seed whose dealer gives the interview i_family as its routine card.
+    // From the walk to customs with something flagged on the file, the open issue the phone search follows up.
     const setup: RunSetup = { character: 'lena', loadout: ['employerLetter', 'returnTicket', 'deed'], bulletin: 'customs', seed: 2 };
-    const s = play(setup, { p_purpose: 'family', c_phone: 'unlock', i_family: 'deny' });
+    const atCustoms: RunState = {
+      ...newRun(setup), checkpoint: 1, slot: 0, screen: { kind: 'between', next: 1 },
+      facts: { noBooking: ['passport', 'customs'] }, flagged: ['noBooking'],
+    };
+    const s = play(setup, { c_medicine: 'evidence', c_phone: 'unlock', i_family: 'deny' }, atCustoms);
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
     expect(s.claims).toContain('noOtherFamily');
     expect(knows(s, 'relativeContact', 'interview')).toBe(true);
@@ -279,7 +290,7 @@ describe('documents are blocked only by claims that truly exclude them', () => {
   it('the hotel fits with visiting family', () => {
     const s = { ...newRun(lenaHotel), claims: ['familyVisit' as const] };
     expect(cardFor(s, 'accommodation')).toBe('hotel');
-    const r = tryStep(at(s, 'i_stay'), { type: 'choose', approach: 'evidence' });
+    const r = tryStep(at(s, 'p_host'), { type: 'choose', approach: 'evidence' });
     expect(r.ok && r.state.used).toEqual(['hotel']);
   });
 
@@ -290,7 +301,7 @@ describe('documents are blocked only by claims that truly exclude them', () => {
   });
 
   it('giving your mother\'s address as where you stay records staying with family', () => {
-    const r = tryStep(at(newRun(lenaHotel), 'i_stay'), { type: 'choose', approach: 'mother' });
+    const r = tryStep(at(newRun(lenaHotel), 'p_host'), { type: 'choose', approach: 'mother' });
     expect(r.ok && r.state.claims).toContain('stayingWithFamily');
   });
 });
@@ -315,10 +326,10 @@ describe('no scrutiny without a reason', () => {
 
   it('a lie adds scrutiny only when a fact on file activates it', () => {
     // "I haven't decided yet" is free with nothing on file, and +1 once her address is there.
-    const free = at(newRun(lena), 'i_stay');
+    const free = at(newRun(lena), 'p_host');
     expect(options(free).map((o) => o.approach.id)).toContain('undecided');
     expect(cost(free, 'undecided').scrutiny).toBe(0);
-    const onFile = at({ ...newRun(lena), facts: known('familyAddress') }, 'i_stay');
+    const onFile = at({ ...newRun(lena), facts: known('familyAddress') }, 'p_host');
     expect(options(onFile).map((o) => o.approach.id)).not.toContain('undecided');
     expect(cost(onFile, 'undecidedOnFile').scrutiny).toBe(1);
   });
@@ -346,8 +357,9 @@ describe('no scrutiny without a reason', () => {
 });
 
 describe('a challenge is dealt even when the last interview answer creates it', () => {
-  // Slot 2: the second and last interview card, so nothing else would follow it.
-  const last = (s: RunState, id: string, extra: Partial<RunState>): RunState => ({ ...at(s, id), slot: 2, ...extra });
+  // Both core cards seen and the follow-up slot spent, so nothing else would follow this card.
+  const last = (s: RunState, id: string, extra: Partial<RunState>): RunState =>
+    ({ ...at(s, id), seen: [...CORE_CARDS.interview], slot: FOLLOW_UP_SLOT + 1, ...extra });
 
   it('denying relatives on the final card, with the brother on file, deals the disproof card', () => {
     const s = last(newRun(mark), 'i_family', { facts: known('brotherAbroad') });
@@ -502,9 +514,9 @@ describe('contacts confirm only what they know', () => {
   });
 
   it('the answer says the guaranteed cost, then the possible gain', () => {
-    const s = at(newRun(lena), 'i_stay');
+    const s = at(newRun(lena), 'p_host');
     const o = options(s).find((x) => x.approach.id === 'mother')!;
-    const text = consequence(o, 'enc.i_stay.mother', 'cousin').parts.map((p) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars)));
+    const text = consequence(o, 'enc.p_host.mother', 'cousin').parts.map((p) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars)));
     expect(text.slice(0, 2)).toEqual(['Shares her number', 'May verify your address']);
   });
 
@@ -535,9 +547,14 @@ describe('what each official knows: facts travel between desks only through a ch
   /** Shows the mother's letter at passport control: her address comes out at that desk. */
   const letterAtPassport = (bulletin: RunSetup['bulletin']) =>
     play({ ...lenaWith(bulletin), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
-  /** Walks up to the interview with "shortTrip" said, and lets the director deal its related card. */
-  const toInterview = (s: RunState): RunState =>
-    step({ ...s, reaction: null, pending: [], claims: [...s.claims, 'shortTrip'], checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 } }, { type: 'ack' });
+  /** Walks to the end of the interview with "shortTrip" said (the employer letter on its last core card), and lets the desk deal what follows. */
+  const toInterview = (s: RunState): RunState => {
+    const last: RunState = {
+      ...s, reaction: null, pending: [], claims: [...s.claims, 'shortTrip'], checkpoint: 2, slot: FOLLOW_UP_SLOT + 1,
+      screen: { kind: 'encounter', id: 'i_employer' }, seen: [...s.seen, ...CORE_CARDS.interview],
+    };
+    return step(step(last, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
+  };
 
   it('a fact is known only at the desk where it came out', () => {
     const s = letterAtPassport('customs');
@@ -604,8 +621,8 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(named.calledIn).toEqual(['mother']);
     // The same evasive answer at the interview, with and without her called in.
     // Her call sent her address on, so the interview has it and the evasion is the on-file one.
-    const free = at(newRun(lena), 'i_stay');
-    const after = at(named, 'i_stay');
+    const free = at(newRun(lena), 'p_host');
+    const after = at(named, 'p_host');
     expect(cost(free, 'undecided').time).toBe(0);
     expect(cost(after, 'undecidedOnFile').time).toBe(1);
     const r = tryStep(after, { type: 'choose', approach: 'undecidedOnFile' });
@@ -724,7 +741,7 @@ describe('officers with one stated priority each (fsx.10)', () => {
     expect(deskIntro(first)).toBe('passport');
     expect(deskIntro({ ...first, slot: 2 })).toBeUndefined();
     expect(deskIntro({ ...first, reaction: [{ key: 'ui.continue' }] })).toBeUndefined();
-    expect(deskIntro(at(newRun(lena), 'i_stay'))).toBe('interview');
+    expect(deskIntro({ ...at(newRun(lena), 'i_family'), checkpoint: 2 })).toBe('interview');
     expect(t('officer.passport.priority')).toBe('The clerk checks every stamp and every date.');
   });
 });
@@ -834,7 +851,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
   });
 
   it('under MISSION_MIN_TIME a card says the bus is gone and offers to finish quickly', () => {
-    const s = { ...at(newRun(lena), 'i_stay'), time: MISSION_MIN_TIME - 1 };
+    const s = { ...at(newRun(lena), 'p_host'), time: MISSION_MIN_TIME - 1 };
     expect(t('ui.doomed')).toBe('You will not make the bus now.');
     expect(legalActions(s)).toContainEqual({ type: 'finish' });
     const r = tryStep(s, { type: 'finish' });
@@ -859,7 +876,8 @@ describe('before admission, scrutiny is a risk', () => {
   /** The last answer of the interview, with every dealer draw fixed at `pick`. */
   const lastAnswer = (scrutiny: number, pick: number, extra: Partial<RunState> = {}, setup: RunSetup = lena) => {
     const s: RunState = {
-      ...newRun(setup), checkpoint: 2, slot: 2, scrutiny, seen: ['i_stay', 'i_family'], decisions: 6,
+      // Both core cards seen and the follow-up slot spent: i_family is the interview's last card.
+      ...newRun(setup), checkpoint: 2, slot: FOLLOW_UP_SLOT + 1, scrutiny, seen: ['p_host', ...CORE_CARDS.interview], decisions: 6,
       screen: { kind: 'encounter', id: 'i_family' }, ...extra,
     };
     const draws: number[] = [];
@@ -989,7 +1007,7 @@ describe('exposure needs a stated reason, and each reaction says which of three 
 
   it("the visit to the mother fires only once the run flags something about her, and the reason names the desk that did", () => {
     // Her address on file, then an evasion at the interview: that answer flags it there.
-    const s = at({ ...newRun(lena), exposed: ['mother'], facts: known('familyAddress') }, 'i_stay');
+    const s = at({ ...newRun(lena), exposed: ['mother'], facts: known('familyAddress') }, 'p_host');
     expect(consequences(s).map((l) => l.key)).toEqual(['exposure.mother.call']);
     const r = tryStep(s, { type: 'choose', approach: 'undecidedOnFile' });
     expect(r.ok).toBe(true);

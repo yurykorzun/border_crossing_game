@@ -319,7 +319,8 @@ describe('what changed, under the reaction', () => {
 
   it('playStep keeps the lines only while the reaction shows', () => {
     const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
-    const s = { ...base, screen: { kind: 'encounter', id: 'p_purpose' } as const, slot: 2 };
+    // Both passport core cards seen and the follow-up slot spent, so the next button leaves the desk.
+    const s = { ...base, screen: { kind: 'encounter', id: 'p_purpose' } as const, slot: 3, seen: ['p_host', 'p_purpose'] };
     const after = playStep(s, { type: 'choose', approach: 'evidence' });
     expect(after.reaction).not.toBeNull();
     expect(after.changes).toContainEqual({ key: 'change.onFile.recorded', vars: { fact: 'familyAddress' }, tone: 'plain' });

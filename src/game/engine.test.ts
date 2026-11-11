@@ -17,7 +17,7 @@ import { load, save, freshSave } from './save';
 import { nextRandom } from './rng';
 import { allSetups } from './walk';
 import { EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION } from './content/world';
-import { CHECKS, CONTRADICTIONS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, CORE_CARDS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
 import type { Action, FactId, FactMap, RunState } from './types';
 
 /** Facts the interview officer knows: the desk most fixtures here are at. */
@@ -42,10 +42,10 @@ describe('relief and pacing', () => {
     expect(factIds(r.state)).not.toContain('property');
   });
 
-  it('the same document on another question still puts its fact on file', () => {
-    const s = at(newRun(mark), 'i_stay', { checkpoint: 2, slot: 1, loadout: ['deed', 'returnTicket', 'hotel', 'hospitalNote'], used: ['hotel'] });
+  it('a document that does not settle the question still puts its fact on file', () => {
+    const s = at(newRun(mark), 'p_purpose', { slot: 0 });
     const o = options(s).find((x) => x.approach.id === 'evidence')!;
-    expect(o.card).toBe('deed');
+    expect(o.card).toBe('hospitalNote');
     expect(noCost(s, o)).toBe(false);
   });
 
@@ -95,13 +95,13 @@ describe('rules', () => {
   });
 
   it('a spent document cannot be played again', () => {
-    const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, used: ['motherLetter'], claims: ['stayingWithFamily'] });
+    const s = at(newRun(lena), 'p_host', { checkpoint: 2, slot: 1, used: ['motherLetter'], claims: ['stayingWithFamily'] });
     // the hotel is blocked by the staying-with-family claim, the letter is spent: no card fits
     expect(tryStep(s, { type: 'choose', approach: 'evidence' })).toMatchObject({ ok: false, reason: 'notAllowed' });
   });
 
   it('an exposed contact cannot be used again', () => {
-    const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, exposed: ['mother'] });
+    const s = at(newRun(lena), 'p_host', { checkpoint: 2, slot: 1, exposed: ['mother'] });
     expect(tryStep(s, { type: 'choose', approach: 'mother' }).ok).toBe(false);
   });
 
@@ -129,7 +129,7 @@ describe('rules', () => {
   });
 
   it('the same claim made again at a desk that writes it down goes on file there too', () => {
-    const s = at(newRun(lena), 'i_stay', { checkpoint: 2, slot: 1, claims: ['familyVisit'] });
+    const s = at(newRun(lena), 'p_host', { checkpoint: 2, slot: 1, claims: ['familyVisit'] });
     const r = tryStep(s, { type: 'choose', approach: 'mother' });
     if (!r.ok) throw new Error('naming the mother is legal here');
     expect(loggedAt(r.state, 'stayingWithFamily')).toEqual(['interview']);
@@ -166,31 +166,37 @@ describe('boundaries', () => {
 });
 
 describe('scenarios', () => {
-  const interviewSlot2 = (extra: Partial<RunState>): RunState =>
-    ({ ...newRun(lena), checkpoint: 2, slot: 1, screen: { kind: 'between', next: 2 }, ...extra });
+  // The interview's last core card answered with the employer letter, so what comes next is the desk's to deal.
+  const leavingInterview = (extra: Partial<RunState>): RunState => {
+    const s = at(newRun(lena), 'i_employer', { checkpoint: 2, slot: 2, seen: [...CORE_CARDS.interview], ...extra });
+    return step(step(s, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
+  };
 
   it('a shortTrip claim plus the family address on file deals the clarify card', () => {
-    const s = step(interviewSlot2({ claims: ['shortTrip'], facts: known('familyAddress') }), { type: 'ack' });
+    const s = leavingInterview({ claims: ['shortTrip'], facts: known('familyAddress') });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
   it('a family-visit claim with the same address deals neither', () => {
-    const s = step(interviewSlot2({ claims: ['familyVisit'], facts: known('familyAddress') }), { type: 'ack' });
+    const s = leavingInterview({ claims: ['familyVisit'], facts: known('familyAddress') });
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_contradiction' });
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
-  // Passport after "shortTrip" and the employer card: 2 decisions, both checkpoint cards.
+  // Passport at its second core card with no issue open on the file (a customs day, so no old
+  // photo to compare, and the return ticket already shown): 2 decisions, both core cards.
   const quietPassport = (extra: Partial<RunState> = {}): RunState =>
-    at(newRun(lena), 'p_employer', {
-      slot: 2, decisions: 1, seen: ['p_purpose', 'p_employer'], claims: ['shortTrip'], ...extra,
+    at(newRun(lena), 'p_host', {
+      slot: 2, decisions: 1, seen: ['p_purpose', 'p_host'], claims: ['familyVisit'], bulletin: 'customs',
+      loadout: ['motherLetter', 'returnTicket', 'employerLetter'], used: ['returnTicket'], ...extra,
     });
 
-  it('every desk deals 2 cards, a quiet run too: no third card (2op.6)', () => {
-    for (const extra of [{ bulletin: 'customs' as const }, { decisions: 2 }, { inspections: 1 }]) {
-      const s = step(quietPassport(extra), { type: 'choose', approach: 'check' });
+  it('every desk deals its 2 core cards, and a quiet run no third card (2op.6)', () => {
+    for (const extra of [{}, { decisions: 2 }, { inspections: 1 }]) {
+      const s = step(step(quietPassport(extra), { type: 'choose', approach: 'evidence' }), { type: 'ack' });
       expect(s.screen, JSON.stringify(extra)).toEqual({ kind: 'between', next: 1 });
       expect(s.seen).not.toContain('p_photo');
+      expect(s.seen).not.toContain('p_stay');
     }
   });
 });
@@ -255,7 +261,7 @@ describe('too late endings', () => {
   };
 
   it('missing the bus: the hours run out before the last checkpoint is done', () => {
-    const { final, states } = honest(18);
+    const { final, states } = honest(17);
     expect(final.ending).toBe('tooLate');
     expect(final.time).toBe(0);
     // The first state with no hours left is still at a desk, not at the ending.
@@ -273,7 +279,7 @@ describe('too late endings', () => {
   });
 
   it('gives the two runs different ending text', () => {
-    const a = honest(18).final;
+    const a = honest(17).final;
     const b = honest(8).final;
     for (const part of ['title', 'body']) {
       const ka = `ending.${endingText(a)}.${part}`;
@@ -291,12 +297,11 @@ describe('contact results', () => {
     const s = at(newRun(lena), 'c_shortTrip', { checkpoint: 1, claims: ['shortTrip'] });
     const n = playStep(s, { type: 'choose', approach: 'mother' });
     expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.']);
-    // Asked, she also gives her address and who else lives there (2op.12); on a records day both reach the desks ahead.
+    // Asked, she also gives her address and who else lives there (2op.12). On a records day both
+    // reach the desks ahead too, which their known-facts line shows, so no row repeats them.
     expect(rows(n)).toEqual([
       'Your reason verified.', "On file at Customs: your mother's number.",
-      'Found in the old records: Your registered family address.', 'Confirmed and on file: Your mother names another relative.',
-      'Into the shared records for the desks ahead: Your registered family address.',
-      'Into the shared records for the desks ahead: Your mother names another relative.',
+      'Found in the old records: Your registered family address.', 'Confirmed: Your mother names another relative.',
     ]);
   });
 

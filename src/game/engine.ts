@@ -9,7 +9,7 @@ import { CHECKPOINTS, FACT_IDS } from './types';
 import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
-import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
+import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, CORE_CARDS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
 import { has, own } from '../i18n';
 import { nextRandom, randomDealer } from './rng';
@@ -42,7 +42,8 @@ export function newRun(setup: RunSetup): RunState {
     time: level.startTime,
     travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
-    facts: {},
+    // Old records the passport desk has at once (Character.onFile).
+    facts: (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {}),
     claims: [],
     logged: {},
     saidAt: {},
@@ -132,6 +133,8 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.contactFree && !cond.contactFree.some((c) => ch.contacts.includes(c) && !s.exposed.includes(c))) return false;
   if (cond.lastHours !== undefined && (s.time <= LAST_HOURS) !== cond.lastHours) return false;
   if (cond.holds && !cardFor(s, cond.holds)) return false;
+  if (cond.used && !cond.used.every((c) => s.used.includes(c))) return false;
+  if (cond.flagged !== undefined && knownAt(s).some((f) => factTier(s, f) === 'flagged') !== cond.flagged) return false;
   if (cond.any && !cond.any.some((c) => check(c, s))) return false;
   if (cond.not && check(cond.not, s)) return false;
   return true;
@@ -366,6 +369,30 @@ const officerScrutiny = (s: RunState) => (f: FactId): Effect => {
   return { scrutiny: r?.scrutiny ?? 0, reason: f };
 };
 
+/** One part of the known-facts line: a text key and its vars. */
+export interface KnownPart {
+  key: string;
+  vars?: Record<string, string>;
+}
+
+/**
+ * What the officer at this desk already knows, as one line on every desk card,
+ * built from the file: the newest fact this desk knows, named by how it sits on
+ * file (factTier()), and the newest claim any desk wrote down. With neither,
+ * the line says the file is empty so far. Only on a desk's own cards: an
+ * inspection is the supervisor's, who reads the whole file.
+ */
+export function knownLine(s: RunState): KnownPart[] {
+  if (s.screen.kind !== 'encounter') return [];
+  // A fact on file outranks a claim, because its tier is what the officer acts on.
+  const fact = knownAt(s).at(-1);
+  if (fact) return [{ key: `known.fact.${factTier(s, fact)}`, vars: { fact } }];
+  const written = s.claims.filter((c) => loggedAt(s, c).length).at(-1);
+  // The claim in this traveler's own wording, as the spot-check names it.
+  if (written) return [{ key: 'known.claim', vars: { claim: own(`claim.${written}`, s.character).slice('claim.'.length) } }];
+  return [{ key: 'known.none' }];
+}
+
 /**
  * The desk the player has just reached: the first card dealt there is on screen,
  * so the officer's priority line shows above it. Undefined anywhere else.
@@ -508,8 +535,23 @@ function finish(s: RunState): RunState {
 // ── The director
 
 function eligible(s: RunState, e: Encounter): boolean {
-  return !s.seen.includes(e.id) && dealsCard(s, e.id) && check(e.when, s);
+  return !s.seen.includes(e.id) && dealsCard(s, e.id) && check(e.when, s) && check(e.issue, s);
 }
+
+/** Whether the open issue a follow-up or related card is about is still on the file (Encounter.issue). */
+export const issueOpen = (s: RunState, id: string): boolean => check(ENCOUNTER_BY_ID.get(id)?.issue, s);
+
+/** The next of this desk's two core cards still to be asked, in CORE_CARDS order. */
+export function coreLeft(s: RunState): Encounter | undefined {
+  const id = CORE_CARDS[deskOf(s)].find((c) => !s.seen.includes(c) && dealsCard(s, c));
+  return id ? ENCOUNTER_BY_ID.get(id) : undefined;
+}
+
+/**
+ * The slot a desk's follow-up is dealt in: after both core cards. A desk asks at
+ * most one, so a run has 0-3 of them.
+ */
+export const FOLLOW_UP_SLOT = 2;
 
 /** A calm card has one answer, so tapping it is not a decision. */
 export const isCalm = (id: string): boolean => !!ENCOUNTER_BY_ID.get(id)?.calm;
@@ -527,18 +569,38 @@ export function routinesLeft(s: RunState): Encounter[] {
   return ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && eligible(s, e));
 }
 
-/** The best related card left at this desk: the one slot 1 deals. */
+/** Follow-ups a run deals at most (related and follow-up cards; the challenges come on top). */
+export const MAX_FOLLOW_UPS = 2;
+
+/** How many follow-ups this run has dealt so far. */
+export function followUpsDealt(s: RunState): number {
+  const challenges: readonly string[] = CHALLENGES;
+  return s.seen.filter((id) => { const k = ENCOUNTER_BY_ID.get(id)?.kind; return (k === 'related' || k === 'followup') && !challenges.includes(id); }).length;
+}
+
+/** Checks a run can have run and still be dealt a follow-up that starts one. */
+export const MAX_CHECKS_BEFORE_FOLLOW_UP = 2;
+
+const followUpRoom = (s: RunState): boolean => followUpsDealt(s) < MAX_FOLLOW_UPS;
+
+/** The best related card left at this desk whose open issue is on the file: the desk's follow-up. */
 function relatedCard(s: RunState): Encounter | undefined {
+  if (!followUpRoom(s)) return undefined;
+  // After two checks (wait screens) a follow-up that could start a third is not
+  // dealt, because three waits in one run push it past the play-time ceiling.
+  const checked = (s.checkedAt ?? []).length >= MAX_CHECKS_BEFORE_FOLLOW_UP;
   const cp = CHECKPOINTS[s.checkpoint];
-  const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && eligible(s, e));
+  const related = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'related' && eligible(s, e)
+    && !(checked && e.approaches.some((a) => a.check)));
   return related.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
 }
 
 /** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
 function escalatesNext(s: RunState): boolean {
-  if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id))) return true;
-  if (s.slot >= 2) return !!pendingChallenge(s);
-  return s.slot === 1 && !!relatedCard(s);
+  if (s.scrutiny >= MAX_SCRUTINY || (followUpRoom(s) && s.pending.some((id) => !s.seen.includes(id)))) return true;
+  if (coreLeft(s)) return false;
+  if (s.slot <= FOLLOW_UP_SLOT && relatedCard(s)) return true;
+  return !!pendingChallenge(s);
 }
 
 /**
@@ -552,14 +614,17 @@ function breather(s: RunState): Encounter | undefined {
 }
 
 /**
- * The card a breather deals: a calm one if any is left at this desk, else any
- * routine card left. After an inspection the calm cards come in reverse order,
- * so the interruption differs between runs (the officer's phone, not the water).
+ * The card a breather deals: a calm one if any is left at this desk, else a
+ * routine card left that is not a core card, else the next core card, so the
+ * core cards keep their order. After an inspection the calm cards come in
+ * reverse order, so the interruption differs between runs (the officer's
+ * phone, not the water).
  */
 function restCard(s: RunState): Encounter | undefined {
   const left = routinesLeft(s);
   const calm = left.filter((e) => e.calm);
-  return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left[0];
+  const core: readonly string[] = CORE_CARDS[deskOf(s)];
+  return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left.find((e) => !core.includes(e.id)) ?? coreLeft(s);
 }
 
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
@@ -571,9 +636,10 @@ function advance(s: RunState, dealer: Dealer): RunState {
   while (s.pending.length) {
     const [id, ...rest] = s.pending;
     s = { ...s, pending: rest };
-    if (!s.seen.includes(id)) return show(s, id);
+    // A follow-up whose issue has closed since it was queued is dropped.
+    if (!s.seen.includes(id) && issueOpen(s, id) && followUpRoom(s)) return show(s, id);
   }
-  if (s.slot >= 2) {
+  if (!coreLeft(s) && (s.slot > FOLLOW_UP_SLOT || !relatedCard(s))) {
     if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer), dealer);
     const challenge = pendingChallenge(s);
     if (challenge) return show(s, challenge);
@@ -581,7 +647,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (next >= CHECKPOINTS.length) return admission(s, dealer);
     return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
   }
-  return deal(s, dealer);
+  return deal(s);
 }
 
 /**
@@ -726,21 +792,17 @@ function spotCheck(s: RunState, dealer: Dealer): RunState {
   return checked;
 }
 
-function deal(s: RunState, dealer: Dealer): RunState {
-  const cp = CHECKPOINTS[s.checkpoint];
-  // Calm cards are kept for breathers, so a desk always has one when the pacing rule needs it.
-  const routine = ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && !e.calm && eligible(s, e));
-  let chosen: Encounter | undefined;
-  let rng = s.rng;
-  if (s.slot === 0) chosen = routine.find((e) => e.opening);
-  if (s.slot === 1) chosen = relatedCard(s);
-  if (!chosen) {
-    if (!routine.length) throw new Error(`no card left for ${cp} slot ${s.slot}`);
-    const r = dealer(rng, routine.length);
-    chosen = routine[r.index];
-    rng = r.rng;
-  }
-  return show({ ...s, rng, slot: s.slot + 1 }, chosen.id);
+/**
+ * Deal this desk's next card: its core cards in order, then the follow-up on
+ * an open issue (relatedCard()), if there is one. Nothing here is random, so
+ * every run asks each desk's core questions in the same order.
+ */
+function deal(s: RunState): RunState {
+  const core = coreLeft(s);
+  if (core) return show({ ...s, slot: s.slot + 1 }, core.id);
+  const follow = relatedCard(s);
+  if (!follow) throw new Error(`no card left for ${deskOf(s)} slot ${s.slot}`);
+  return show({ ...s, slot: FOLLOW_UP_SLOT + 1 }, follow.id);
 }
 
 /** The inspections that can be dealt now: their condition holds, and a confiscation needs the medicine. */
@@ -782,7 +844,10 @@ function startWait(s: RunState, checkId: NonNullable<Approach['check']>): RunSta
     const b = Math.floor(r.value * BEAT_COUNT);
     if (!beats.includes(b)) beats.push(b);
   }
-  return { ...s, rng, screen: { kind: 'wait', check: checkId, beats, shown: 0, resolved, asked: false } };
+  return {
+    ...s, rng, checkedAt: [...(s.checkedAt ?? []), deskOf(s)],
+    screen: { kind: 'wait', check: checkId, beats, shown: 0, resolved, asked: false },
+  };
 }
 
 export function waitActions(s: RunState): { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] {
@@ -895,7 +960,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     }
     case 'ack':
       if (s.reaction) return { ...s, reaction: null };
-      if (s.screen.kind === 'between') return deal(s, dealer);
+      if (s.screen.kind === 'between') return deal(s);
       return s;
     case 'turnBack':
       if (!canTurnBack(s)) return s;

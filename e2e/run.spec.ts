@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { newRun, options } from '../src/game/engine';
+import { knownLine, newRun, options } from '../src/game/engine';
 import { CHECKS, ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 import { SAVE_KEY, freshSave } from '../src/game/save';
@@ -173,8 +173,8 @@ test('after an answer: the reaction, what changed, and the next action', async (
   await expect(reaction).toContainText('Found in the old records: Your registered family address.');
   await expect(next).toHaveText('Continue');
 
-  // The last passport card: the button walks on to customs.
-  await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 2 });
+  // The last passport card (both core cards asked, the follow-up slot spent): the button walks on to customs.
+  await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 3, seen: ['p_host', 'p_purpose'] });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
   await expect(reaction).toContainText('Found in the old records: Your registered family address.');
   await expect(next).toHaveText('Proceed to customs');
@@ -194,12 +194,11 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   const beat = reaction.locator('.story-beat');
   const rows = reaction.locator('.changes li');
   await expect(beat).toHaveText('Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.');
-  // Her address and the family go on file too; on a records day both reach the desks ahead.
+  // Her address and the family go on file too. On a records day both reach the desks ahead,
+  // which their known-facts line shows, so no row repeats them.
   await expect(rows).toHaveText([
     'Your reason verified.', "On file at Customs: your mother's number.",
-    'Found in the old records: Your registered family address.', 'Confirmed and on file: Your mother names another relative.',
-    'Into the shared records for the desks ahead: Your registered family address.',
-    'Into the shared records for the desks ahead: Your mother names another relative.',
+    'Found in the old records: Your registered family address.', 'Confirmed: Your mother names another relative.',
   ]);
   // Separate elements: the beat holds no result text, and the rows sit under it.
   await expect(beat).not.toContainText('verified');
@@ -207,6 +206,30 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   const firstRow = (await rows.first().boundingBox())!;
   expect(firstRow.y, 'first result row below the beat').toBeGreaterThanOrEqual(beatBox.y + beatBox.height);
   await noHorizontalScroll(page, 'contact reaction');
+  expect(errors).toEqual([]);
+});
+
+test('the passport and customs cards each say what the officer already knows', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  const line = page.locator('main.run [data-known]');
+  // Passport, first card: nothing has come out at this desk yet.
+  const passport: RunState = { ...lenaRun(), reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1, seen: ['p_purpose'] };
+  await openAt(page, passport);
+  await expect(line).toHaveCount(1);
+  await expect(line).toHaveText('Nothing on your file yet.');
+  // Customs, after a fact was confirmed at passport and shared: the line names it.
+  const customs: RunState = {
+    ...lenaRun(), reaction: null, screen: { kind: 'encounter', id: 'c_medicine' }, checkpoint: 1, slot: 1,
+    seen: ['p_purpose', 'p_host', 'c_medicine'], facts: { ...lenaRun().facts, fatherCondition: ['passport', 'customs', 'interview'] },
+  };
+  const [part] = knownLine(customs);
+  expect(part.key).toBe('known.fact.confirmed');
+  await openAt(page, customs);
+  await expect(line).toHaveText(t(part.key, part.vars));
+  await expect(line).not.toHaveText('');
+  await noHorizontalScroll(page, 'known-facts line');
   expect(errors).toEqual([]);
 });
 
@@ -275,7 +298,7 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
     if (check === 'medicineLab') {
       // Asking puts the urgency on file and gives the hint, and the reaction says both.
       await buttons.nth(1).click();
-      await expect(page.locator('main.run .panel.reaction')).toContainText('Confirmed and on file: You\'re in a hurry.');
+      await expect(page.locator('main.run .panel.reaction')).toContainText('Confirmed: You\'re in a hurry.');
       await expect(page.locator('main.run .panel.reaction')).toContainText(en['check.medicineLab.hint.clear']);
       // The hint comes before the decision: back in the waiting room, with the result still to come.
       await page.locator('main.run .controls button.primary').click();
