@@ -30,6 +30,18 @@ const at = (s: RunState, id: string, extra: Partial<RunState> = {}): RunState =>
 
 const mark: RunSetup = { character: 'mark', loadout: ['deed', 'returnTicket', 'hotel', 'hospitalNote'], bulletin: 'customs', seed: 3 };
 
+describe('the preview matches what happens', () => {
+  it('telling about your father at the stay question costs the 2-hour hospital call it shows', () => {
+    const s = at(newRun(lena), 'p_stay', { slot: 2 });
+    const o = options(s).find((x) => x.approach.id === 'father')!;
+    const shown = o.effects.reduce((h, e) => h + ('time' in e ? e.time : 0), 0);
+    expect(shown).toBe(-2);
+    const next = step(s, { type: 'choose', approach: 'father' });
+    expect(next.time - s.time).toBe(shown);
+    expect(factIds(next)).toContain('fatherCondition');
+  });
+});
+
 describe('relief and pacing', () => {
   it('a document that settles the question keeps its harmless fact off file and costs nothing', () => {
     const s = at(newRun(mark), 'p_photo', { slot: 2 });

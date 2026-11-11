@@ -542,10 +542,15 @@ export function checkFindings(s: RunState, checkId: CheckId, result: CheckCase):
 
 // ── Applying things
 
+/**
+ * Applies effects whose `when` was already resolved against the state before the
+ * action (resolvedEffects, checkEffects, explainEffects). It does not check `when`
+ * again, because an earlier effect in the list could change the answer, and the
+ * preview the player saw must be what happens.
+ */
 function apply(s: RunState, effects: Effect[]): RunState {
   let n = s;
   for (const e of effects) {
-    if (!check(e.when, n)) continue;
     if ('time' in e) n = { ...n, time: Math.max(0, n.time + e.time) };
     // Capped at the max, because anything at the max already means an inspection.
     else if ('scrutiny' in e) {

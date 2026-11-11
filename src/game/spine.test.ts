@@ -92,6 +92,22 @@ describe('a follow-up is dealt only while its issue is open on the file', () => 
     expect(issueOpen(withAddress, 'p_photo')).toBe(true);
     expect(issueOpen({ ...withAddress, used: ['deed'] }, 'p_photo')).toBe(false);
   });
+
+  it('the phone search opens on a flag or on a salary from abroad on file at customs (border_crossing_game-4qd.15)', () => {
+    const atCustoms = (extra: Partial<RunState>): RunState => ({ ...newRun({ character: 'mark', loadout: ['motherLetter', 'returnTicket', 'employerLetter', 'deed'], bulletin: 'customs', seed: 7 }), checkpoint: 1, ...extra });
+    expect(issueOpen(atCustoms({}), 'c_phone')).toBe(false);
+    expect(issueOpen(atCustoms({ facts: { employer: ['customs'] } }), 'c_phone')).toBe(true);
+    // Confirmed at passport only, the employer is not on file at customs.
+    expect(issueOpen(atCustoms({ facts: { employer: ['passport'] } }), 'c_phone')).toBe(false);
+    expect(issueOpen(atCustoms({ facts: { noBooking: ['customs'] }, flagged: ['noBooking'] }), 'c_phone')).toBe(true);
+  });
+
+  it('honest and cautious runs get the phone search and unlock it (border_crossing_game-4qd.15)', () => {
+    const unlocked = (style: (typeof BOT_STYLES)[number]) => Array.from({ length: SEEDS }, (_, i) => playRun(style, setupFor(i, 'arrival')))
+      .filter((r) => r.choices.some((c) => c.card === 'c_phone' && c.pick === 'unlock')).length;
+    expect(unlocked('honest')).toBeGreaterThan(0);
+    expect(unlocked('cautious')).toBeGreaterThan(0);
+  });
 });
 
 describe('every desk card says what the officer already knows', () => {
