@@ -5,7 +5,8 @@ import { spawnSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import { describe, expect, it } from 'vitest';
 
-const jobs = Math.max(2, Math.min(8, availableParallelism() - 1));
+// Half the cores at most, so the other test files running beside it keep their time limits.
+const jobs = Math.max(2, Math.min(4, Math.floor(availableParallelism() / 2)));
 const sweep = (args: string[]) => spawnSync('npx', ['tsx', 'tools/sweep.ts', ...args], { encoding: 'utf8' });
 
 describe('npx tsx tools/sweep.ts', () => {
