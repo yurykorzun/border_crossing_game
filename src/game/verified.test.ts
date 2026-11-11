@@ -167,7 +167,12 @@ describe('a contact who confirmed a point is not charged again for it', () => {
     const customs = at(named, 'c_host', 'customs');
     // Her statement about where you stay was already checked: no call-in hour on any answer.
     expect(hours(option(customs, 'evidence'))).toBe(0);
-    expect(hours(option(customs, 'call'))).toBe(1);
+    // Waiting for the call uses the address on file instead: no hour, no call.
+    expect(hours(option(customs, 'call'))).toBe(0);
+    expect(answerKey(customs, 'call', 'label')).toBe('enc.c_host.call.verified.label');
+    const waited = choose(customs, 'call');
+    expect(waited.time).toBe(customs.time);
+    expect(waited.screen.kind).not.toBe('wait');
     const after = choose(customs, 'evidence');
     expect(after.time).toBe(customs.time);
     expect(after.reaction?.map((l) => l.key)).not.toContain('calledIn.reaction');

@@ -272,7 +272,8 @@ export const ENCOUNTERS: Encounter[] = [
     // Where you stay is on the file: her address, or what you told the clerk.
     issue: { any: [{ facts: ['familyAddress'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }] },
     approaches: [
-      { id: 'call', kind: 'verify', effects: [{ time: -1 }], check: 'hostCall' },
+      // With the address verified earlier, he reads it off the file: no call, no wait.
+      { id: 'call', kind: 'verify', effects: [{ time: -1 }], check: 'hostCall', ifVerified: [] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [] },
     ],

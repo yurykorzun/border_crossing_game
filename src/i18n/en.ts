@@ -495,6 +495,8 @@ export const en: Record<string, string> = {
   'enc.c_host.call.label': 'Wait while they call',
   'enc.c_host.call.event': 'Call to your host',
   'enc.c_host.call.reaction': "He dials your mother's number and waits.",
+  'enc.c_host.call.verified.label': 'Point to the address already confirmed',
+  'enc.c_host.call.verified.reaction': 'He finds the address already confirmed at passport and lets it go.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
