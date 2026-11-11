@@ -77,6 +77,13 @@ export const en: Record<string, string> = {
   'ui.tier.recorded': 'In the old records',
   'ui.tier.confirmed': 'Confirmed on this crossing',
   'ui.tier.flagged': 'Flagged',
+  // The known-facts line on every desk card (knownLine() in src/game/engine.ts):
+  // the newest fact this officer knows, by its tier, and the newest claim written down.
+  'known.fact.recorded': 'Old records: {fact}.',
+  'known.fact.confirmed': 'Confirmed: {fact}.',
+  'known.fact.flagged': 'Flagged: {fact}.',
+  'known.claim': 'Written down: {claim}.',
+  'known.none': 'Nothing on your file yet.',
   'ui.and': 'and',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
@@ -117,10 +124,10 @@ export const en: Record<string, string> = {
   'change.claim.testimony': 'Two accounts differ, nothing proven: "{claim}".',
   'change.claim.disproof': 'Disproved by the record: "{claim}".',
   'change.onFile.recorded': 'Found in the old records: {fact}.',
-  'change.onFile.confirmed': 'Confirmed and on file: {fact}.',
-  'change.onFile.flagged': 'Flagged on your file: {fact}.',
+  'change.onFile.confirmed': 'Confirmed: {fact}.',
+  'change.onFile.flagged': 'Flagged: {fact}.',
   'change.sent': 'Sent on to {desk}: {fact}.',
-  'change.records': 'Into the shared records for the desks ahead: {fact}.',
+  'change.records': 'Shared with the desks ahead: {fact}.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
   'ui.proceed.customs': 'Proceed to customs',
   'ui.proceed.interview': 'Proceed to the interview',
@@ -420,7 +427,7 @@ export const en: Record<string, string> = {
   'enc.p_stay.unsure.event': 'Residence register check',
   'enc.p_stay.unsure.reaction': 'She enters an open stay and checks whether you are still registered at an address here.',
 
-  'enc.p_secondPassport.q': '"You left on a foreign passport last time. You hold two. Is that correct?"',
+  'enc.p_secondPassport.q': '"You left on a foreign passport last time. You hold two?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
   'enc.p_secondPassport.both.reaction': 'She writes "dual national" on your file and flags it.',
   'enc.p_secondPassport.evidence.label': 'Show {cardThe}',
@@ -468,7 +475,7 @@ export const en: Record<string, string> = {
   'enc.c_shortTrip.mother.label': 'Ask him to call {contact}',
   'enc.c_shortTrip.mother.reaction': 'Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.',
 
-  'enc.c_host.q': 'He finds your registered address and asks whether your mother still lives there. "Is that where you will stay?"',
+  'enc.c_host.q': 'He finds your registered address. "Will you stay there, with your mother?"',
   // An accommodation day with no address on file at customs (questionKey()): every host is phoned.
   'enc.c_host.phoned.q': '"Today we phone every host. Where will you stay, and with whom?"',
   'enc.c_host.call.label': 'Wait while they call',
@@ -488,16 +495,16 @@ export const en: Record<string, string> = {
   'enc.c_phone.refuse.reaction': 'He writes "refused search" on your file and makes you wait for a supervisor.',
 
   // ── Security interview
-  'enc.i_stay.q': '"Who will you stay with?"',
-  'enc.i_stay.evidence.label': 'Show {cardThe}',
-  'enc.i_stay.evidence.reaction': 'The officer copies the address into a file.',
-  'enc.i_stay.mother.label': "Give {contact}'s address",
-  'enc.i_stay.mother.reaction': 'The officer writes down her address and number.',
-  'enc.i_stay.undecided.label': '"I haven\'t decided yet."',
-  'enc.i_stay.undecided.reaction': '"You came all this way without a place to sleep?" The officer moves on.',
-  'enc.i_stay.undecided.bulletin.accommodation.reaction': '"Hosts are phoned today, and you have none to name?" The officer flags it.',
-  'enc.i_stay.undecidedOnFile.label': '"I haven\'t decided yet."',
-  'enc.i_stay.undecidedOnFile.reaction': '"Your mother\'s address is in your file, and you haven\'t decided?" The officer flags it.',
+  'enc.p_host.q': '"Who will you stay with?"',
+  'enc.p_host.evidence.label': 'Show {cardThe}',
+  'enc.p_host.evidence.reaction': 'The clerk copies the address into a file.',
+  'enc.p_host.mother.label': "Give {contact}'s address",
+  'enc.p_host.mother.reaction': 'The clerk writes down her address and number.',
+  'enc.p_host.undecided.label': '"I haven\'t decided yet."',
+  'enc.p_host.undecided.reaction': '"You came all this way without a place to sleep?" The clerk moves on.',
+  'enc.p_host.undecided.bulletin.accommodation.reaction': '"Hosts are phoned today, and you have none to name?" The clerk flags it.',
+  'enc.p_host.undecidedOnFile.label': '"I haven\'t decided yet."',
+  'enc.p_host.undecidedOnFile.reaction': '"Your mother\'s address is on file, and you haven\'t decided?"',
 
   'enc.i_family.q': '"Do you have any other relatives here?"',
   'enc.i_family.name.label': '"{contactMine} lives here."',
@@ -552,6 +559,8 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.noOtherFamily.relativeNamed.review.reaction': 'You explain. Both accounts go to a formal review.',
 
   'enc.i_employer.q': '"Your employer is registered abroad. What exactly do you do for them?"',
+  'enc.i_employer.evidence.label': 'Show {cardThe}',
+  'enc.i_employer.evidence.reaction': 'The officer copies the company name and hands the letter back.',
   'enc.i_employer.perk.label': 'Explain your job plainly',
   'enc.i_employer.perk.reaction': 'You explain test plans. The officer stops writing.',
   'enc.i_employer.contract.label': 'Let them check your contract',
@@ -682,9 +691,9 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'calledIn.reaction': 'Earlier you named {contact}. The officer checks that statement first.',
-  'spot.clear': 'Before you go, the officer checks one thing you said against your file: "{claim}". It fits.',
-  'spot.flaw': 'Before you go, the officer checks one thing you said against your file: "{claim}". It does not fit.',
-  'spot.answered': 'Before you go, the officer checks one thing you said against your file: "{claim}". You have already answered for it.',
+  'spot.clear': 'Spot-check: "{claim}". It fits.',
+  'spot.flaw': 'Spot-check: "{claim}". It does not fit.',
+  'spot.answered': 'Spot-check: "{claim}". You have already answered for it.',
   // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
   'spot.explained': 'Before you go, a spot-check. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
   // Under a clarify or contradiction card's question (caughtLine() in src/game/consequence.ts):

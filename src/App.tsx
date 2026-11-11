@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t, tn } from './i18n';
-import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -622,6 +622,8 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   const short = !caught && question.length <= SHORT_QUESTION;
   // On reaching a desk, one line says what this officer cares about.
   const desk = deskIntro(s);
+  // On every desk card, one line of what this officer already knows, from the file.
+  const known = knownLine(s);
   // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
   const finishing = canFinish(s);
   return (
@@ -629,6 +631,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
         {finishing && <p className="priority doomed">{t('ui.doomed')}</p>}
         {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
+        {known.length > 0 && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
       </section>

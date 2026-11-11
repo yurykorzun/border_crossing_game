@@ -183,8 +183,11 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
   // Each fact names how it sits on file: found in the old records, confirmed on this
   // crossing, or flagged (factTier() in src/game/engine.ts).
   for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.onFile.${e.tier}`, vars: { fact: e.id }, tone: 'plain' });
+  // A fact the line above already names is not named again on its way into the
+  // shared records: the next desk's card shows it on its known-facts line (knownLine()).
+  const named = new Set(events.flatMap((e) => (e.type === 'factRecorded' ? [e.id] : [])));
   for (const e of events)
-    if (e.type === 'factSent')
+    if (e.type === 'factSent' && !(e.via === 'records' && named.has(e.id)))
       out.push(e.via === 'records'
         ? { key: 'change.records', vars: { fact: e.id }, tone: 'plain' }
         : { key: 'change.sent', vars: { fact: e.id, desk: e.desks[0] }, tone: 'plain' });

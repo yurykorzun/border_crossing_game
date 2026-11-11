@@ -1,5 +1,6 @@
-// The encounter decks. Each checkpoint deals one routine card, then the
-// highest-priority related card that fits (see engine.ts deal()).
+// The encounter decks. Each checkpoint deals its two core cards in a fixed
+// order (CORE_CARDS), then at most one follow-up: the highest-priority related
+// card whose open issue is on the file (see engine.ts deal()).
 // Text lives in src/i18n/en.ts: enc.<id>.q, enc.<id>.<approach>.label/.reaction.
 //
 // Rule: every encounter has an approach that needs no card and no contact.
@@ -27,7 +28,7 @@ export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   // fact on file that gives one (the family here, your father's condition) looks odd.
   ['shortTrip', 'familyAddress'],
   ['shortTrip', 'fatherCondition'],
-  // A short trip home with nowhere booked (i_stay).
+  // A short trip home with nowhere booked (p_host).
   ['shortTrip', 'noBooking'],
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
@@ -94,6 +95,18 @@ function noneOf(pairs: readonly [ClaimId, FactId][]): Cond {
 const firstCaught = (pairs: readonly [ClaimId, FactId][], scrutiny: number): Effect[] =>
   pairs.map(([c, f], i) => ({ scrutiny, reason: f, when: { claims: [c], facts: [f], ...noneOf(pairs.slice(0, i)) } }));
 
+/**
+ * Each desk's own job, as two questions asked on every run in this order.
+ * Passport: why you came and where you will stay. Customs: what you carry.
+ * The interview: who you know and where you have been. Anything else a desk
+ * asks is a follow-up on an open issue (Encounter.issue) or a breather.
+ */
+export const CORE_CARDS: Record<'passport' | 'customs' | 'interview', readonly [string, string]> = {
+  passport: ['p_purpose', 'p_host'],
+  customs: ['c_medicine', 'c_cash'],
+  interview: ['i_family', 'i_employer'],
+};
+
 export const ENCOUNTERS: Encounter[] = [
   // ── Passport control: identity and purpose (the clerk wants complete paperwork)
   {
@@ -113,10 +126,39 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
+    // Where you will stay: the clerk puts it on the entry form with your reason.
+    id: 'p_host', checkpoint: 'passport', kind: 'routine', topic: 'accommodation',
+    approaches: [
+      { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
+      // Staying with her is what rules the hotel out, not visiting family.
+      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }, { claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
+      // An evasion is free unless something on file makes it odd: her address is right there.
+      // A short trip with no decided place to stay has no booking to show.
+      // On a day hosts are phoned, having no host to name is itself flagged.
+      {
+        id: 'undecided', kind: 'say', reacts: 'suspicion', requires: { noFacts: ['familyAddress'] },
+        effects: [
+          { fact: 'noBooking', when: { claims: ['shortTrip'] } },
+          { fact: 'noBooking', when: { bulletin: 'accommodation' } },
+          { scrutiny: 1, reason: 'noBooking', when: { bulletin: 'accommodation' } },
+        ],
+      },
+      {
+        id: 'undecidedOnFile', kind: 'say', reacts: 'suspicion', requires: { facts: ['familyAddress'] },
+        effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['shortTrip'] } }],
+      },
+    ],
+  },
+  {
     // A deed proves who owns a flat, not whose face is in the photo. What it gives
     // is a registered address: the clerk looks it up and finds your old ID photo
-    // on the entry. Or a face scan, or another photo ID.
-    id: 'p_photo', checkpoint: 'passport', kind: 'routine', topic: 'identity',
+    // on the entry. Or a face scan, or another photo ID. Asked on a records day,
+    // once an address is on file: the clerk looks it up in the register.
+    id: 'p_photo', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'identity',
+    when: { bulletin: 'records' },
+    // The address on file is not matched to your face yet. A property deed shown
+    // already did that, as the registered owner.
+    issue: { facts: ['familyAddress'], not: { used: ['deed'] } },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'scan', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
@@ -127,7 +169,13 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     // The clerk checks every date: how long you stay. A return ticket settles it.
-    id: 'p_stay', checkpoint: 'passport', kind: 'routine', topic: 'stay',
+    id: 'p_stay', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'stay',
+    // A reason for the trip is on the form with no date out. A return ticket
+    // closes it: it is the only paper with a date out on it.
+    issue: {
+      any: [{ claims: ['familyVisit'] }, { claims: ['shortTrip'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }],
+      not: { used: ['returnTicket'] },
+    },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
       // The honest answer gives the reason, and your father's condition goes on file. She
@@ -141,8 +189,10 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
-    id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'identity',
+    id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 3, topic: 'identity',
     when: { background: 'secondPassport' },
+    // The exit record shows which passport he left on (Character.onFile).
+    issue: { facts: ['secondPassport'] },
     approaches: [
       // Honest, and the second passport goes on file: that entry is the reason for the scrutiny.
       { id: 'both', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
@@ -151,11 +201,12 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
-    id: 'p_employer', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'work',
+    id: 'p_employer', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'work',
     // A short trip home on a foreign salary: the clerk wants to know who pays.
     // No perk here: the clerk wants paper or the register, not an explanation,
     // so Lena's plain answer is kept for the interview (i_employer).
     when: { background: 'foreignEmployer', claims: ['shortTrip'] },
+    issue: { claims: ['shortTrip'] },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       // The register confirms who pays you. That is a fact; what the clerk reads into a
@@ -199,6 +250,7 @@ export const ENCOUNTERS: Encounter[] = [
     // The bag shows it: a short trip home, with a pensioner's prescription.
     id: 'c_shortTrip', checkpoint: 'customs', kind: 'related', priority: 3, topic: 'purpose',
     when: { claims: ['shortTrip'] },
+    issue: { claims: ['shortTrip'] },
     approaches: [
       // Changing the purpose means re-entering it, which takes an hour, and the new form has her address.
       // Every answer here puts the family on file at customs, so a spot-check of "short trip" finds it.
@@ -215,6 +267,8 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'c_host', checkpoint: 'customs', kind: 'related', priority: 2, topic: 'accommodation',
     // An address on file, or a day when every host is phoned.
     when: { any: [{ facts: ['familyAddress'] }, { bulletin: 'accommodation' }] },
+    // Where you stay is on the file: her address, or what you told the clerk.
+    issue: { any: [{ facts: ['familyAddress'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }] },
     approaches: [
       { id: 'call', kind: 'verify', effects: [{ time: -1 }], check: 'hostCall' },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
@@ -224,6 +278,8 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'c_phone', checkpoint: 'customs', kind: 'related', priority: 1, topic: 'history',
     when: { any: [{ background: 'protestPhoto' }, { background: 'donation' }] },
+    // Something on your file is flagged, so the inspector wants the phone.
+    issue: { flagged: true },
     approaches: [
       {
         id: 'unlock', kind: 'verify', check: 'phoneSearch',
@@ -242,29 +298,6 @@ export const ENCOUNTERS: Encounter[] = [
   },
 
   // ── Security interview: history and relationships (the officer asks about people)
-  {
-    id: 'i_stay', checkpoint: 'interview', kind: 'routine', topic: 'accommodation',
-    approaches: [
-      { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
-      // Staying with her is what rules the hotel out, not visiting family.
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [{ claim: 'familyVisit' }, { claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
-      // An evasion is free unless something on file makes it odd: her address is right there.
-      // A short trip with no decided place to stay has no booking to show.
-      // On a day hosts are phoned, having no host to name is itself flagged.
-      {
-        id: 'undecided', kind: 'say', reacts: 'suspicion', requires: { noFacts: ['familyAddress'] },
-        effects: [
-          { fact: 'noBooking', when: { claims: ['shortTrip'] } },
-          { fact: 'noBooking', when: { bulletin: 'accommodation' } },
-          { scrutiny: 1, reason: 'noBooking', when: { bulletin: 'accommodation' } },
-        ],
-      },
-      {
-        id: 'undecidedOnFile', kind: 'say', reacts: 'suspicion', requires: { facts: ['familyAddress'] },
-        effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['shortTrip'] } }],
-      },
-    ],
-  },
   {
     id: 'i_family', checkpoint: 'interview', kind: 'routine', topic: 'history',
     approaches: [
@@ -304,6 +337,7 @@ export const ENCOUNTERS: Encounter[] = [
     // it, or it stays unexplained (scrutiny).
     id: 'i_clarify', checkpoint: 'interview', kind: 'related', priority: 3, topic: 'purpose',
     when: anyPair(INCONSISTENCIES),
+    issue: anyPair(INCONSISTENCIES),
     approaches: [
       { id: 'clarify', kind: 'say', effects: [{ claim: CLARIFIED_BY }, { time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'purpose', effects: [] },
@@ -314,26 +348,29 @@ export const ENCOUNTERS: Encounter[] = [
     // Disproof: something on file says the opposite of a claim. Expensive.
     id: 'i_contradiction', checkpoint: 'interview', kind: 'related', priority: 4, topic: 'history',
     when: anyPair(CONTRADICTIONS),
+    issue: anyPair(CONTRADICTIONS),
     approaches: [
       { id: 'apologise', kind: 'say', effects: firstCaught(CONTRADICTIONS, 2) },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
   {
-    id: 'i_employer', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'work',
-    when: { any: [{ facts: ['employer'] }, { background: 'foreignEmployer' }] },
-    // No paper answer: Mark's only work paper is the letter that put his employer
-    // on file, and Lena's plain answer settles this for free.
+    // Where you have been: the years abroad, and who pays you there. A core card,
+    // so both travelers are asked. Lena's plain answer settles it for free; the
+    // employer letter answers it too, and puts the employer on file.
+    id: 'i_employer', checkpoint: 'interview', kind: 'routine', topic: 'work',
     approaches: [
       { id: 'perk', kind: 'perk', effects: [] },
+      { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       // The contract confirms the employer, and only that (Officer.readings).
-      { id: 'contract', kind: 'verify', effects: [{ time: -2 }, { fact: 'employer' }] },
+      { id: 'contract', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }] },
       { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],
   },
   {
     id: 'i_brother', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'history',
     when: { facts: ['brotherAbroad'] },
+    issue: { facts: ['brotherAbroad'] },
     approaches: [
       { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
       { id: 'calls', kind: 'verify', effects: [{ time: -2 }, { fact: 'brotherAbroad' }] },
@@ -343,6 +380,8 @@ export const ENCOUNTERS: Encounter[] = [
   // ── Follow-ups: dealt only by a check result
   {
     id: 'f_host', checkpoint: 'followup', kind: 'followup', topic: 'accommodation',
+    // Nobody has confirmed where you stay yet.
+    issue: { noFacts: ['hostStatement'] },
     approaches: [
       { id: 'again', kind: 'verify', effects: [{ time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
@@ -351,6 +390,8 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'f_lab', checkpoint: 'followup', kind: 'followup', topic: 'medicine',
+    // The prescription has not been verified: nothing on file says who it is for.
+    issue: { noFacts: ['fatherCondition'] },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'medicine', effects: [] },
       { id: 'wait', kind: 'verify', effects: [{ time: -2 }] },
@@ -359,6 +400,7 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'f_donation', checkpoint: 'followup', kind: 'followup', topic: 'history',
+    issue: { facts: ['donationRecord'] },
     approaches: [
       { id: 'explain', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'donationRecord' }, { scrutiny: 1, reason: 'donationRecord' }] },
       // The record is on the desk, so denying it is a disproof.
@@ -368,6 +410,7 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'f_photo', checkpoint: 'followup', kind: 'followup', topic: 'history',
+    issue: { facts: ['phoneSearched'] },
     approaches: [
       // The photo came from the phone search, which is the only thing that deals this card.
       // A face in a photo raises the question but is not a record, so even a denial is a suspicion.

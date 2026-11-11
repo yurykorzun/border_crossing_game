@@ -345,7 +345,7 @@ test('each checkpoint has its own named scene, and so do the traveler, packing a
 
   const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
   const labels: string[] = [];
-  for (const [id, cp] of [['p_purpose', 0], ['c_medicine', 1], ['i_stay', 2]] as const) {
+  for (const [id, cp] of [['p_purpose', 0], ['c_medicine', 1], ['i_family', 2]] as const) {
     await openAt(page, { ...base, reaction: null, screen: { kind: 'encounter', id }, checkpoint: cp, slot: 1 });
     const scene = page.locator('main.run .scene svg[role="img"]');
     await expect(scene, id).toHaveCount(1);

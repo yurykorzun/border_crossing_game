@@ -9,24 +9,30 @@ import type { CharacterId, RunState } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
 
 // Screen rule 8 in docs/design.md: design for the crowded screen. The longest question in
-// src/i18n/en.ts with all three of its answers, at 390x844 and again at 200 percent text.
+// src/i18n/en.ts that has three answers, with all three, at 390x844 and again at 200 percent text.
 // Every answer must be reachable and nothing may be clipped: with big text the screen
 // scrolls, it never cuts text off. The card is picked from the strings, so a longer
 // question added later becomes the one under test.
 
-/** The longest card question in English, as `enc.<id>.q`, `insp.<id>.q` or a traveler's own `enc.<id>.<traveler>.q`. */
-function longestQuestion() {
-  const qs = Object.entries(en)
+/** Every card question in English, longest first, as `enc.<id>.q`, `insp.<id>.q` or a traveler's own `enc.<id>.<traveler>.q`. */
+function questionsByLength() {
+  return Object.entries(en)
     .map(([key, text]) => ({ key, text, m: /^(enc|insp)\.([^.]+)\.(?:([a-z]+)\.)?q$/.exec(key) }))
     .filter((q) => q.m)
-    .sort((a, b) => b.text.length - a.text.length);
-  const { key, text, m } = qs[0];
-  return { key, text, prefix: m![1] as 'enc' | 'insp', id: m![2], traveler: m![3] as CharacterId | undefined };
+    .sort((a, b) => b.text.length - a.text.length)
+    .map(({ key, text, m }) => ({ key, text, prefix: m![1] as 'enc' | 'insp', id: m![2], traveler: m![3] as CharacterId | undefined }));
 }
 
-/** A saved run on that card for a traveler who gets three answers on it. */
+/** A saved run on the longest question a traveler gets three answers on (a two-answer card is less crowded). */
 function crowdedRun(): { run: RunState; question: string; key: string } {
-  const q = longestQuestion();
+  for (const q of questionsByLength()) {
+    const found = threeAnswers(q);
+    if (found) return found;
+  }
+  throw new Error('no traveler gets three answers on any question');
+}
+
+function threeAnswers(q: ReturnType<typeof questionsByLength>[number]): { run: RunState; question: string; key: string } | undefined {
   const travelers = q.traveler ? [q.traveler] : CHARACTER_IDS;
   for (const character of travelers) {
     const base = newRun({ character, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[character].evidenceSlots), bulletin: 'records', seed: 7 });
@@ -44,7 +50,7 @@ function crowdedRun(): { run: RunState; question: string; key: string } {
     }
     if (options(run).length === 3) return { run, question: q.text, key: q.key };
   }
-  throw new Error(`no traveler gets three answers on the longest question (${q.key})`);
+  return undefined;
 }
 
 async function openAt(page: Page, run: RunState) {

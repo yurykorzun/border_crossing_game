@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { own, t } from '../i18n';
-import { CHALLENGE_PAIRS, CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
+import { CHALLENGE_PAIRS, CONTRADICTIONS, CORE_CARDS, INCONSISTENCIES } from './content/encounters';
 import { SPOT_CHECK_HOURS } from './content/world';
 import { newRun, spotCheckOf, step } from './engine';
 import type { RunSetup } from './engine';
@@ -37,7 +37,8 @@ function leaving(desk: Checkpoint, claims: ClaimId[], facts: FactId[], extra: Pa
     ...newRun(lena),
     checkpoint: CHECKPOINTS.indexOf(desk), slot: 3, claims, facts: at(desk, facts),
     logged: Object.fromEntries(claims.map((c) => [c, [desk]])),
-    screen: { kind: 'encounter', id: card.id }, seen: [card.id], ...extra,
+    // The desk's core cards are behind you, so the desk ends after this card.
+    screen: { kind: 'encounter', id: card.id }, seen: [...CORE_CARDS[desk], card.id], ...extra,
   };
 }
 
@@ -95,7 +96,7 @@ describe('spot-checks', () => {
   });
 
   it('a flaw whose challenge was already answered costs nothing more', () => {
-    const s = leaving('interview', ['shortTrip'], ['noBooking'], { seen: ['i_water', 'i_clarify'] });
+    const s = leaving('interview', ['shortTrip'], ['noBooking'], { seen: [...CORE_CARDS.interview, 'i_water', 'i_clarify'] });
     expect(spotCheckOf(s, 'shortTrip')).toEqual({ result: 'answered' });
     const n = step(s, choose('interview'), picks(0));
     expect(n.time).toBe(s.time);
