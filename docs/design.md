@@ -186,6 +186,9 @@ Kept, because a person picks them even though the bots don't:
 - `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
 - `c_host.mother` - giving your mother's number at customs yourself instead of waiting for the host call. Once she confirmed the address at passport the officer reads it off the file for nothing, and on a day every host is phoned the bots wait for the call. It stays for the person who would rather she hears it from them first.
 - `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
+- `d_hold.leave` - in Departure, walking out without your passport when the exit desk holds it over a claim your last crossing showed false. It ends the crossing (free to go, for now), and every bot waits for the review or signs instead. It stays as the choice of someone who won't spend three more hours at that desk.
+- `d_named.name` - in Departure, naming the relative your file already holds. It is the same trade as `i_family.name`, a person for an hour, so the bots never take it. It stays for the same reason.
+- `p_photo.evidence` - in Departure, a document for the photo check. Departure's opening card asks for the paper first, so the bots reach the photo check with nothing left that settles it. It stays because in Arrival the same answer gets picked.
 
 ## Screen rules
 
