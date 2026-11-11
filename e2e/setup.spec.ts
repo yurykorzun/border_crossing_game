@@ -111,29 +111,30 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
   });
 }
 
-test('one ending seen, one level open: Begin goes straight to the traveler, never the level list, and plays today\'s mission', async ({ page }) => {
+test('Arrival finished: Begin shows the level list with Arrival and The funeral, and each plays its own mission', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await openReturning(page);
+  await openReturning(page, ['arrival']);
   await page.locator('.title-screen button.primary').click();
 
-  // Only Level 1 Arrival is open, so there is nothing to choose and no level list (g0q.2).
+  // Finishing Arrival opens Level 2 The funeral, so the level list comes before the traveler screen.
+  const list = page.locator('main.level-step');
+  await expect(list).toBeVisible();
+  await expect(page.locator('main.traveler-step')).toHaveCount(0);
+  await expect(list.locator('.stage-label')).toHaveText('1 / 4 · Crossing');
+  await expect(list.getByRole('heading', { name: en['ui.pickLevel'] })).toBeVisible();
+  const levels = list.getByRole('list', { name: en['ui.pickLevel'] }).locator('button.level');
+  await expect(levels).toHaveCount(2);
+  await expect(levels.locator('.level-name')).toHaveText(['Arrival', 'The funeral']);
+  await expect(levels.nth(0)).toContainText('Level 1');
+  await expect(levels.nth(1)).toContainText('Level 2');
+  await expect(levels.nth(1)).toContainText(en['level.funeral.blurb']);
+  await expect(levels.nth(1)).toBeEnabled();
+
+  // Arrival: today's mission, 8 hours with a 2-hour trip.
+  await pickArrival(page);
   const traveler = page.locator('main.traveler-step');
-  await expect(traveler).toBeVisible();
-  await expect(page.locator('main.level-step')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: en['ui.pickLevel'] })).toHaveCount(0);
-  await expect(traveler.locator('.stage-label')).toHaveText('1 / 3 · Traveler');
-  await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
-  await expect(page.locator('main.begin-step')).toHaveCount(0);
-
-  // Back from the first step returns to the title; Begin again still skips the list.
-  await traveler.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(page.locator('.title-screen')).toBeVisible();
-  await page.locator('.title-screen button.primary').click();
-  await expect(traveler).toBeVisible();
-  await expect(page.locator('main.level-step')).toHaveCount(0);
-
-  // Through to the begin screen: today's mission, 8 hours with a 2-hour trip.
+  await expect(traveler.locator('.stage-label')).toHaveText('2 / 4 · Traveler');
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
   await page.locator('.traveler-step .controls button.primary').click();
   for (const id of FIRST_RUN.loadout) await page.locator('.doc').nth(EVIDENCE_IDS.indexOf(id)).click();
@@ -142,12 +143,21 @@ test('one ending seen, one level open: Begin goes straight to the traveler, neve
   await expect(mission.locator('h3')).toHaveText(en['mission.title']);
   await expect(mission).toContainText('Last bus leaves in 8 hours.');
   await expect(mission).toContainText('Allow 2 hours to reach the station after the border.');
+
+  // Back to the list and into The funeral: its own goal on Before you cross, and the run saves its level.
+  await openReturning(page, ['arrival']);
+  await page.locator('.title-screen button.primary').click();
+  await page.locator('main.level-step button.level[data-level="funeral"]').click();
+  await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  for (const id of FIRST_RUN.loadout) await page.locator('.doc').nth(EVIDENCE_IDS.indexOf(id)).click();
+  await page.locator('.documents-step .controls button.primary').click();
+  await expect(page.locator('main.begin-step .mission h3')).toHaveText(en['funeral.title']);
+  await expect(page.locator('main.begin-step .mission')).toContainText(en['funeral.body']);
   await page.locator('main.begin-step .controls button.primary').click();
   await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
-  await expect(page.locator('main.run .strip')).toContainText('8 hours');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('purpose-of-visit-save') ?? '{}'));
-  expect(saved.run.level).toBe('arrival');
-  expect(saved.run.time).toBe(8);
+  expect(saved.run.level).toBe('funeral');
   expect(errors).toEqual([]);
 });
 

@@ -9,13 +9,13 @@
 // smooth desk she writes something ordinary. Queues offer no choice, because
 // nothing in them changes what comes next.
 
-import type { CharacterId, ContactId, QueueMood, RunState } from '../types';
+import type { CharacterId, ContactId, FactId, QueueMood, RunState } from '../types';
 
 /** phone: a message from someone, with the sender. speech and narration: what you hear or see in the queue. */
 export type QueueKind = 'phone' | 'speech' | 'narration';
 
-/** Who a phone message is from (msg.from.<id>): your mother, a relative you can name, or work. */
-export type Sender = ContactId | 'work';
+/** Who a phone message is from (msg.from.<id>): your mother, a relative you can name, work, or your friend's sister (The funeral). */
+export type Sender = ContactId | 'work' | 'sister';
 
 export interface QueueBeat {
   key: string;
@@ -29,6 +29,8 @@ export interface QueueBeat {
   after?: QueueMood;
   /** A small kindness from a stranger or an officer, with nothing asked back. */
   kindness?: true;
+  /** Only a run with this fact on file sees the beat: the contact statement its level gave the border (Level.statements). */
+  fact?: FactId;
 }
 
 const beat = (key: string, kind: QueueKind, extra: Omit<QueueBeat, 'key' | 'kind'> = {}): QueueBeat => ({ key, kind, ...extra });
@@ -47,6 +49,9 @@ export const QUEUES: readonly (readonly QueueBeat[])[] = [
     beat('msg.0.0', 'phone', { from: 'mother' }),
     beat('msg.0.1.lena', 'phone', { from: 'mother', character: 'lena' }),
     beat('msg.0.1.mark', 'phone', { from: 'mother', character: 'mark' }),
+    // The funeral: what your friend's sister told the border, in her own message.
+    beat('msg.0.sister.sisterSaysDays', 'phone', { from: 'sister', fact: 'sisterSaysDays' }),
+    beat('msg.0.sister.sisterSaysWeeks', 'phone', { from: 'sister', fact: 'sisterSaysWeeks' }),
     // The relative's own ordinary line, before any card can offer to name them (PERSONAL_LINES).
     beat('msg.0.personal.lena', 'phone', { from: 'cousin', character: 'lena' }),
     beat('msg.0.personal.mark', 'phone', { from: 'brother', character: 'mark' }),
@@ -80,16 +85,17 @@ export const PERSONAL_LINES: Record<CharacterId, Partial<Record<ContactId, strin
 export const PREPARATION_MESSAGE: QueueBeat = beat('msg.prep', 'phone', { from: 'work' });
 
 /** The beats this traveler sees in the queue before checkpoint `next`, after the desk went the way `s.after` says. */
-export function queueBeats(next: number, s: Pick<RunState, 'character' | 'after'>): QueueBeat[] {
+export function queueBeats(next: number, s: Pick<RunState, 'character' | 'after'> & { facts?: RunState['facts'] }): QueueBeat[] {
   const mood = s.after?.[next] ?? 'smooth';
-  return (QUEUES[next] ?? []).filter((b) => (!b.character || b.character === s.character) && (!b.after || b.after === mood));
+  return (QUEUES[next] ?? []).filter((b) => (!b.character || b.character === s.character) && (!b.after || b.after === mood)
+    && (!b.fact || !!s.facts?.[b.fact]));
 }
 
 /**
  * The phone messages this traveler has seen so far, oldest first, for My story.
  * In a queue, `shown` is how many of its beats are up; queues already passed count in full.
  */
-export function messagesSoFar(s: Pick<RunState, 'character' | 'checkpoint' | 'screen' | 'reaction' | 'after'>, shown = Infinity): QueueBeat[] {
+export function messagesSoFar(s: Pick<RunState, 'character' | 'checkpoint' | 'screen' | 'reaction' | 'after'> & { facts?: RunState['facts'] }, shown = Infinity): QueueBeat[] {
   const sc = s.screen;
   // The last reaction before a queue shows with that queue already set, but not started yet.
   const passed = sc.kind === 'between' ? sc.next : Math.min(s.checkpoint, QUEUES.length - 1) + 1;

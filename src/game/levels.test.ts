@@ -20,7 +20,9 @@ describe('levels as data', () => {
     expect([a.goalTitle, a.goalBody]).toEqual(['mission.title', 'mission.body']);
     expect([a.startTime, a.minTripTime]).toEqual([START_TIME, MISSION_MIN_TIME]);
     expect([START_TIME, MISSION_MIN_TIME]).toEqual([8, 2]);
-    expect([...a.cards].sort()).toEqual([...ALL_CARDS].sort());
+    // Every card but the one only The funeral deals: how long you stay.
+    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((id) => id !== 'p_days').sort());
+    expect(LEVELS.funeral.cards.filter((id) => !a.cards.includes(id))).toEqual(['p_days']);
     expect(a.rules).toEqual([]);
   });
 
@@ -37,10 +39,10 @@ describe('levels as data', () => {
   });
 
   it('shows the level list only when more than one level is open (g0q.2)', () => {
-    // Today only Arrival exists, so no save ever sees the list.
+    // A fresh save has only Arrival open, so it never sees the list.
     expect(showsLevelList([])).toBe(false);
-    expect(showsLevelList(['arrival'])).toBe(false);
-    // A second level opens once Arrival is finished: the list appears then.
+    // The funeral opens once Arrival is finished: the list appears then.
+    expect(showsLevelList(['arrival'])).toBe(true);
     const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2 }];
     expect(showsLevelList([], two)).toBe(false);
     expect(showsLevelList(['arrival'], two)).toBe(true);

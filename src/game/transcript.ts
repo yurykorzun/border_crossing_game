@@ -11,7 +11,7 @@
 // counted in onceWords(), not in the run's play time. When a screen there
 // changes, change it here too, or the transcript stops being what the player reads.
 
-import { andList, has, own, t, tn } from '../i18n';
+import { andList, getStory, has, own, setStory, t, tn } from '../i18n';
 import type { BotRun } from './bots';
 import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
@@ -433,6 +433,17 @@ function endingLines(s: RunState, p: Page): void {
  * level list on the first setup screen: every level (LEVEL_IDS) unless a test passes its own.
  */
 export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): Transcript {
+  // In the level's own wording (setStory()), then back to whatever was shown before.
+  const before = getStory();
+  setStory(setup.level);
+  try {
+    return record(run, setup, levels);
+  } finally {
+    setStory(before);
+  }
+}
+
+function record(run: BotRun, setup: RunSetup, levels: readonly Level[]): Transcript {
   let s = newRun(setup);
   const first = new Page(0);
   setupLines(setup, first, levels);

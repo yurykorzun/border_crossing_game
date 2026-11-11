@@ -2,16 +2,18 @@ import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { SaveData } from '../src/game/save';
+import type { LevelId } from '../src/game/types';
 
 /**
- * Opens the game as a returning player: a save with one finished Arrival, so Begin walks
- * the traveler and documents screens (and the level list, once more than one level
- * is open). A fresh save skips them and opens the begin screen as Lena with
- * FIRST_RUN's packing (src/game/content/world.ts).
+ * Opens the game as a returning player: a save with an ending seen, so Begin walks the
+ * traveler and documents screens. A fresh save skips them and opens the begin screen as
+ * Lena with FIRST_RUN's packing (src/game/content/world.ts). By default no level is marked
+ * finished, so only Arrival is open and there is no level list; pass ['arrival'] to open
+ * The funeral too, and the list comes first.
  */
-export async function openReturning(page: Page) {
+export async function openReturning(page: Page, levelsFinished: readonly LevelId[] = []) {
   await page.goto('./');
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['tooLate'], levelsFinished: ['arrival'] })] as const);
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['tooLate'], levelsFinished })] as const);
   await page.reload();
 }
 

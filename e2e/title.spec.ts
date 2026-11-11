@@ -132,9 +132,9 @@ test('with one level open the level list never shows, fresh or returning', async
   await expect(page.locator('main.begin-step')).toBeVisible();
   await expect(page.locator('main.level-step')).toHaveCount(0);
 
-  // Every ending seen: still one level, still no list.
+  // Every ending seen but no level finished on this save: still one level, still no list.
   await openReturning(page);
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['homeInTime', 'homeAtCost', 'tooLate', 'turnedBack'] })] as const);
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['homeInTime', 'homeAtCost', 'tooLate', 'turnedBack'], levelsFinished: [] })] as const);
   await page.reload();
   await expect(page.locator('main.title-screen .levels')).toHaveCount(0);
   await page.locator('.title-screen button.begin').click();
