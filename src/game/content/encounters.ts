@@ -565,7 +565,8 @@ export const INSPECTIONS: Inspection[] = [
     id: 's_connection', kind: 'connection', issue: 'accommodation',
     when: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }, { noFacts: ['familyAddress'] }] },
     approaches: [
-      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }] },
+      // The supervisor rings ahead to say you will be late, which confirms where you stay (Approach.confirms).
+      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }], confirms: true },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', requires: { holds: 'accommodation' }, effects: [] },
       {
         id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true,

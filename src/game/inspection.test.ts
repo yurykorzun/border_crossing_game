@@ -80,7 +80,7 @@ describe('an inspection names the open issue it is about', () => {
     expect(waited.medicine).toBe(true);
   });
 
-  it(`over ${SEEDS} Arrival seeds per style, every answer offered at an inspection settles its issue or changes the file`, () => {
+  it(`over ${SEEDS} Arrival seeds per style, every answer offered at an inspection settles the issue it names or changes it`, () => {
     const answers = new Set<string>();
     for (const style of BOT_STYLES)
       for (let i = 0; i < SEEDS; i++)
@@ -92,15 +92,16 @@ describe('an inspection names the open issue it is about', () => {
             const where = `${style} seed ${i + 1} ${s.screen.id}.${o.approach.id}`;
             answers.add(`${s.screen.id}.${o.approach.id}`);
             const n = step(s, { type: 'choose', approach: o.approach.id });
+            // Settled, a fact on file, the medicine held or someone who can speak to it named: never only a cost.
             const changed = pointVerified(n, issue)
               || JSON.stringify(n.facts) !== JSON.stringify(s.facts)
               || n.medicine !== s.medicine
-              || (n.travel ?? 0) !== (s.travel ?? 0)
               || n.exposed.length > s.exposed.length;
             expect(changed, where).toBe(true);
           }
         }
     expect(answers.has('s_medicine.wait')).toBe(true);
+    expect(answers.has('s_connection.later')).toBe(true);
   });
 });
 

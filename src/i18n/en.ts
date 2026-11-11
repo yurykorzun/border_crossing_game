@@ -665,7 +665,7 @@ export const en: Record<string, string> = {
 
   'insp.s_connection.q': 'While they keep you here, the shuttle to the station leaves without you. The next one is an hour later.',
   'insp.s_connection.later.label': 'Take the later shuttle',
-  'insp.s_connection.later.reaction': 'You write down the new time.',
+  'insp.s_connection.later.reaction': 'You write down the new time. The supervisor rings ahead to say you will be late, and they confirm where you are staying.',
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
   'insp.s_connection.drive.reaction': 'A short call. Someone will be waiting past the gate.',
   'insp.s_connection.transfer.label': 'Take the border transfer',
