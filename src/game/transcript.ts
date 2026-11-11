@@ -641,6 +641,95 @@ export const BALANCE_RULES: Rule[] = [
     () => true, inspected, (p) => p >= BALANCE.inspected.min && p <= BALANCE.inspected.max),
 ];
 
+/** One run's packing, style and whether it got home in time, for rule 11. */
+export interface PackingResult { style: string; packing: string; home: boolean }
+
+/** A packing as rule 11 names it: the traveler and the documents carried. */
+export const packingOf = (setup: RunSetup) => `${setup.character}:${setup.loadout.join('+')}`;
+
+export const PACKING_RULE = { id: 11, name: 'the most successful bot style differs between packings, and every packing gets home in time at least once' } as const;
+
+/**
+ * Rule 11: different packings need different strategies. Per packing, the best
+ * styles are the ones with the highest homeInTime share (ties keep all of
+ * them). It passes when two packings have no best style in common and every
+ * packing got home in time in some run. Checked with at least BALANCE.minRuns
+ * runs per style, like rules 7-9.
+ */
+export function packingSummary(results: readonly PackingResult[]): Summary {
+  const by = new Map<string, Map<string, { won: number; played: number }>>();
+  const perStyle = new Map<string, number>();
+  for (const r of results) {
+    perStyle.set(r.style, (perStyle.get(r.style) ?? 0) + 1);
+    const styles = by.get(r.packing) ?? new Map<string, { won: number; played: number }>();
+    const t = styles.get(r.style) ?? { won: 0, played: 0 };
+    styles.set(r.style, { won: t.won + (r.home ? 1 : 0), played: t.played + 1 });
+    by.set(r.packing, styles);
+  }
+  const bests: Set<string>[] = [];
+  const lost: string[] = [];
+  const tally = new Map<string, number>();
+  for (const [packing, styles] of by) {
+    const rate = (t: { won: number; played: number }) => t.won / t.played;
+    const top = Math.max(...[...styles.values()].map(rate));
+    if (top === 0) lost.push(packing);
+    const best = new Set([...styles].filter(([, t]) => rate(t) === top).map(([s]) => s));
+    for (const s of best) tally.set(s, (tally.get(s) ?? 0) + 1);
+    bests.push(best);
+  }
+  const differs = bests.some((a, i) => bests.slice(i + 1).some((b) => ![...a].some((s) => b.has(s))));
+  const counts = [...tally].sort(([sa, a], [sb, b]) => b - a || sa.localeCompare(sb)).map(([s, n]) => `${s} ${n}`).join(', ');
+  const text = `best style ${differs ? 'differs' : 'never differs'} across ${by.size} packings (best in: ${counts || 'none'}; ties count for each)`
+    + (lost.length ? `, never home in time: ${lost.join(', ')}` : ', every packing home in time at least once');
+  const fewest = perStyle.size ? Math.min(...perStyle.values()) : 0;
+  if (fewest < BALANCE.minRuns) return { rule: PACKING_RULE.id, ok: true, text: `${text} (not checked: ${fewest} runs per style, needs ${BALANCE.minRuns})` };
+  return { rule: PACKING_RULE.id, ok: differs && !lost.length, text };
+}
+
+/** One pick on a card, the hours left when it was made, and whether its run got home in time, for rule 12. */
+export interface TimedPick { card: string; pick: string; hours: number; home: boolean }
+
+/** Rule 12 only compares picks made at least this often on that side of the card's split. */
+export const MIN_TIMED_PICKS = 20;
+
+export const HOURS_RULE = { id: 12, name: 'for at least one card, the answer that gets home in time most often differs between many and few hours left' } as const;
+
+/**
+ * Rule 12: the best choice changes with time. Per card, the picks are split at
+ * the median hours left: many is above it, few is at it or below. On each side
+ * the best answer is the one with the highest homeInTime share among answers
+ * picked at least MIN_TIMED_PICKS times (a tie on top gives no best). A card
+ * counts when both sides have a best and they differ. `runsPerStyle` gates it
+ * like rules 7-10.
+ */
+export function hoursSummary(picks: readonly TimedPick[], runsPerStyle: number): Summary {
+  const by = new Map<string, TimedPick[]>();
+  for (const p of picks) by.set(p.card, [...(by.get(p.card) ?? []), p]);
+  const bestOf = (side: TimedPick[]): string | undefined => {
+    const t = new Map<string, { won: number; played: number }>();
+    for (const p of side) {
+      const x = t.get(p.pick) ?? { won: 0, played: 0 };
+      t.set(p.pick, { won: x.won + (p.home ? 1 : 0), played: x.played + 1 });
+    }
+    const ranked = [...t].filter(([, x]) => x.played >= MIN_TIMED_PICKS).map(([pick, x]) => ({ pick, rate: x.won / x.played }))
+      .sort((a, b) => b.rate - a.rate);
+    if (!ranked.length || (ranked.length > 1 && ranked[0].rate === ranked[1].rate)) return undefined;
+    return ranked[0].pick;
+  };
+  const turns: string[] = [];
+  for (const [card, list] of [...by].sort(([a], [b]) => a.localeCompare(b))) {
+    const hours = list.map((p) => p.hours).sort((a, b) => a - b);
+    const median = hours[(hours.length - 1) >> 1];
+    const many = bestOf(list.filter((p) => p.hours > median));
+    const few = bestOf(list.filter((p) => p.hours <= median));
+    if (many && few && many !== few) turns.push(`${card}: ${many} with more than ${median} h, ${few} with ${median} h or less`);
+  }
+  const text = `best answer changes with hours left on ${turns.length} of ${by.size} cards`
+    + (turns.length ? ` (${turns.slice(0, 3).join('; ')}${turns.length > 3 ? '; ...' : ''})` : '');
+  if (runsPerStyle < BALANCE.minRuns) return { rule: HOURS_RULE.id, ok: true, text: `${text} (not checked: ${runsPerStyle} runs per style, needs ${BALANCE.minRuns})` };
+  return { rule: HOURS_RULE.id, ok: turns.length > 0, text };
+}
+
 /** An inspection, or an encounter card that is not routine. */
 const escalating = (id: string) => INSPECTION_BY_ID.has(id) || ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
 

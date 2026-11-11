@@ -259,6 +259,22 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
   return { style, final: s, actions, choices, noCost: free, lies, caught: caught.size };
 }
 
+/**
+ * A run's choices with the hours left (RunState.time) when each was made, read
+ * by replaying its actions from the setup. Rule 12 in src/game/transcript.ts.
+ */
+export function timedChoices(run: BotRun, setup: RunSetup): { card: string; pick: string; hours: number }[] {
+  const out: { card: string; pick: string; hours: number }[] = [];
+  let s = newRun(setup);
+  for (const a of run.actions) {
+    const sc = s.screen;
+    if (a.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) out.push({ card: sc.id, pick: a.approach, hours: s.time });
+    if (a.type === 'waitAction' && sc.kind === 'wait') out.push({ card: sc.check, pick: a.action, hours: s.time });
+    s = step(s, a);
+  }
+  return out;
+}
+
 /** One run of a style. With `ignore`, the bot ignores that level rule (botAction()). */
 export function playRun(style: BotStyle, setup: RunSetup, ignore?: LevelRule): BotRun {
   return playWith(style, setup, (s, botRng) => botAction(style, s, botRng, ignore));

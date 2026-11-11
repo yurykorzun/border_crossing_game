@@ -3,7 +3,8 @@
 // known entry covers, on a known entry that no longer happens, or on a
 // whole-eval check that is not ok (rule 4 only reports the median full run;
 // rules 7-9 check balance shares once every style has 100 runs, rule 10 the
-// memorised script's homeInTime once it has 100 runs).
+// memorised script's homeInTime once it has 100 runs, rules 11-12 that packing
+// and hours left change the best play, also from 100 runs per style).
 // `npm run eval -- [--seeds 200] [--seed 0] [--level arrival] [--no-known] [--min-minutes 4.5] [--out dir]`
 //
 // Every level in turn (LEVEL_IDS in src/game/content/levels.ts), or only --level,
@@ -14,10 +15,10 @@
 // as plain text, for reading, named <level>-<style>-seed<n>.txt.
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor } from '../src/game/bots';
+import { BOT_STYLES, firstPassScript, playRun, playScript, setupFor, timedChoices } from '../src/game/bots';
 import type { BotStyle } from '../src/game/bots';
-import { KNOWN_FAILURES, MEMORISED_RULE, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, memorisedSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
-import type { Transcript } from '../src/game/transcript';
+import { HOURS_RULE, KNOWN_FAILURES, MEMORISED_RULE, PACKING_RULE, PLAY_MINUTES, RULES, evaluate, formatFailure, formatSummary, hoursSummary, memorisedSummary, packingOf, packingSummary, playTimeRule, transcriptOf, transcriptText } from '../src/game/transcript';
+import type { PackingResult, Summary, TimedPick, Transcript } from '../src/game/transcript';
 import { LEVELS, LEVEL_IDS, isLevelId } from '../src/game/content/levels';
 import type { LevelId } from '../src/game/types';
 
@@ -71,10 +72,16 @@ let exitCode = 0;
 
 for (const level of PLAYED) {
   const transcripts: Transcript[] = [];
+  const packings: PackingResult[] = [];
+  const timed: TimedPick[] = [];
   for (const style of STYLES)
     for (let i = 0; i < SEEDS; i++) {
       const setup = setupFor(START + i, level);
-      transcripts.push(transcriptOf(playRun(style, setup), setup));
+      const run = playRun(style, setup);
+      transcripts.push(transcriptOf(run, setup));
+      const home = run.final.ending === 'homeInTime';
+      packings.push({ style, packing: packingOf(setup), home });
+      for (const c of timedChoices(run, setup)) timed.push({ ...c, home });
     }
 
   for (const style of STYLES)
@@ -103,10 +110,17 @@ for (const level of PLAYED) {
   const script = firstPassScript(SEEDS, START, level);
   let memorisedHome = 0;
   for (let i = 0; i < SEEDS; i++) if (playScript(script, setupFor(START + i, level)).final.ending === 'homeInTime') memorisedHome++;
-  const memorised = memorisedSummary(memorisedHome, SEEDS);
-  console.log(`  ${(memorised.ok ? 'ok' : 'FAIL').padEnd(6)}rule ${MEMORISED_RULE.id}: ${MEMORISED_RULE.name}`);
-  console.log(`        ${memorised.ok ? '' : 'FAIL '}${formatSummary(memorised)}`);
-  if (r.exitCode || !memorised.ok) exitCode = 1;
+  // Rules 11 and 12 read the same style runs as the rules above, by packing and by hours left at each card.
+  const whole: [{ id: number; name: string }, Summary][] = [
+    [MEMORISED_RULE, memorisedSummary(memorisedHome, SEEDS)],
+    [PACKING_RULE, packingSummary(packings)],
+    [HOURS_RULE, hoursSummary(timed, SEEDS)],
+  ];
+  for (const [rule, x] of whole) {
+    console.log(`  ${(x.ok ? 'ok' : 'FAIL').padEnd(6)}rule ${rule.id}: ${rule.name}`);
+    console.log(`        ${x.ok ? '' : 'FAIL '}${formatSummary(x)}`);
+  }
+  if (r.exitCode || whole.some(([, x]) => !x.ok)) exitCode = 1;
   if (r.fresh.length) {
     console.log(`\n${r.fresh.length} failures${r.fresh.length > SHOW ? `, first ${SHOW}` : ''}:`);
     for (const f of r.fresh.slice(0, SHOW)) console.log(`  ${formatFailure(f)}`);
