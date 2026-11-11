@@ -50,6 +50,7 @@ export const en: Record<string, string> = {
   'ui.record.title': 'Your file',
   'ui.record.none': 'Nothing you said went on file.',
   'ui.record.said': '{date}, {desk}: "{said}"',
+  'ui.record.said.undated': '"{said}"',
   'ui.record.named': 'Named: {contact}',
   'ui.record.disproved': 'A record did not match "{said}"',
   'ui.record.continue': "Continue {traveler}'s crossing",
@@ -856,6 +857,8 @@ export const en: Record<string, string> = {
   // A file line under a question quotes what the file holds (fileLine() in src/game/consequence.ts).
   'file.said': '{crossing}, {date}, {desk}. Asked {context}: "{said}".',
   'file.disproved': '{crossing}, {date}: a record did not match "{said}".',
+  'file.said.undated': '{crossing}: "{said}".',
+  'file.disproved.undated': '{crossing}: a record did not match "{said}".',
   'file.declared.under': 'Kept from {crossing}: "Under the limit."',
   'file.declared.counted': 'Kept from {crossing}: your cash, counted.',
   'file.declared.shown': 'Kept from {crossing}: a paper for your cash.',

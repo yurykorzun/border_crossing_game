@@ -30,9 +30,19 @@ export interface RunSetup {
   file?: CarriedFile;
 }
 
+/** A claim a later desk quotes: with its date, desk and card, or only the crossing in a file saved before `said` existed. */
+export type FileQuote = CarriedClaim | Pick<CarriedClaim, 'claim' | 'crossing'>;
+
+/**
+ * The claims a carried file quotes: its `said` list, or, in a file saved before that
+ * list existed, each of its `claims` with only the crossing it came from.
+ */
+export const fileSaid = (file: CarriedFile | undefined): FileQuote[] =>
+  !file ? [] : file.said ?? file.claims.map((claim) => ({ claim, crossing: file.level }));
+
 /** The claim a carried file is quoted on: why you came if it says, else the first thing it has you saying. */
-export function fileClaim(file: CarriedFile | undefined): CarriedClaim | undefined {
-  const said = file?.said ?? [];
+export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined {
+  const said = fileSaid(file);
   return said.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? said[0];
 }
 

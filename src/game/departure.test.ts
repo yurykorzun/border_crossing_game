@@ -193,3 +193,27 @@ describe('Lena\'s file never opens Mark\'s Departure', () => {
     expect(LEVELS.arrival.readsFile).toBeFalsy();
   });
 });
+
+describe('a file saved before claims kept their desk and date still carries its claims', () => {
+  // A save from Arrival before CarriedFile.said existed has only `claims`.
+  const old = (file: CarriedFile): CarriedFile => {
+    const { said: _said, ...rest } = file;
+    return rest;
+  };
+
+  it.each([['lena'], ['mark']] as const)('%s: desk 1 names the claim, the hold names the false one, the recap lists them', (who) => {
+    const file = old(SAMPLE_FILES[who]);
+    const s = { ...newRun(setupOf(who, file)), seen: ['d_entry'], screen: { kind: 'encounter', id: 'd_entry' } } as RunState;
+    const claim = file.claims.find((c) => c === 'familyVisit' || c === 'shortTrip')!;
+    expect(questionKey(s, 'enc', 'd_entry')).not.toMatch(/unsaid/);
+    const line = text(fileLine(s, 'd_entry'));
+    expect(line).toContain(`"${t(own(`said.${claim}`, who))}"`);
+    expect(line).toContain(t('level.arrival.title'));
+    expect(line).not.toMatch(/[{}—]/);
+    for (const c of file.disproved ?? []) expect(text(fileLine(s, 'd_hold'))).toContain(`"${t(own(`said.${c}`, who))}"`);
+    const recap = recordLines(file).map(text);
+    expect(recap).not.toContain(t('ui.record.none'));
+    for (const c of file.claims) expect(recap.some((l) => l.includes(`"${t(own(`said.${c}`, who))}"`))).toBe(true);
+    for (const l of recap) expect(l).not.toMatch(/[{}—]/);
+  });
+});

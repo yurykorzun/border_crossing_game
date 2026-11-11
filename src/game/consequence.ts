@@ -4,10 +4,10 @@
 // read the same parts.
 
 import { has, own, t } from '../i18n';
-import type { Option } from './engine';
+import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, factIds, factTier, fileClaim, fileContact, knows, travelOf } from './engine';
-import type { CarriedClaim, CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import { caught, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
+import type { CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -325,16 +325,16 @@ export function caughtLine(s: RunState, card: string): { key: string; vars: Reco
 export const fileDate = (date: string): string =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 
-/** The vars a file line quotes a claim with: the crossing, the date, the desk, the question it answered and your words. */
-function quoteVars(s: RunState, c: CarriedClaim): Record<string, string> {
+/**
+ * A file line quoting a claim: `key` with the crossing, the date, the desk, the question
+ * it answered and your words, or `key`.undated with the crossing and your words when the
+ * file was saved before it kept the rest (fileSaid() in src/game/engine.ts).
+ */
+function quoteLine(s: RunState, key: string, c: FileQuote): { key: string; vars: Record<string, string> } {
+  const vars = { crossing: t(`level.${c.crossing}.title`), said: own(`said.${c.claim}`, s.character).slice('said.'.length) };
+  if (!('date' in c)) return { key: `${key}.undated`, vars };
   const context = has(`file.context.${c.context}`) ? `file.context.${c.context}` : 'file.context';
-  return {
-    crossing: t(`level.${c.crossing}.title`),
-    date: fileDate(c.date),
-    desk: c.desk,
-    context: t(context),
-    said: own(`said.${c.claim}`, s.character).slice('said.'.length),
-  };
+  return { key, vars: { ...vars, date: fileDate(c.date), desk: c.desk, context: t(context) } };
 }
 
 /**
@@ -347,10 +347,10 @@ export function fileLine(s: RunState, card: string): { key: string; vars: Record
   const file = s.file;
   if (!file) return undefined;
   const first = fileClaim(file);
-  if (card === 'd_entry') return first && { key: 'file.said', vars: quoteVars(s, first) };
+  if (card === 'd_entry') return first && quoteLine(s, 'file.said', first);
   if (card === 'd_hold') {
-    const c = (file.said ?? []).find((x) => file.disproved?.includes(x.claim));
-    return c && { key: 'file.disproved', vars: quoteVars(s, c) };
+    const c = fileSaid(file).find((x) => file.disproved?.includes(x.claim));
+    return c && quoteLine(s, 'file.disproved', c);
   }
   if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: { crossing: t(`level.${file.level}.title`) } };
   return undefined;
@@ -364,8 +364,10 @@ export function fileLine(s: RunState, card: string): { key: string; vars: Record
 export function recordLines(file: CarriedFile): { key: string; vars?: Record<string, string> }[] {
   const said = (c: ClaimId) => own(`said.${c}`, file.character).slice('said.'.length);
   const lines: { key: string; vars?: Record<string, string> }[] = [{ key: 'ui.record.title' }];
-  const claims = file.said ?? [];
-  for (const c of claims) lines.push({ key: 'ui.record.said', vars: { date: fileDate(c.date), desk: c.desk, said: said(c.claim) } });
+  const claims = fileSaid(file);
+  for (const c of claims) {
+    lines.push('date' in c ? { key: 'ui.record.said', vars: { date: fileDate(c.date), desk: c.desk, said: said(c.claim) } } : { key: 'ui.record.said.undated', vars: { said: said(c.claim) } });
+  }
   if (!claims.length) lines.push({ key: 'ui.record.none' });
   for (const c of file.named) lines.push({ key: 'ui.record.named', vars: { contact: c } });
   for (const c of file.disproved ?? []) lines.push({ key: 'ui.record.disproved', vars: { said: said(c) } });
