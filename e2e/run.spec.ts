@@ -597,3 +597,39 @@ test('the bag search scene has an open suitcase, and the supervisor comes in for
   await expect(page.locator('main.run .scene svg[data-scene="passport"] [data-name="passport behind the glass"]')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+// "Why now?" with the letter and the hospital note packed: one "Show a document" answer
+// opens both under the same question, each with its own cost line, and Back to answers
+// returns to the card. Both phone heights, so the way back is never below the screen.
+for (const height of [844, 667]) {
+  test(`at 390x${height} the document list shows both documents and the way back on screen`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.setViewportSize({ width: 390, height });
+    await page.goto('./');
+    const run = newRun({ character: 'lena', loadout: ['motherLetter', 'hospitalNote', 'employerLetter'], bulletin: 'records', seed: 7 });
+    await openAt(page, { ...run, reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
+    const answers = page.locator('main.run .controls button.choice');
+    await expect(answers).toHaveCount(3);
+    await expect(answers.first()).toHaveText(/Show a document\s*2 documents fit/);
+
+    await answers.first().click();
+    const question = (await page.locator('main.run .question').innerText()).trim();
+    expect(question).toContain('Why now?');
+    expect((await answerCards(page)).map((c) => c.rows)).toEqual([
+      ["Show your mother's letter", 'Uses letter · Reveals her address'],
+      ['Show the hospital note', "Uses note · Reveals your father's condition"],
+    ]);
+    const back = page.locator('main.run .controls button.back-to-answers');
+    await expect(back).toHaveText('Back to answers');
+    const lowest = await page.locator('main.run .controls button').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().bottom)));
+    expect(lowest, 'the last button below the screen').toBeLessThanOrEqual(height);
+    await noHorizontalScroll(page, `the document list at 390x${height}`);
+    await page.screenshot({ path: `test-results/document-list-390x${height}.png` });
+
+    await back.click();
+    await expect(answers).toHaveCount(3);
+    await expect(answers.first()).toHaveText(/Show a document/);
+    expect(errors).toEqual([]);
+  });
+}
