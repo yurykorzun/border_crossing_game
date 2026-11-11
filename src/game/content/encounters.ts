@@ -102,6 +102,7 @@ const firstCaught = (pairs: readonly [ClaimId, FactId][], scrutiny: number): Eff
  * asks is a follow-up on an open issue (Encounter.issue) or a breather.
  */
 export const CORE_CARDS: Record<'passport' | 'customs' | 'interview', readonly [string, string]> = {
+  // A level can ask its own (Level.core): Departure opens each desk from your file.
   passport: ['p_purpose', 'p_host'],
   customs: ['c_medicine', 'c_cash'],
   interview: ['i_family', 'i_employer'],
@@ -425,6 +426,105 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 1, reason: 'phoneSearch' }] },
       { id: 'deny', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 2, reason: 'phoneSearch' }] },
       { id: 'law', kind: 'verify', effects: [{ time: -2 }] },
+    ],
+  },
+
+  // ── Departure (rwf.3): the desks open with your file from the crossing before
+  // (RunState.file). Each card asks one of Arrival's core questions again, with what
+  // you said then quoted above it (fileLine() in src/game/consequence.ts). Saying
+  // something else now is held against you with the entry record as the reason, an
+  // interpretation of the record, never proof.
+  {
+    // Why you came: the first card at the first desk names the claim your file holds.
+    id: 'd_entry', checkpoint: 'passport', kind: 'routine', opening: true, topic: 'purpose',
+    approaches: [
+      {
+        id: 'evidence', kind: 'evidence', topic: 'purpose',
+        effects: [
+          { send: 'call', facts: ['familyAddress'], when: { bulletin: 'accommodation' } },
+          { send: 'call', facts: ['fatherCondition'] },
+        ],
+      },
+      // The register check is only needed when the file does not already say it.
+      {
+        id: 'family', kind: 'verify', reacts: 'suspicion',
+        effects: [
+          { claim: 'familyVisit' },
+          { time: -1, when: { not: { fileSaid: ['familyVisit'] } } },
+          { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['shortTrip'] } },
+        ],
+      },
+      {
+        id: 'shortTrip', kind: 'say', reacts: 'suspicion',
+        effects: [{ claim: 'shortTrip' }, { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['familyVisit'] } }],
+      },
+    ],
+  },
+  {
+    // The return ticket: your entry form says five days, and you leave after twelve.
+    // A longer stay is asked about, never proof of a lie: no answer here ends the run.
+    id: 'd_stay', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'stay',
+    issue: { any: [{ claims: ['familyVisit'] }, { claims: ['shortTrip'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }] },
+    approaches: [
+      { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
+      // Explaining the changed plans says more about your family: his condition goes on file.
+      {
+        id: 'father', kind: 'verify',
+        effects: [{ claim: 'familyVisit' }, { fact: 'fatherCondition' }, { time: -1, when: { noFacts: ['fatherCondition'] } }],
+      },
+      // Letting the difference stand is no proof of anything, so she checks it herself: the longer wait.
+      { id: 'stand', kind: 'verify', effects: [{ time: -2 }] },
+    ],
+  },
+  {
+    // A claim your last crossing showed false is on the entry record, so the exit desk
+    // can hold your passport for a review. Never dealt from a file with no disproved claim.
+    id: 'd_hold', checkpoint: 'passport', kind: 'related', priority: 5, topic: 'history',
+    when: { facts: ['entryRecord'], fileDisproved: true },
+    issue: { fileDisproved: true },
+    approaches: [
+      { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
+      { id: 'sign', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 1, reason: 'entryRecord' }, { time: -1 }] },
+      // Leaving without it ends the crossing: turned back, free to go for now (endingText()).
+      { id: 'leave', kind: 'withdraw', effects: [] },
+    ],
+  },
+  {
+    // Cash going out: the officer has what customs kept of your declaration on the way in.
+    id: 'd_declared', checkpoint: 'customs', kind: 'routine', topic: 'money',
+    approaches: [
+      { id: 'evidence', kind: 'evidence', topic: 'money', effects: [] },
+      { id: 'count', kind: 'verify', effects: [{ time: -1 }, { fact: 'cashCount' }] },
+      {
+        id: 'under', kind: 'say',
+        effects: [
+          { claim: 'cashUnderLimit' },
+          { fact: 'cashCount', when: { bulletin: 'customs' } },
+          { send: 'printout', facts: ['cashCount'], when: { bulletin: 'customs' } },
+          // The total counted on the way in is on the record, and "under the limit" is not a total,
+          // so she counts it again: the wait, not a mark against you.
+          { time: -1, when: { fileDeclared: ['counted'] } },
+        ],
+      },
+    ],
+  },
+  {
+    // Who you know: with a contact named on your file, the officer asks about them first.
+    id: 'd_named', checkpoint: 'interview', kind: 'routine', topic: 'history',
+    approaches: [
+      {
+        id: 'name', kind: 'contact', contacts: ['cousin', 'brother'], namesOnly: true,
+        effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
+      },
+      {
+        id: 'deny', kind: 'say',
+        effects: [
+          { claim: 'noOtherFamily' },
+          { fact: 'relativeContact', when: { bulletin: 'records' } },
+          { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
+        ],
+      },
+      { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
   },
 ];

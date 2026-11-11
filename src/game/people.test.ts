@@ -133,7 +133,7 @@ describe('each contact speaks before any card offers them', () => {
 
   it('the packing screen shows one short message, from work, asking for a return date', () => {
     expect(PREPARATION_MESSAGE.from).toBe('work');
-    expect(t(PREPARATION_MESSAGE.key)).toBe("Hope your dad's OK. Do you know when you'll be back? The client meeting is Monday.");
+    expect(t(PREPARATION_MESSAGE.key)).toBe("Hope your dad's OK. Will you be back for Monday's client meeting?");
   });
 });
 

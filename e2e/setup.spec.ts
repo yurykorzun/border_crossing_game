@@ -114,7 +114,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
 test('one ending seen, one level open: Begin goes straight to the traveler, never the level list, and plays today\'s mission', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await openReturning(page);
+  await openReturning(page, []);
   await page.locator('.title-screen button.primary').click();
 
   // Only Level 1 Arrival is open, so there is nothing to choose and no level list (g0q.2).
@@ -172,7 +172,7 @@ async function fits(page: Page, where: string, bodyMayScroll = false) {
 test('choose your traveler: premise heading, role lines, history link, Continue as the pick', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await openReturning(page);
+  await openReturning(page, []);
   await page.locator('.title-screen button.primary').click();
   await pickArrival(page);
 
@@ -283,7 +283,7 @@ async function stepFits(page: Page, where: string) {
 test('prepare your documents, begin the crossing, and Back keeps the picks', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
-  await openReturning(page);
+  await openReturning(page, []);
 
   // Title, then each setup heading in order, into the first queue.
   await expect(page.locator('.title-screen h1')).toHaveText('Purpose of Visit');

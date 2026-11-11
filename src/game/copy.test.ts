@@ -161,6 +161,15 @@ describe('a time cost names what the hours are spent on', () => {
     // New with the stay question (p_stay), so it has no earlier price.
     'enc.p_stay.unsure': { always: 1, most: 1 },
     'enc.p_stay.father': { always: 0, most: 2 },
+    // Departure's cards (rwf.3), new, so they have no earlier price.
+    'enc.d_entry.family': { always: 0, most: 1 },
+    'enc.d_stay.father': { always: 0, most: 1 },
+    'enc.d_stay.stand': { always: 2, most: 2 },
+    'enc.d_hold.review': { always: 3, most: 3 },
+    'enc.d_hold.sign': { always: 1, most: 1 },
+    'enc.d_declared.count': { always: 1, most: 1 },
+    'enc.d_declared.under': { always: 0, most: 1 },
+    'enc.d_named.why': { always: 1, most: 1 },
   };
 
   it('every answer that costs time has a non-empty event text, at the same hours as before', () => {

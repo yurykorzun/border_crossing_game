@@ -2,7 +2,7 @@
 // and returns the next state. The UI only renders state and sends actions.
 
 import type {
-  Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
+  Action, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
   CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
@@ -22,13 +22,44 @@ export interface RunSetup {
   loadout: EvidenceId[];
   bulletin: BulletinId;
   seed: number;
+  /**
+   * The file from the crossing before, in a level that reads one (Level.readsFile):
+   * the player's own, or a seeded default (defaultFile() in src/game/carry.ts) for a
+   * standalone run. It must be this traveler's.
+   */
+  file?: CarriedFile;
 }
+
+/** A claim a later desk quotes: with its date, desk and card, or only the crossing in a file saved before `said` existed. */
+export type FileQuote = CarriedClaim | Pick<CarriedClaim, 'claim' | 'crossing'>;
+
+/**
+ * The claims a carried file quotes: its `said` list, or, in a file saved before that
+ * list existed, each of its `claims` with only the crossing it came from.
+ */
+export const fileSaid = (file: CarriedFile | undefined): FileQuote[] =>
+  !file ? [] : file.said ?? file.claims.map((claim) => ({ claim, crossing: file.level }));
+
+/** The claim a carried file is quoted on: why you came if it says, else the first thing it has you saying. */
+export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined {
+  const said = fileSaid(file);
+  return said.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? said[0];
+}
+
+/** The contact a carried file names that a desk asks about: a relative before your mother. */
+export const fileContact = (file: CarriedFile | undefined): ContactId | undefined =>
+  file?.named.find((c) => c !== 'mother') ?? file?.named[0];
 
 export function newRun(setup: RunSetup): RunState {
   const ch = CHARACTERS[setup.character];
   if (setup.loadout.length !== ch.evidenceSlots) throw new Error(`${ch.id} takes ${ch.evidenceSlots} evidence cards`);
   const level = levelOf(setup);
+  if (level.readsFile && !setup.file) throw new Error(`${level.id} opens with a file from your last crossing`);
+  // One traveler's file never opens another's crossing.
+  if (setup.file && setup.file.character !== ch.id) throw new Error(`${setup.file.character}'s file cannot open ${ch.id}'s crossing`);
+  const onFile = (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {});
   return {
+    ...(level.readsFile && setup.file ? { file: setup.file } : {}),
     v: 2,
     level: setup.level ?? DEFAULT_LEVEL,
     seed: setup.seed,
@@ -43,10 +74,12 @@ export function newRun(setup: RunSetup): RunState {
     travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
     // Old records the passport desk has at once (Character.onFile).
-    facts: (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {}),
+    // Leaving, every desk has your entry record from the crossing in.
+    facts: level.readsFile ? { ...onFile, entryRecord: [...CHECKPOINTS] } : onFile,
     claims: [],
     logged: {},
     saidAt: {},
+    saidOn: {},
     medicine: true,
     perkUsed: false,
     withdrew: false,
@@ -75,6 +108,7 @@ export const setupOf = (s: RunState): RunSetup => ({
   loadout: [...s.loadout],
   bulletin: s.bulletin,
   seed: s.seed,
+  ...(s.file ? { file: s.file } : {}),
 });
 
 // ── What each official knows
@@ -122,7 +156,10 @@ export const loggedAt = (s: RunState, c: ClaimId): Checkpoint[] => s.logged?.[c]
 /** `s` after claiming `c` here: on the record of what you said, and written down if this officer does (writesDown). */
 function claim(s: RunState, c: ClaimId): RunState {
   const desk = deskOf(s);
-  const n = s.claims.includes(c) ? s : { ...s, claims: [...s.claims, c], saidAt: { ...s.saidAt, [c]: desk } };
+  const card = s.screen.kind === 'encounter' || s.screen.kind === 'inspection' ? s.screen.id : undefined;
+  const n = s.claims.includes(c) ? s : {
+    ...s, claims: [...s.claims, c], saidAt: { ...s.saidAt, [c]: desk }, ...(card ? { saidOn: { ...s.saidOn, [c]: card } } : {}),
+  };
   const had = loggedAt(n, c);
   if (!writesDown(desk, c) || had.includes(desk)) return n;
   return { ...n, logged: { ...n.logged, [c]: CHECKPOINTS.filter((d) => had.includes(d) || d === desk) } };
@@ -150,6 +187,13 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.flagged !== undefined && knownAt(s).some((f) => factTier(s, f) === 'flagged') !== cond.flagged) return false;
   if (cond.any && !cond.any.some((c) => check(c, s))) return false;
   if (cond.not && check(cond.not, s)) return false;
+  if (cond.fileSaid) {
+    const c = fileClaim(s.file);
+    if (!c || !cond.fileSaid.includes(c.claim)) return false;
+  }
+  if (cond.fileNamed !== undefined && (fileContact(s.file) !== undefined) !== cond.fileNamed) return false;
+  if (cond.fileDisproved !== undefined && !!s.file?.disproved?.length !== cond.fileDisproved) return false;
+  if (cond.fileDeclared && !(s.file?.declared && cond.fileDeclared.includes(s.file.declared))) return false;
   return true;
 }
 
@@ -653,6 +697,8 @@ export function endingFor(s: RunState): EndingId {
  */
 export function endingText(s: RunState): string {
   const ending = s.ending ?? endingFor(s);
+  // Leaving the exit desk without your passport (d_hold): free to go, for now.
+  if (ending === 'turnedBack' && s.log.some((l) => /^enc\.d_hold\.(\w+\.)?leave\./.test(l.key))) return 'held';
   return ending === 'tooLate' && s.time === 0 ? 'missedBus' : ending;
 }
 
@@ -669,9 +715,15 @@ function eligible(s: RunState, e: Encounter): boolean {
 /** Whether the open issue a follow-up or related card is about is still on the file (Encounter.issue). */
 export const issueOpen = (s: RunState, id: string): boolean => check(ENCOUNTER_BY_ID.get(id)?.issue, s);
 
-/** The next of this desk's two core cards still to be asked, in CORE_CARDS order. */
+/** This desk's two core cards in this level: its own (Level.core), else CORE_CARDS. */
+export const coreCards = (s: RunState): readonly string[] => {
+  const desk = deskOf(s) as keyof typeof CORE_CARDS;
+  return levelOf(s).core?.[desk] ?? CORE_CARDS[desk];
+};
+
+/** The next of this desk's two core cards still to be asked, in coreCards() order. */
 export function coreLeft(s: RunState): Encounter | undefined {
-  const id = CORE_CARDS[deskOf(s)].find((c) => !s.seen.includes(c) && dealsCard(s, c));
+  const id = coreCards(s).find((c) => !s.seen.includes(c) && dealsCard(s, c));
   return id ? ENCOUNTER_BY_ID.get(id) : undefined;
 }
 
@@ -758,7 +810,7 @@ function breather(s: RunState): Encounter | undefined {
 function restCard(s: RunState): Encounter | undefined {
   const left = routinesLeft(s);
   const calm = left.filter((e) => e.calm);
-  const core: readonly string[] = CORE_CARDS[deskOf(s)];
+  const core = coreCards(s);
   return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left.find((e) => !core.includes(e.id)) ?? coreLeft(s);
 }
 

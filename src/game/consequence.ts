@@ -4,10 +4,10 @@
 // read the same parts.
 
 import { has, own, t } from '../i18n';
-import type { Option } from './engine';
+import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, factIds, factTier, knows, travelOf } from './engine';
-import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import { caught, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
+import type { CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -316,9 +316,68 @@ export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red' 
  */
 export function caughtLine(s: RunState, card: string): { key: string; vars: Record<string, string> } | undefined {
   const c = caught(s, card);
-  if (!c) return undefined;
+  if (!c) return fileLine(s, card);
   const said = own(`said.${c.claim}`, s.character).slice('said.'.length);
   return { key: `caught.line.${factTier(s, c.fact)}`, vars: { said, desk: c.desk, fact: c.fact } };
+}
+
+/** A date on a carried file, as the line reads it: "9 March". */
+export const fileDate = (date: string): string =>
+  new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+
+/**
+ * A file line quoting a claim: `key` with the crossing, the date, the desk, the question
+ * it answered and your words, or `key`.undated with the crossing and your words when the
+ * file was saved before it kept the rest (fileSaid() in src/game/engine.ts).
+ */
+function quoteLine(s: RunState, key: string, c: FileQuote): { key: string; vars: Record<string, string> } {
+  const vars = { crossing: t(`level.${c.crossing}.title`), said: own(`said.${c.claim}`, s.character).slice('said.'.length) };
+  if (!('date' in c)) return { key: `${key}.undated`, vars };
+  const context = has(`file.context.${c.context}`) ? `file.context.${c.context}` : 'file.context';
+  return { key, vars: { ...vars, date: fileDate(c.date), desk: c.desk, context: t(context) } };
+}
+
+/**
+ * The line a Departure card shows under its question: what your carried file
+ * (RunState.file) says about the point it asks, so a claim made on the way in comes
+ * back with its date, crossing, desk and the question it answered. Undefined on
+ * any other card, or when the file has nothing on that point.
+ */
+export function fileLine(s: RunState, card: string): { key: string; vars: Record<string, string> } | undefined {
+  const file = s.file;
+  if (!file) return undefined;
+  const first = fileClaim(file);
+  if (card === 'd_entry') return first && quoteLine(s, 'file.said', first);
+  if (card === 'd_hold') {
+    const c = fileSaid(file).find((x) => file.disproved?.includes(x.claim));
+    return c && quoteLine(s, 'file.disproved', c);
+  }
+  if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: { crossing: t(`level.${file.level}.title`) } };
+  return undefined;
+}
+
+/**
+ * The recap a level that reads a file opens with (RecordStep in src/App.tsx): each
+ * claim with its date, desk and your words, who you named, which claim a record did
+ * not match.
+ */
+export function recordLines(file: CarriedFile): { key: string; vars?: Record<string, string> }[] {
+  const said = (c: ClaimId) => own(`said.${c}`, file.character).slice('said.'.length);
+  const lines: { key: string; vars?: Record<string, string> }[] = [{ key: 'ui.record.title' }];
+  const claims = fileSaid(file);
+  for (const c of claims) {
+    lines.push('date' in c ? { key: 'ui.record.said', vars: { date: fileDate(c.date), desk: c.desk, said: said(c.claim) } } : { key: 'ui.record.said.undated', vars: { said: said(c.claim) } });
+  }
+  if (!claims.length) lines.push({ key: 'ui.record.none' });
+  for (const c of file.named) lines.push({ key: 'ui.record.named', vars: { contact: c } });
+  for (const c of file.disproved ?? []) lines.push({ key: 'ui.record.disproved', vars: { said: said(c) } });
+  return lines;
+}
+
+/** The vars a question takes: on d_named, the contact your file names (fileContact()). */
+export function questionVars(s: RunState, id: string): Record<string, string> {
+  const c = id === 'd_named' ? fileContact(s.file) : undefined;
+  return c ? { contact: c } : {};
 }
 
 /**
@@ -327,6 +386,9 @@ export function caughtLine(s: RunState, card: string): { key: string; vars: Reco
  * desk, and then it cannot say the officer found one: it reads `enc.c_host.phoned.q`.
  */
 export function questionKey(s: RunState, prefix: 'enc' | 'insp', id: string): string {
-  const base = prefix === 'enc' && id === 'c_host' && !knows(s, 'familyAddress') ? 'enc.c_host.phoned' : `${prefix}.${id}`;
+  const base = prefix === 'enc' && id === 'c_host' && !knows(s, 'familyAddress') ? 'enc.c_host.phoned'
+    // With nothing on file for the point, the Departure card asks it plainly.
+    : prefix === 'enc' && ((id === 'd_entry' && !fileClaim(s.file)) || (id === 'd_named' && !fileContact(s.file))) ? `enc.${id}.unsaid`
+    : `${prefix}.${id}`;
   return own(`${base}.q`, s.character);
 }

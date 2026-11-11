@@ -20,7 +20,9 @@ describe('levels as data', () => {
     expect([a.goalTitle, a.goalBody]).toEqual(['mission.title', 'mission.body']);
     expect([a.startTime, a.minTripTime]).toEqual([START_TIME, MISSION_MIN_TIME]);
     expect([START_TIME, MISSION_MIN_TIME]).toEqual([8, 2]);
-    expect([...a.cards].sort()).toEqual([...ALL_CARDS].sort());
+    // Every card but Departure's own (rwf.3), which ask about a file Arrival has not made yet.
+    const departureOnly = LEVELS.departure.cards.filter((c) => c.startsWith('d_'));
+    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((c) => !departureOnly.includes(c)).sort());
     expect(a.rules).toEqual([]);
   });
 
@@ -37,13 +39,13 @@ describe('levels as data', () => {
   });
 
   it('shows the level list only when more than one level is open (g0q.2)', () => {
-    // Today only Arrival exists, so no save ever sees the list.
+    // A fresh save has only Arrival open, so it does not see the list; Departure opens after it.
     expect(showsLevelList([])).toBe(false);
-    expect(showsLevelList(['tooLate', 'homeAtCost', 'turnedBack', 'homeInTime'])).toBe(false);
-    // A second level that opens after one ending: the list appears once it is open.
-    const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2, opensAt: 1 }];
+    expect(showsLevelList(['arrival'])).toBe(true);
+    // A second level opens once Arrival is finished: the list appears then.
+    const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2 }];
     expect(showsLevelList([], two)).toBe(false);
-    expect(showsLevelList(['tooLate'], two)).toBe(true);
+    expect(showsLevelList(['arrival'], two)).toBe(true);
   });
 
   it('tells a level id from anything else', () => {

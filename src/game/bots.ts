@@ -7,8 +7,8 @@
 
 import { CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
 import { CHARACTERS } from './content/world';
-import { DEFAULT_LEVEL, LEVEL_IDS } from './content/levels';
-import { chooseAction, documentsOf, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
+import { DEFAULT_LEVEL } from './content/levels';
+import { check, chooseAction, documentsOf, legalActions, newRun, noCost, optionFor, options, step, travelOf } from './engine';
 import type { Option, RunSetup } from './engine';
 import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, Level, LevelId, LevelRule, RunState } from './types';
@@ -143,8 +143,15 @@ export function pickKey(s: RunState, a: Action): string | undefined {
 function allowed(s: RunState, rule: LevelRule | undefined): Action[] {
   const legal = legalActions(s);
   if (!rule) return legal;
-  const rest = legal.filter((a) => !rule.heeds.includes(pickKey(s, a) ?? ''));
+  const rest = legal.filter((a) => !heeds(rule, s, a));
   return rest.length ? rest : legal;
+}
+
+/** Whether taking `a` on `s` is a pick the rule's heeders make: always (LevelRule.heeds), or while its condition holds (heedsWhen). */
+export function heeds(rule: LevelRule, s: RunState, a: Action): boolean {
+  const pick = pickKey(s, a);
+  if (!pick) return false;
+  return rule.heeds.includes(pick) || (rule.heedsWhen ?? []).some((h) => h.pick === pick && check(h.when, s));
 }
 
 /**
@@ -192,7 +199,12 @@ function best<T>(list: T[], cost: (x: T) => number): T {
   return pick;
 }
 
-const SETUPS = new Map<LevelId, RunSetup[]>(LEVEL_IDS.map((id) => [id, allSetups(id)]));
+const setups = new Map<LevelId, RunSetup[]>();
+/** A level's walk setups (allSetups()), built on first use: Departure's files are played by these bots. */
+const SETUPS = { get: (level: LevelId): RunSetup[] => {
+  if (!setups.has(level)) setups.set(level, allSetups(level));
+  return setups.get(level)!;
+} };
 
 /** The setup for run number `i` in a level: cycles every character x packing x bulletin, seed i + 1. */
 export function setupFor(i: number, level: LevelId = DEFAULT_LEVEL): RunSetup {
@@ -388,12 +400,12 @@ export const ruleOf = (level: Level, id: string): LevelRule | undefined => level
  * its place when ignoring it does worse (docs/research/2026-11-09-balance-and-levels.md).
  */
 export function ruleShares(level: Level, rule: LevelRule, seeds = WALK_SEEDS, styles: readonly BotStyle[] = PICKING_STYLES): RuleShare[] {
-  const setups = allSetups(level.id);
+  const list = SETUPS.get(level.id);
   return styles.map((style) => {
     let heeding = 0;
     let ignoring = 0;
     let runs = 0;
-    for (const setup of setups)
+    for (const setup of list)
       for (let seed = 1; seed <= seeds; seed++) {
         runs++;
         if (playRun(style, { ...setup, seed }).final.ending === 'homeInTime') heeding++;

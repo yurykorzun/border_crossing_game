@@ -24,7 +24,8 @@ function evalCli(args: string[]) {
 describe('npm run eval', () => {
   it('exits 1 with seed and step when a rule breaks (a short run against a 6-minute floor)', () => {
     // Lena's cautious run on seed 6 estimates about 4.6 minutes (measured 2026-11-10, with every desk's core cards dealt).
-    const r = evalCli(['--seed', '4', '--seeds', '3', '--min-minutes', '6']);
+    // Arrival only, so the transcript count below is one level's (Departure has its own, rwf.3).
+    const r = evalCli(['--level', 'arrival', '--seed', '4', '--seeds', '3', '--min-minutes', '6']);
     expect(r.status, r.stderr).toBe(1);
     expect(r.stdout).toMatch(/rule 4: cautious seed 6 step \d+ \(lena, tooShort\)/);
     expect(r.stdout).toContain('eval: FAIL');
