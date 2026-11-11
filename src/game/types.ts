@@ -140,6 +140,8 @@ export interface Approach {
   /**
    * A record check that confirms the card's point at the desk (the employer register):
    * like a document shown, it verifies the point for the later desks (RunState.verified).
+   * At an inspection it verifies the open issue the inspection is about (the lab
+   * handing the medicine back).
    */
   confirms?: boolean;
   /**
@@ -200,6 +202,13 @@ export interface Check {
   cases: CheckCase[];
   /** How many ordinary beats to show from the checkpoint's pool. */
   beats: number;
+  /**
+   * A check in stages: after the beats an observation hints at the direction
+   * (check.<id>.observe.<result>), then you answer narrowly (wait), ask what it
+   * concerns, or explain first, which applies these effects and answers the
+   * follow-up before it is asked. Nothing found is taken off the file.
+   */
+  explain?: Effect[];
 }
 
 /**
@@ -215,6 +224,15 @@ export type InspectionKind = 'search' | 'confiscation' | 'connection' | 'verific
 export interface Inspection {
   id: string;
   kind: InspectionKind;
+  /**
+   * The open issue on the file this inspection is about: a point no desk has
+   * verified (pointVerified() in src/game/engine.ts). It is dealt only while that
+   * point is open, and the screen names it (knownLine()). An answer that shows a
+   * paper, has a contact confirm it or runs a check that confirms it
+   * (Approach.confirms) settles the point; any other answer
+   * changes it instead (a fact goes on file, the medicine is held, the trip is longer).
+   */
+  issue: Topic;
   /** What a contact could confirm here. Without one, nobody can be named. */
   topic?: Topic;
   when?: Cond;
@@ -395,7 +413,7 @@ export interface CarriedFile {
   seeded?: true;
 }
 
-export type WaitAction = 'wait' | 'ask' | 'assist';
+export type WaitAction = 'wait' | 'ask' | 'assist' | 'explain';
 
 export type Screen =
   | { kind: 'encounter'; id: string }

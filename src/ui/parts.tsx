@@ -85,7 +85,8 @@ export function ScrutinyContent({ s }: { s: RunState }) {
   );
 }
 
-export function SettingsContent({ settings, onChange }: { settings: Settings; onChange: (next: Settings) => void }) {
+/** The settings toggles, then Start over when a run is going: it drops the run and keeps endings and settings (startOver() in src/game/save.ts). */
+export function SettingsContent({ settings, onChange, onStartOver }: { settings: Settings; onChange: (next: Settings) => void; onStartOver?: () => void }) {
   const row = (key: keyof Settings, label: string) => (
     <label className="setting">
       <input type="checkbox" checked={settings[key]} onChange={(e) => onChange({ ...settings, [key]: e.target.checked })} />
@@ -97,6 +98,12 @@ export function SettingsContent({ settings, onChange }: { settings: Settings; on
       {row('reduceWait', t('ui.reduceWait'))}
       {row('sound', t('ui.sound'))}
       {row('reduceMotion', t('ui.reduceMotion'))}
+      {onStartOver && (
+        <div className="start-over">
+          <button type="button" className="choice start-over-button" onClick={onStartOver}>{t('ui.startOver')}</button>
+          <p className="muted">{t('ui.startOverNote')}</p>
+        </div>
+      )}
     </div>
   );
 }

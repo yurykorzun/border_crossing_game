@@ -457,11 +457,17 @@ export const CHECKS: Record<CheckId, Check> = {
   },
   // Data: nobody can vouch away what is on the phone or in the records.
   // The search report prints and goes with you to the interview.
+  // In stages (Check.explain): the phone goes behind the partition, an observation
+  // points somewhere, then you answer. Background and bulletin fix the result: on a
+  // records day the fund is listed, so the officer asks about that payment; on a
+  // customs day a salary from abroad is read as a transfer, which takes an hour to explain.
   phoneSearch: {
     id: 'phoneSearch', beats: 3,
+    explain: [{ fact: 'donationRecord', when: { background: 'donation' } }, { scrutiny: 1, reason: 'phoneSearch' }],
     cases: [
       { when: { background: 'protestPhoto' }, followUp: 'f_photo', result: 'photo', effects: [PHONE_REPORT] },
-      { when: { background: 'donation' }, followUp: 'f_donation', result: 'donation', effects: [PHONE_REPORT] },
+      { when: { background: 'donation', bulletin: 'records' }, followUp: 'f_donation', result: 'donation', effects: [PHONE_REPORT] },
+      { when: { background: 'foreignEmployer', bulletin: 'customs' }, result: 'misread', effects: [PHONE_REPORT, { time: -1 }] },
       { result: 'clear', effects: [PHONE_REPORT] },
     ],
   },
@@ -490,19 +496,54 @@ export const CHECKS: Record<CheckId, Check> = {
  * (InspectionKind, checked in checkState). With LAST_HOURS left or fewer any
  * wait misses the bus, so the waits are not offered and the card asks for one
  * sacrifice instead. A card is only dealt when its `when` holds, which keeps a
- * second answer there (noFreeExits() in src/game/walk.ts).
+ * second answer there (noFreeExits() in src/game/walk.ts), and while the open
+ * issue it is about (Inspection.issue) is still open.
+ *
+ * The order is the supervisor's (inspect() in src/game/engine.ts): the issue
+ * the bulletin warned about first, then why you came back, the medicine, and
+ * the missed shuttle last. Nothing is drawn, so the same file always gets the
+ * same inspection.
  */
 export const INSPECTIONS: Inspection[] = [
   {
+    // Extra verification: the supervisor checks why you travel. Spend the document
+    // that backs it (or, without one, have your mother confirm it), or let her
+    // phone the hospital: the call takes time and your father's condition goes on
+    // file. Only dealt while that call would tell this desk something new, and
+    // while there is a paper or your mother for the second answer.
+    id: 's_supervisor', kind: 'verification', issue: 'purpose', topic: 'purpose',
+    when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
+    approaches: [
+      { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
+      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
+      { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
+      { id: 'withdraw', kind: 'withdraw', effects: [] },
+    ],
+  },
+  {
+    // Confiscation: the medicine is held. Get it back now, or leave without it.
+    // Only dealt while you still carry it (inspect() in src/game/engine.ts), and
+    // only on the day the bulletin sends medicines to the lab: any other day the
+    // open prescription gets the bag search instead.
+    id: 's_medicine', kind: 'confiscation', issue: 'medicine', when: { bulletin: 'customs' },
+    approaches: [
+      { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
+      // The lab looks at it and hands it back, so the prescription is verified (Approach.confirms).
+      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }], confirms: true },
+      { id: 'withdraw', kind: 'withdraw', effects: [] },
+    ],
+  },
+  {
     // The prescription is in the bag, and your mother can confirm it. With her
     // out of reach, you lay it all out yourself instead.
-    id: 's_bag', kind: 'search', topic: 'medicine',
+    id: 's_bag', kind: 'search', issue: 'medicine', topic: 'medicine',
     when: { any: [{ contactFree: ['mother'] }, { noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
     approaches: [
       // A full search counts the cash, so the total goes on file.
       // The search report, cash total included, goes with you to the next desk.
+      // They find the prescription with the medicine, so it is verified (Approach.confirms).
       {
-        id: 'wait', kind: 'verify', requires: { lastHours: false },
+        id: 'wait', kind: 'verify', requires: { lastHours: false }, confirms: true,
         effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }],
       },
       { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
@@ -515,26 +556,17 @@ export const INSPECTIONS: Inspection[] = [
     ],
   },
   {
-    // Confiscation: the medicine is held. Get it back now, or leave without it.
-    // Only dealt while you still carry it (inspect() in src/game/engine.ts).
-    id: 's_medicine', kind: 'confiscation',
-    approaches: [
-      { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
-      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }] },
-      { id: 'withdraw', kind: 'withdraw', effects: [] },
-    ],
-  },
-  {
     // Missed connection: the shuttle to the station has gone. The next one makes
     // the trip an hour longer, so the run needs an hour more left. Or another
     // way out: a paper with where you stay books the border transfer, and they
     // keep it; else someone drives out for you, which puts them on file; else
     // the transfer takes you and they write down where it drops you. Driving is
     // not confirming anything, so anyone close enough will do (namesOnly).
-    id: 's_connection', kind: 'connection',
+    id: 's_connection', kind: 'connection', issue: 'accommodation',
     when: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }, { noFacts: ['familyAddress'] }] },
     approaches: [
-      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }] },
+      // The supervisor rings ahead to say you will be late, which confirms where you stay (Approach.confirms).
+      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }], confirms: true },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', requires: { holds: 'accommodation' }, effects: [] },
       {
         id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true,
@@ -545,21 +577,6 @@ export const INSPECTIONS: Inspection[] = [
         requires: { not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] }, noFacts: ['familyAddress'] },
         effects: [{ fact: 'familyAddress' }],
       },
-    ],
-  },
-  {
-    // Extra verification: the supervisor checks why you travel. Spend the document
-    // that backs it (or, without one, have your mother confirm it), or let her
-    // phone the hospital: the call takes time and your father's condition goes on
-    // file. Only dealt while that call would tell this desk something new, and
-    // while there is a paper or your mother for the second answer.
-    id: 's_supervisor', kind: 'verification', topic: 'purpose',
-    when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
-    approaches: [
-      { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
-      { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
-      { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
-      { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
 ];

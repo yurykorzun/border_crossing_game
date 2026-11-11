@@ -64,6 +64,19 @@ export function newRun(setup: RunSetup): RunState {
   };
 }
 
+/**
+ * The setup a run was started from: its level, traveler, packing, bulletin and seed.
+ * "Play again with the same setup" starts newRun() from it, so the deal comes out the
+ * same and only the player's answers differ.
+ */
+export const setupOf = (s: RunState): RunSetup => ({
+  level: s.level ?? DEFAULT_LEVEL,
+  character: s.character,
+  loadout: [...s.loadout],
+  bulletin: s.bulletin,
+  seed: s.seed,
+});
+
 // ── What each official knows
 
 /** The desk the run is at: where a fact that comes out now is known. */
@@ -379,10 +392,15 @@ export interface KnownPart {
  * What the officer at this desk already knows, as one line on every desk card,
  * built from the file: the newest fact this desk knows, named by how it sits on
  * file (factTier()), and the newest claim any desk wrote down. With neither,
- * the line says the file is empty so far. Only on a desk's own cards: an
- * inspection is the supervisor's, who reads the whole file.
+ * the line says the file is empty so far. On an inspection the line names the
+ * open issue it is about instead (Inspection.issue): the supervisor has read
+ * the whole file, and this is the point on it still open.
  */
 export function knownLine(s: RunState): KnownPart[] {
+  if (s.screen.kind === 'inspection') {
+    const issue = inspectionIssue(s);
+    return issue ? [{ key: `insp.issue.${issue}` }] : [];
+  }
   if (s.screen.kind !== 'encounter') return [];
   // A fact on file outranks a claim, because its tier is what the officer acts on.
   const fact = knownAt(s).at(-1);
@@ -391,6 +409,11 @@ export function knownLine(s: RunState): KnownPart[] {
   // The claim in this traveler's own wording, as the spot-check names it.
   if (written) return [{ key: 'known.claim', vars: { claim: own(`claim.${written}`, s.character).slice('claim.'.length) } }];
   return [{ key: 'known.none' }];
+}
+
+/** The open issue the inspection on screen is about (Inspection.issue), or undefined off one. */
+export function inspectionIssue(s: RunState): Topic | undefined {
+  return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
 }
 
 /**
@@ -505,6 +528,11 @@ export function activeEffects(s: RunState, effects: Effect[], from: ReasonSource
 /** The effects a check result applies, with conditions and scrutiny reasons resolved. */
 export function checkEffects(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
   return activeEffects(s, (result.effects ?? []).filter((e) => check(e.when, s)), { check: checkId });
+}
+
+/** What explaining first applies in a check in stages (Check.explain), conditions and reasons resolved. */
+export function explainEffects(s: RunState, checkId: CheckId): Effect[] {
+  return activeEffects(s, (CHECKS[checkId].explain ?? []).filter((e) => check(e.when, s)), { check: checkId });
 }
 
 /** The facts a check result puts on file. A contact can explain them, never erase them. */
@@ -729,33 +757,28 @@ function advance(s: RunState, dealer: Dealer): RunState {
  * inspection yet that can still make the bus (a doomed run is waved through,
  * because one more card changes nothing). She sends you to secondary
  * inspection whenever scrutiny is above 0, the scrutiny a character starts
- * with included: Mark's second passport is on file before he says a word. A
- * paper on the topic the bulletin warned about, shown on the way, settles her
- * two times in three: the dealer draws one of 3. She inspects on that topic when an
- * inspection takes such a paper (an evidence answer), else the dealer picks one
- * as usual.
+ * with included: Mark's second passport is on file before he says a word,
+ * and only while an issue on the file is still open (inspectionsFitting()).
+ * A paper on the topic the bulletin warned about, shown on the way, settles
+ * her. Nothing here is drawn: the same file always gets the same decision,
+ * and inspect() picks the inspection the same way.
  *
  * This is what puts an inspection in a quarter to a third of runs (`npm run
  * autoplay`). Once spot-checks caught lies at the desks, counting only the
  * scrutiny gained on the way left the share under a quarter, so the start
- * value counts too (2op.9). Once the day and the file decided which lies get
- * caught, caught liars pushed it over a third, so a warned-about paper settles
- * her more often (2op.12). The pacing rule still holds: after 2 escalating
- * cards a routine card left comes first, and the supervisor reads the file
- * again after it, drawing only then.
+ * value counts too (2op.9). Until 4qd.11 a warned-about paper settled her two
+ * times in three, by a draw. Now the file decides: the paper always settles
+ * her, and an inspection needs an open issue, so a run whose papers verified
+ * its points is not inspected. The pacing rule still holds: after 2
+ * escalating cards a routine card left comes first, and the supervisor reads
+ * the file again after it.
  */
 function admission(s: RunState, dealer: Dealer): RunState {
   if (s.inspections || s.scrutiny <= 0 || doomed(s) || !inspectionsFitting(s).length) return finish(s);
   const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
   if (rest) return show(s, rest.id);
-  let n = s;
-  if (coversWarning(s.used, s.bulletin)) {
-    const r = dealer(s.rng, 3);
-    n = { ...s, rng: r.rng };
-    if (r.index !== 0) return finish(n);
-  }
-  const topic = BULLETIN_TOPICS[n.bulletin];
-  return inspect(n, dealer, (i) => i.approaches.some((a) => a.kind === 'evidence' && a.topic === topic));
+  if (coversWarning(s.used, s.bulletin)) return finish(s);
+  return inspect(s, dealer);
 }
 
 /**
@@ -883,25 +906,31 @@ function deal(s: RunState): RunState {
   return show({ ...s, slot: FOLLOW_UP_SLOT + 1 }, follow.id);
 }
 
-/** The inspections that can be dealt now: their condition holds, and a confiscation needs the medicine. */
+/**
+ * The inspections that can be dealt now: the open issue each is about is still
+ * open (no desk verified that point), their condition holds, and a confiscation
+ * needs the medicine.
+ */
 const inspectionsFitting = (s: RunState): Inspection[] =>
-  INSPECTIONS.filter((i) => dealsCard(s, i.id) && check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
+  INSPECTIONS.filter((i) => !pointVerified(s, i.issue) && dealsCard(s, i.id) && check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
 
-/** Deal an inspection: the first fitting one `prefer` accepts, else the dealer picks. */
-function inspect(s: RunState, dealer: Dealer, prefer?: (i: Inspection) => boolean): RunState {
+/**
+ * Deal an inspection, decided by the file alone: one not asked yet before one
+ * asked again, then the one on the point the bulletin warned about, then the
+ * first in INSPECTIONS order. Nothing here is random, so the same file always
+ * gets the same inspection.
+ */
+function inspect(s: RunState, dealer: Dealer): RunState {
   const fits = inspectionsFitting(s);
   const fresh = fits.filter((i) => !s.seen.includes(i.id));
   const pool = fresh.length ? fresh : fits;
-  // Nothing left to ask for: the medicine, your mother and every fact an
-  // inspection could take are already gone or on file. The supervisor reads
-  // the file and sends you back, and scrutiny drops as after an inspection.
+  // Nothing left to ask for: no open issue an inspection could take up. The
+  // supervisor reads the file and sends you back, and scrutiny drops as after an inspection.
   if (!pool.length) return advance(say({ ...s, scrutiny: SCRUTINY_AFTER_INSPECTION }, [{ key: 'insp.none' }]), dealer);
-  const preferred = prefer && pool.find(prefer);
-  const r = preferred ? { rng: s.rng, index: pool.indexOf(preferred) } : dealer(s.rng, pool.length);
-  const id = pool[r.index].id;
+  const warned = BULLETIN_TOPICS[s.bulletin];
+  const id = (pool.find((i) => i.issue === warned) ?? pool[0]).id;
   return {
     ...s,
-    rng: r.rng,
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
@@ -937,12 +966,23 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   // free contact can confirm what the check is about; nobody vouches away data.
   const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] = [
     { action: 'wait', blocked: null },
+    ...(CHECKS[s.screen.check].explain ? [{ action: 'explain' as const, blocked: null }] : []),
     ...(s.screen.asked ? [] : [{ action: 'ask' as const, blocked: null }]),
   ];
   const contact = assistContact(s);
   // vouches: the check's topic, so the option can say what the contact may confirm.
   const vouches = CHECKS[s.screen.check].topic;
   return contact && vouches ? [...out, { action: 'assist', blocked: null, contact, vouches }] : out;
+}
+
+/** The text key of a waiting-room answer: a check in stages words its own (Check.explain). */
+export const waitKey = (check: CheckId, action: WaitAction, part: 'label' | 'detail' | 'reaction'): string =>
+  CHECKS[check].explain ? `check.${check}.${action}.${part}` : `wait.${action}.${part}`;
+
+/** What you notice once the beats are done in a check in stages, before its result. */
+export function observation(s: RunState): string | undefined {
+  if (s.screen.kind !== 'wait' || !CHECKS[s.screen.check].explain || s.screen.shown < s.screen.beats.length) return undefined;
+  return `check.${s.screen.check}.observe.${s.screen.resolved.result}`;
 }
 
 /** Who could vouch on the check in the waiting room, if anyone. */
@@ -977,8 +1017,14 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     if (vouched) n = verifyPoints(n, [vouched]);
     result = { result: 'clear' };
   }
+  // Explaining first: you say it before he asks, so the follow-up is already answered.
+  if (how === 'explain' && CHECKS[w.check].explain) {
+    n = say(apply(n, explainEffects(n, w.check)), [{ key: waitKey(w.check, how, 'reaction') }]);
+    result = { ...result, followUp: undefined };
+  }
   n = apply(n, checkEffects(n, w.check, result));
-  n = say(n, [{ key: `check.${w.check}.${result.result}` }]);
+  const line = `check.${w.check}.${result.result}`;
+  n = say(n, [{ key: how === 'explain' && has(`${line}.explained`) ? `${line}.explained` : line }]);
   if (result.followUp && !n.seen.includes(result.followUp)) n = { ...n, pending: [result.followUp, ...n.pending] };
   return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer);
 }
@@ -1003,7 +1049,8 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
   n = apply(n, opt.effects);
   // A document shown or a contact who confirmed the point at a desk settles it for the later
-  // desks. An inspection is the supervisor's: what it settles is the inspection, not the desk's question.
+  // desks. At an inspection the point settled is the open issue it is about (Inspection.issue),
+  // and a check there that confirms it (the lab handing the medicine back) settles it too.
   // On the day the bulletin orders that point checked (every host phoned), a name given at a
   // desk is not yet a confirmation: the check is what confirms it, so it settles nothing here.
   const vouched = opt.contact && opt.vouches !== BULLETIN_TOPICS[s.bulletin] ? opt.vouches : undefined;
@@ -1012,6 +1059,9 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
     // A record check that confirmed the point (Approach.confirms) settles it like a document.
     if (opt.approach.confirms && topic && !points.includes(topic)) points.push(topic);
     n = verifyPoints(n, points);
+  } else if (opt.card || vouched || opt.approach.confirms) {
+    const issue = inspectionIssue(s);
+    if (issue) n = verifyPoints(n, [issue]);
   }
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;

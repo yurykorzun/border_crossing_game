@@ -230,6 +230,11 @@ test('the passport and customs cards each say what the officer already knows', a
   await expect(line).toHaveText(t(part.key, part.vars));
   await expect(line).not.toHaveText('');
   await noHorizontalScroll(page, 'known-facts line');
+  // A secondary inspection names the open issue it is about instead (4qd.11).
+  const inspection: RunState = { ...lenaRun(), reaction: null, screen: { kind: 'inspection', id: 's_bag' }, checkpoint: 1, slot: 1, inspections: 1, seen: ['p_purpose', 'p_host', 's_bag'] };
+  await openAt(page, inspection);
+  await expect(line).toHaveText('Not verified yet: the prescription.');
+  await noHorizontalScroll(page, 'inspection issue line');
   expect(errors).toEqual([]);
 });
 
@@ -281,17 +286,21 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
 
     const panel = page.locator('main.run .panel.waiting');
     await expect(panel.locator('h2')).toHaveText(en[`check.${check}.title`]);
-    await expect(panel.locator('p')).toHaveText([en['beat.customs.1']]);
+    // A check in stages ends on its observation instead of the last beat, and words its own answers.
+    const staged = !!CHECKS[check].explain;
+    await expect(panel.locator('p')).toHaveText([staged ? en[`check.${check}.observe.clear`] : en['beat.customs.1']]);
     // The old labels are gone: no "Waiting", no "Verification in progress", no check name.
     await expect(page.locator('main.run')).not.toContainText('Waiting');
     await expect(page.locator('main.run')).not.toContainText('Verification in progress');
     await expect(page.locator('main.run')).not.toContainText(/(Address|Medicine|Records) check|Phone search/);
 
     const buttons = page.locator('main.run .controls button');
-    await expect(buttons.nth(0)).toHaveText('Wait for the result');
+    await expect(buttons.nth(0)).toHaveText(staged ? en[`check.${check}.wait.label`] : 'Wait for the result');
     await expect(buttons.nth(0)).toHaveClass(/wait-go/);
-    await expect(buttons.nth(1)).toContainText('Ask for an update');
-    await expect(buttons.nth(1).locator('.consequence')).toHaveText('Your urgency goes on file');
+    const ask = buttons.nth(staged ? 2 : 1);
+    if (staged) await expect(buttons.nth(1)).toContainText(en[`check.${check}.explain.label`]);
+    await expect(ask).toContainText(staged ? en[`check.${check}.ask.label`] : 'Ask for an update');
+    await expect(ask.locator('.consequence')).toHaveText('Your urgency goes on file');
     await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
     await expect(page.locator('.strip .scrutiny')).toContainText('Scrutiny');
 
@@ -344,7 +353,7 @@ test('a Home in time ending is a short result card that fits the screen', async 
     return { doc: document.documentElement.scrollHeight <= window.innerHeight, main: main.scrollHeight <= main.clientHeight };
   });
   expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
-  await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport();
 
   // See border records opens Border records alone: no epilogue, no costs, no biography.
   await page.getByRole('button', { name: 'See border records' }).click();
@@ -366,7 +375,7 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(sheet).toHaveCount(0);
 
   // Play again goes back to the level list, then to picking a traveler.
-  await page.getByRole('button', { name: 'Play again' }).click();
+  await page.getByRole('button', { name: 'Play again', exact: true }).click();
   await pickArrival(page);
   await expect(page.locator('.traveler-step')).toBeVisible();
   await expect(page.getByRole('radio').first()).toBeVisible();
@@ -490,7 +499,7 @@ for (const c of endingCases) {
     // Play again is on screen without scrolling.
     const scrolled = await page.evaluate(() => ({ doc: window.scrollY, main: document.querySelector('main.ending')!.scrollTop }));
     expect(scrolled).toEqual({ doc: 0, main: 0 });
-    await expect(page.getByRole('button', { name: 'Play again' })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport({ ratio: 1 });
     await noHorizontalScroll(page, `${c.name} ending`);
     // The sheet button names the sheet it opens (pfi.18).
     await expect(page.getByRole('button', { name: "See what's on file" })).toHaveCount(0);
