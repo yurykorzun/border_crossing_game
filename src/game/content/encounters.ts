@@ -33,6 +33,19 @@ export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
 ];
+/**
+ * Contact statements (The funeral): what someone told the border before you
+ * came, on file at every desk from the start (Level.statements). A claim that
+ * agrees with it stands. One it `disproves` is a contradiction like any other,
+ * caught by i_contradiction or a spot-check. It is testimony, not proof
+ * (TESTIMONY), so it can be explained.
+ */
+export const STATEMENTS: readonly { fact: FactId; agrees: ClaimId; disproves: ClaimId }[] = [
+  { fact: 'sisterSaysDays', agrees: 'stayDays', disproves: 'stayWeeks' },
+  { fact: 'sisterSaysWeeks', agrees: 'stayWeeks', disproves: 'stayDays' },
+];
+/** A claim against a statement on file, as a contradiction pair. */
+const STATEMENT_PAIRS: readonly [ClaimId, FactId][] = STATEMENTS.map((x) => [x.disproves, x.fact]);
 /** What the clarify answer says. Once you have said it, a spot-check finds an inconsistency explained (spotCheckOf()). */
 export const CLARIFIED_BY: ClaimId = 'familyVisit';
 /** In this order, which also picks the one an apology is charged for (firstCaught). */
@@ -47,6 +60,8 @@ export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
   ['noOtherFamily', 'relativeContact'],
   // Your mother names another relative, on the host call or when customs phones her.
   ['noOtherFamily', 'relativeNamed'],
+  // The funeral: a stay that disagrees with what your friend's sister told the border (STATEMENTS).
+  ...STATEMENT_PAIRS,
 ];
 
 /**
@@ -54,7 +69,7 @@ export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
  * officer on the phone. A claim they speak against is conflicting testimony,
  * which you can explain, never a proven lie.
  */
-export const TESTIMONY: readonly FactId[] = ['hostStatement', 'relativeNamed'];
+export const TESTIMONY: readonly FactId[] = ['hostStatement', 'relativeNamed', ...STATEMENTS.map((x) => x.fact)];
 
 /**
  * The cards that challenge a claim, most expensive first. One that applies is
@@ -94,6 +109,17 @@ function noneOf(pairs: readonly [ClaimId, FactId][]): Cond {
 /** `scrutiny` for the first pair that holds, with its fact as the reason, so one answer is charged once. */
 const firstCaught = (pairs: readonly [ClaimId, FactId][], scrutiny: number): Effect[] =>
   pairs.map(([c, f], i) => ({ scrutiny, reason: f, when: { claims: [c], facts: [f], ...noneOf(pairs.slice(0, i)) } }));
+
+/**
+ * What saying sorry costs on i_contradiction: 2 scrutiny for the first pair caught.
+ * Against a contact statement (The funeral) the officer rings her back to compare
+ * the two accounts instead, which costs 1 scrutiny and 2 hours.
+ */
+const apologyFor = (pairs: readonly [ClaimId, FactId][]): Effect[] =>
+  firstCaught(pairs, 2).flatMap((e) => ('reason' in e && STATEMENTS.some((x) => x.fact === e.reason) ? [{ ...e, scrutiny: STATEMENT_SCRUTINY }, { time: -STATEMENT_CALL, when: e.when }] : [e]));
+const STATEMENT_SCRUTINY = 1;
+/** Hours the officer spends ringing back the contact who gave a statement. */
+const STATEMENT_CALL = 2;
 
 /**
  * Each desk's own job, as two questions asked on every run in this order.
@@ -202,6 +228,21 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'both', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
+    ],
+  },
+  {
+    // The funeral's stay question, the clerk's follow-up there in the place of
+    // p_stay and p_employer (Level.cards). Only a records-day photo (p_photo, listed
+    // first at the same priority) or a second passport comes before it. Your friend's
+    // sister has already told the border how long you stay (STATEMENTS), and the
+    // known-facts line says so. Neither answer costs anything here: the price is the
+    // contradiction, if your answer disagrees with hers.
+    id: 'p_days', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'stay',
+    // Open while her statement is on file, which is the whole of The funeral.
+    issue: { any: [{ facts: ['sisterSaysDays'] }, { facts: ['sisterSaysWeeks'] }] },
+    approaches: [
+      { id: 'days', kind: 'say', effects: [{ claim: 'stayDays' }] },
+      { id: 'weeks', kind: 'say', effects: [{ claim: 'stayWeeks' }] },
     ],
   },
   {
@@ -358,7 +399,7 @@ export const ENCOUNTERS: Encounter[] = [
     when: anyPair(CONTRADICTIONS),
     issue: anyPair(CONTRADICTIONS),
     approaches: [
-      { id: 'apologise', kind: 'say', effects: firstCaught(CONTRADICTIONS, 2) },
+      { id: 'apologise', kind: 'say', effects: apologyFor(CONTRADICTIONS) },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },

@@ -189,6 +189,7 @@ Kept, because a person picks them even though the bots don't:
 - `d_hold.leave` - in Departure, walking out without your passport when the exit desk holds it over a claim your last crossing showed false. It ends the crossing (free to go, for now), and every bot waits for the review or signs instead. It stays as the choice of someone who won't spend three more hours at that desk.
 - `d_named.name` - in Departure, naming the relative your file already holds. It is the same trade as `i_family.name`, a person for an hour, so the bots never take it. It stays for the same reason.
 - `p_photo.evidence` - in Departure, a document for the photo check. Departure's opening card asks for the paper first, so the bots reach the photo check with nothing left that settles it. It stays because in Arrival the same answer gets picked.
+- `s_connection.drive` - in The funeral, asking your mother or cousin to drive out to the station for you. The bots take it only in the last hours, when the supervisor can no longer ring ahead, and The funeral's passport desk asks how long you stay (free) where Arrival asks the slower stay and employer checks, so they reach the transfer with hours left. It stays because in Arrival the same answer gets picked.
 
 ## Screen rules
 

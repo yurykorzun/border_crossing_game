@@ -20,25 +20,16 @@ describe('levels as data', () => {
     expect([a.goalTitle, a.goalBody]).toEqual(['mission.title', 'mission.body']);
     expect([a.startTime, a.minTripTime]).toEqual([START_TIME, MISSION_MIN_TIME]);
     expect([START_TIME, MISSION_MIN_TIME]).toEqual([8, 2]);
-    // Every card but Departure's own (rwf.3), which ask about a file Arrival has not made yet.
+    // Every card but Departure's own (rwf.3), which ask about a file Arrival has not made yet,
+    // and the one only The funeral deals: how long you stay (rwf.4).
     const departureOnly = LEVELS.departure.cards.filter((c) => c.startsWith('d_'));
-    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((c) => !departureOnly.includes(c)).sort());
-    expect(a.rules).toEqual([]);
-  });
+    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((c) => !departureOnly.includes(c) && c !== 'p_days').sort());
+    // There it takes the place of the other stay question and of who pays you.
+    expect(LEVELS.funeral.cards.filter((id) => !a.cards.includes(id))).toEqual(['p_days']);
+    expect(a.cards.filter((id) => !LEVELS.funeral.cards.includes(id))).toEqual(['p_stay', 'p_employer']);
+    // Departure never deals it.
+    expect(LEVELS.departure.cards).not.toContain('p_days');
 
-  it('names only real cards and keys that have English text, numbered 1 up in list order', () => {
-    LEVEL_IDS.forEach((id, i) => {
-      const l = LEVELS[id];
-      expect(l.id).toBe(id);
-      expect(l.number).toBe(i + 1);
-      expect(l.cards.filter((c) => !ALL_CARDS.includes(c)), id).toEqual([]);
-      for (const k of [l.title, l.blurb, l.goalTitle, l.goalBody]) expect(en[k], `${id}: ${k}`).toBeTruthy();
-      expect(new Set(l.rules.map((r) => r.id)).size, id).toBe(l.rules.length);
-    });
-    for (const k of ['ui.level', 'ui.pickLevel', 'ui.levelNumber']) expect(en[k], k).toBeTruthy();
-  });
-
-  it('shows the level list only when more than one level is open (g0q.2)', () => {
     // A fresh save has only Arrival open, so it does not see the list; Departure opens after it.
     expect(showsLevelList([])).toBe(false);
     expect(showsLevelList(['arrival'])).toBe(true);

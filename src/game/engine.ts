@@ -28,6 +28,20 @@ export interface RunSetup {
    * standalone run. It must be this traveler's.
    */
   file?: CarriedFile;
+  /**
+   * In a level with contact statements (Level.statements), the one given to the
+   * border before you came. Unset: drawn from the seed, the way the app draws the bulletin.
+   */
+  statement?: FactId;
+}
+
+/** The contact statement a run starts with, or undefined in a level that has none. */
+export function statementOf(setup: RunSetup): FactId | undefined {
+  const level = levelOf(setup);
+  const statements = level.statements ?? [];
+  if (!statements.length) return undefined;
+  if (setup.statement && !statements.includes(setup.statement)) throw new Error(`${setup.statement} is not a statement in ${level.id}`);
+  return setup.statement ?? statements[Math.abs(Math.floor(setup.seed / 3)) % statements.length];
 }
 
 /** A claim a later desk quotes: with its date, desk and card, or only the crossing in a file saved before `said` existed. */
@@ -57,6 +71,8 @@ export function newRun(setup: RunSetup): RunState {
   if (level.readsFile && !setup.file) throw new Error(`${level.id} opens with a file from your last crossing`);
   // One traveler's file never opens another's crossing.
   if (setup.file && setup.file.character !== ch.id) throw new Error(`${setup.file.character}'s file cannot open ${ch.id}'s crossing`);
+  const statement = statementOf(setup);
+  // Old records the passport desk has at once (Character.onFile).
   const onFile = (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {});
   return {
     ...(level.readsFile && setup.file ? { file: setup.file } : {}),
@@ -73,9 +89,13 @@ export function newRun(setup: RunSetup): RunState {
     time: level.startTime,
     travel: level.minTripTime,
     scrutiny: ch.startScrutiny,
-    // Old records the passport desk has at once (Character.onFile).
     // Leaving, every desk has your entry record from the crossing in.
-    facts: level.readsFile ? { ...onFile, entryRecord: [...CHECKPOINTS] } : onFile,
+    // A contact statement was given before you came, so every desk has it too.
+    facts: {
+      ...onFile,
+      ...(level.readsFile ? { entryRecord: [...CHECKPOINTS] } : {}),
+      ...(statement ? { [statement]: [...CHECKPOINTS] } : {}),
+    },
     claims: [],
     logged: {},
     saidAt: {},
@@ -109,7 +129,11 @@ export const setupOf = (s: RunState): RunSetup => ({
   bulletin: s.bulletin,
   seed: s.seed,
   ...(s.file ? { file: s.file } : {}),
+  ...(statementIn(s) ? { statement: statementIn(s) } : {}),
 });
+
+/** The contact statement on this run's file, if its level has them. */
+const statementIn = (s: RunState): FactId | undefined => levelOf(s).statements?.find((f) => s.facts[f]);
 
 // ── What each official knows
 
