@@ -251,7 +251,14 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
   return (
     <main className="setup setup-step documents-step">
       <div className="setup-body" ref={bodyRef} onScroll={onScroll}>
-        <div className="pack-scene"><Desk /></div>
+        <div className="pack-scene">
+          <Desk />
+          {/* One message before you choose what to carry, on the phone on the desk: work wants a return date (PREPARATION_MESSAGE). */}
+          <p className="msg prep-message" data-msg={PREPARATION_MESSAGE.key}>
+            <span className="msg-from">{t(`msg.from.${PREPARATION_MESSAGE.from}`)}</span>
+            {t(PREPARATION_MESSAGE.key)}
+          </p>
+        </div>
         <header className="step-head">
           <div className="step-nav">
             <BackButton onBack={onBack} />
@@ -260,11 +267,6 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
           <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
           <p className="pack-count" aria-live="polite">{t('ui.picked', { picked: picked.length, count: slots })}</p>
         </header>
-        {/* One message before you choose what to carry: work wants a return date (PREPARATION_MESSAGE). */}
-        <p className="msg prep-message" data-msg={PREPARATION_MESSAGE.key}>
-          <span className="msg-from">{t(`msg.from.${PREPARATION_MESSAGE.from}`)}</span>
-          {t(PREPARATION_MESSAGE.key)}
-        </p>
         <p className="bulletin" role="note" aria-label={t('ui.bulletin')}>
           <Icon name="alert" />
           <span className="bulletin-text">

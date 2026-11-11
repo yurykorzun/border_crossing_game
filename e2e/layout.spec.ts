@@ -65,9 +65,9 @@ test('run screen: strip, scrutiny sheet, settings sheet and fit at 390x844', asy
 
   const strip = page.locator('main.run .strip');
   await expect(strip).toContainText('1 / 3 · In the queue');
-  // The first queue: phone, phone, two lines in the queue, then the booth.
+  // The first queue: three phone messages, two lines in the queue, then the booth.
   await expectFits(page, 'first queue');
-  for (let i = 0; i < 3; i++) await page.locator('main.run .controls button.primary').click();
+  for (let i = 0; i < 4; i++) await page.locator('main.run .controls button.primary').click();
   await expectFits(page, 'end of the first queue');
   await page.getByRole('button', { name: 'Approach the booth' }).click();
   await expect(strip).toContainText('1 / 3 · Passport control');
@@ -117,7 +117,7 @@ test('the run header, the tray and its pixel icons, at the first checkpoint', as
   for (let i = 0; !(await cont.isEnabled()); i++) await docs.nth(i).click();
   await cont.click();
   await page.locator('.begin-step .controls button.primary').click();
-  for (let i = 0; i < 3; i++) await page.locator('main.run .controls button.primary').click();
+  for (let i = 0; i < 4; i++) await page.locator('main.run .controls button.primary').click();
   await page.getByRole('button', { name: 'Approach the booth' }).click();
 
   const run = page.locator('main.run');

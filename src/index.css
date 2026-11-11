@@ -707,5 +707,9 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .ending-turnedBack .ending-card { border-top: 6px solid var(--danger-paper); }
 .ending-tooLate .ending-card, .ending-homeAtCost .ending-card { border-top: 6px solid var(--amber-paper); }
 .ending-homeInTime .ending-card { border-top: 6px solid var(--navy); }
-/* The one message on the packing screen, above the bulletin. */
-.prep-message { margin: 0; max-width: none; }
+/* The one message on the packing screen: a notification over the desk scene, so the list keeps its room. */
+.pack-scene .prep-message {
+  position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; max-width: none;
+  padding: 4px 10px; font-size: 0.8rem; line-height: 1.25;
+}
+.pack-scene .prep-message .msg-from { display: inline; margin-right: 6px; }
