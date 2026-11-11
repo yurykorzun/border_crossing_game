@@ -29,7 +29,7 @@ TL;DR: you hold a small hand of document cards and two people you can call on. A
 Each checkpoint (passport, customs, interview) has its own deck and its own job. At each one the dealer deals:
 
 1. The desk's two core cards, asked on every run in a fixed order (`CORE_CARDS` in `src/game/content/encounters.ts`). Passport: why you came, then where you will stay. Customs: the medicine, then the cash. The interview: your family, then your employer.
-2. At most one follow-up: the highest-priority related card whose condition matches what you have done so far and whose open issue is still on the file (`Encounter.issue`). A run gets 0-3 of them. If nothing is open, the desk asks nothing more, so a smooth run finishes sooner.
+2. At most one follow-up: the highest-priority related card whose condition matches what you have done so far and whose open issue is still on the file (`Encounter.issue`). A run gets 0-3 of them, not counting a clarify or contradiction card, which comes whenever a claim is caught. If nothing is open, the desk asks nothing more, so a smooth run finishes sooner.
 
 Every desk card shows one line of what that officer already knows, built from the file: the newest fact this desk knows, named by how it sits on file (old records, confirmed, flagged), or else the newest claim written down (`knownLine()` in `src/game/engine.ts`).
 
