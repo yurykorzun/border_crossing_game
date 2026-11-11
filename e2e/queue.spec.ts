@@ -72,7 +72,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     // 1. The phone vibrates: Mom's first message, alone under the scene.
     await expect(msg).toContainText(en['msg.0.0']);
     await expect(msg.locator('.msg-from')).toHaveText('Mom');
-    await expect(msg).toContainText('The doctor says Dad can hear me. He hasn\'t said anything yet. Come straight to the hospital.');
+    await expect(msg).toContainText("The doctor says Dad can hear me. He can't talk yet after the stroke. Come straight to the hospital.");
     await expect(button).toHaveText('Continue');
 
     // 2. A tap on the scene: the warning about this traveler's own protected contact replaces it.
@@ -83,41 +83,49 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     await expect(beat).not.toContainText(other);
     await expectFits(page, 'beat 2');
 
-    // 3. The passenger ahead speaks, in the same place.
+    // 3. The relative writes too, something ordinary, signed with their own name.
     await button.click();
     await expectOneMessageUnderScene(page, 'beat 3');
+    await expect(msg).toContainText(en[`msg.0.personal.${id}`]);
+    await expect(msg.locator('.msg-from')).toHaveText(own);
+    await expectFits(page, 'beat 3');
+
+    // 4. The passenger ahead speaks, in the same place.
+    await button.click();
+    await expectOneMessageUnderScene(page, 'beat 4');
     await expect(msg).toHaveText(en['msg.0.2']);
     await expect(button).toHaveText('Continue');
-    await expectFits(page, 'beat 3');
+    await expectFits(page, 'beat 4');
 
     // The earlier messages, the warning included, are in My story.
     await run.getByRole('button', { name: 'My story' }).click();
     const story = page.locator('dialog.sheet[open] .messages');
-    await expect(story.locator('.msg')).toHaveCount(2);
+    await expect(story.locator('.msg')).toHaveCount(3);
     await expect(story.locator('.msg').first()).toContainText(en['msg.0.0']);
     await expect(story.locator('.msg').first()).toContainText('Mom');
     await expect(story.locator('.msg').nth(1)).toContainText(own);
+    await expect(story.locator('.msg').nth(2)).toContainText(en[`msg.0.personal.${id}`]);
     await expect(story).not.toContainText(other);
     await page.keyboard.press('Escape');
     await expect(page.locator('dialog.sheet[open]')).toHaveCount(0);
 
-    // 4. A tap on the message works too: the clerk's "Next." replaces it, and the booth
+    // 5. A tap on the message works too: the clerk's "Next." replaces it, and the booth
     // light changes, red to green.
     const light = scene.locator('svg.queue-art .booth-light');
     const fill = () => light.evaluate((el) => getComputedStyle(el).fill);
     await expect(light).toHaveAttribute('data-light', 'red');
     const red = await fill();
     await beat.click();
-    await expectOneMessageUnderScene(page, 'beat 4');
+    await expectOneMessageUnderScene(page, 'beat 5');
     await expect(msg).toHaveText(en['msg.0.3']);
     await expect(light).toHaveAttribute('data-light', 'green');
     expect(await fill()).not.toBe(red);
 
-    // 5. The walk up to the officer, or the one early point to turn back. The checkpoint is named only now.
+    // 6. The walk up to the officer, or the one early point to turn back. The checkpoint is named only now.
     await expect(button).toHaveText('Approach the booth');
     await expect(run.locator('.controls button.turn-back')).toHaveText(en['queue.0.turnBack']);
     await expect(run.getByText('In the queue')).toHaveCount(1);
-    await expectFits(page, 'beat 4');
+    await expectFits(page, 'beat 5');
     await button.click();
     await expect(run.getByText('In the queue')).toHaveCount(0);
     await expect(strip).toContainText('1 / 3 · Passport control');
@@ -175,5 +183,55 @@ test('leaving the passport queue ends the crossing, Turned back', async ({ page 
   await expect(run.locator('.reaction')).toContainText(en['turnBack.reaction']);
   await run.locator('.controls button.primary').click();
   await expect(page.locator('.ending-card')).toContainText(en['ending.turnedBack.title']);
+  expect(errors).toEqual([]);
+});
+
+test('the packing screen shows one message, and a queue beat read on an earlier run is skipped with one tap', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const run = page.locator('main.run');
+  const button = run.locator('.controls button.primary');
+  const skip = run.locator('.controls button.skip-read');
+
+  // First run: work writes before you pack.
+  await openReturning(page);
+  await page.locator('.title-screen button.primary').click();
+  await pickArrival(page);
+  await page.getByRole('radio').first().click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  const prep = page.locator('main.documents-step .prep-message');
+  await expect(prep).toHaveCount(1);
+  await expect(prep).toContainText(en['msg.prep']);
+  await expect(prep.locator('.msg-from')).toHaveText(en['msg.from.work']);
+  const docs = page.locator('.documents-step .doc');
+  for (let i = 0; i < CHARACTERS.lena.evidenceSlots; i++) await docs.nth(i).click();
+  await page.locator('.documents-step .controls button.primary').click();
+  await page.locator('.begin-step .controls button.primary').click();
+
+  // Nothing is read yet, so nothing offers a skip: read the whole passport queue, then turn back.
+  await expect(run.locator('.queue-beat .msg')).toContainText(en['msg.0.0']);
+  while ((await button.innerText()).trim() !== en['queue.0.go']) {
+    await expect(skip).toHaveCount(0);
+    await button.click();
+  }
+  await run.locator('.controls button.turn-back').click();
+  await button.click();
+  await expect(page.locator('.ending-card')).toBeVisible();
+
+  // Second run: the first beat was read before, and one tap goes past every read beat to the booth.
+  await page.locator('button.play-again').click();
+  await pickArrival(page);
+  await page.getByRole('radio').first().click();
+  await page.locator('.traveler-step .controls button.primary').click();
+  for (let i = 0; i < CHARACTERS.lena.evidenceSlots; i++) await docs.nth(i).click();
+  await page.locator('.documents-step .controls button.primary').click();
+  await page.locator('.begin-step .controls button.primary').click();
+  await expect(run.locator('.queue-beat .msg')).toContainText(en['msg.0.0']);
+  await expect(skip).toHaveText(en['ui.skipRead']);
+  await expectFits(page, 'a read beat with Skip');
+  await skip.click();
+  await expect(run.locator('.queue-beat .msg')).toHaveText(en['msg.0.3']);
+  await expect(button).toHaveText(en['queue.0.go']);
+  await expect(skip).toHaveCount(0);
   expect(errors).toEqual([]);
 });

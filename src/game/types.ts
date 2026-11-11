@@ -401,6 +401,12 @@ export type Screen =
 
 export type EndingId = 'homeInTime' | 'homeAtCost' | 'tooLate' | 'turnedBack';
 
+/**
+ * How a desk went, which picks your mother's next message (src/game/content/queues.ts).
+ * call: an officer phoned her there. delay: the desk took 2 hours or more. smooth: neither.
+ */
+export type QueueMood = 'call' | 'delay' | 'smooth';
+
 export interface LogEntry {
   /** i18n key of the line shown after a choice. */
   key: string;
@@ -509,6 +515,15 @@ export interface RunState {
    * src/game/engine.ts). Unset in saves from before it existed.
    */
   verified?: Partial<Record<Topic, VerifiedPoint>>;
+  /**
+   * Where the current desk started: the hours left, how many contacts were named
+   * and how long the log was, so the queue after it can follow what happened
+   * there (queueMood() in src/game/engine.ts). Unset before the first desk and in
+   * saves from before it existed.
+   */
+  deskStart?: { time: number; exposed: number; log: number };
+  /** How each desk went, by the index of the queue after it (QueueMood). Unset in saves from before it existed. */
+  after?: Partial<Record<number, QueueMood>>;
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;

@@ -142,6 +142,8 @@ export const en: Record<string, string> = {
   'ui.nameSomeone': 'Name someone',
   'ui.reduceWait': 'Shorter waits',
   'ui.tapToSkip': 'Tap to skip',
+  // In a queue, on a beat read in an earlier run: one tap past every read beat in a row.
+  'ui.skipRead': 'Skip what you have read',
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
@@ -370,28 +372,38 @@ export const en: Record<string, string> = {
   // ── The queue before each checkpoint (src/game/content/queues.ts says which beat
   // is a phone message and which is said or seen). A .lena / .mark key is one traveler's.
   'msg.from.mother': 'Mom',
+  'msg.from.cousin': 'Ilya',
+  'msg.from.brother': 'Tom',
   'msg.from.work': 'Work',
-  'msg.0.0': "The doctor says Dad can hear me. He hasn't said anything yet. Come straight to the hospital.",
+  // On the packing screen, before you choose what to carry (PREPARATION_MESSAGE).
+  'msg.prep': "Hope your dad's OK. Do you know when you'll be back? The client meeting is Monday.",
+  'msg.0.0': "The doctor says Dad can hear me. He can't talk yet after the stroke. Come straight to the hospital.",
   'msg.0.1.lena': "Don't mention Ilya to anyone. Please.",
   'msg.0.1.mark': "Don't mention Tom to anyone. Please.",
-  'msg.0.2': 'The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
+  // The relative's own ordinary line (PERSONAL_LINES). Ilya plays things down so you don't worry.
+  'msg.0.personal.lena': "The spare key is still under the ugly flowerpot. Don't tell Mum.",
+  'msg.0.personal.mark': "Bad signal here. I'm fine. Kiss Dad for me.",
+  'msg.0.2': 'The passenger ahead says: "I cross here six times a year. Never a problem. Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
   // The one early point to turn back (canTurnBack() in src/game/engine.ts): no desk has asked anything yet.
   'queue.0.turnBack': 'Leave the queue and go back',
   'turnBack.reaction': 'You step out of the line. Nobody stops you. The passport stays in your coat.',
-  'msg.1.0': "Hope your dad's OK. Any chance you can make Monday's call?",
-  'msg.1.1': 'The woman ahead writes a phone number on her wrist.',
-  'msg.1.2': '"My lawyer," she says, and pulls her sleeve down.',
-  'msg.1.3': 'An inspector at the next table holds a jar of honey to the light.',
+  // Your mother's message after a desk follows how it went (QueueMood): a call, a delay, or a smooth desk.
+  'msg.1.after.call.lena': 'Passport control just called me. They asked about Ilya.',
+  'msg.1.after.call.mark': 'Passport control just called me. They asked about Tom.',
+  'msg.1.after.delay': 'Are you through yet? It has been hours.',
+  'msg.1.after.smooth': 'Dad squeezed my hand. The nurse says that is good.',
+  'msg.1.1': 'An officer shows the woman ahead which copy is missing.',
   'msg.1.4': '"Answer only what they ask," a man behind you says. "Then stop talking."',
   'msg.1.5': 'The inspector taps the steel table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
-  'msg.2.0': 'Text me when you are through. Anything at all.',
-  'msg.2.1': 'The Wi-Fi drops. Your reply is still sending.',
-  'msg.2.2': 'The man beside you on the bench has been here since morning.',
+  'msg.2.after.call.lena': 'Someone from customs called me. They wanted to know about Ilya.',
+  'msg.2.after.call.mark': 'Someone from customs called me. They wanted to know about Tom.',
+  'msg.2.after.delay': 'Still nothing? Text me when you are through.',
+  'msg.2.after.smooth': 'The hospital café closes at six. I saved you a sandwich.',
+  'msg.2.1': 'Your phone is dying. The man on the bench hands you his charger.',
   'msg.2.3': '"They ask the same thing three ways," he says. "Give the same answer."',
-  'msg.2.4': 'A phone rings and rings. Nobody answers it.',
   'msg.2.5': 'A door opens at the end of the corridor. "This way, please."',
   'queue.2.go': 'Follow the officer',
 
@@ -665,7 +677,7 @@ export const en: Record<string, string> = {
 
   // ── Checks and the waiting room
   'check.hostCall.title': "They're calling your mother.",
-  'check.hostCall.clear': 'Your mother answers. The officer asks who else lives there and writes it down.',
+  'check.hostCall.clear': 'Your mother answers. She tells him more than he asked, and names the rest of the family.',
   'check.hostCall.noAnswer': 'The officer puts the phone down without speaking.',
   'check.hostCall.hint.clear': '"They are calling your host."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',

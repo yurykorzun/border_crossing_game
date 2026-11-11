@@ -3,7 +3,7 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -680,6 +680,24 @@ function restCard(s: RunState): Encounter | undefined {
   return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left.find((e) => !core.includes(e.id)) ?? coreLeft(s);
 }
 
+/** Hours a desk takes, at least, for the queue after it to read as a delay (QueueMood). */
+export const DELAY_HOURS = 2;
+
+/**
+ * How the desk just finished went, for your mother's next message: an officer
+ * phoned her (you named her, or the host call reached her), it took
+ * DELAY_HOURS or more, or neither. Only the message changes: nothing here
+ * costs time or adds a choice.
+ */
+export function queueMood(s: RunState): QueueMood {
+  const start = s.deskStart;
+  if (!start) return 'smooth';
+  const named = s.exposed.slice(start.exposed);
+  const answered = s.log.slice(start.log).some((l) => l.key === 'check.hostCall.clear');
+  if (named.includes('mother') || answered) return 'call';
+  return start.time - s.time >= DELAY_HOURS ? 'delay' : 'smooth';
+}
+
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
 function advance(s: RunState, dealer: Dealer): RunState {
   if (s.withdrew) return finish(s);
@@ -698,7 +716,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
     if (next >= CHECKPOINTS.length) return admission(s, dealer);
-    return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next } };
+    return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next }, after: { ...s.after, [next]: queueMood(s) } };
   }
   return deal(s);
 }
@@ -1023,7 +1041,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     }
     case 'ack':
       if (s.reaction) return { ...s, reaction: null };
-      if (s.screen.kind === 'between') return deal(s);
+      if (s.screen.kind === 'between') return deal({ ...s, deskStart: { time: s.time, exposed: s.exposed.length, log: s.log.length } });
       return s;
     case 'turnBack':
       if (!canTurnBack(s)) return s;

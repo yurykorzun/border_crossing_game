@@ -73,6 +73,17 @@ Both are citizens returning after years abroad (see Setting).
 - Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
 - Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
 
+### What the people around you want
+
+Each person wants something ordinary, and that is what pulls on you, not a score. Nobody's harm is counted.
+
+- Your mother wants your father cared for and the family together. She volunteers what she thinks proves you innocent (on the host call she names the rest of the family unasked), and what she says is her account: testimony you can explain, never a disproof (`TESTIMONY` in `src/game/content/encounters.ts`).
+- Ilya wants to help without getting involved. He plays a problem down so you don't worry.
+- Your employer wants a return date. Work writes before you pack ("Do you know when you'll be back? The client meeting is Monday."), which pulls against the passport clerk's stay question.
+- The officer wants a complete file before the shift ends. Sometimes that means a small kindness, like showing the woman ahead which copy is missing.
+
+Your mother, Ilya and Tom each say one ordinary thing in the passport queue before any card can offer to name them (`PERSONAL_LINES` in `src/game/content/queues.ts`). The packing screen shows one message, from work. Between desks your mother's message follows what happened at the desk just left (`queueMood()` in `src/game/engine.ts`): after a call she says the officer asked about your relative, after a delay of 2 hours or more she asks if you are through, else she writes something ordinary about the hospital or food. Queues offer no choice, because nothing in them changes what comes next. A beat read on an earlier run can be skipped with one tap.
+
 ## Evidence cards (pick 3)
 
 | Card | Useful against | Puts on file |

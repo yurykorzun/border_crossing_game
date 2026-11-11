@@ -19,6 +19,11 @@ export interface SaveData {
    * to read. Null until a crossing ends; unset in saves from before it existed.
    */
   file: CarriedFile | null;
+  /**
+   * Queue beats read on any run so far (QueueBeat.key), so a later run can skip
+   * them with one tap. Unset in saves from before it existed: none read.
+   */
+  beatsSeen: string[];
   settings: Settings;
 }
 
@@ -61,6 +66,7 @@ export const freshSave = (): SaveData => ({
   run: null,
   endingsSeen: [],
   file: null,
+  beatsSeen: [],
   settings: { reduceWait: false, reduceMotion: false, sound: true },
 });
 
@@ -76,6 +82,7 @@ export function load(store: Store): SaveData {
       run: data.run && data.run.v === 2 ? data.run : null,
       endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e) => ENDINGS.includes(e)) : [],
       file: loadFile(data.file),
+      beatsSeen: isList(data.beatsSeen) ? data.beatsSeen : [],
       settings: { ...base.settings, ...(data.settings ?? {}) },
     };
   } catch {

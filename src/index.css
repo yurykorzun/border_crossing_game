@@ -707,3 +707,5 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: 0
 .ending-turnedBack .ending-card { border-top: 6px solid var(--danger-paper); }
 .ending-tooLate .ending-card, .ending-homeAtCost .ending-card { border-top: 6px solid var(--amber-paper); }
 .ending-homeInTime .ending-card { border-top: 6px solid var(--navy); }
+/* The one message on the packing screen, above the bulletin. */
+.prep-message { margin: 0; max-width: none; }
