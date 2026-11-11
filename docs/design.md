@@ -246,12 +246,14 @@ Rules that keep it fair:
 Each desk knows only its own facts (`RunState.facts` maps each fact to the desks that know it). A fact is known at the desk where it came out. It travels on only through a named channel:
 
 1. The shared records system: with the records bulletin, a fact reaches every later desk at once.
-2. A phone call between desks: a `{ send: 'call' }` effect passes facts this desk knows to the next desk. Today the passport clerk phones customs about your mother's address on the accommodation bulletin, and about your father's condition on the customs bulletin.
+2. A phone call between desks: a `{ send: 'call' }` effect passes facts this desk knows to the next desk. Today the passport clerk phones customs about your mother's address on the accommodation bulletin, and passes on your father's condition whenever a medical note answers why you came.
 3. A printout handed over after a check: `{ send: 'printout' }` on a check result or inspection. The address check note, the phone search report and the bag search report go on to the next desk.
 
 A call or printout reaches only the next desk, so a fact from passport control needs two hops to reach the interview without the records bulletin. Every condition on facts (cards, effects, scrutiny reasons, the clarify and contradiction cards) reads what the current desk knows, never the whole crossing. My story's On file column tags each fact with the desks that know it, and the reaction says when a fact is sent on ("Sent on to Customs: Family address."). The walk checks every move: a desk learns a fact only where it came out or through one of these channels.
 
 Claims stay one shared list for now.
+
+Verified once, asked once. A point resolved at one desk stays resolved (`RunState.verified`, `pointVerified()` in `src/game/engine.ts`): a document that answered it, or a contact who confirmed it. A document can verify more than the question it answered (`EvidenceCard.forwards`): the hospital note shown for why you came verifies the prescription too. A contact called in earlier adds no hour on a later card about a verified point. On a desk's own card about a verified point, an answer with `ifVerified` uses what is on file instead: declaring the medicine at customs costs nothing and opens no lab check, and the interview reads the employer the clerk confirmed instead of checking the contract. The answer keeps its place and reads `<key>.verified.label`. The host card at customs keeps its call, because a free answer there made the accommodation warning not worth heeding (the walk's warning check). The point stays resolved until a new reason appears: any fact flagged since it was verified opens it again. An inspection is the supervisor's, so what it settles stays there and verifies nothing for the desks.
 
 ## Director
 

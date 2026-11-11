@@ -114,11 +114,12 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       {
         id: 'evidence', kind: 'evidence', topic: 'purpose',
-        // Today's bulletin tells the clerk which desk to phone: addresses go to
-        // customs on accommodation checks, medical notes on medicine checks.
+        // Today's bulletin tells the clerk to phone customs with the address on
+        // accommodation checks. A medical note always goes on to customs with the
+        // prescription details (EvidenceCard.forwards), so customs uses them.
         effects: [
           { send: 'call', facts: ['familyAddress'], when: { bulletin: 'accommodation' } },
-          { send: 'call', facts: ['fatherCondition'], when: { bulletin: 'customs' } },
+          { send: 'call', facts: ['fatherCondition'] },
         ],
       },
       { id: 'family', kind: 'verify', effects: [{ claim: 'familyVisit' }, { time: -1 }] },
@@ -220,7 +221,8 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'c_medicine', checkpoint: 'customs', kind: 'routine', topic: 'medicine',
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'medicine', effects: [] },
-      { id: 'declare', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'customs' } }], check: 'medicineLab' },
+      // With the prescription verified earlier, he uses the details on file: no lab, no wait.
+      { id: 'declare', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'customs' } }], check: 'medicineLab', ifVerified: [] },
     ],
   },
   {
@@ -363,7 +365,8 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'perk', kind: 'perk', effects: [] },
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
       // The contract confirms the employer, and only that (Officer.readings).
-      { id: 'contract', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }] },
+      // With who pays you verified earlier, the officer reads that entry instead.
+      { id: 'contract', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }], ifVerified: [] },
       { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],
   },

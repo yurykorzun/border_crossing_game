@@ -450,6 +450,8 @@ export const en: Record<string, string> = {
   'enc.c_medicine.declare.label': 'Declare it and wait',
   'enc.c_medicine.declare.event': 'Prescription verification',
   'enc.c_medicine.declare.reaction': 'He takes the medicine away for testing.',
+  'enc.c_medicine.declare.verified.label': 'Declare it, as already checked',
+  'enc.c_medicine.declare.verified.reaction': 'He reads the prescription details already on your file and nods at the cool bag.',
 
   // Asked about the cash itself: income (the employer letter) or a declaration answers it, not a ticket.
   'enc.c_cash.q': '"Where is the cash in your bag from?"',
@@ -566,6 +568,8 @@ export const en: Record<string, string> = {
   'enc.i_employer.contract.label': 'Let them check your contract',
   'enc.i_employer.contract.event': 'Contract check',
   'enc.i_employer.contract.reaction': 'Someone goes to find the contract.',
+  'enc.i_employer.contract.verified.label': 'Point to the employer already confirmed',
+  'enc.i_employer.contract.verified.reaction': 'The officer finds the employer already confirmed and turns the page.',
   'enc.i_employer.brother.label': 'Let them call {contact}',
   'enc.i_employer.brother.reaction': 'Tom explains the job offer. The officer writes his name down.',
 

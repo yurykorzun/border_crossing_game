@@ -132,6 +132,12 @@ export interface Approach {
   /** Opens the waiting room for this check after the effects apply. */
   check?: CheckId;
   /**
+   * On a desk's card whose point was verified earlier (RunState.verified), these
+   * effects replace `effects` and no check opens: the officer uses what is on
+   * file instead of asking again. The answer reads `<key>.verified.label`/`.reaction`.
+   */
+  ifVerified?: Effect[];
+  /**
    * An answer the officer holds against you (it adds scrutiny) outside a challenge card:
    * which of three the reaction is. A disproof records the answer's claim as disproved
    * (reactionOf() in src/game/engine.ts). Challenge cards say it for every answer (catchKind()).
@@ -311,6 +317,12 @@ export interface EvidenceCard {
   settles?: Topic[];
   /** The card can't back an answer while this holds. */
   blockedBy?: Cond;
+  /**
+   * Points this document verifies wherever it is shown, besides the question it
+   * answers: the hospital note at passport verifies the prescription too, and the
+   * clerk forwards its details, so customs uses them instead of asking again.
+   */
+  forwards?: Topic[];
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
@@ -414,6 +426,12 @@ export interface ChangeLine {
  */
 export type FactMap = Partial<Record<FactId, Checkpoint[]>>;
 
+/** Where a point was verified, and how many facts were flagged at that moment (RunState.verified). */
+export interface VerifiedPoint {
+  desk: Checkpoint;
+  flags: number;
+}
+
 export interface RunState {
   v: 2;
   /** The level being played (LEVELS in src/game/content/levels.ts). Unset in saves from before it existed: Arrival. */
@@ -484,6 +502,13 @@ export interface RunState {
   spotChecked?: Checkpoint[];
   /** The desk of each check run so far (a wait screen), in order (relatedCard() in src/game/engine.ts). */
   checkedAt?: Checkpoint[];
+  /**
+   * Points resolved at a desk: a document answered them, or a contact confirmed
+   * them. Each keeps the desk and how many facts were flagged then, because a
+   * point stays resolved only until a new reason appears (pointVerified() in
+   * src/game/engine.ts). Unset in saves from before it existed.
+   */
+  verified?: Partial<Record<Topic, VerifiedPoint>>;
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;
