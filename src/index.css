@@ -404,11 +404,12 @@ p { margin: 0 0 var(--gap); }
 /* Where you stand: the goal, which checkpoint (and phase), then the clock with its time bar and scrutiny. */
 .strip { display: grid; gap: 2px; flex: none; }
 .goal { margin: 0; font-weight: 700; font-size: var(--text); line-height: 1.3; }
-/* Wraps only with large text: the clock then takes the whole width and Scrutiny drops under it. */
+/* Wraps only at about 200 percent text (the clock's 8rem plus the button pass 390 px): the clock
+   then takes the whole width and Scrutiny drops under it. Below that the clock's words wrap instead. */
 .strip-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
 .stat { display: flex; align-items: center; gap: 6px; }
 /* The clock group: hours to the bus over the bar that shows them, so the bar reads as time and not progress. */
-.stat.time { flex: 1 1 10rem; min-width: 0; flex-direction: column; align-items: stretch; gap: 4px; }
+.stat.time { flex: 1 1 8rem; min-width: 0; flex-direction: column; align-items: stretch; gap: 4px; }
 .clock-line { display: flex; align-items: center; gap: 6px; }
 /* "8 hours until the last bus" is a sentence, so it keeps its case. */
 .stat-label.hours { font-size: var(--text-small); color: var(--paper); }
