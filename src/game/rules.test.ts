@@ -602,7 +602,7 @@ describe('what each official knows: facts travel between desks only through a ch
   it('the reaction says where a fact was sent', () => {
     const r = tryStep({ ...lenaWith('accommodation'), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
     expect(r.ok && r.events).toContainEqual({ type: 'factSent', id: 'familyAddress', desks: ['customs'], via: 'desk' });
-    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Sent on to Customs: Your registered family address.');
+    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Passed to Customs: Your registered family address.');
   });
 });
 
@@ -631,7 +631,7 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(r.state.time).toBe(after.time - 1);
     expect(r.state.calledIn).toEqual([]);
     expect(r.state.reaction?.map((l) => l.key)).toContain('calledIn.reaction');
-    expect(t('calledIn.reaction', { contact: 'mother' })).toBe('Earlier you named your mother. The officer checks that statement first.');
+    expect(t('calledIn.reaction', { contact: 'mother' })).toBe('You named your mother earlier. The officer checks that first.');
     // Once checked, the next card about her costs nothing extra, and she cannot help again.
     const later = at(r.state, 'c_host');
     expect(cost(later, 'evidence').time).toBe(0);
@@ -713,7 +713,7 @@ describe('officers with one stated priority each (fsx.10)', () => {
     expect(atPassport.state.reaction?.map((l) => l.key)).not.toContain('officer.passport.flags');
     // The reason is stated in the reaction.
     expect(atInterview.state.reaction).toContainEqual({ key: 'officer.interview.flags', vars: { fact: 'brotherAbroad' }, kind: 'suspicion' });
-    expect(t('officer.interview.flags', { fact: 'brotherAbroad' })).toBe('Your brother across the border: the officer marks it as a security matter.');
+    expect(t('officer.interview.flags', { fact: 'brotherAbroad' })).toBe('Your brother abroad: the officer marks it as a security matter.');
   });
 
   it('a political fact already on file at the interview costs nothing more', () => {

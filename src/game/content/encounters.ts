@@ -191,7 +191,9 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 3, topic: 'identity',
-    when: { background: 'secondPassport' },
+    // Only on a records day, when the clerk reads the old exit records closely.
+    // Dealt every day, it made Mark's longest runs go over 8 minutes (rwf.15).
+    when: { background: 'secondPassport', bulletin: 'records' },
     // The exit record shows which passport he left on (Character.onFile).
     issue: { facts: ['secondPassport'] },
     approaches: [
@@ -434,7 +436,7 @@ const PHONE_REPORT: Effect = { send: 'printout', facts: ['phoneSearched', 'broth
 export const CHECKS: Record<CheckId, Check> = {
   // Your host can be vouched for: whoever can confirm the address.
   hostCall: {
-    id: 'hostCall', topic: 'accommodation', beats: 3,
+    id: 'hostCall', topic: 'accommodation', beats: 1,
     cases: [
       // The call note goes with your file to the interview, address and all.
       { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
@@ -450,7 +452,7 @@ export const CHECKS: Record<CheckId, Check> = {
     ],
   },
   medicineLab: {
-    id: 'medicineLab', beats: 2,
+    id: 'medicineLab', beats: 1,
     cases: [
       { when: { bulletin: 'customs', noFacts: ['fatherCondition'] }, followUp: 'f_lab', result: 'lab' },
       { result: 'clear' },
@@ -463,7 +465,7 @@ export const CHECKS: Record<CheckId, Check> = {
   // records day the fund is listed, so the officer asks about that payment; on a
   // customs day a salary from abroad is read as a transfer, which takes an hour to explain.
   phoneSearch: {
-    id: 'phoneSearch', beats: 3,
+    id: 'phoneSearch', beats: 1,
     explain: [{ fact: 'donationRecord', when: { background: 'donation' } }, { scrutiny: 1, reason: 'phoneSearch' }],
     cases: [
       { when: { background: 'protestPhoto' }, followUp: 'f_photo', result: 'photo', effects: [PHONE_REPORT] },
@@ -473,7 +475,7 @@ export const CHECKS: Record<CheckId, Check> = {
     ],
   },
   recordsCheck: {
-    id: 'recordsCheck', beats: 2,
+    id: 'recordsCheck', beats: 1,
     cases: [
       { when: { bulletin: 'records', background: 'donation' }, followUp: 'f_donation', result: 'flagged', effects: [{ fact: 'donationRecord' }] },
       { when: { bulletin: 'records', background: 'brotherAtWar' }, result: 'noted', effects: [{ fact: 'brotherAbroad' }] },

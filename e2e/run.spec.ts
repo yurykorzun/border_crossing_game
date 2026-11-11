@@ -248,7 +248,7 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   await openAt(page, { ...run, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
   await expect(reaction).toContainText('Found in the old records: Your registered family address.');
-  await expect(reaction).toContainText('Sent on to Customs: Your registered family address.');
+  await expect(reaction).toContainText('Passed to Customs: Your registered family address.');
   await page.locator('main.run .controls button.primary').click();
 
   await page.getByRole('button', { name: 'My story' }).click();
