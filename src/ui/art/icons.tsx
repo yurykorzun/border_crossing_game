@@ -113,7 +113,21 @@ const ALERT = [
   '....##....',
 ];
 
-const ICONS = { alert: ALERT, clock: CLOCK, flag: FLAG, document: DOCUMENT, folder: FOLDER, gear: GEAR, check: CHECK, shield: SHIELD } as const;
+/** More about this: opens an explanation. */
+const INFO = [
+  '..######..',
+  '.#......#.',
+  '#...aa...#',
+  '#........#',
+  '#...aa...#',
+  '#...aa...#',
+  '#...aa...#',
+  '#...aa...#',
+  '.#......#.',
+  '..######..',
+];
+
+const ICONS = { alert: ALERT, info: INFO, clock: CLOCK, flag: FLAG, document: DOCUMENT, folder: FOLDER, gear: GEAR, check: CHECK, shield: SHIELD } as const;
 export type IconName = keyof typeof ICONS;
 
 export function Icon({ name }: { name: IconName }) {

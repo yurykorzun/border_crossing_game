@@ -14,10 +14,13 @@ export const en: Record<string, string> = {
   'ui.resume': 'Resume crossing',
   'ui.newCrossing': 'New crossing',
   // Time is hours until the last bus to the hospital. Plural keys end in .one / .other (tn()).
-  // The run header reads "8 hours left", with "8 hours" picked out in amber.
+  // The run header reads "8 hours until the last bus", with "8 hours" picked out in amber.
+  // "Left" alone could mean the hospital closing, so the bus is named.
   'ui.hours.one': '{n} hour',
   'ui.hours.other': '{n} hours',
-  'ui.hoursLeft': '{hours} left',
+  'ui.untilLastBus': '{hours} until the last bus',
+  // Under the time bar, at its white mark: the hours the trip after the border needs.
+  'ui.travelReserve': '{hours} to the station',
   'ui.goal': 'Reach the hospital',
   'ui.scrutiny': 'Scrutiny',
   'ui.scrutinyCount': 'Scrutiny {n}/{max}',

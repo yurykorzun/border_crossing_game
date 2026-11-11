@@ -26,28 +26,32 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
   const start = levelOf(s).startTime;
   const left = Math.max(0, Math.min(s.time, start)) / start;
   // The hours the trip to the bus needs: once the bar runs past this mark, the last bus is gone.
-  const reserve = Math.max(0, Math.min(travelOf(s), start)) / start;
+  const travel = Math.max(0, Math.min(travelOf(s), start));
+  const reserve = travel / start;
   return (
     <header className="strip" aria-label={t('ui.yourCrossing')}>
       <p className="goal">{t('ui.goal')}</p>
       {/* Checkpoint and phase on one line. In the queue the checkpoint is not named yet: it shows once you reach the officer. */}
       <p className="progress-label">{pickOut(t('ui.progress', { count, name: progressName(s) }), count)}</p>
       <div className="strip-stats">
-        {/* The time bar belongs to the clock, so it reads as hours left and not as progress. */}
+        {/* The time bar belongs to the clock, so it reads as hours to the bus and not as progress. */}
         <span className="stat time">
           <span className="clock-line">
             <Icon name="clock" />
-            <span className="stat-label hours">{pickOut(t('ui.hoursLeft', { hours }), hours)}</span>
+            <span className="stat-label hours">{pickOut(t('ui.untilLastBus', { hours }), hours)}</span>
           </span>
           <span className="time-bar" aria-hidden>
             <i style={{ width: `${left * 100}%` }} />
             <b className="reserve" style={{ left: `${reserve * 100}%` }} />
           </span>
+          {/* The white mark's label. It slides with the mark but stays inside the bar's width. */}
+          <span className="reserve-label" style={{ left: `${reserve * 100}%`, transform: `translateX(-${reserve * 100}%)` }}>
+            {t('ui.travelReserve', { hours: tn('ui.hours', travel) })}
+          </span>
         </span>
-        <span className="strip-divider" aria-hidden />
-        {/* A button, not a readout: the word "Noticed" never said what scrutiny does, the sheet does. */}
+        {/* An outlined button with an info icon: it opens the scrutiny sheet, which says what scrutiny does. */}
         <button className={`scrutiny lvl-${level}`} aria-haspopup="dialog" onClick={onScrutiny}>
-          <Icon name="flag" />
+          <Icon name="info" />
           <span className="scrutiny-text">{t('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY })}</span>
         </button>
       </div>

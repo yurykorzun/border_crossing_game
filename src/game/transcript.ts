@@ -18,7 +18,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './consequence';
-import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, waitActions, waitKey } from './engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
@@ -90,7 +90,9 @@ function chromeLines(s: RunState, p: Page): void {
   p.add('ui.yourCrossing', {}, CHROME);
   p.add('ui.goal', {}, CHROME);
   p.plural('ui.hours', s.time, CHROME);
-  p.add('ui.hoursLeft', { hours: tn('ui.hours', s.time) }, CHROME);
+  p.add('ui.untilLastBus', { hours: tn('ui.hours', s.time) }, CHROME);
+  p.plural('ui.hours', travelOf(s), CHROME);
+  p.add('ui.travelReserve', { hours: tn('ui.hours', travelOf(s)) }, CHROME);
   p.add('ui.scrutinyCount', { n: level, max: MAX_SCRUTINY }, CHROME);
   const now = shownCheckpoint(s);
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.

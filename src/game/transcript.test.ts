@@ -273,7 +273,7 @@ describe('scenario evals', () => {
     expect(ended, 'some run ends on an officer line').toBeDefined();
     expect(ended!.lines.some((l) => l.key === `ending.${ended!.ending}.title`)).toBe(true);
     const tr = run(LENA);
-    for (const key of ['ui.goal', 'ui.hoursLeft', 'ui.scrutinyCount', 'ui.progress', 'ui.myStory'])
+    for (const key of ['ui.goal', 'ui.untilLastBus', 'ui.travelReserve', 'ui.scrutinyCount', 'ui.progress', 'ui.myStory'])
       expect(tr.lines.some((l) => l.key === key && l.chrome), key).toBe(true);
   });
 
