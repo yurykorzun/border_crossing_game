@@ -286,17 +286,21 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
 
     const panel = page.locator('main.run .panel.waiting');
     await expect(panel.locator('h2')).toHaveText(en[`check.${check}.title`]);
-    await expect(panel.locator('p')).toHaveText([en['beat.customs.1']]);
+    // A check in stages ends on its observation instead of the last beat, and words its own answers.
+    const staged = !!CHECKS[check].explain;
+    await expect(panel.locator('p')).toHaveText([staged ? en[`check.${check}.observe.clear`] : en['beat.customs.1']]);
     // The old labels are gone: no "Waiting", no "Verification in progress", no check name.
     await expect(page.locator('main.run')).not.toContainText('Waiting');
     await expect(page.locator('main.run')).not.toContainText('Verification in progress');
     await expect(page.locator('main.run')).not.toContainText(/(Address|Medicine|Records) check|Phone search/);
 
     const buttons = page.locator('main.run .controls button');
-    await expect(buttons.nth(0)).toHaveText('Wait for the result');
+    await expect(buttons.nth(0)).toHaveText(staged ? en[`check.${check}.wait.label`] : 'Wait for the result');
     await expect(buttons.nth(0)).toHaveClass(/wait-go/);
-    await expect(buttons.nth(1)).toContainText('Ask for an update');
-    await expect(buttons.nth(1).locator('.consequence')).toHaveText('Your urgency goes on file');
+    const ask = buttons.nth(staged ? 2 : 1);
+    if (staged) await expect(buttons.nth(1)).toContainText(en[`check.${check}.explain.label`]);
+    await expect(ask).toContainText(staged ? en[`check.${check}.ask.label`] : 'Ask for an update');
+    await expect(ask.locator('.consequence')).toHaveText('Your urgency goes on file');
     await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
     await expect(page.locator('.strip .scrutiny')).toContainText('Scrutiny');
 
