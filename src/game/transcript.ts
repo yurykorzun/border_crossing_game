@@ -18,7 +18,7 @@ import { messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
-import { answerKey, canFinish, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
@@ -303,7 +303,10 @@ function screenLines(s: RunState, p: Page): void {
       p.add(b.key);
     }
     if (beats.length > 1) p.add('ui.continue');
-    return p.add(`queue.${sc.next}.go`);
+    p.add(`queue.${sc.next}.go`);
+    // The passport queue is the one early point to turn back (canTurnBack()).
+    if (canTurnBack(s)) p.add(`queue.${sc.next}.turnBack`);
+    return;
   }
   if (sc.kind === 'wait') {
     // Waiting in src/App.tsx: what they are doing, then the latest beat.
@@ -412,6 +415,7 @@ export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Leve
         ? answerKey(s, action.approach, 'label')
         : action.type === 'waitAction' ? `wait.${action.action}.label`
         : action.type === 'finish' ? 'ui.finishQuickly'
+        : action.type === 'turnBack' && sc.kind === 'between' ? `queue.${sc.next}.turnBack`
         : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`
         : s.reaction ? nextActionKey(s) : 'ui.continue';
     const picked = page.lines.find((l) => l.key === pickedKey) ?? page.lines.find((l) => l.key === 'ui.continue');
@@ -421,6 +425,8 @@ export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Leve
     if (action.type === 'choose' && !(sc.kind === 'encounter' && isCalm(sc.id))) decisions++;
     // Every check offers at least waiting or asking, so each pick there is a decision.
     if (action.type === 'waitAction') decisions++;
+    // Turning back in the passport queue is a choice too (canTurnBack() in src/game/engine.ts).
+    if (action.type === 'turnBack') decisions++;
     if (action.type === 'beat' && s.screen.kind === 'wait') beatMs += beatDelayMs(s.screen.beats[s.screen.shown] ?? 0);
     const n = playStep(s, action);
     for (const e of eventsBetween(s, n, action)) {

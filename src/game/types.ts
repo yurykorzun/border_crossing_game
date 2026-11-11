@@ -478,5 +478,7 @@ export type Action =
   | { type: 'beat' }
   | { type: 'waitAction'; action: WaitAction }
   | { type: 'ack' }
+  /** Only in the passport queue (canTurnBack()): you leave before the first desk, Turned back. */
+  | { type: 'turnBack' }
   /** Only once the bus is out of reach (doomed()): the rest of the crossing plays out, Too late. */
   | { type: 'finish' };

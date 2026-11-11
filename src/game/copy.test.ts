@@ -108,6 +108,8 @@ describe('the realism review lines in src/i18n/en.ts', () => {
 
 describe('every button says what its answer does', () => {
   /** A refusal: you decline to answer or to be searched, or you walk away. */
+  // Withdrawing at an inspection is a request to go back, so its label asks to return and says so.
+  const RETURNS = /^Ask to return\b/;
   const refuses = (a: Approach) => a.kind === 'withdraw' || a.effects.some((e) => 'fact' in e && e.fact === 'phoneRefused');
 
   it('maps each label to its kind of answer, so an "Ask" label never refuses', () => {
@@ -116,12 +118,12 @@ describe('every button says what its answer does', () => {
       const label = t(`${key}.label`, { cardThe: 'deed', contact: 'mother', contactMine: 'cousin' });
       const raw = t(`${key}.label`);
       const asks = /^Ask\b/.test(label) || /\?"?$/.test(label);
-      if (asks && (refuses(a) || (a.kind !== 'verify' && a.kind !== 'contact'))) wrong.push(`${key}: "${label}" asks, but is a ${a.kind}${refuses(a) ? ' refusal' : ''}`);
+      if (asks && !(a.kind === 'withdraw' && RETURNS.test(label)) && (refuses(a) || (a.kind !== 'verify' && a.kind !== 'contact'))) wrong.push(`${key}: "${label}" asks, but is a ${a.kind}${refuses(a) ? ' refusal' : ''}`);
       if (asks && /until you answer/i.test(t(`${key}.reaction`, { contact: 'mother' }))) wrong.push(`${key}: "${label}" asks, but the reaction treats it as not answering`);
       if (a.kind === 'evidence' && !raw.includes('{cardThe}')) wrong.push(`${key}: shows a document, but "${raw}" does not name it`);
       if (a.kind === 'contact' && !/\{contact(Mine)?\}/.test(raw)) wrong.push(`${key}: names someone, but "${raw}" does not say who`);
-      if (a.kind === 'withdraw' && !/^Withdraw\b/.test(label)) wrong.push(`${key}: ends the crossing, but "${label}" does not say so`);
-      if (a.kind !== 'withdraw' && /^Withdraw\b/.test(label)) wrong.push(`${key}: "${label}" says withdraw, but is a ${a.kind}`);
+      if (a.kind === 'withdraw' && !/^Withdraw\b/.test(label) && !RETURNS.test(label)) wrong.push(`${key}: ends the crossing, but "${label}" does not say so`);
+      if (a.kind !== 'withdraw' && (/^Withdraw\b/.test(label) || RETURNS.test(label))) wrong.push(`${key}: "${label}" says withdraw, but is a ${a.kind}`);
     }
     expect(wrong).toEqual([]);
   });

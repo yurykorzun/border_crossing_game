@@ -429,8 +429,13 @@ export const CHECKS: Record<CheckId, Check> = {
 /**
  * Drawn when scrutiny reaches 3. Each one asks you to pay with something:
  * time, belongings (the medicine or a document), a disclosure, or a person.
- * Every one shows two answers that cost different things, plus a way out, and
- * never more, so a card keeps to three answers on screen. Where a card has more
+ * Every one shows two answers that cost different things, and never more than
+ * three answers on screen. The third, "Ask to return", is there only where the
+ * situation allows it: the medicine is held, so leaving with it is a real
+ * request, or the supervisor has not decided yet. A bag search runs to the end,
+ * and once the shuttle has gone there is no way back to ask for. Turning back
+ * before any desk decides is the passport queue's (canTurnBack() in
+ * src/game/engine.ts). Where a card has more
  * than two ways to pay, the conditions pick which two you see. Apart from the
  * bag search, each changes the problem instead of only costing hours
  * (InspectionKind, checked in checkState). With LAST_HOURS left or fewer any
@@ -458,7 +463,6 @@ export const INSPECTIONS: Inspection[] = [
         requires: { not: { contactFree: ['mother'] }, any: [{ noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
         effects: [{ fact: 'cashCount' }, { fact: 'fatherCondition' }, { send: 'printout', facts: ['cashCount', 'fatherCondition'] }],
       },
-      { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
@@ -492,7 +496,6 @@ export const INSPECTIONS: Inspection[] = [
         requires: { not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] }, noFacts: ['familyAddress'] },
         effects: [{ fact: 'familyAddress' }],
       },
-      { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {

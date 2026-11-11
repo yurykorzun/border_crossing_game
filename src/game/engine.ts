@@ -879,12 +879,28 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
       if (s.reaction) return { ...s, reaction: null };
       if (s.screen.kind === 'between') return deal(s, dealer);
       return s;
+    case 'turnBack':
+      if (!canTurnBack(s)) return s;
+      // You step out of the passport queue before any desk has asked you anything.
+      return say(finish({ ...s, withdrew: true, decisions: s.decisions + 1 }), [{ key: 'turnBack.reaction' }]);
     case 'finish':
       if (!canFinish(s)) return s;
       // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
       return say(finish({ ...s, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
   }
 }
+
+/**
+ * The one early point where you can still turn back: the queue before the
+ * passport desk, before that desk has asked or decided anything. After it, no
+ * desk card offers a way out, and an inspection offers "Ask to return" only
+ * where its situation allows (the withdraw answers in INSPECTIONS).
+ */
+export const TURN_BACK_QUEUE = 0;
+
+/** Whether turning back is open now: in the passport queue, with nothing else to read first. */
+export const canTurnBack = (s: RunState): boolean =>
+  !s.ending && !s.reaction && s.screen.kind === 'between' && s.screen.next === TURN_BACK_QUEUE;
 
 /** The finish-quickly option shows on a card once the bus is out of reach. */
 export const canFinish = (s: RunState): boolean =>
@@ -895,7 +911,7 @@ export function legalActions(s: RunState): Action[] {
   if (s.ending) return [];
   if (s.reaction) return [{ type: 'ack' }];
   const sc: Screen = s.screen;
-  if (sc.kind === 'between') return [{ type: 'ack' }];
+  if (sc.kind === 'between') return canTurnBack(s) ? [{ type: 'ack' }, { type: 'turnBack' }] : [{ type: 'ack' }];
   if (sc.kind === 'wait') {
     if (sc.shown < sc.beats.length) return [{ type: 'beat' }];
     return waitActions(s).filter((w) => !w.blocked).map((w) => ({ type: 'waitAction', action: w.action }));

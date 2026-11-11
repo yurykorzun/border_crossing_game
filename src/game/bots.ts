@@ -161,6 +161,9 @@ export function botAction(style: BotStyle, s: RunState, botRng: number, ignore?:
     return { action: legal[Math.floor(r.value * legal.length)], botRng: r.rng };
   }
   if (style === 'situational') return { action: best(legal, (a) => -lookahead(s, a)), botRng };
+  // In the passport queue the scoring styles walk up to the booth: turning back
+  // there is withdrawing, which they rank last everywhere (KIND_RANK, SCORE).
+  if (legal.some((a) => a.type === 'turnBack')) return { action: legal.find((a) => a.type !== 'turnBack')!, botRng };
   if (legal[0].type === 'waitAction') return { action: waitPick(style, legal), botRng };
   const open = new Set(legal.map((a) => (a.type === 'choose' ? a.approach : '')));
   const opts = options(s).filter((o) => !o.blocked && (!ignore || open.has(o.approach.id)));

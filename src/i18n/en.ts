@@ -370,6 +370,9 @@ export const en: Record<string, string> = {
   'msg.0.2': 'The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
+  // The one early point to turn back (canTurnBack() in src/game/engine.ts): no desk has asked anything yet.
+  'queue.0.turnBack': 'Leave the queue and go back',
+  'turnBack.reaction': 'You step out of the line. Nobody stops you. The passport stays in your coat.',
   'msg.1.0': "Hope your dad's OK. Any chance you can make Monday's call?",
   'msg.1.1': 'The woman ahead writes a phone number on her wrist.',
   'msg.1.2': '"My lawyer," she says, and pulls her sleeve down.',
@@ -615,8 +618,6 @@ export const en: Record<string, string> = {
   // Why her word helps here: the search stops once the prescription checks out.
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
   'insp.s_bag.contact.reaction': 'They make the call, and the search stops early.',
-  'insp.s_bag.withdraw.label': 'Withdraw your entry request',
-  'insp.s_bag.withdraw.reaction': 'They pack your things back into the suitcase. The officer hands back your passport.',
 
   'insp.s_medicine.q': 'They are holding the medicine for testing.',
   'insp.s_medicine.surrender.label': 'Leave without it',
@@ -624,8 +625,8 @@ export const en: Record<string, string> = {
   'insp.s_medicine.wait.label': 'Wait to get it back',
   'insp.s_medicine.wait.event': 'Shift change at the lab',
   'insp.s_medicine.wait.reaction': 'They test the medicine, then the bag comes back.',
-  'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
-  'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport.',
+  'insp.s_medicine.withdraw.label': 'Ask to return with the medicine',
+  'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport. An officer walks you to departures.',
 
   'insp.s_connection.q': 'While they keep you here, the shuttle to the station leaves without you. The next one is an hour later.',
   'insp.s_connection.later.label': 'Take the later shuttle',
@@ -636,8 +637,6 @@ export const en: Record<string, string> = {
   'insp.s_connection.transfer.reaction': 'The driver asks where you are going. The officer writes down the address.',
   'insp.s_connection.evidence.label': 'Show {cardThe} for the transfer',
   'insp.s_connection.evidence.reaction': 'The officer clips it to the transfer form and keeps it.',
-  'insp.s_connection.withdraw.label': 'Withdraw your entry request',
-  'insp.s_connection.withdraw.reaction': 'The officer hands back your passport and points you to departures.',
 
   'insp.s_supervisor.q': 'A supervisor opens your file. "Why are you here?"',
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
@@ -648,7 +647,7 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.contact.label': 'Ask her to call {contact}',
   'insp.s_supervisor.contact.event': 'Phone call',
   'insp.s_supervisor.contact.reaction': 'She calls {contact}, who tells her about your father.',
-  'insp.s_supervisor.withdraw.label': 'Withdraw your entry request',
+  'insp.s_supervisor.withdraw.label': 'Ask to return before she decides',
   'insp.s_supervisor.withdraw.reaction': 'She closes your file and hands back your passport.',
 
   // ── Checks and the waiting room

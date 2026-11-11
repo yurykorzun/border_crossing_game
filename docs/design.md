@@ -42,6 +42,8 @@ Endings (crossing result x mission result):
 3. Too late - admitted with under 2 hours left, so you miss the bus.
 4. Turned back - you withdrew.
 
+Turning back is offered at one set early point: the passport queue, after the clerk's "Next." and before the desk has asked or decided anything ("Leave the queue and go back", `canTurnBack()` in `src/game/engine.ts`). No desk card after it offers a way out. A later inspection offers "Ask to return" only where the situation allows it: the confiscation (they hold the medicine, so you can ask to leave with it) and the supervisor's check (she has not decided yet). The bag search runs to the end, and once the shuttle has gone there is no way back to ask for. `npm run autoplay` prints how often turnedBack is reached, and where.
+
 Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
 ## Run shape
@@ -164,7 +166,6 @@ Kept, because a person picks them even though the bots don't:
 - `f_host.evidence`, `f_lab.evidence` - a paper saved at the first card (the call, the declaration) can still settle the follow-up. Every bot spends its paper at the first card, so it never gets here holding one.
 - `f_donation.explain`, `f_photo.honest`, `i_brother.honest` - the truth for 1 scrutiny instead of 2-3 hours. The honest bot prefers the slower check and the cautious one avoids scrutiny, and the liar and situational bots rarely get these cards, because they don't unlock the phone or scan on a records day.
 - `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
-- `s_bag.withdraw` - turning back is one of the four endings, and every inspection offers it as the way out.
 - `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
 
 ## Screen rules
@@ -228,7 +229,7 @@ Spot-checks (`spotCheck()` in `src/game/engine.ts`): before you leave each desk,
 
 Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection, and a paper on the bulletin's warned topic settles her on two draws of 3.
 
-No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things plus a way out.
+No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things, plus "Ask to return" where its situation allows it.
 
 The pairs live in `INCONSISTENCIES` and `DISPROOFS` in `src/game/content/encounters.ts`, and eval rule 3 and the walk both check a card is only dealt when its pair holds.
 

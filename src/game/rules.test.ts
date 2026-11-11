@@ -794,21 +794,21 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
 
   it('shows at most two answers and a way out: the conditions pick which two', () => {
     const ids = (s: RunState) => options(s).map((o) => o.approach.id);
-    expect(ids(inspection('s_bag'))).toEqual(['wait', 'contact', 'withdraw']);
-    expect(ids(inspection('s_bag', { exposed: ['mother'] }))).toEqual(['wait', 'declare', 'withdraw']);
+    expect(ids(inspection('s_bag'))).toEqual(['wait', 'contact']);
+    expect(ids(inspection('s_bag', { exposed: ['mother'] }))).toEqual(['wait', 'declare']);
     expect(ids(inspection('s_supervisor'))).toEqual(['evidence', 'accept', 'withdraw']);
     expect(ids(inspection('s_supervisor', { loadout: ['hotel', 'employerLetter', 'deed'] }))).toEqual(['contact', 'accept', 'withdraw']);
-    expect(ids(inspection('s_connection'))).toEqual(['later', 'evidence', 'withdraw']);
+    expect(ids(inspection('s_connection'))).toEqual(['later', 'evidence']);
     expect(ids(inspection('s_connection', { loadout: ['employerLetter', 'returnTicket', 'hospitalNote'], exposed: ['mother', 'cousin'] })))
-      .toEqual(['later', 'transfer', 'withdraw']);
+      .toEqual(['later', 'transfer']);
   });
 
-  it('every inspection lists two answers that cost different things, plus a way out', () => {
+  it('every inspection lists two answers that cost different things, and a way out only where it can be asked for', () => {
     for (const i of INSPECTIONS) {
       const answers = i.approaches.filter((a) => a.kind !== 'withdraw');
       expect(answers.length, i.id).toBeGreaterThanOrEqual(2);
-      expect(i.approaches.some((a) => a.kind === 'withdraw'), i.id).toBe(true);
     }
+    expect(INSPECTIONS.filter((i) => i.approaches.some((a) => a.kind === 'withdraw')).map((i) => i.id)).toEqual(['s_medicine', 's_supervisor']);
   });
 
   it('with LAST_HOURS left, an inspection offers no wait, only a sacrifice', () => {
@@ -851,7 +851,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
   it('a later shuttle that would miss the bus is not offered: the inspection asks for a sacrifice instead', () => {
     const ids = (s: RunState) => options(s).map((o) => o.approach.id);
     expect(ids(inspection('s_connection', { time: 3 }))).toContain('later');
-    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['evidence', 'withdraw']);
+    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['evidence']);
   });
 });
 

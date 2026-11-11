@@ -96,6 +96,10 @@ for (const level of PLAYED) {
     ], 12)}`);
   }
   console.log(`  runs with an inspection, all styles: ${pct(all.filter(inspected).length, all.length)} (memorised not counted)`);
+  // Where turning back happened: the passport queue (the one early point, canTurnBack()) or "Ask to return" at an inspection.
+  const back = all.filter((r) => r.final.ending === 'turnedBack');
+  const atQueue = back.filter((r) => r.actions.some((a) => a.type === 'turnBack')).length;
+  console.log(`  turnedBack reached, all styles: ${pct(back.length, all.length)} of runs (${atQueue} in the passport queue, ${back.length - atQueue} asking to return at an inspection)`);
 
   // ── 2. Success by setup
   console.log('\nhomeInTime by character x packing x bulletin (won/played per style)');
