@@ -583,39 +583,46 @@ test('the interview scene keeps its top and height through question, reaction an
   expect(errors).toEqual([]);
 });
 
-test('with the longest question and three answers, the scene shrinks before an answer leaves the screen', async ({ page }) => {
+// Every card with three answers, for every traveler: the tallest one is not always the
+// one with the longest question (i_employer's answers wrap more than c_host's), so each
+// card is measured rather than picked by text length.
+test('with three answers, every card keeps every answer on screen, and the scene shrinks first', async ({ page }) => {
+  test.setTimeout(240_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
-  // The longest question with three answers, of every card and traveler.
-  let worst: { run: RunState; length: number } | null = null;
+  const cards: { run: RunState; name: string }[] = [];
   for (const id of CHARACTER_IDS) {
     const base = newRun({ character: id, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[id].evidenceSlots), bulletin: 'records', seed: 7 });
-    const cards: [Screen, number][] = [
+    const screens: [Screen, number][] = [
       ...ENCOUNTERS.map((e): [Screen, number] => [{ kind: 'encounter', id: e.id }, e.checkpoint === 'followup' ? 2 : CHECKPOINTS.indexOf(e.checkpoint)]),
       ...INSPECTIONS.map((i): [Screen, number] => [{ kind: 'inspection', id: i.id }, 2]),
     ];
-    for (const [screen, checkpoint] of cards) {
+    for (const [screen, checkpoint] of screens) {
       const run: RunState = { ...base, reaction: null, screen, checkpoint, slot: 1 };
-      if (options(run).length !== 3) continue;
-      const prefix = screen.kind === 'inspection' ? 'insp' : 'enc';
-      const length = t(own(`${prefix}.${(screen as { id: string }).id}.q`, id)).length;
-      if (!worst || length > worst.length) worst = { run, length };
+      if (options(run).length === 3) cards.push({ run, name: `${id} ${(screen as { id: string }).id}` });
     }
   }
-  expect(worst, 'a card with three answers').not.toBeNull();
+  expect(cards.length, 'cards with three answers').toBeGreaterThan(0);
 
   // At the default text size, and at a larger one where the answers wrap more.
+  const viewport = page.viewportSize()!.height;
+  const below: string[] = [];
+  let tallest = { name: '', scene: 0, lowest: 0 };
   for (const fontSize of ['16px', '20px']) {
-    await openAt(page, worst!.run);
-    await page.addStyleTag({ content: `html { font-size: ${fontSize}; }` });
-    const scene = await sceneBox(page);
-    const lowest = await page.locator('main.run .controls button').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().bottom)));
-    const viewport = page.viewportSize()!.height;
-    expect(lowest, `an answer below the screen at ${fontSize}`).toBeLessThanOrEqual(viewport);
-    expect(scene.height, `scene height at ${fontSize}`).toBeLessThanOrEqual(220);
-    if (fontSize === '20px') expect(scene.height, 'the scene gave up height at 20px').toBeLessThan(180);
+    for (const card of cards) {
+      await openAt(page, card.run);
+      await page.addStyleTag({ content: `html { font-size: ${fontSize}; }` });
+      const scene = await sceneBox(page);
+      const lowest = await page.locator('main.run .controls button').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().bottom)));
+      if (lowest > viewport) below.push(`${card.name} at ${fontSize}: ${lowest}px`);
+      expect(scene.height, `scene height for ${card.name} at ${fontSize}`).toBeLessThanOrEqual(220);
+      if (fontSize === '20px' && lowest > tallest.lowest) tallest = { name: card.name, scene: scene.height, lowest };
+    }
   }
+  expect(below, 'answers below the screen').toEqual([]);
+  // The card that needs the most room got it by giving up scene height.
+  expect(tallest.scene, `the scene gave up height at 20px on ${tallest.name}`).toBeLessThan(180);
   expect(errors).toEqual([]);
 });
 
