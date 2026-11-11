@@ -719,13 +719,11 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: v
 .ending { overflow-y: auto; }
 /* Sticky at the bottom of the scrolling ending, so Play again stays in view on the longest card (pfi.9). */
 .ending .controls { margin-top: auto; position: sticky; bottom: 0; background: var(--bg); padding-top: 4px; }
-/* The ending scene takes the spare height above the card and gives it up first
-   (down to 64px, so the open questions fit under a short card on a phone). */
+/* The arrival scene under the ending's name: the picture, a short strip cropped from the
+   bottom (the art is anchored there), then one paragraph. */
 .ending-scene {
   position: relative;
-  flex: 1 1 0;
-  min-height: 64px;
-  max-height: 300px;
+  height: 104px;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--booth);
@@ -734,18 +732,25 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: v
 .ending-card { flex: none; padding: 14px var(--card-pad); }
 .ending-card .outcome { margin: 0 0 2px; color: var(--muted); }
 /* The ending's name is the one amber word on the card: amber marks attention (docs/plan.md "UI rules"). */
-.ending-card h1 { font-size: 1.6rem; margin: 0 0 4px; color: var(--amber-paper); }
-/* The story reads at body size in the sans face: what you kept, what it cost, the epilogue. */
-.ending-card .kept, .ending-card .cost-line, .ending-card .cost-reason, .ending-card .epilogue { font-size: var(--text); line-height: var(--leading); font-weight: 400; }
-.ending-card .kept { margin: 0 0 10px; }
+.ending-card h1 { font-size: 1.6rem; margin: 0 0 8px; color: var(--amber-paper); }
+/* The story reads at body size in the sans face: the arrival, what it cost, what came back later. */
+.ending-card .cost-line, .ending-card .cost-reason, .ending-card .epilogue, .ending-card .beat-line, .ending-card .beat-reason { font-size: var(--text); line-height: var(--leading); font-weight: 400; }
+.ending-card .epilogue { margin: 8px 0 0; }
+/* What happened after, under one time heading ("The following morning"). */
+.later { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--paper-2); }
+.later-heading { margin: 0 0 4px; color: var(--muted); font-size: var(--text-small); font-weight: 600; }
 /* What it cost, worst first: a short heading and one line each, with no severity tag. */
-.costs { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
-.cost { padding-top: 8px; border-top: 1px solid var(--paper-2); }
+.costs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cost + .cost { padding-top: 8px; border-top: 1px solid var(--paper-2); }
 .cost-title { font-size: var(--text); font-weight: 700; margin: 0 0 2px; }
 .cost-line { margin: 0; }
 /* Why naming them did this, before what it did (EndingLine.reason). */
 .cost-reason { margin: 0 0 2px; color: var(--muted); }
-.ending-card .epilogue { margin: 0; padding-top: 8px; border-top: 1px solid var(--paper-2); }
+/* Days later: its own line after the costs, then the choice that caused it. */
+.costs + .beat { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--paper-2); }
+.beat-line { margin: 0; }
+.beat-when { font-weight: 700; }
+.beat-reason { margin: 2px 0 0; color: var(--muted); }
 /* The run summary under the story: hours left and the other stats. */
 .run-summary { margin-top: 12px; }
 .run-summary h3 { margin: 0 0 2px; color: var(--muted); }

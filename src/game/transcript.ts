@@ -17,7 +17,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
-import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './consequence';
+import { SEPARATOR, caughtLine, consequence, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -376,33 +376,44 @@ function screenLines(s: RunState, p: Page): void {
 }
 
 /**
- * Ending in src/App.tsx: the title, what you kept and the worst consequence are the story;
- * the other consequences, the epilogue and the sheet behind "See what's on file" are chrome.
+ * Ending in src/App.tsx, in its order: the title, the arrival scene, what happened after
+ * under its time heading, then the run summary. The title, the worst consequence and the
+ * later beat are the story; the other consequences, the epilogue and the sheet behind
+ * "See border records" are chrome.
  */
 function endingLines(s: RunState, p: Page): void {
   const ending = s.ending!;
   const text = endingText(s);
   const ch = CHARACTERS[s.character];
   p.add('ui.title', {}, CHROME);
-  const scene = ending === 'turnedBack' ? 'scene.turnedBack'
-    : text === 'missedBus' ? (s.medicine ? 'scene.emptyStop' : 'scene.emptyStopEmpty')
-    : s.medicine ? 'scene.bus' : 'scene.busEmpty';
-  p.add(scene, {}, CHROME);
   p.add(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete');
   p.add(`ending.${text}.title`);
-  // keptLines(): what you kept, under the title.
-  for (const k of keptLines(s)) p.add(k.key, k.vars);
-  // consequences(), worst first: the worst is read, as a heading and a line; the rest,
-  // like the epilogue, are counted as chrome, as the card's longer text always was.
-  consequences(s).forEach((l, i) => {
+  const scene = ending === 'turnedBack' ? 'scene.turnedBack'
+    : text === 'missedBus' ? (s.medicine ? 'scene.emptyStop' : 'scene.emptyStopEmpty')
+    : ending === 'tooLate' ? (s.medicine ? 'scene.bus' : 'scene.busEmpty')
+    : 'scene.ward';
+  p.add(scene, {}, CHROME);
+  p.add(`ending.${text}.body`, {}, CHROME);
+  // consequences(), worst first, under the time heading: the worst is read, as a heading and
+  // a line; the rest, like the epilogue, are counted as chrome, as the card's longer text always was.
+  const cost = consequences(s);
+  if (cost.length) p.add('ending.later.heading', {}, CHROME);
+  cost.forEach((l, i) => {
     p.add(`${l.key}.title`, l.vars, i === 0 ? {} : CHROME);
     if (l.reason) p.add(l.reason, l.vars, i === 0 ? {} : CHROME);
     p.add(l.key, l.vars, i === 0 ? {} : CHROME);
   });
-  p.add(`ending.${text}.body`, {}, CHROME);
-  // The run summary, resultRows(): hours left, the medicine, the protected contact.
+  // laterBeat(): what came back days later, read, with the choice that caused it.
+  const later = laterBeat(s);
+  if (later) {
+    p.add(`later.${later.id}.when`);
+    p.add(`later.${later.id}`, later.vars);
+    p.add(`later.${later.id}.reason`, later.vars);
+  }
+  // The run summary, resultRows(): time left, the medicine, the protected contact.
   p.add('ui.runSummary', {}, CHROME);
-  p.add('ui.hoursLeftRow');
+  p.add('ui.timeLeftRow');
+  p.plural('ui.hours', s.time);
   p.add('ui.medicineRow');
   p.add(s.medicine ? 'ui.kept' : 'ui.lost');
   p.add(`contact.${ch.protectedContact}`);

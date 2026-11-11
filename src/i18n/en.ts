@@ -168,7 +168,8 @@ export const en: Record<string, string> = {
   'ui.crossingComplete': 'Crossing complete',
   'ui.crossingRefused': 'Request withdrawn',
   'ui.runSummary': 'Your run',
-  'ui.hoursLeftRow': 'Hours left',
+  // Yury's ending review, 2026-11-10. The value reads in hours ("5 hours"), so time stays counted in hours.
+  'ui.timeLeftRow': 'Time left at border exit',
   'ui.medicineRow': 'Medicine',
   'ui.kept': 'Kept',
   'ui.lost': 'Lost',
@@ -381,6 +382,7 @@ export const en: Record<string, string> = {
   'scene.emptyStop': 'An empty bus stop under a streetlight at night, the medicine box in your hands',
   'scene.emptyStopEmpty': 'An empty bus stop under a streetlight at night, your hands empty',
   'scene.turnedBack': 'The border post at night, after you turned back',
+  'scene.ward': 'A hospital ward at night: your father in bed under a lamp, two chairs pushed together beside him, a lit window',
 
   // ── The queue before each checkpoint (src/game/content/queues.ts says which beat
   // is a phone message and which is said or seen). A .lena / .mark key is one traveler's.
@@ -780,7 +782,7 @@ export const en: Record<string, string> = {
 
   // ── Endings
   'ending.homeInTime.title': 'Home in time',
-  'ending.homeInTime.body': 'You reach the hospital before visiting hours end. Your father squeezes your hand. Your mother laughs and cries at once, then makes you eat something from the machine in the hall. Tonight you sleep on two chairs by his bed, with your passport still in your coat.',
+  'ending.homeInTime.body': 'Your father squeezes your hand. Your mother laughs and cries at once. Tonight you sleep on two chairs beside his bed, your passport still in your coat.',
   'ending.homeAtCost.title': 'Home at a cost',
   'ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Your father is awake and asks how the trip was. You tell him it was fine. Later, in the corridor, you read your messages twice and think about who you can still call.',
   'ending.tooLate.title': 'Too late',
@@ -789,13 +791,24 @@ export const en: Record<string, string> = {
   'ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send your mother the time and sit on a bench under the light. She writes that your father is stable. You read it until the screen goes dark.',
   'ending.turnedBack.title': 'You turned back',
   'ending.turnedBack.body': 'You sit in the departures hall with your passport back in your coat. Your mother calls. You let it ring. The next bus back leaves in the morning. You write her a message three times and delete it three times.',
-  // The line under the ending's title: what you kept (keptLines).
-  'ending.kept.medicine': "Your father's medicine is still in the cool bag.",
-  'ending.kept.contact': 'You keep {contact} out of the file.',
-  'ending.kept.none': 'You still have your passport.',
-  // What the run cost, worst first (consequences): a short heading, then one line.
+  // What the run cost, worst first (consequences), under one time heading: a short heading, then one line.
+  'ending.later.heading': 'The following morning',
   'ending.line.medicineLost.title': 'The medicine stays at the border',
-  'ending.line.medicineLost': 'Your father goes without it tonight.',
+  'ending.line.medicineLost': 'Your father went the night without it.',
+  // What comes back days later (laterBeat()): when, what happens, and the choice that caused it.
+  // It states what an office does, never what you feel, and never scores the harm.
+  'later.statement.when': 'Three days later',
+  'later.statement': 'A letter asks you to come to an office and explain your statement at {desk}.',
+  'later.statement.reason': 'Because {desk} wrote down "{said}", and a record on file says otherwise.',
+  'later.relative.when': 'Three days later',
+  'later.relative': 'A man who gives no name phones the other relative on your file. He asks when they last saw you.',
+  'later.relative.reason': 'Because {desk} flagged another relative on your file.',
+  'later.donation.when': 'A week later',
+  'later.donation': 'Your bank writes that your account is under review and holds a payment.',
+  'later.donation.reason': 'Because your old donation went on file at {desk}.',
+  'later.registration.when': 'Two days later',
+  'later.registration': "A local officer knocks on your mother's door to check that you are registered with her.",
+  'later.registration.reason': 'Because you told {desk} you stay with family, and the address is on file.',
   // What exposing each person costs them, worst for the one you were asked to protect.
   'exposure.mother.call.title': 'The border calls your mother',
   'exposure.mother.call': "She has to leave your father's bedside to answer questions.",
@@ -813,7 +826,7 @@ export const en: Record<string, string> = {
   'exposure.brother.protected.reason': 'He lives in a country at war with this one.',
   'exposure.brother.protected.record.reason': 'Your file flags your brother across the border.',
   'exposure.mother.home.title': "Officers go to your mother's address",
-  'exposure.mother.home': "The following morning, officers ask her to come in. She has to leave your father's bedside to give a statement.",
+  'exposure.mother.home': "Officers ask her to come in. She has to leave your father's bedside to give a statement.",
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',
   'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out of it.',
   // Tom's line says why: with his record already flagged on your file he is listed, else he is only questioned.

@@ -3,6 +3,7 @@
 // alexis_adventure_game/src/core/save.ts). A broken or old save falls back to fresh.
 
 import type { CarriedFile, EndingId, RunState } from './types';
+import { LATER_IDS } from './types';
 
 export interface Settings {
   reduceWait: boolean;
@@ -57,7 +58,12 @@ function loadFile(x: unknown): CarriedFile | null {
   const f = x as Partial<CarriedFile>;
   const ok = typeof f.level === 'string' && typeof f.character === 'string' && ENDINGS.includes(f.ending as EndingId)
     && isList(f.claims) && isList(f.named) && isList(f.kept) && isList(f.spent) && typeof f.medicine === 'boolean';
-  return ok ? (f as CarriedFile) : null;
+  if (!ok) return null;
+  // A broken later beat is dropped on its own, so the rest of the file still carries.
+  const { later, ...rest } = f as CarriedFile;
+  const laterOk = !!later && LATER_IDS.includes(later.id) && !!later.vars && typeof later.vars === 'object'
+    && Object.values(later.vars).every((v) => typeof v === 'string');
+  return laterOk ? { ...rest, later } : rest;
 }
 
 export const freshSave = (): SaveData => ({

@@ -683,7 +683,9 @@ describe('every exposure has a consequence (fsx.3)', () => {
     expect(t('exposure.mother.call.title', { contact: 'mother' })).toBe('The border calls your mother');
     expect(t('exposure.mother.home.title', { contact: 'mother' })).toBe("Officers go to your mother's address");
     // The visit is the following morning, so it agrees with every epilogue, where she is at the hospital that night.
-    expect(t('exposure.mother.home', { contact: 'mother' })).toMatch(/^The following morning, /);
+    // The ending lists every consequence under that time heading (Ending in src/App.tsx), so the line itself does not repeat it.
+    expect(t('ending.later.heading')).toBe('The following morning');
+    expect(t('exposure.mother.home', { contact: 'mother' })).toMatch(/^Officers ask her to come in\./);
     expect(consequences({ ...base, facts: known('employer') })).toEqual([]);
     // Mark's brother is his protected contact.
     expect(consequences({ ...newRun(mark), exposed: ['brother'] })[0]).toMatchObject({ key: 'exposure.brother.protected', severity: 3 });

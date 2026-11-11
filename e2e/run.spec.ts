@@ -333,14 +333,16 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await expect(page.locator('.ending .setup-title')).toHaveText('Purpose of Visit');
   await expect(card.locator('.outcome')).toHaveText('Crossing complete');
   await expect(card.locator('h1')).toHaveText('Home in time');
-  await expect(card.locator('.kept')).toHaveText("Your father's medicine is still in the cool bag. You keep your cousin Ilya out of the file.");
-  // Nothing went wrong, so there is no consequence.
+  // No opening line about the medicine or the contact: the summary shows both (rwf.10).
+  await expect(card.locator('.kept')).toHaveCount(0);
+  // Nothing went wrong and nothing came back later, so there is no consequence.
   await expect(card.locator('.cost')).toHaveCount(0);
-  await expect(card.locator('.epilogue')).toContainText('visiting hours end');
-  // Hours left and the other stats sit in the run summary under the story.
+  await expect(card.locator('.later')).toHaveCount(0);
+  await expect(card.locator('.epilogue')).toHaveText(en['ending.homeInTime.body']);
+  // Time left and the other stats sit in the run summary under the story.
   const rows = card.locator('.run-summary .result-row');
   await expect(rows).toHaveCount(3);
-  await expect(rows.nth(0)).toHaveText(/Hours left\s*5$/);
+  await expect(rows.nth(0)).toHaveText(/Time left at border exit\s*5 hours$/);
   await expect(rows.nth(1)).toHaveText(/Medicine\s*Kept/);
   await expect(rows.nth(2)).toHaveText(/Your cousin Ilya\s*Not named/);
 
@@ -405,7 +407,7 @@ for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
 
     const card = page.locator('.ending-card');
     await expect(card.locator('h1')).toHaveText(en[`ending.${text}.title`]);
-    await expect(card.locator('.kept')).toHaveText(`${en['ending.kept.medicine']} You keep your cousin Ilya out of the file.`);
+    await expect(card.locator('.kept')).toHaveCount(0);
     await expect(card).toBeInViewport();
     await noHorizontalScroll(page, `${text} ending`);
     await expect(card.locator('.epilogue')).toHaveText(en[`ending.${text}.body`]);
@@ -443,20 +445,56 @@ test('a Too late ending still lists the exposed mother, with no severity tag', a
   expect(errors).toEqual([]);
 });
 
+// The scene under Home in time is the reunion in the ward (rwf.10): the lit window, the
+// lamp over the bed and two chairs pushed together, not the medicine box in your hand.
+test('the Home in time scene shows the hospital ward, not the medicine close-up', async ({ page }, info) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  for (const character of ['lena', 'mark'] as const) {
+    const loadout = character === 'lena' ? ['motherLetter', 'hotel', 'returnTicket'] as const : ['motherLetter', 'hotel', 'returnTicket', 'deed'] as const;
+    const base = newRun({ character, loadout: [...loadout], bulletin: 'records', seed: 7 });
+    const run: RunState = { ...base, time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime' };
+    await openSaved(page, { ...freshSave(), run, endingsSeen: ['homeInTime'] });
+    const scene = page.locator('.ending-card .arrival .ending-scene svg[role="img"]');
+    await expect(scene).toBeVisible();
+    await expect(scene).toHaveAttribute('data-scene', 'ward');
+    await expect(scene).toHaveAttribute('aria-label', en['scene.ward']);
+    // The lit window and the two chairs are in the picture the player sees, and no medicine box.
+    await expect(scene.locator('.art-window-lit')).not.toHaveCount(0);
+    await expect(scene.locator('.art-seat-edge')).toHaveCount(1);
+    await expect(scene.locator('.art-box, .art-box-band')).toHaveCount(0);
+    const shot = await scene.screenshot();
+    await info.attach(`ward-${character}.png`, { body: shot, contentType: 'image/png' });
+    // A drawn scene, not an empty box: the screenshot holds more than one colour.
+    const box = (await scene.boundingBox())!;
+    expect(box.height, 'scene height').toBeGreaterThanOrEqual(80);
+    const colours = await scene.evaluate((svg) => new Set([...svg.querySelectorAll('rect')].map((r) => getComputedStyle(r).fill)).size);
+    expect(colours, 'colours in the ward').toBeGreaterThanOrEqual(8);
+  }
+  expect(errors).toEqual([]);
+});
+
 // Every ending, each with something to lose, down to the worst case: the medicine lost,
 // the protected contact named and the mother's address on file (pfi.13, pfi.9).
-const endingCases: { name: string; run: () => RunState; worst: string }[] = [
+// Two get home with a beat days later as well (rwf.10): a statement a record disproved.
+const disprovedCash: Partial<RunState> = { claims: ['cashUnderLimit'], logged: { cashUnderLimit: ['customs'] }, disproved: ['cashUnderLimit'] };
+const endingCases: { name: string; run: () => RunState; worst: string; beat?: true }[] = [
   { name: 'homeInTime', worst: 'exposure.mother.call', run: () => ({ ...lenaRun(), time: 5, exposed: ['mother'], ending: 'homeInTime' }) },
+  {
+    name: 'homeInTime with a later beat', worst: 'exposure.mother.call', beat: true,
+    run: () => ({ ...lenaRun(), time: 5, exposed: ['mother'], ...disprovedCash, facts: { cashCount: ['customs'] }, ending: 'homeInTime' }),
+  },
   { name: 'tooLate', worst: 'exposure.mother.home', run: () => ({ ...lenaRun(), time: 1, exposed: ['mother'], facts: { familyAddress: ['interview'] }, flagged: ['familyAddress'], flaggedAt: { familyAddress: 'interview' }, ending: 'tooLate' }) },
   { name: 'missedBus', worst: 'ending.line.medicineLost', run: () => ({ ...lenaRun(), time: 0, medicine: false, ending: 'tooLate' }) },
   { name: 'turnedBack', worst: 'exposure.cousin.protected', run: () => ({ ...lenaRun(), time: 4, exposed: ['cousin'], withdrew: true, ending: 'turnedBack' }) },
   {
-    name: 'homeAtCost, the worst case', worst: 'exposure.cousin.protected',
-    run: () => ({ ...lenaRun(), time: 5, medicine: false, exposed: ['mother', 'cousin'], facts: { familyAddress: ['interview'], employer: ['passport'], urgency: ['customs'], cashCount: ['customs'] }, flagged: ['familyAddress'], flaggedAt: { familyAddress: 'interview' }, ending: 'homeAtCost' }),
+    name: 'homeAtCost, the worst case', worst: 'exposure.cousin.protected', beat: true,
+    run: () => ({ ...lenaRun(), time: 5, medicine: false, exposed: ['mother', 'cousin'], ...disprovedCash, facts: { familyAddress: ['interview'], employer: ['passport'], urgency: ['customs'], cashCount: ['customs'] }, flagged: ['familyAddress'], flaggedAt: { familyAddress: 'interview' }, ending: 'homeAtCost' }),
   },
 ];
 for (const c of endingCases) {
-  test(`the ${c.name} ending reads title, what you kept, the worst consequence, then the epilogue, with Play again in view`, async ({ page }) => {
+  test(`the ${c.name} ending reads title, arrival, what happened after, then the summary, with Play again in view`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
     await page.goto('./');
@@ -471,14 +509,25 @@ for (const c of endingCases) {
     await expect(worst.locator('.cost-line')).toHaveText(en[c.worst]);
     // A person harmed always comes with the reason, before what it did to them.
     if (c.worst.startsWith('exposure.')) await expect(worst.locator('.cost-reason')).not.toBeEmpty();
-    // In reading order: title, kept line, worst heading and line, epilogue, then the run summary with hours left.
-    const order = ['h1', '.kept', '.worst .cost-title', '.worst .cost-line', '.epilogue', '.run-summary'];
+    // In reading order: the crossing result first (title, arrival scene and paragraph), then
+    // what happened to the medicine and the relatives under the time heading, then what came
+    // back later about what you disclosed, with the one line naming the choice behind it, then
+    // the run summary with the time left.
+    await expect(card.locator('.kept')).toHaveCount(0);
+    await expect(card.locator('.later-heading')).toHaveText('The following morning');
+    const order = ['h1', '.arrival .ending-scene', '.epilogue', '.later-heading', '.worst .cost-title', '.worst .cost-line', ...(c.beat ? ['.beat-line', '.beat-reason'] : []), '.run-summary'];
     const tops: number[] = [];
     for (const sel of order) tops.push((await card.locator(sel).boundingBox())!.y);
     expect(tops, order.join(' > ')).toEqual([...tops].sort((a, b) => a - b));
-    await expect(card.locator('.run-summary .result-row').first()).toHaveText(new RegExp(`^Hours left\\s*${run.time}$`));
+    if (c.beat) {
+      await expect(card.locator('.beat-line')).toHaveText(`${en['later.statement.when']}: A letter asks you to come to an office and explain your statement at Customs.`);
+      await expect(card.locator('.beat-reason')).toHaveText('Because Customs wrote down "My savings. It\'s under the limit", and a record on file says otherwise.');
+      // The beat is a line after the crossing's result, which it leaves as it was.
+      await expect(card.locator('h1')).toHaveText(en[`ending.${run.ending}.title`]);
+    } else await expect(card.locator('.beat')).toHaveCount(0);
+    await expect(card.locator('.run-summary .result-row').first()).toHaveText(new RegExp(`^Time left at border exit\\s*${run.time} hours?$`));
     // Story text at 17-18 px in the sans face, not monospace, at regular weight.
-    for (const sel of ['.kept', '.cost-line', '.epilogue']) {
+    for (const sel of ['.cost-line', '.epilogue', ...(c.beat ? ['.beat-line', '.beat-reason'] : [])]) {
       const style = await card.locator(sel).first().evaluate((el) => {
         const cs = getComputedStyle(el);
         return { size: parseFloat(cs.fontSize), family: cs.fontFamily, weight: cs.fontWeight };

@@ -5,13 +5,19 @@
 
 import { DEFAULT_LEVEL } from './content/levels';
 import { playRun, setupFor } from './bots';
+import { laterBeat } from './consequence';
 import type { SaveData } from './save';
 import type { CarriedFile, RunState } from './types';
 
-/** The file a finished run leaves behind: its claims, the contacts it named, the documents kept and spent. */
+/**
+ * The file a finished run leaves behind: its claims, the contacts it named, the documents
+ * kept and spent, and what came back days later (laterBeat()), so the next crossing opens with it.
+ */
 export function fileOf(s: RunState): CarriedFile {
   if (!s.ending) throw new Error('only a finished crossing leaves a file');
+  const later = laterBeat(s);
   return {
+    ...(later ? { later } : {}),
     level: s.level ?? DEFAULT_LEVEL,
     character: s.character,
     ending: s.ending,
