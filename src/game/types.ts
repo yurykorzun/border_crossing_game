@@ -127,6 +127,12 @@ export interface Approach {
   effects: Effect[];
   /** Opens the waiting room for this check after the effects apply. */
   check?: CheckId;
+  /**
+   * An answer the officer holds against you (it adds scrutiny) outside a challenge card:
+   * which of three the reaction is. A disproof records the answer's claim as disproved
+   * (reactionOf() in src/game/engine.ts). Challenge cards say it for every answer (catchKind()).
+   */
+  reacts?: ReactionKind;
 }
 
 export interface Encounter {

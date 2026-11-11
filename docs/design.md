@@ -211,11 +211,11 @@ A claim is in one of three tiers:
 2. Inconsistency: a fact makes the claim look odd, but does not disprove it (gave no particular reason, just a short trip, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
 3. Contradiction: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
 
-Every reaction against you says which of three it is (`ReactionKind` in `src/game/types.ts`, `catchKind()` in `src/game/content/encounters.ts`), on the line under the reaction:
+Every reaction against you says which of three it is (`ReactionKind` in `src/game/types.ts`, `reactionOf()` in `src/game/engine.ts`). On the two challenge cards `catchKind()` in `src/game/content/encounters.ts` decides it, and any other answer that adds scrutiny names its own (`Approach.reacts`). A caught claim is named on the line under the reaction:
 
 - Suspicion: a question raised. An inconsistency, a fact the officer flags for their priority, or what the officer reads into a confirmed fact.
 - Conflicting testimony: someone said otherwise, which you can explain. Your mother's account on the phone (`TESTIMONY`: she says you stay with her, or she names another relative) only conflicts with yours. It is never a proven lie, and the review answer reads "Explain the difference".
-- Disproof: a document or record shows the claim false (the old family register, the cash count, a bank notice, a contact synced on the phone).
+- Disproof: a document or record shows the claim false (the old family register, the cash count, a bank notice, a contact synced on the phone, the donation record on the desk when you deny it). A face in a photo from your phone only raises the question, so denying it is a suspicion.
 
 Only a disproof records the claim as disproved (`RunState.disproved`).
 

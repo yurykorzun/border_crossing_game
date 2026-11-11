@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { own, t, tn } from '../i18n';
-import { CHECKS, CONTRADICTIONS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS, TESTIMONY, catchKind } from './content/encounters';
+import { CHALLENGES, CHECKS, CONTRADICTIONS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS, TESTIMONY, catchKind } from './content/encounters';
 import { CHARACTERS, CONTACTS, EVIDENCE, LAST_HOURS, MISSION_MIN_TIME, OFFICERS } from './content/world';
 import { changeLines, consequence, consequences, SEPARATOR } from './consequence';
 import { cardFor, costsOf, deskIntro, endingFor, factIds, factTier, knows, legalActions, newRun, officerFlags, options, step, waitActions } from './engine';
@@ -1022,6 +1022,49 @@ describe('exposure needs a stated reason, and each reaction says which of three 
       expect(t(said!.key, said!.vars)).not.toBe('');
     }
     expect(answered).toBeGreaterThan(0);
+  });
+
+  it('every other answer that adds scrutiny says which of three it is, and only a disproof records its claim', () => {
+    // The answers a reaction is held against outside the challenge cards: each names its kind.
+    const held = [...ENCOUNTERS, ...INSPECTIONS]
+      .filter((c) => !(CHALLENGES as readonly string[]).includes(c.id))
+      .flatMap((c) => c.approaches.filter((a) => a.effects.some((e) => 'scrutiny' in e && e.scrutiny > 0)).map((a) => [c.id, a] as const));
+    expect(held.length).toBeGreaterThan(0);
+    for (const [card, a] of held) expect(a.reacts, `${card}.${a.id}`).toMatch(/^(suspicion|testimony|disproof)$/);
+    // Each one answered on every day, with her address or the donation record on file or neither: tagged exactly when it adds scrutiny.
+    const tagged = new Set<string>();
+    for (const [card, a] of held)
+      for (const bulletin of ['records', 'accommodation', 'customs'] as const)
+        for (const facts of [known(), known('familyAddress'), known('donationRecord')]) {
+          const s = at({ ...newRun({ ...lena, bulletin }), facts }, card);
+          const o = options(s).find((x) => x.approach.id === a.id);
+          if (!o || o.blocked) continue;
+          const r = tryStep(s, { type: 'choose', approach: a.id } as Action);
+          expect(r.ok, `${card}.${a.id}`).toBe(true);
+          if (!r.ok) continue;
+          const adds = o.effects.some((e) => 'scrutiny' in e && e.scrutiny > 0);
+          expect(r.state.reaction?.[0]?.kind, `${card}.${a.id} ${bulletin}`).toBe(adds ? a.reacts : undefined);
+          const claims = o.effects.flatMap((e) => ('claim' in e ? [e.claim] : []));
+          for (const c of claims) expect((r.state.disproved ?? []).includes(c), `${card}.${a.id}`).toBe(adds && a.reacts === 'disproof');
+          if (adds) tagged.add(`${card}.${a.id}`);
+        }
+    expect([...tagged].sort()).toEqual(held.map(([c, a]) => `${c}.${a.id}`).sort());
+  });
+
+  it('denying the donation the record shows is a disproof, and the player is told so', () => {
+    const s = at({ ...newRun(lena), facts: known('donationRecord') }, 'f_donation');
+    const r = tryStep(s, { type: 'choose', approach: 'deny' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.reaction?.[0]).toMatchObject({ key: 'enc.f_donation.deny.reaction', kind: 'disproof' });
+    expect(r.state.disproved).toEqual(['neverDonated']);
+    expect(r.events.find((x) => x.type === 'claimChallenged')).toMatchObject({ claim: 'neverDonated', fact: 'donationRecord', kind: 'disproof' });
+    const said = changeLines(r.events, 'cousin').find((l) => l.key.startsWith('change.claim.'));
+    expect(t(said!.key, said!.vars)).toBe('Disproved by the record: "Never donated".');
+    // Explaining it instead keeps the record and makes it a question, not a disproof.
+    const e = tryStep(s, { type: 'choose', approach: 'explain' });
+    expect(e.ok && e.state.reaction?.[0]?.kind).toBe('suspicion');
+    expect(e.ok && e.state.disproved).toBeFalsy();
   });
 
   it("a check that confirms Lena's foreign employer records that fact, and the officer's reading stays a separate suspicion", () => {

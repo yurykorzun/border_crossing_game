@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { challengeOf, deskOf, factIds, factTier, legalActions, newRun, options, step, travelOf } from './engine';
+import { deskOf, factIds, factTier, legalActions, newRun, options, reactionOf, step, travelOf } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -34,7 +34,8 @@ export type GameEvent =
   | { type: 'factSent'; id: FactId; desks: Checkpoint[]; via: 'records' | 'desk' }
   | { type: 'claimRecorded'; id: ClaimId }
   /**
-   * A challenge card was answered: which of three it is (catchKind()), the claim it
+   * A challenge card was answered, or a claim denied against a record on the desk
+   * (reactionOf() in src/game/engine.ts): which of three it is, the claim it
    * caught and, as `said`, that claim's id in the traveler's own wording
    * (`noOtherFamily.mark`). Only a disproof records the claim as disproved.
    */
@@ -96,7 +97,10 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   if (n.time < s.time) ev.push({ type: 'timeSpent', hours: s.time - n.time });
   if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
   for (const id of added(s.claims, n.claims)) ev.push({ type: 'claimRecorded', id });
-  const challenge = action.type === 'choose' ? challengeOf(s) : undefined;
+  // A challenge card, or a disproof answered anywhere else (f_donation's denial): the claim it catches.
+  const opt = action.type === 'choose' ? options(s).find((o) => o.approach.id === action.approach) : undefined;
+  const reacted = opt && reactionOf(s, opt);
+  const challenge = reacted?.claim && reacted.fact ? { kind: reacted.kind, claim: reacted.claim, fact: reacted.fact } : undefined;
   if (challenge) {
     const said = own(`claim.${challenge.claim}`, s.character).slice('claim.'.length);
     ev.push({ type: 'claimChallenged', ...challenge, said });

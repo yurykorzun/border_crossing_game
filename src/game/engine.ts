@@ -5,7 +5,7 @@ import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
   CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
-import { CHECKPOINTS } from './types';
+import { CHECKPOINTS, FACT_IDS } from './types';
 import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
@@ -340,6 +340,24 @@ export function challengeOf(s: RunState): { claim: ClaimId; fact: FactId; kind: 
   if (!CHALLENGES.includes(id)) return undefined;
   const c = caught(s, id);
   return c && { claim: c.claim, fact: c.fact, kind: catchKind(id, c.fact) };
+}
+
+/**
+ * Which of three the reaction to this answer is, and on a disproof the claim it
+ * catches and the record that does. A challenge card says it for every answer
+ * (challengeOf()); anywhere else an answer that adds scrutiny says it itself
+ * (Approach.reacts). Undefined for an answer nobody holds against you.
+ */
+export function reactionOf(s: RunState, opt: Option): { kind: ReactionKind; claim?: ClaimId; fact?: FactId } | undefined {
+  const c = challengeOf(s);
+  if (c) return c;
+  const kind = opt.approach.reacts;
+  const held = opt.effects.find((e): e is Extract<Effect, { scrutiny: number }> => 'scrutiny' in e && e.scrutiny > 0);
+  if (!kind || !held) return undefined;
+  if (kind !== 'disproof') return { kind };
+  const said = opt.effects.find((e): e is Extract<Effect, { claim: ClaimId }> => 'claim' in e);
+  const fact = (FACT_IDS as readonly string[]).includes(held.reason) ? (held.reason as FactId) : undefined;
+  return { kind, ...(said ? { claim: said.claim } : {}), ...(fact ? { fact } : {}) };
 }
 
 /** The scrutiny the officer here adds for a flagged fact, with the fact as the reason. */
@@ -827,7 +845,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
-  const challenge = challengeOf(s);
+  const reacted = reactionOf(s, opt);
   const readings = officerReadings(s, opt.effects);
   const decided = s.screen.kind === 'encounter' && isCalm(s.screen.id) ? 0 : 1;
   let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
@@ -838,10 +856,10 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
-  // A challenge says which of three it is, and only a disproof records the claim as disproved.
-  n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars, ...(challenge ? { kind: challenge.kind } : {}) }]);
-  if (challenge?.kind === 'disproof' && !(n.disproved ?? []).includes(challenge.claim))
-    n = { ...n, disproved: [...(n.disproved ?? []), challenge.claim] };
+  // A reaction against you says which of three it is, and only a disproof records the claim as disproved.
+  n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars, ...(reacted ? { kind: reacted.kind } : {}) }]);
+  if (reacted?.kind === 'disproof' && reacted.claim && !(n.disproved ?? []).includes(reacted.claim))
+    n = { ...n, disproved: [...(n.disproved ?? []), reacted.claim] };
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
   for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f }, kind: 'suspicion' }]);
   // What the officer reads into a confirmed fact is their suspicion, a line of its own.

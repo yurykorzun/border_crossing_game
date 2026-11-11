@@ -145,7 +145,7 @@ export const ENCOUNTERS: Encounter[] = [
     when: { background: 'secondPassport' },
     approaches: [
       // Honest, and the second passport goes on file: that entry is the reason for the scrutiny.
-      { id: 'both', kind: 'say', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
+      { id: 'both', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
     ],
@@ -237,7 +237,7 @@ export const ENCOUNTERS: Encounter[] = [
           { fact: 'relativeContact' },
         ],
       },
-      { id: 'refuse', kind: 'say', effects: [{ fact: 'phoneRefused' }, { scrutiny: 1, reason: 'phoneRefused' }, { time: -1 }] },
+      { id: 'refuse', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'phoneRefused' }, { scrutiny: 1, reason: 'phoneRefused' }, { time: -1 }] },
     ],
   },
 
@@ -252,7 +252,7 @@ export const ENCOUNTERS: Encounter[] = [
       // A short trip with no decided place to stay has no booking to show.
       // On a day hosts are phoned, having no host to name is itself flagged.
       {
-        id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] },
+        id: 'undecided', kind: 'say', reacts: 'suspicion', requires: { noFacts: ['familyAddress'] },
         effects: [
           { fact: 'noBooking', when: { claims: ['shortTrip'] } },
           { fact: 'noBooking', when: { bulletin: 'accommodation' } },
@@ -260,7 +260,7 @@ export const ENCOUNTERS: Encounter[] = [
         ],
       },
       {
-        id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] },
+        id: 'undecidedOnFile', kind: 'say', reacts: 'suspicion', requires: { facts: ['familyAddress'] },
         effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['shortTrip'] } }],
       },
     ],
@@ -335,7 +335,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'i_brother', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'history',
     when: { facts: ['brotherAbroad'] },
     approaches: [
-      { id: 'honest', kind: 'say', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
+      { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
       { id: 'calls', kind: 'verify', effects: [{ time: -2 }, { fact: 'brotherAbroad' }] },
     ],
   },
@@ -360,9 +360,9 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'f_donation', checkpoint: 'followup', kind: 'followup', topic: 'history',
     approaches: [
-      { id: 'explain', kind: 'say', effects: [{ fact: 'donationRecord' }, { scrutiny: 1, reason: 'donationRecord' }] },
+      { id: 'explain', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'donationRecord' }, { scrutiny: 1, reason: 'donationRecord' }] },
       // The record is on the desk, so denying it is a disproof.
-      { id: 'deny', kind: 'say', effects: [{ claim: 'neverDonated' }, { scrutiny: 2, reason: 'donationRecord' }] },
+      { id: 'deny', kind: 'say', reacts: 'disproof', effects: [{ claim: 'neverDonated' }, { scrutiny: 2, reason: 'donationRecord' }] },
       { id: 'lawyer', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
@@ -370,8 +370,9 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'f_photo', checkpoint: 'followup', kind: 'followup', topic: 'history',
     approaches: [
       // The photo came from the phone search, which is the only thing that deals this card.
-      { id: 'honest', kind: 'say', effects: [{ scrutiny: 1, reason: 'phoneSearch' }] },
-      { id: 'deny', kind: 'say', effects: [{ scrutiny: 2, reason: 'phoneSearch' }] },
+      // A face in a photo raises the question but is not a record, so even a denial is a suspicion.
+      { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 1, reason: 'phoneSearch' }] },
+      { id: 'deny', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 2, reason: 'phoneSearch' }] },
       { id: 'law', kind: 'verify', effects: [{ time: -2 }] },
     ],
   },
