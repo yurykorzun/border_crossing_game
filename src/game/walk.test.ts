@@ -7,6 +7,7 @@ import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { BULLETINS, BULLETIN_TOPICS } from './content/world';
 import { LEVELS, LEVEL_IDS } from './content/levels';
 import { t } from '../i18n';
+import type { RunState } from './types';
 
 // One walk per level shared by every assertion: every character, packing and
 // bulletin, every player choice and every card the dealer could deal (about 11 s a level).
@@ -123,15 +124,17 @@ describe('the walker itself', () => {
   });
 
   it('tries every pick the dealer could make', () => {
-    // Walk one run until the dealer has a real choice, then expect one outcome per card.
+    // Walk one run until the dealer has a real choice, then expect one outcome per pick: a card
+    // dealt, or the claim a spot-check picks (same screen, its own reaction line).
     let s = newRun(allSetups()[0]);
     for (let i = 0; i < 200 && !s.ending; i++) {
       const a = legalActions(s)[0];
       const next = outcomes(s, a);
       if (next.length > 1) {
-        const ids = next.map((n) => JSON.stringify(n.state.screen));
+        const shown = (x: RunState) => JSON.stringify([x.screen, x.reaction]);
+        const ids = next.map((n) => shown(n.state));
         expect(new Set(ids).size).toBe(next.length);
-        expect(ids).toContain(JSON.stringify(step(s, a).screen));
+        expect(ids).toContain(shown(step(s, a)));
         return;
       }
       s = next[0].state;

@@ -569,7 +569,11 @@ export function routinesLeft(s: RunState): Encounter[] {
   return ENCOUNTERS.filter((e) => e.checkpoint === cp && e.kind === 'routine' && eligible(s, e));
 }
 
-/** Follow-ups a run deals at most (related and follow-up cards; the challenges come on top). */
+/**
+ * Follow-ups a run deals at most (related and follow-up cards; the challenges come
+ * on top). A check's own follow-up (its result queued it) may be one more, so a
+ * run has 0-3 and what a check found is always asked about.
+ */
 export const MAX_FOLLOW_UPS = 2;
 
 /** How many follow-ups this run has dealt so far. */
@@ -581,7 +585,10 @@ export function followUpsDealt(s: RunState): number {
 /** Checks a run can have run and still be dealt a follow-up that starts one. */
 export const MAX_CHECKS_BEFORE_FOLLOW_UP = 2;
 
-const followUpRoom = (s: RunState): boolean => followUpsDealt(s) < MAX_FOLLOW_UPS;
+const followUpRoom = (s: RunState, checkFound = false): boolean => followUpsDealt(s) < MAX_FOLLOW_UPS + (checkFound && !s.inspections ? 1 : 0);
+
+/** A queued card that a check's result asked for, not a challenge a spot-check put. */
+const fromCheck = (id: string): boolean => !(CHALLENGES as readonly string[]).includes(id);
 
 /** The best related card left at this desk whose open issue is on the file: the desk's follow-up. */
 function relatedCard(s: RunState): Encounter | undefined {
@@ -597,7 +604,7 @@ function relatedCard(s: RunState): Encounter | undefined {
 
 /** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
 function escalatesNext(s: RunState): boolean {
-  if (s.scrutiny >= MAX_SCRUTINY || (followUpRoom(s) && s.pending.some((id) => !s.seen.includes(id)))) return true;
+  if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id) && followUpRoom(s, fromCheck(id)))) return true;
   if (coreLeft(s)) return false;
   if (s.slot <= FOLLOW_UP_SLOT && relatedCard(s)) return true;
   return !!pendingChallenge(s);
@@ -637,7 +644,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     const [id, ...rest] = s.pending;
     s = { ...s, pending: rest };
     // A follow-up whose issue has closed since it was queued is dropped.
-    if (!s.seen.includes(id) && issueOpen(s, id) && followUpRoom(s)) return show(s, id);
+    if (!s.seen.includes(id) && issueOpen(s, id) && followUpRoom(s, fromCheck(id))) return show(s, id);
   }
   if (!coreLeft(s) && (s.slot > FOLLOW_UP_SLOT || !relatedCard(s))) {
     if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer), dealer);

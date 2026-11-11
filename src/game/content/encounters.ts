@@ -196,7 +196,7 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
-    id: 'p_employer', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'work',
+    id: 'p_employer', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'work',
     // A short trip home on a foreign salary: the clerk wants to know who pays.
     // No perk here: the clerk wants paper or the register, not an explanation,
     // so Lena's plain answer is kept for the interview (i_employer).
