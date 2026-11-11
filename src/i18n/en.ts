@@ -502,7 +502,7 @@ export const en: Record<string, string> = {
   'enc.c_shortTrip.mother.label': 'Ask him to call {contact}',
   'enc.c_shortTrip.mother.reaction': 'Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.',
 
-  'enc.c_host.q': 'He finds your registered address. "Staying there, with your mother?"',
+  'enc.c_host.q': 'He finds your registered address. "Will you stay there, with your mother?"',
   // An accommodation day with no address on file at customs (questionKey()): every host is phoned.
   'enc.c_host.phoned.q': '"Today we phone every host. Where will you stay, and with whom?"',
   'enc.c_host.call.label': 'Wait while they call',
