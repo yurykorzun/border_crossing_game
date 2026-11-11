@@ -2,8 +2,7 @@
 // names and goals are in src/i18n/en.ts under the keys each level names.
 // Every level uses the same three desks and officers (epic border_crossing_game-rwf).
 
-import type { EndingId, Level, LevelId } from '../types';
-import { distinctEndings } from '../save';
+import type { Level, LevelId } from '../types';
 import { MISSION_MIN_TIME, START_TIME } from './world';
 import { ENCOUNTERS, INSPECTIONS } from './encounters';
 
@@ -20,7 +19,6 @@ export const LEVELS: Record<LevelId, Level> = {
     minTripTime: MISSION_MIN_TIME,
     cards: [...ENCOUNTERS.map((e) => e.id), ...INSPECTIONS.map((i) => i.id)],
     rules: [],
-    opensAt: 0,
   },
 };
 
@@ -39,21 +37,29 @@ const DEALS = new Map(LEVEL_IDS.map((id) => [id, new Set(LEVELS[id].cards)]));
 /** Whether this level can deal the encounter or inspection `card`. */
 export const dealsCard = (s: { level?: LevelId }, card: string): boolean => DEALS.get(s.level ?? DEFAULT_LEVEL)!.has(card);
 
-/** Whether `level` is open: the player has seen at least its opensAt different endings (distinctEndings() in src/game/save.ts). */
-export const levelOpen = (level: Pick<Level, 'opensAt'>, endingsSeen: readonly EndingId[]): boolean =>
-  distinctEndings(endingsSeen) >= level.opensAt;
+const ALL_LEVELS = (): Level[] => LEVEL_IDS.map((id) => LEVELS[id]);
 
-/** One row of the level list. A locked row says what opens it: `ui.levelOpensAt`, read with tn() and the endings count. */
+/**
+ * Whether the level at `index` of `levels` (list order) is open: the first always is, and
+ * any other once the player has finished the one before it, with any ending (rwf.12).
+ * Endings stay a collection to fill, not a key, so nobody has to lose a relative to move on.
+ */
+export const levelOpen = (index: number, levelsFinished: readonly LevelId[], levels: readonly Level[] = ALL_LEVELS()): boolean =>
+  index === 0 || levelsFinished.includes(levels[index - 1].id);
+
+/** One row of the level list. A locked row names the level that opens it: `ui.levelOpensAfter` with {level} its title. */
 export interface LevelRow {
   level: Level;
   open: boolean;
-  opensAt?: { key: 'ui.levelOpensAt'; n: number };
+  opensAfter?: { key: 'ui.levelOpensAfter'; level: Level };
 }
 
-/** The level list for a player who has seen `endingsSeen`, in list order. */
-export const levelRows = (endingsSeen: readonly EndingId[], levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): LevelRow[] =>
-  levels.map((level) => (levelOpen(level, endingsSeen) ? { level, open: true } : { level, open: false, opensAt: { key: 'ui.levelOpensAt', n: level.opensAt } }));
+/** The level list for a player who has finished `levelsFinished`, in list order. */
+export const levelRows = (levelsFinished: readonly LevelId[], levels: readonly Level[] = ALL_LEVELS()): LevelRow[] =>
+  levels.map((level, i) => (levelOpen(i, levelsFinished, levels)
+    ? { level, open: true }
+    : { level, open: false, opensAfter: { key: 'ui.levelOpensAfter', level: levels[i - 1] } }));
 
 /** Whether setup shows the level list: only when there is a choice, more than one level open (g0q.2). */
-export const showsLevelList = (endingsSeen: readonly EndingId[], levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): boolean =>
-  levelRows(endingsSeen, levels).filter((r) => r.open).length > 1;
+export const showsLevelList = (levelsFinished: readonly LevelId[], levels: readonly Level[] = ALL_LEVELS()): boolean =>
+  levelRows(levelsFinished, levels).filter((r) => r.open).length > 1;

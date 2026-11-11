@@ -1,62 +1,86 @@
-// Unlocking and carry-over (border_crossing_game-rwf.2): a level opens on how many
-// different endings were seen, and the file from the last finished crossing is
+// Unlocking and carry-over (border_crossing_game-rwf.2, rwf.12): a level opens once the
+// one before it is finished, with any ending, and the file from the last finished crossing is
 // saved for a later level, with a seeded default when there is none.
 import { describe, expect, it } from 'vitest';
-import { en } from '../i18n/en';
-import { tn } from '../i18n';
+import { t } from '../i18n';
 import { LEVELS, levelOpen, levelRows } from './content/levels';
 import { defaultFile, fileFor, fileOf, recordRun } from './carry';
 import { playRun, setupFor } from './bots';
 import { SAVE_KEY, SAVE_VERSION, distinctEndings, freshSave, load, save } from './save';
-import type { Store } from './save';
-import type { Level } from './types';
+import type { SaveData, Store } from './save';
+import type { Level, LevelId } from './types';
 
 function memoryStore(): Store {
   const map = new Map<string, string>();
   return { get: (k) => map.get(k) ?? null, set: (k, v) => void map.set(k, v) };
 }
 
-// A made-up second level that opens after two different endings, until rwf.3 adds a real one.
-const later: Level = { ...LEVELS.arrival, number: 2, opensAt: 2 };
+// Made-up Levels 2 and 3, until rwf.3 adds a real Departure.
+const DEPARTURE = 'departure' as LevelId;
+const departure: Level = { ...LEVELS.arrival, id: DEPARTURE, number: 2, title: 'level.arrival.title' };
+const third: Level = { ...LEVELS.arrival, id: 'third' as LevelId, number: 3 };
+const three = [LEVELS.arrival, departure, third];
+const openOf = (finished: readonly LevelId[]) => levelRows(finished, three).map((r) => r.open);
 
-describe('unlocking a level by endings seen', () => {
-  it('keeps a level locked below its endings count and opens it at that count', () => {
-    expect(levelOpen(later, [])).toBe(false);
-    expect(levelOpen(later, ['tooLate'])).toBe(false);
-    expect(levelOpen(later, ['tooLate', 'turnedBack'])).toBe(true);
-    expect(levelOpen(later, ['tooLate', 'turnedBack', 'homeInTime'])).toBe(true);
+/** The save after playing `level` to its end with this bot style and seed. */
+const finish = (d: SaveData, level: LevelId, style: 'cautious' | 'liar', i: number): SaveData =>
+  recordRun(d, { ...playRun(style, setupFor(i)).final, level });
+
+describe('a level opens once the one before it is finished (rwf.12)', () => {
+  it('keeps Departure locked on a fresh save and opens it after one finished Arrival, with any ending', () => {
+    expect(openOf(freshSave().levelsFinished)).toEqual([true, false, false]);
+    const endings = new Set<string>();
+    for (const style of ['cautious', 'liar'] as const) {
+      for (const i of [0, 1, 2, 3]) {
+        const d = finish(freshSave(), 'arrival', style, i);
+        endings.add(d.endingsSeen[0]);
+        expect(d.endingsSeen).toHaveLength(1);
+        expect(d.levelsFinished).toEqual(['arrival']);
+        expect(openOf(d.levelsFinished), `${style} ${i} ${d.endingsSeen[0]}`).toEqual([true, true, false]);
+      }
+    }
+    // A win and a loss both open it, so no ending is a key.
+    expect([...endings].some((e) => e.startsWith('home'))).toBe(true);
+    expect([...endings].some((e) => !e.startsWith('home'))).toBe(true);
   });
 
-  it('counts different endings, not runs or wins', () => {
-    expect(distinctEndings(['tooLate', 'tooLate'])).toBe(1);
-    expect(levelOpen(later, ['tooLate', 'tooLate'])).toBe(false);
-    // Two losses open it as well as a win and a loss.
-    expect(levelOpen(later, ['turnedBack', 'tooLate'])).toBe(true);
+  it('opens a level after Departure only when Departure is finished, however many endings were seen', () => {
+    let d = freshSave();
+    for (const [style, i] of [['cautious', 0], ['liar', 1], ['liar', 2], ['cautious', 3]] as const) d = finish(d, 'arrival', style, i);
+    expect(d.levelsFinished).toEqual(['arrival']);
+    expect(openOf(d.levelsFinished)).toEqual([true, true, false]);
+    d = finish(d, DEPARTURE, 'cautious', 0);
+    expect(d.levelsFinished).toEqual(['arrival', DEPARTURE]);
+    expect(openOf(d.levelsFinished)).toEqual([true, true, true]);
   });
 
   it('has Arrival open on a fresh save', () => {
-    expect(LEVELS.arrival.opensAt).toBe(0);
-    expect(levelOpen(LEVELS.arrival, freshSave().endingsSeen)).toBe(true);
+    expect(levelOpen(0, freshSave().levelsFinished)).toBe(true);
+    expect(levelRows([])[0]).toEqual({ level: LEVELS.arrival, open: true });
   });
 
-  it('lists a locked level with what opens it in place of its blurb', () => {
-    const [arrival, locked] = levelRows(['tooLate'], [LEVELS.arrival, later]);
+  it('says on a locked row which level opens it, in place of its blurb', () => {
+    const [arrival, locked, after] = levelRows([], three);
     expect(arrival).toEqual({ level: LEVELS.arrival, open: true });
     expect(locked.open).toBe(false);
-    expect(locked.opensAt).toEqual({ key: 'ui.levelOpensAt', n: 2 });
-    expect(tn(locked.opensAt!.key, locked.opensAt!.n)).toBe('Opens after 2 different endings');
-    expect(en['ui.levelOpensAt.one']).toBe('Opens after {n} ending');
-    const [open] = levelRows(['tooLate', 'homeAtCost'], [later]);
-    expect(open).toEqual({ level: later, open: true });
+    expect(locked.opensAfter).toEqual({ key: 'ui.levelOpensAfter', level: LEVELS.arrival });
+    expect(t(locked.opensAfter!.key, { level: t(locked.opensAfter!.level.title) })).toBe('Opens after you finish Arrival');
+    expect(after.opensAfter?.level).toBe(departure);
+    expect(levelRows(['arrival'], three)[1]).toEqual({ level: departure, open: true });
   });
 
-  it('reads the endings count from a save written before unlocking existed', () => {
+  it('reads a save written before finished levels existed: any ending means Arrival was finished', () => {
     const store = memoryStore();
-    store.set(SAVE_KEY, JSON.stringify({ v: SAVE_VERSION, run: null, endingsSeen: ['homeInTime', 'tooLate'], settings: {} }));
-    const data = load(store);
-    expect(data.endingsSeen).toEqual(['homeInTime', 'tooLate']);
-    expect(data.file).toBeNull();
-    expect(levelOpen(later, data.endingsSeen)).toBe(true);
+    store.set(SAVE_KEY, JSON.stringify({ v: SAVE_VERSION, run: null, endingsSeen: ['tooLate'], settings: {} }));
+    expect(load(store).levelsFinished).toEqual(['arrival']);
+    store.set(SAVE_KEY, JSON.stringify({ v: SAVE_VERSION, run: null, endingsSeen: [], settings: {} }));
+    expect(load(store).levelsFinished).toEqual([]);
+    store.set(SAVE_KEY, JSON.stringify({ ...freshSave(), levelsFinished: ['arrival', 'nope', 3, 'arrival'] }));
+    expect(load(store).levelsFinished).toEqual(['arrival']);
+  });
+
+  it('keeps counting different endings as a collection', () => {
+    expect(distinctEndings(['tooLate', 'tooLate', 'turnedBack'])).toBe(2);
   });
 });
 

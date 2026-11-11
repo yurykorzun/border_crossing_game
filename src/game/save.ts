@@ -2,8 +2,9 @@
 // Pure helpers take a Store so tests use a Map (pattern from
 // alexis_adventure_game/src/core/save.ts). A broken or old save falls back to fresh.
 
-import type { CarriedFile, EndingId, RunState } from './types';
+import type { CarriedFile, EndingId, LevelId, RunState } from './types';
 import { LATER_IDS } from './types';
+import { DEFAULT_LEVEL, isLevelId } from './content/levels';
 
 export interface Settings {
   reduceWait: boolean;
@@ -15,6 +16,11 @@ export interface SaveData {
   v: typeof SAVE_VERSION;
   run: RunState | null;
   endingsSeen: EndingId[];
+  /**
+   * Levels finished at least once, with any ending: what opens the next level
+   * (levelOpen() in src/game/content/levels.ts). Unset in saves from before it existed.
+   */
+  levelsFinished: LevelId[];
   /**
    * The file from the last finished crossing (src/game/carry.ts), for a later level
    * to read. Null until a crossing ends; unset in saves from before it existed.
@@ -39,7 +45,7 @@ export const SAVE_VERSION = 1 as const;
 /** Every ending the game knows, so a save from an older build drops ids it no longer has. */
 export const ENDINGS: readonly EndingId[] = ['homeInTime', 'homeAtCost', 'tooLate', 'turnedBack'];
 
-/** How many different endings the player has seen: what opens a level (levelOpen() in src/game/content/levels.ts). */
+/** How many different endings the player has seen. A collection only: finishing a level is what opens the next. */
 export const distinctEndings = (endingsSeen: readonly EndingId[]): number =>
   new Set(endingsSeen.filter((e) => ENDINGS.includes(e))).size;
 
@@ -66,10 +72,20 @@ function loadFile(x: unknown): CarriedFile | null {
   return laterOk ? { ...rest, later } : rest;
 }
 
+/**
+ * The levels a save has finished. A save from before the list existed only ever played
+ * Arrival, so any ending in it means Arrival was finished.
+ */
+function loadFinished(x: unknown, endingsSeen: readonly EndingId[]): LevelId[] {
+  if (x === undefined) return endingsSeen.length > 0 ? [DEFAULT_LEVEL] : [];
+  return Array.isArray(x) ? [...new Set(x.filter(isLevelId))] : [];
+}
+
 export const freshSave = (): SaveData => ({
   v: SAVE_VERSION,
   run: null,
   endingsSeen: [],
+  levelsFinished: [],
   file: null,
   beatsSeen: [],
   settings: { reduceWait: false, reduceMotion: false, sound: true },
@@ -82,10 +98,12 @@ export function load(store: Store): SaveData {
     const data = JSON.parse(raw) as Partial<SaveData>;
     if (data.v !== SAVE_VERSION) return freshSave();
     const base = freshSave();
+    const endingsSeen = Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e) => ENDINGS.includes(e)) : [];
     return {
       v: SAVE_VERSION,
       run: data.run && data.run.v === 2 ? data.run : null,
-      endingsSeen: Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e) => ENDINGS.includes(e)) : [],
+      endingsSeen,
+      levelsFinished: loadFinished(data.levelsFinished, endingsSeen),
       file: loadFile(data.file),
       beatsSeen: isList(data.beatsSeen) ? data.beatsSeen : [],
       settings: { ...base.settings, ...(data.settings ?? {}) },

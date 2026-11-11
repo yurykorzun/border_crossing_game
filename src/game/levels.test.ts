@@ -39,11 +39,11 @@ describe('levels as data', () => {
   it('shows the level list only when more than one level is open (g0q.2)', () => {
     // Today only Arrival exists, so no save ever sees the list.
     expect(showsLevelList([])).toBe(false);
-    expect(showsLevelList(['tooLate', 'homeAtCost', 'turnedBack', 'homeInTime'])).toBe(false);
-    // A second level that opens after one ending: the list appears once it is open.
-    const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2, opensAt: 1 }];
+    expect(showsLevelList(['arrival'])).toBe(false);
+    // A second level opens once Arrival is finished: the list appears then.
+    const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2 }];
     expect(showsLevelList([], two)).toBe(false);
-    expect(showsLevelList(['tooLate'], two)).toBe(true);
+    expect(showsLevelList(['arrival'], two)).toBe(true);
   });
 
   it('tells a level id from anything else', () => {

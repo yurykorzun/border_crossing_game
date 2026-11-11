@@ -4,14 +4,14 @@ import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { SaveData } from '../src/game/save';
 
 /**
- * Opens the game as a returning player: a save with one ending seen, so Begin walks
+ * Opens the game as a returning player: a save with one finished Arrival, so Begin walks
  * the traveler and documents screens (and the level list, once more than one level
  * is open). A fresh save skips them and opens the begin screen as Lena with
  * FIRST_RUN's packing (src/game/content/world.ts).
  */
 export async function openReturning(page: Page) {
   await page.goto('./');
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['tooLate'] })] as const);
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['tooLate'], levelsFinished: ['arrival'] })] as const);
   await page.reload();
 }
 

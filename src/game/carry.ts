@@ -30,13 +30,16 @@ export function fileOf(s: RunState): CarriedFile {
 }
 
 /**
- * The save after a run step: once the run has ended, its ending counts as seen and
- * its file replaces the last one. A run still under way leaves both alone.
+ * The save after a run step: once the run has ended, its ending counts as seen, its
+ * level counts as finished and its file replaces the last one. A run still under way
+ * leaves all three alone.
  */
 export function recordRun(d: SaveData, run: RunState): SaveData {
   if (!run.ending) return { ...d, run };
   const endingsSeen = d.endingsSeen.includes(run.ending) ? d.endingsSeen : [...d.endingsSeen, run.ending];
-  return { ...d, run, endingsSeen, file: fileOf(run) };
+  const level = run.level ?? DEFAULT_LEVEL;
+  const levelsFinished = d.levelsFinished.includes(level) ? d.levelsFinished : [...d.levelsFinished, level];
+  return { ...d, run, endingsSeen, levelsFinished, file: fileOf(run) };
 }
 
 /**
