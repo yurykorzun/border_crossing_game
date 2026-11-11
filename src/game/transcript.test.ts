@@ -129,20 +129,22 @@ describe('scenario evals', () => {
   it('rule 4: the level list counts once per session, so more levels do not lengthen a run (rwf.11)', () => {
     const setup = setupFor(LENA);
     const bot = playRun('honest', setup);
-    const one = transcriptOf(bot, setup);
-    // Arrival plus 8 stand-ins (the planned levels and a daily row), each with a long line.
-    const nine: Level[] = [LEVELS.arrival, ...Array.from({ length: 8 }, (_, i) => ({
+    // Arrival plus stand-ins (the planned levels and a daily row), each with a long line.
+    const withExtra = (n: number): Level[] => [LEVELS.arrival, ...Array.from({ length: n }, (_, i) => ({
       ...LEVELS.arrival, id: `extra${i}` as LevelId, number: i + 2, blurb: 'ui.premise',
     }))];
-    const many = transcriptOf(bot, setup, nine);
+    // Two open levels is the first list a player sees (one level shows no list, g0q.2).
+    const one = transcriptOf(bot, setup, withExtra(1));
+    const many = transcriptOf(bot, setup, withExtra(8));
     // Same words, same minutes: only the picked level's row is in the run.
     expect(words(many)).toBe(words(one));
     expect(playMinutes(many)).toBe(playMinutes(one));
     // Every row is still in the transcript and still counted, once per session.
     const read = (tr: Transcript) => tr.lines.filter((l) => l.key === 'ui.premise' && l.once).length;
     expect(read(many)).toBe(8);
-    expect(onceWords(one)).toBe(0);
+    expect(read(one)).toBe(1);
     expect(onceWords(many)).toBeGreaterThan(8 * 3);
+    expect(onceWords(many)).toBeGreaterThan(onceWords(one));
     // The picked level's own row counts in the run.
     expect(many.lines.find((l) => l.key === LEVELS.arrival.blurb)?.once).toBeUndefined();
     expect(only(4, [many]).summaries.map(formatSummary)[0]).toContain(`plus ${onceWords(many)} words of the level list read once per session`);

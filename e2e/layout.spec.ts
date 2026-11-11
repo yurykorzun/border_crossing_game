@@ -6,7 +6,7 @@ import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME }
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
-import { openReturning, pickArrival } from './returning';
+import { openReturning, openSaved, pickArrival } from './returning';
 
 // The run screen at 390x844, a border counter: the header says where you stand, the
 // scene and the question sit in the middle with the question right on top of the
@@ -224,8 +224,7 @@ function crowdedStates(): { name: string; run: RunState; card: boolean }[] {
 
 /** Opens the run on a saved state, as a returning player would. */
 async function openAt(page: Page, run: RunState) {
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-  await page.reload();
+  await openSaved(page, { ...freshSave(), run });
   await expect(page.locator('main.run .controls button').first()).toBeVisible();
 }
 
@@ -304,8 +303,7 @@ test('every card and waiting room fits at 390x844 with no page scroll', async ({
   await page.goto('./');
   const weights = new Set<string>();
   for (const { name, run, card } of crowdedStates()) {
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-    await page.reload();
+    await openSaved(page, { ...freshSave(), run });
     await expect(page.locator('main.run .controls button').first(), name).toBeVisible();
     await expectFits(page, name, card);
     await expectLinesVisible(page, name);
@@ -360,8 +358,7 @@ test('each checkpoint has its own named scene, and so do the traveler, packing a
   // The ending: the night bus, or the border post if you were turned back.
   for (const ending of ['homeInTime', 'turnedBack'] as const) {
     const run: RunState = { ...base, reaction: null, screen: { kind: 'ending' }, ending };
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-    await page.reload();
+    await openSaved(page, { ...freshSave(), run });
     await expect(page.locator('.ending-scene svg[role="img"]'), ending).toBeVisible();
   }
 
@@ -379,8 +376,7 @@ for (const reduceMotion of [false, true]) {
     const run: RunState = { ...base, reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 };
     const save = { ...freshSave(), run };
     save.settings = { ...save.settings, reduceMotion };
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify(save)] as const);
-    await page.reload();
+    await openSaved(page, save);
 
     const scene = page.locator('main.run .scene svg[data-scene="passport"]');
     await expect(scene).toBeVisible();

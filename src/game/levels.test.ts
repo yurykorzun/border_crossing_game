@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS, dealsCard, isLevelId, levelOf } from './content/levels';
+import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS, dealsCard, isLevelId, levelOf, showsLevelList } from './content/levels';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { MISSION_MIN_TIME, START_TIME } from './content/world';
 import { newRun, travelOf } from './engine';
@@ -34,6 +34,16 @@ describe('levels as data', () => {
       expect(new Set(l.rules.map((r) => r.id)).size, id).toBe(l.rules.length);
     });
     for (const k of ['ui.level', 'ui.pickLevel', 'ui.levelNumber']) expect(en[k], k).toBeTruthy();
+  });
+
+  it('shows the level list only when more than one level is open (g0q.2)', () => {
+    // Today only Arrival exists, so no save ever sees the list.
+    expect(showsLevelList([])).toBe(false);
+    expect(showsLevelList(['tooLate', 'homeAtCost', 'turnedBack', 'homeInTime'])).toBe(false);
+    // A second level that opens after one ending: the list appears once it is open.
+    const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2, opensAt: 1 }];
+    expect(showsLevelList([], two)).toBe(false);
+    expect(showsLevelList(['tooLate'], two)).toBe(true);
   });
 
   it('tells a level id from anything else', () => {

@@ -53,3 +53,7 @@ export interface LevelRow {
 /** The level list for a player who has seen `endingsSeen`, in list order. */
 export const levelRows = (endingsSeen: readonly EndingId[], levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): LevelRow[] =>
   levels.map((level) => (levelOpen(level, endingsSeen) ? { level, open: true } : { level, open: false, opensAt: { key: 'ui.levelOpensAt', n: level.opensAt } }));
+
+/** Whether setup shows the level list: only when there is a choice, more than one level open (g0q.2). */
+export const showsLevelList = (endingsSeen: readonly EndingId[], levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): boolean =>
+  levelRows(endingsSeen, levels).filter((r) => r.open).length > 1;

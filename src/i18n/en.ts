@@ -10,7 +10,9 @@ export const en: Record<string, string> = {
   'ui.tagline': "You're going home. You no longer know if home is safe for you.",
   'ui.start': 'Begin',
   'ui.continue': 'Continue',
+  // The title with a saved run: Resume crossing, and New crossing under it (endings and settings stay).
   'ui.resume': 'Resume crossing',
+  'ui.newCrossing': 'New crossing',
   // Time is hours until the last bus to the hospital. Plural keys end in .one / .other (tn()).
   // The run header reads "8 hours left", with "8 hours" picked out in amber.
   'ui.hours.one': '{n} hour',
@@ -150,13 +152,9 @@ export const en: Record<string, string> = {
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
-  // Open questions (openQuestions in src/game/save.ts): one per ending not seen yet, on the title and the ending card.
-  // Each hints where an ending might be. None says what to feel or counts harm to the family.
-  'ui.openQuestions': 'Still to find out',
-  'question.homeInTime': 'Can you get home with everything you carried?',
-  'question.homeAtCost': 'What if something stays behind?',
-  'question.tooLate': 'What if the last bus leaves without you?',
-  'question.turnedBack': 'What happens if you stop waiting?',
+  // The one replay prompt on the ending card. It points at a choice, not at another ending,
+  // so it never lists what endings exist (g0q.2).
+  'ui.replayPrompt': 'What would change if you packed different documents?',
   // Ending card (Ending in src/App.tsx)
   'ui.crossingComplete': 'Crossing complete',
   'ui.crossingRefused': 'Request withdrawn',
