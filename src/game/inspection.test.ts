@@ -8,7 +8,7 @@ import { t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { INSPECTIONS } from './content/encounters';
 import { CHECKPOINTS } from './types';
-import { inspectionIssue, knownLine, newRun, options, pointVerified, step } from './engine';
+import { chooseAction, choices, inspectionIssue, knownLine, newRun, pointVerified, step } from './engine';
 import type { Action, RunState } from './types';
 
 const SEEDS = 200;
@@ -85,13 +85,15 @@ describe('an inspection names the open issue it is about', () => {
     for (const style of BOT_STYLES)
       for (let i = 0; i < SEEDS; i++)
         for (const { s } of steps(style, i)) {
-          if (s.screen.kind !== 'inspection' || s.reaction) continue;
+          // The list behind "Show a document" is the same card, checked with it closed.
+          if (s.screen.kind !== 'inspection' || s.reaction || s.documentList) continue;
           const issue = inspectionIssue(s)!;
-          for (const o of options(s)) {
+          // Every answer, one per packed document behind "Show a document" (choices()).
+          for (const o of choices(s)) {
             if (o.blocked || o.approach.kind === 'withdraw') continue;
             const where = `${style} seed ${i + 1} ${s.screen.id}.${o.approach.id}`;
             answers.add(`${s.screen.id}.${o.approach.id}`);
-            const n = step(s, { type: 'choose', approach: o.approach.id });
+            const n = step(s, chooseAction(o));
             // Settled, a fact on file, the medicine held or someone who can speak to it named: never only a cost.
             const changed = pointVerified(n, issue)
               || JSON.stringify(n.facts) !== JSON.stringify(s.facts)

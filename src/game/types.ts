@@ -550,6 +550,11 @@ export interface RunState {
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;
+  /**
+   * The approach whose "Show a document" list is open on this card: the packed
+   * documents that answer it, each with its own cost (options() in src/game/engine.ts).
+   */
+  documentList?: string;
   /** Reaction to the last choice, shown above the next screen until acknowledged. */
   reaction: LogEntry[] | null;
   /** What the last action changed, shown under the reaction. Set by playStep() in src/game/play.ts. */
@@ -561,7 +566,9 @@ export interface RunState {
 }
 
 export type Action =
-  | { type: 'choose'; approach: string }
+  | { type: 'choose'; approach: string; card?: EvidenceId }
+  /** Back from the list behind "Show a document" (RunState.documentList). Not in legalActions(), so the walk and bots never loop on it. */
+  | { type: 'back' }
   | { type: 'beat' }
   | { type: 'waitAction'; action: WaitAction }
   | { type: 'ack' }

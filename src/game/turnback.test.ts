@@ -8,7 +8,7 @@ import { t } from '../i18n';
 import { BOT_STYLES, playRun } from './bots';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { LEVEL_IDS } from './content/levels';
-import { TURN_BACK_QUEUE, canTurnBack, legalActions, newRun, options, step } from './engine';
+import { TURN_BACK_QUEUE, canTurnBack, choices, legalActions, newRun, step } from './engine';
 import type { RunSetup } from './engine';
 import { tryStep } from './play';
 import type { RunState } from './types';
@@ -17,7 +17,8 @@ import { allSetups } from './walk';
 const lena: RunSetup = { character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin: 'records', seed: 7 };
 const RETURN_ALLOWED = ['s_medicine', 's_supervisor'];
 
-const offersWithdraw = (s: RunState) => options(s).some((o) => o.approach.kind === 'withdraw');
+// The card's answers, with the list behind "Show a document" open or not (choices()).
+const offersWithdraw = (s: RunState) => choices(s).some((o) => o.approach.kind === 'withdraw');
 const offersTurnBack = (s: RunState) => legalActions(s).some((a) => a.type === 'turnBack');
 
 /** Every state a run passes through, replayed from its setup (step() is seeded, so it replays exactly). */

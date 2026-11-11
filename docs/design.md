@@ -31,7 +31,7 @@ Lena carries mostly the first (the donation, her cousin) plus a foreign employer
 
 ## First mission: your father's stroke
 
-Your mother needs help arranging his care. The last bus to the hospital leaves in 8 hours, and the station is 2 hours past the border. You carry his medicine, some cash and your everyday phone.
+The last bus to the hospital leaves in 8 hours, from a station 2 hours past the border. You carry his medicine, some cash and your phone.
 
 Requirement: be admitted and reach the last bus with at least 2 hours left. The bus to the hospital leaves in 8 hours, and you need 2 hours to reach the station, so the crossing can spend up to 6.
 
@@ -86,14 +86,18 @@ Your mother, Ilya and Tom each say one ordinary thing in the passport queue befo
 
 ## Evidence cards (pick 3)
 
-| Card | Useful against | Puts on file |
+Each document answers named questions, so a decision is which problem to solve, not which penalty is cheapest. The second column is the contract: `src/game/documents.test.ts` reads it and fails when a document (`EVIDENCE` in `src/game/content/world.ts`) answers or settles a question its row does not list.
+
+| Card | Answers the question | Puts on file |
 |---|---|---|
-| Hotel booking | Accommodation, length of stay | You claim a hotel stay, can't back a family stay |
-| Letter from mother | Purpose, accommodation | The family address |
-| Employer letter | Work, money | Your employer |
-| Hospital note | Medicine, purpose | Your father's condition |
-| Return ticket | Length of stay (not cash: a ticket says when you leave, not what you carry) | A fixed departure date |
-| Apartment deed | Identity (its registered address, not the photo), accommodation | Your property inside |
+| Hotel booking (`hotel`) | Where you stay (`accommodation`), how long you stay (`stay`) | You claim a hotel stay, can't back a family stay |
+| Letter from mother (`motherLetter`) | Why you came (`purpose`), where you stay (`accommodation`) | The family address |
+| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`) | Your employer |
+| Hospital note (`hospitalNote`) | What the medicine is (`medicine`), why you came (`purpose`) | Your father's condition |
+| Return ticket (`returnTicket`) | How long you stay (`stay`), not the cash: a ticket says when you leave, not what you carry | A fixed departure date |
+| Apartment deed (`deed`) | Who you are (`identity`, its registered address, not the photo), where you stay (`accommodation`) | Your property inside |
+
+Nothing explains a donation, and no document answers your past (`history`). When two or more packed documents answer the same question, the card shows one "Show a document" answer ("2 documents fit"), so a card still keeps to three answers. Choosing it opens the list under the same question: each document with its own cost line, and "Back to answers" under them. At "Why now?" the hospital note puts his condition on file and the letter puts her address on file. Opening the list spends nothing and is not a decision; the document picked from it is. With one fitting document the card shows it straight away. Ordinary paperwork can reveal something that matters (the letter's address is what the customs host call dials), and not every disclosure is harmful: the departure date and the property stay off file when the document settles the question (`HARMLESS_FACTS`).
 
 Each card but the return ticket covers two topics, so a "wrong" pick is rarely useless. The ticket answers one question, how long you stay (the passport clerk's `p_stay`), and answers it outright. History questions have no card on purpose: your past can only be answered with honesty, time or another person. Before picking, a daily bulletin warns about today's risk. The warning points at a topic and never names a card, so packing is a guess you can make well:
 
@@ -242,7 +246,7 @@ Spot-checks (`spotCheck()` in `src/game/engine.ts`): before you leave each desk,
 - answered: that challenge card was already put to you, so it passes.
 - explained: an inconsistency you have since explained with the clarify answer's claim, so checking it takes 3 hours (`SPOT_CHECK_HOURS`).
 
-Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection while an issue on the file is still open, and a paper on the bulletin's warned topic, shown on the way, settles her. Nothing is drawn: the same file always gets the same decision and the same inspection. Each inspection names the open issue it is about on its screen ("Not verified yet: the prescription."), a point no desk verified (`Inspection.issue`). A paper or a contact who confirms it there settles that point; any other answer changes it instead.
+Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection while an issue on the file is still open, and a paper on the bulletin's warned topic, shown on the way, settles her once that point was verified on the way too (the deed shown only for where you stay does not settle a records day). Nothing is drawn: the same file always gets the same decision and the same inspection. Each inspection names the open issue it is about on its screen ("Not verified yet: the prescription."), a point no desk verified (`Inspection.issue`). A paper or a contact who confirms it there settles that point; any other answer changes it instead.
 
 No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things, plus "Ask to return" where its situation allows it.
 

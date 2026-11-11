@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t, tn } from './i18n';
-import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
+import { answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -699,27 +699,33 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
   const known = knownLine(s);
   // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
   const finishing = canFinish(s);
+  // The list behind "Show a document" keeps only the question over the documents,
+  // and a way back to the other answers under them.
+  const list = !!s.documentList;
   return (
     <>
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
-        {finishing && <p className="priority doomed">{t('ui.doomed')}</p>}
-        {desk && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
-        {known.length > 0 && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
+        {finishing && !list && <p className="priority doomed">{t('ui.doomed')}</p>}
+        {desk && !list && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
+        {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
       </section>
       <div className="controls stack">
         {options(s).map((o) => (
           <button
-            key={o.approach.id}
+            key={o.card ? `${o.approach.id}.${o.card}` : o.approach.id}
             className="choice"
             disabled={!!o.blocked}
-            onClick={() => dispatch({ type: 'choose', approach: o.approach.id })}
+            onClick={() => dispatch(chooseAction(o))}
           >
             <span className="choice-label">{optionLabel(s, o)}</span>
             <ConsequenceLine o={o} cardKey={`${prefix}.${id}.${o.approach.id}`} s={s} />
           </button>
         ))}
+        {list && (
+          <button className="turn-back back-to-answers" onClick={() => dispatch({ type: 'back' })}>{t('ui.backToAnswers')}</button>
+        )}
         {finishing && (
           <button className="primary finish" onClick={() => dispatch({ type: 'finish' })}>{t('ui.finishQuickly')}</button>
         )}
@@ -730,7 +736,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
 
 /** A blocked option has no card or person to name, so it gets a generic label. */
 function optionLabel(s: RunState, o: Option): string {
-  if (o.blocked === 'noCard') return t('ui.showDocument');
+  if (o.blocked === 'noCard' || o.documents) return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;

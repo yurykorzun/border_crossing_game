@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { deskOf, factIds, factTier, legalActions, newRun, options, reactionOf, step, travelOf } from './engine';
+import { chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, reactionOf, step, travelOf } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -64,8 +64,11 @@ export const sameAction = (a: Action, b: Action) => JSON.stringify(a) === JSON.s
  * spent document, an exposed contact or a double tap is rejected and the state
  * is returned untouched, so nothing is ever spent twice.
  */
-export function tryStep(s: RunState, action: Action, dealer: Dealer = randomDealer): StepResult {
+export function tryStep(s: RunState, given: Action, dealer: Dealer = randomDealer): StepResult {
   if (s.ending) return { ok: false, state: s, reason: 'runOver' };
+  // A document answer that names no document shows the first packed one that fits (optionFor()).
+  const first = given.type === 'choose' && !given.card ? optionFor(s, given) : undefined;
+  const action = first ? chooseAction(first) : given;
   if (!legalActions(s).some((a) => sameAction(a, action))) return { ok: false, state: s, reason: 'notAllowed' };
   const n = step(s, action, dealer);
   return { ok: true, state: n, events: eventsBetween(s, n, action) };
@@ -98,7 +101,7 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
   for (const id of added(s.claims, n.claims)) ev.push({ type: 'claimRecorded', id });
   // A challenge card, or a disproof answered anywhere else (f_donation's denial): the claim it catches.
-  const opt = action.type === 'choose' ? options(s).find((o) => o.approach.id === action.approach) : undefined;
+  const opt = action.type === 'choose' ? optionFor(s, action) : undefined;
   const reacted = opt && reactionOf(s, opt);
   const challenge = reacted?.claim && reacted.fact ? { kind: reacted.kind, claim: reacted.claim, fact: reacted.fact } : undefined;
   if (challenge) {
@@ -136,7 +139,7 @@ function exposedEvent(s: RunState, n: RunState, action: Action, id: ContactId): 
     const topic = CHECKS[s.screen.check].topic;
     return { type: 'contactExposed', id, desk, shares: 'number', ...(topic ? { vouch: { topic, passed: true } } : {}) };
   }
-  const o = action.type === 'choose' ? options(s).find((x) => x.approach.id === action.approach) : undefined;
+  const o = action.type === 'choose' ? optionFor(s, action) : undefined;
   const shares = o?.approach.namesOnly ? 'name' : 'number';
   if (!o?.vouches) return { type: 'contactExposed', id, desk, shares };
   const passed = n.screen.kind !== 'wait' || n.screen.resolved.result === 'clear';

@@ -173,12 +173,16 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
 
 export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
-export function cardFor(s: RunState, topic: Topic): EvidenceId | undefined {
-  return s.loadout.find((id) => {
+/** Every packed, unspent document that answers `topic`, in packing order. */
+export function cardsFor(s: RunState, topic: Topic): EvidenceId[] {
+  return s.loadout.filter((id) => {
     const c = EVIDENCE[id];
     return !s.used.includes(id) && c.topics.includes(topic) && !(c.blockedBy && check(c.blockedBy, s));
   });
 }
+
+/** The first of cardsFor(). */
+export const cardFor = (s: RunState, topic: Topic): EvidenceId | undefined => cardsFor(s, topic)[0];
 
 /**
  * The character's contacts from `wanted` (all of them when undefined). With
@@ -208,6 +212,11 @@ export interface Option {
   effects: Effect[];
   /** Facts this answer brings out that the officer here reacts to (officerFlags()). */
   flagged?: FactId[];
+  /**
+   * A "Show a document" row: the packed documents that answer, in packing order.
+   * Choosing it opens their list (documentsOf()) and spends nothing yet.
+   */
+  documents?: EvidenceId[];
 }
 
 /**
@@ -225,6 +234,28 @@ export const vouchTopic = (a: Approach, topic: Topic | undefined): Topic | null 
  * is visible.
  */
 export function options(s: RunState): Option[] {
+  const all = choices(s);
+  // The list behind "Show a document": only the packed documents that answer, each with its own cost.
+  if (s.documentList) return all.filter((o) => o.approach.id === s.documentList && o.card);
+  const out: Option[] = [];
+  for (const o of all) {
+    const docs = o.card && o.approach.kind === 'evidence' ? all.filter((x) => x.approach.id === o.approach.id).map((x) => x.card!) : [];
+    if (docs.length < 2) out.push(o);
+    // Two or more packed documents answer: one "Show a document" row opens them (documentsOf()).
+    else if (docs[0] === o.card) out.push({ approach: o.approach, blocked: null, documents: docs, effects: [] });
+  }
+  return out;
+}
+
+/** The answers behind a "Show a document" row, one per packed document, or [] for any other answer. */
+export const documentsOf = (s: RunState, o: Option): Option[] =>
+  o.documents ? options({ ...s, documentList: o.approach.id }) : [];
+
+/**
+ * Every answer the card has, with one per packed document that fits, before
+ * options() puts two or more documents behind one "Show a document" row.
+ */
+export function choices(s: RunState): Option[] {
   const card = currentCard(s);
   if (!card) return [];
   const ch = CHARACTERS[s.character];
@@ -235,27 +266,45 @@ export function options(s: RunState): Option[] {
     if (a.kind === 'perk' && !(topic && ch.perkTopics.includes(topic))) continue;
     const vouches = vouchTopic(a, topic);
     if (a.kind === 'contact' && !contactsFor(s, a.contacts, vouches).length) continue;
-    let blocked: Unavailable = null;
-    let ev: EvidenceId | undefined;
-    let contact: ContactId | undefined;
     if (a.kind === 'perk' && s.perkUsed) continue;
-    if (a.kind === 'evidence') {
-      ev = cardFor(s, a.topic!);
-      if (!ev) blocked = 'noCard';
+    // Every packed document that answers the question is its own answer, with its own cost.
+    const cards: (EvidenceId | undefined)[] = a.kind === 'evidence' ? cardsFor(s, a.topic!) : [undefined];
+    if (!cards.length) cards.push(undefined);
+    for (const ev of cards) {
+      let blocked: Unavailable = null;
+      let contact: ContactId | undefined;
+      if (a.kind === 'evidence' && !ev) blocked = 'noCard';
+      if (a.kind === 'contact') {
+        contact = freeContact(s, a.contacts, vouches);
+        if (!contact) blocked = 'noContact';
+      }
+      const effects = resolvedEffects(s, a, topic, ev);
+      const flagged = officerFlags(s, effects);
+      const o: Option = { approach: a, blocked, card: ev, contact, effects: [...effects, ...flagged.map(officerScrutiny(s))] };
+      if (vouches) o.vouches = vouches;
+      if (flagged.length) o.flagged = flagged;
+      out.push(o);
     }
-    if (a.kind === 'contact') {
-      contact = freeContact(s, a.contacts, vouches);
-      if (!contact) blocked = 'noContact';
-    }
-    const effects = resolvedEffects(s, a, topic, ev);
-    const flagged = officerFlags(s, effects);
-    const o: Option = { approach: a, blocked, card: ev, contact, effects: [...effects, ...flagged.map(officerScrutiny(s))] };
-    if (vouches) o.vouches = vouches;
-    if (flagged.length) o.flagged = flagged;
-    out.push(o);
   }
   return out;
 }
+
+/**
+ * The option a choose action picks. Naming a document picks that document's
+ * answer (step() takes it straight from the card; legalActions() offers it only
+ * from the open list). Without a document it is the answer on screen, so a
+ * scripted pick of 'evidence' shows the one packed document, or opens the list
+ * when two or more fit. With the list open, an answer that names no document
+ * picks nothing, so a double tap on "Show a document" never spends one.
+ */
+export function optionFor(s: RunState, action: { approach: string; card?: EvidenceId }): Option | undefined {
+  if (action.card) return choices(s).find((o) => o.approach.id === action.approach && o.card === action.card);
+  return s.documentList ? undefined : options(s).find((o) => o.approach.id === action.approach);
+}
+
+/** The choose action for `o`, naming its document when it shows one. */
+export const chooseAction = (o: Option): Action =>
+  o.card && o.approach.kind === 'evidence' ? { type: 'choose', approach: o.approach.id, card: o.card } : { type: 'choose', approach: o.approach.id };
 
 /**
  * A no-cost answer: it spends no time, adds no scrutiny, names nobody and puts
@@ -765,7 +814,9 @@ function advance(s: RunState, dealer: Dealer): RunState {
  * with included: Mark's second passport is on file before he says a word,
  * and only while an issue on the file is still open (inspectionsFitting()).
  * A paper on the topic the bulletin warned about, shown on the way, settles
- * her. Nothing here is drawn: the same file always gets the same decision,
+ * her once the point it covers was verified there too: since every packed
+ * document is offered (4qd.8), a paper shown for its other question (the deed
+ * for where you stay, on a records day) no longer settles her. Nothing here is drawn: the same file always gets the same decision,
  * and inspect() picks the inspection the same way.
  *
  * This is what puts an inspection in a quarter to a third of runs (`npm run
@@ -782,7 +833,7 @@ function admission(s: RunState, dealer: Dealer): RunState {
   if (s.inspections || s.scrutiny <= 0 || doomed(s) || !inspectionsFitting(s).length) return finish(s);
   const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
   if (rest) return show(s, rest.id);
-  if (coversWarning(s.used, s.bulletin)) return finish(s);
+  if (coversWarning(s.used, s.bulletin) && s.verified?.[BULLETIN_TOPICS[s.bulletin]]) return finish(s);
   return inspect(s, dealer);
 }
 
@@ -1036,17 +1087,19 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
 
 // ── Choosing
 
-function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
+function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: EvidenceId): RunState {
   const card = currentCard(s);
-  const opt = options(s).find((o) => o.approach.id === approachId);
+  const opt = optionFor(s, { approach: approachId, card: cardId });
   if (!card || !opt || opt.blocked) return s;
+  // "Show a document" only opens the list: nothing is said, spent or decided yet.
+  if (opt.documents) return { ...s, documentList: opt.approach.id };
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
   const reacted = reactionOf(s, opt);
   const readings = officerReadings(s, opt.effects);
   const decided = s.screen.kind === 'encounter' && isCalm(s.screen.id) ? 0 : 1;
-  let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
+  let n: RunState = { ...s, documentList: undefined, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
   // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
@@ -1098,7 +1151,10 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
 export function step(s: RunState, action: Action, dealer: Dealer = randomDealer): RunState {
   switch (action.type) {
     case 'choose':
-      return choose(s, action.approach, dealer);
+      return choose(s, action.approach, dealer, action.card);
+    case 'back':
+      // Back from the document list to the card's answers.
+      return s.documentList ? { ...s, documentList: undefined } : s;
     case 'beat':
       if (s.screen.kind !== 'wait' || s.screen.shown >= s.screen.beats.length) return s;
       return { ...s, reaction: null, screen: { ...s.screen, shown: s.screen.shown + 1 } };
@@ -1119,7 +1175,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     case 'finish':
       if (!canFinish(s)) return s;
       // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
-      return say(finish({ ...s, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
+      return say(finish({ ...s, documentList: undefined, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
   }
 }
 
@@ -1149,6 +1205,6 @@ export function legalActions(s: RunState): Action[] {
     if (sc.shown < sc.beats.length) return [{ type: 'beat' }];
     return waitActions(s).filter((w) => !w.blocked).map((w) => ({ type: 'waitAction', action: w.action }));
   }
-  const answers: Action[] = options(s).filter((o) => !o.blocked).map((o) => ({ type: 'choose', approach: o.approach.id }));
+  const answers: Action[] = options(s).filter((o) => !o.blocked).map(chooseAction);
   return canFinish(s) ? [...answers, { type: 'finish' }] : answers;
 }

@@ -72,7 +72,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     // 1. The phone vibrates: Mom's first message, alone under the scene.
     await expect(msg).toContainText(en['msg.0.0']);
     await expect(msg.locator('.msg-from')).toHaveText('Mom');
-    await expect(msg).toContainText("The doctor says Dad can hear me. He can't talk yet after the stroke. Come straight to the hospital.");
+    await expect(msg).toContainText("The doctor says Dad can hear me. He can't talk yet. Come straight to the hospital.");
     await expect(button).toHaveText('Continue');
 
     // 2. A tap on the scene: the warning about this traveler's own protected contact replaces it.

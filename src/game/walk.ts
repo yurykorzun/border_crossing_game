@@ -15,7 +15,7 @@
 
 import {
   callInsDue, check, checkEffects, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
-  options, routinesLeft, topicOf, travelOf,
+  choices, optionFor, options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
 import type { Option, RunSetup } from './engine';
@@ -145,7 +145,7 @@ const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: IN
 
 /** The effects a move applied, or null for a move that applies none of its own (ack, beat). An assisted check applies only its findings; an ask only the urgency; explaining first adds Check.explain. */
 function moveEffects(s: RunState, action: Action): Effect[] | null {
-  if (action.type === 'choose') return options(s).find((o) => o.approach.id === action.approach)?.effects ?? null;
+  if (action.type === 'choose') return optionFor(s, action)?.effects ?? null;
   if (action.type === 'waitAction' && s.screen.kind === 'wait')
     return action.action === 'ask' ? [{ fact: 'urgency' }]
       : action.action === 'assist' ? checkFindings(s, s.screen.check, s.screen.resolved)
@@ -172,7 +172,7 @@ export function changesProblem(s: RunState, o: Option): boolean {
 export function noFreeExits(s: RunState): string[] {
   if (s.reaction || (s.screen.kind !== 'inspection' && !(s.screen.kind === 'encounter' && s.screen.id in CHALLENGES))) return [];
   const id = s.screen.id;
-  const open = options(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
+  const open = choices(s).filter((o) => !o.blocked && o.approach.kind !== 'withdraw');
   const bad = open.filter((o) => !costsOf(s, o).length).map((o) => `${id}.${o.approach.id} is free`);
   if (s.screen.kind !== 'inspection' || doomed(s)) return bad;
   const sets = new Set(open.map((o) => costsOf(s, o).sort().join('+')));
@@ -226,7 +226,7 @@ export function checkState(s: RunState): string[] {
   // An inspection that changes the problem offers an answer that changes something
   // besides time: the medicine, the trip, a fact on file, a document or a contact.
   const insp = s.screen.kind === 'inspection' && !s.reaction ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
-  if (insp && insp.kind !== 'search' && !options(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
+  if (insp && insp.kind !== 'search' && !choices(s).some((o) => !o.blocked && o.approach.kind !== 'withdraw' && changesProblem(s, o)))
     bad.push(`${insp.id} (${insp.kind}) offers nothing but time`);
   for (const d of noFreeExits(s)) bad.push(d);
   // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
@@ -269,8 +269,9 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   for (const c of n.exposed.filter((x) => !s.exposed.includes(x)))
     if (c !== CHARACTERS[s.character].protectedContact && !after.includes(c)) bad.push(`${c} exposed but not called in`);
   if (action.type === 'choose') {
-    const o = options(s).find((x) => x.approach.id === action.approach);
-    const due = o ? callInsDue(s, o.approach, topicOf(currentCard(s))) : [];
+    const o = optionFor(s, action);
+    // Opening the list behind "Show a document" answers nothing yet, so it checks no call-in.
+    const due = o && !o.documents ? callInsDue(s, o.approach, topicOf(currentCard(s))) : [];
     if (due.some((c) => after.includes(c))) bad.push(`${due} checked on ${(s.screen as { id: string }).id} but still called in`);
     if (s.time - n.time < Math.min(due.length, s.time)) bad.push(`${due} checked on ${(s.screen as { id: string }).id} for less than an hour each`);
     if (before.some((c) => !due.includes(c) && !after.includes(c))) bad.push('a call-in disappeared without being checked');
@@ -340,7 +341,7 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
           bad.push(`${f} came out at ${here} on ${s.screen.id} with no scrutiny from the officer`);
       }
     }
-    for (const f of options(s).find((o) => o.approach.id === action.approach)?.flagged ?? [])
+    for (const f of optionFor(s, action)?.flagged ?? [])
       if (!(n.reaction ?? []).some((l) => l.key === `officer.${here}.flags` && l.vars?.fact === f))
         bad.push(`the officer flagged ${f} on ${s.screen.id} without saying why`);
   }
@@ -348,7 +349,7 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
   // check's in the waiting room. Naming a relative (namesOnly) confirms nothing.
   const named = n.exposed.filter((c) => !s.exposed.includes(c));
   if (action.type === 'choose' && named.length) {
-    const o = options(s).find((x) => x.approach.id === action.approach);
+    const o = optionFor(s, action);
     const topic = topicOf(currentCard(s));
     if (!o?.approach.namesOnly && !named.every((c) => canConfirm(c, topic)))
       bad.push(`${named} named on ${(s.screen as { id: string }).id}, which asks about ${topic ?? 'nothing they can confirm'}`);
