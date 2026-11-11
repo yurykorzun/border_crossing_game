@@ -79,7 +79,7 @@ export const POLITICAL_FACTS: readonly FactId[] = ['secondPassport', 'brotherAbr
  * reason, where the same answer at the passport desk costs nothing extra.
  *
  * Each officer writes down the claims their priority covers, and only those:
- * the clerk puts your reason and address on the form, the inspector your cash
+ * the clerk puts your reason, address and length of stay on the form, the inspector your cash
  * declaration, the security officer your denials and who you stay with. Any
  * other claim is only said aloud, and My story shows the difference.
  */
@@ -88,7 +88,7 @@ export const OFFICERS: Record<Checkpoint, Officer> = {
   // loyalty. The employer is a fact once confirmed; that reading stays a suspicion.
   passport: {
     desk: 'passport', priority: 'paperwork', reactions: [],
-    writesDown: ['familyVisit', 'shortTrip', 'hotelStay', 'stayingWithFamily'],
+    writesDown: ['familyVisit', 'shortTrip', 'hotelStay', 'stayingWithFamily', 'stayDays', 'stayWeeks'],
     readings: ['employer'],
   },
   customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'], readings: [] },
@@ -137,6 +137,8 @@ export const FACT_TIERS: Record<FactId, OnFileTier> = {
   relativeContact: 'confirmed',
   relativeNamed: 'confirmed',
   entryRecord: 'recorded',
+  sisterSaysDays: 'confirmed',
+  sisterSaysWeeks: 'confirmed',
   donationRecord: 'flagged',
   phoneRefused: 'flagged',
 };

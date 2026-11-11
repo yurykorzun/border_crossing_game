@@ -146,6 +146,9 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.i_family.why': { always: 1, most: 1 },
     'enc.i_clarify.clarify': { always: 1, most: 1 },
     'enc.i_contradiction.review': { always: 3, most: 3 },
+    // The funeral: sorry for a stay against her sister's statement, and the officer rings her back (rwf.4).
+    // Two statements, 2 hours each, though only the first caught is charged (firstCaught()).
+    'enc.i_contradiction.apologise': { always: 0, most: 4 },
     // An hour since i_employer became a core card asked on every run (CORE_CARDS).
     'enc.i_employer.contract': { always: 1, most: 1 },
     'enc.i_brother.calls': { always: 2, most: 2 },

@@ -46,6 +46,9 @@ export const en: Record<string, string> = {
   'level.arrival.blurb': 'Home to your father in the hospital.',
   'level.departure.title': 'Departure',
   'level.departure.blurb': 'Out to your flight, with your file.',
+  'level.funeral.title': 'The funeral',
+  'level.funeral.blurb': "An old friend's funeral.",
+
   // Departure opens with the traveler's record (RecordStep in src/App.tsx).
   'ui.record.title': 'Your file',
   'ui.record.none': 'Nothing you said went on file.',
@@ -198,6 +201,22 @@ export const en: Record<string, string> = {
   // ── Mission
   'mission.title': 'Your father has had a stroke.',
   'mission.body': "Your mother needs help with his care. You're carrying his medicine.",
+  // The funeral: an old friend's, while your father is still in care.
+  'funeral:mission.title': "An old friend's funeral is tomorrow.",
+  'funeral:mission.body': "Her family wants it quiet. You carry Dad's medicine.",
+  // The funeral's own wording of shared keys (setStory() in src/i18n/index.ts):
+  // you are going to a funeral, not to the hospital.
+  'funeral:ui.goal': 'Reach the funeral',
+  'funeral:ui.premise': "You're going home. An old friend has died.",
+  'funeral:ev.hotel.desc': 'Three nights near the hall. Answers accommodation and length of stay. Does not prove a family stay.',
+  'funeral:scene.bus': 'A night bus, the town through the rain',
+  'funeral:scene.busEmpty': 'Your empty hands on a night bus, the town through the rain',
+  'funeral:msg.prep': 'Sorry about your friend. Will you be back for Monday\'s client meeting?',
+  'funeral:msg.0.0': "Dad slept well. I'm with him, go.",
+  'funeral:ending.homeInTime.body': 'You reach the hall before the service ends. Your old classmates make room on the bench. Her sister nods at you from the front. Afterwards you stand outside with the others, and nobody says much.',
+  'funeral:ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Her sister asks how the trip was. You tell her it was fine. Later you read your messages twice and think about who you can still call.',
+  'funeral:ending.tooLate.body': 'By the time you get there, the service is over. The chairs are stacked by the wall. Her sister gives you the program and a cup of tea. You read the name on it until they turn off the lights.',
+  'funeral:ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send her sister the time and sit on a bench under the light. She writes that they will wait. You read it until the screen goes dark.',
 
   // ── Characters
   'char.lena.name': 'Lena',
@@ -305,6 +324,8 @@ export const en: Record<string, string> = {
   'claim.neverDonated': 'Never donated',
   'claim.stayingWithFamily': 'Staying with family',
   'claim.cashUnderLimit': 'Cash under the limit',
+  'claim.stayDays': 'Staying three days',
+  'claim.stayWeeks': 'Staying two weeks',
   'fact.familyAddress': 'Your registered family address',
   'fact.employer': 'Your employer',
   'fact.fatherCondition': "Your father's condition",
@@ -322,6 +343,8 @@ export const en: Record<string, string> = {
   'fact.bankNotice': 'A bank notice for your donation',
   'fact.relativeContact': 'Another relative',
   'fact.relativeNamed': 'Your mother names another relative',
+  'fact.sisterSaysDays': 'Sister says three days',
+  'fact.sisterSaysWeeks': 'Sister says two weeks',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for coming back',
   'claim.shortTrip.recorded': 'Recorded as your reason for coming back',
@@ -330,6 +353,8 @@ export const en: Record<string, string> = {
   'claim.neverDonated.recorded': 'Recorded as a denial',
   'claim.stayingWithFamily.recorded': "Recorded as where you're staying",
   'claim.cashUnderLimit.recorded': 'Recorded as your cash declaration',
+  'claim.stayDays.recorded': "Recorded as how long you're staying",
+  'claim.stayWeeks.recorded': "Recorded as how long you're staying",
   // The same, where this officer does not write the claim down (OFFICERS writesDown).
   'claim.said': 'Said aloud, not written down',
   'fact.familyAddress.reveal': 'Reveals her address',
@@ -349,6 +374,8 @@ export const en: Record<string, string> = {
   'fact.bankNotice.reveal': 'Reveals a bank notice',
   'fact.relativeContact.reveal': 'Reveals another relative',
   'fact.relativeNamed.reveal': 'Your mother names a relative',
+  'fact.sisterSaysDays.reveal': 'Her sister says how long you stay',
+  'fact.sisterSaysWeeks.reveal': 'Her sister says how long you stay',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicines require supporting paperwork today.',
@@ -402,11 +429,16 @@ export const en: Record<string, string> = {
   'msg.from.cousin': 'Ilya',
   'msg.from.brother': 'Tom',
   'msg.from.work': 'Work',
+  'msg.from.sister': 'Her sister',
   // On the packing screen, before you choose what to carry (PREPARATION_MESSAGE).
   'msg.prep': 'Hope your dad\'s OK. Will you be back for Monday\'s client meeting?',
   'msg.0.0': 'The doctor says Dad can hear me. Come straight to the hospital.',
   'msg.0.1.lena': 'Don\'t mention Ilya. Please.',
   'msg.0.1.mark': 'Don\'t mention Tom. Please.',
+  // The funeral: what her sister told the border (QueueBeat.fact).
+  'msg.0.sister.sisterSaysDays': 'I told the border three days.',
+  'msg.0.sister.sisterSaysWeeks': 'I told the border two weeks.',
+
   // The relative's own ordinary line (PERSONAL_LINES). Ilya plays things down so you don't worry.
   'msg.0.personal.lena': 'The spare key is under the ugly flowerpot. Don\'t tell Mum.',
   'msg.0.personal.mark': 'Bad signal here. Kiss Dad for me.',
@@ -466,6 +498,12 @@ export const en: Record<string, string> = {
   'enc.p_stay.unsure.event': 'Residence register check',
   'enc.p_stay.unsure.reaction': 'She enters an open stay and checks whether you are still registered at an address here.',
 
+  // The funeral: her sister's statement is on file at every desk (fact.sisterSays*).
+  'enc.p_days.q': '"How long will you stay?"',
+  'enc.p_days.days.label': '"Three days."',
+  'enc.p_days.days.reaction': 'She types three days.',
+  'enc.p_days.weeks.label': '"Two weeks."',
+  'enc.p_days.weeks.reaction': 'She types two weeks.',
   'enc.p_secondPassport.q': '"You left on a foreign passport. You hold two?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
   'enc.p_secondPassport.both.reaction': 'She flags "dual national" on your file.',
@@ -600,6 +638,18 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.noOtherFamily.relativeNamed.apologise.reaction': "The officer notes that your mother's account differs.",
   'enc.i_contradiction.noOtherFamily.relativeNamed.review.label': 'Explain the difference',
   'enc.i_contradiction.noOtherFamily.relativeNamed.review.reaction': 'You explain. Both accounts go to a formal review.',
+  // The funeral: her sister's account of your stay against yours (STATEMENTS), testimony too.
+  // Saying sorry here, the officer rings her back to compare (apologyFor() in src/game/content/encounters.ts).
+  'enc.i_contradiction.apologise.event': 'Call back',
+  'funeral:enc.i_contradiction.apologise.event': 'Call to her sister',
+  'enc.i_contradiction.stayWeeks.sisterSaysDays.apologise.label': '"Sorry. My plans changed."',
+  'enc.i_contradiction.stayDays.sisterSaysWeeks.apologise.label': '"Sorry. My plans changed."',
+  'enc.i_contradiction.stayWeeks.sisterSaysDays.apologise.reaction': 'The officer rings her sister back. Your accounts differ.',
+  'enc.i_contradiction.stayWeeks.sisterSaysDays.review.label': 'Explain the difference',
+  'enc.i_contradiction.stayWeeks.sisterSaysDays.review.reaction': 'You explain. Both accounts go to a formal review.',
+  'enc.i_contradiction.stayDays.sisterSaysWeeks.apologise.reaction': 'The officer rings her sister back. Your accounts differ.',
+  'enc.i_contradiction.stayDays.sisterSaysWeeks.review.label': 'Explain the difference',
+  'enc.i_contradiction.stayDays.sisterSaysWeeks.review.reaction': 'You explain. Both accounts go to a formal review.',
 
   'enc.i_employer.q': '"Your employer is registered abroad. What exactly do you do for them?"',
   'enc.i_employer.evidence.label': 'Show {cardThe}',
@@ -773,6 +823,8 @@ export const en: Record<string, string> = {
   'said.noOtherFamily.mark': 'No family across the border',
   'said.neverDonated': 'I never donated',
   'said.cashUnderLimit': "My savings. It's under the limit",
+  'said.stayDays': 'Three days',
+  'said.stayWeeks': 'Two weeks',
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',

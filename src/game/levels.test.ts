@@ -20,9 +20,15 @@ describe('levels as data', () => {
     expect([a.goalTitle, a.goalBody]).toEqual(['mission.title', 'mission.body']);
     expect([a.startTime, a.minTripTime]).toEqual([START_TIME, MISSION_MIN_TIME]);
     expect([START_TIME, MISSION_MIN_TIME]).toEqual([8, 2]);
-    // Every card but Departure's own (rwf.3), which ask about a file Arrival has not made yet.
+    // Every card but Departure's own (rwf.3), which ask about a file Arrival has not made yet,
+    // and the one only The funeral deals: how long you stay (rwf.4).
     const departureOnly = LEVELS.departure.cards.filter((c) => c.startsWith('d_'));
-    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((c) => !departureOnly.includes(c)).sort());
+    expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((c) => !departureOnly.includes(c) && c !== 'p_days').sort());
+    // There it takes the place of the other stay question and of who pays you.
+    expect(LEVELS.funeral.cards.filter((id) => !a.cards.includes(id))).toEqual(['p_days']);
+    expect(a.cards.filter((id) => !LEVELS.funeral.cards.includes(id))).toEqual(['p_stay', 'p_employer']);
+    // Departure never deals it.
+    expect(LEVELS.departure.cards).not.toContain('p_days');
     expect(a.rules).toEqual([]);
   });
 

@@ -32,12 +32,16 @@ export type FactId =
   /** Your mother named another relative on the phone: her account, not a record (TESTIMONY). */
   | 'relativeNamed'
   /** Departure: your entry record from the crossing in, open at every desk from the start (RunState.file). */
-  | 'entryRecord';
+  | 'entryRecord'
+  /** Contact statements (STATEMENTS in src/game/content/encounters.ts): what your friend's sister told the border before you came. */
+  | 'sisterSaysDays'
+  | 'sisterSaysWeeks';
 
 export const FACT_IDS: readonly FactId[] = [
   'familyAddress', 'employer', 'fatherCondition', 'departureDate', 'property', 'urgency', 'phoneSearched',
   'donationRecord', 'brotherAbroad', 'secondPassport', 'phoneRefused', 'cashCount',
   'noBooking', 'hostStatement', 'bankNotice', 'relativeContact', 'relativeNamed', 'entryRecord',
+  'sisterSaysDays', 'sisterSaysWeeks',
 ];
 
 /**
@@ -51,7 +55,10 @@ export const FACT_IDS: readonly FactId[] = [
 export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 
 /** What the player has said. Can be contradicted by facts. */
-export type ClaimId = 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit';
+export type ClaimId =
+  | 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
+  /** How long you stay (p_days, The funeral). */
+  | 'stayDays' | 'stayWeeks';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -359,7 +366,7 @@ export interface EvidenceCard {
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
-export type LevelId = 'arrival' | 'departure';
+export type LevelId = 'arrival' | 'departure' | 'funeral';
 
 /**
  * The one new rule a level adds (docs/research/2026-11-09-balance-and-levels.md,
@@ -402,6 +409,13 @@ export interface Level {
   core?: Partial<Record<Checkpoint, readonly [string, string]>>;
   /** The level opens with the file from your last crossing (RunSetup.file): Departure. */
   readsFile?: true;
+  /**
+   * Contact statements, one of them on file at every desk before you arrive. The
+   * setup picks which (statementOf() in src/game/engine.ts), so the walk tries
+   * each and one memorised answer list cannot learn the run. A phone message in
+   * the first queue says it (QueueBeat.fact).
+   */
+  statements?: readonly FactId[];
 }
 
 /**
