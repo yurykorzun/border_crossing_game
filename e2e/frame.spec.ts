@@ -122,6 +122,32 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
       expect(widths.title, 'content width at 390 px').toBe(viewport.width - 32);
       expect(errors).toEqual([]);
     });
+
+    // The ending card on the same scale: 18 px story text, nothing under 16 px, 52 px buttons,
+    // the same content width. Every ending kind, the bus missed too, and a consequence card.
+    test('ending: 52 px buttons, 18 px story text, 16 px supporting text, one content width', async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', (err) => errors.push(err.message));
+      await page.goto('./');
+      const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+      const endings: [string, Partial<RunState>][] = [
+        ['Home in time', { time: 5, ending: 'homeInTime' }],
+        ['Home at a cost', { time: 4, ending: 'homeAtCost', medicine: false, exposed: ['cousin'] }],
+        ['Too late', { time: 1, ending: 'tooLate' }],
+        ['missed bus', { time: 0, ending: 'tooLate' }],
+        ['You turned back', { time: 6, ending: 'turnedBack' }],
+      ];
+      const widths = new Set<number>();
+      for (const [name, patch] of endings) {
+        const run: RunState = { ...base, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ...patch };
+        await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: [run.ending!] })] as const);
+        await page.reload();
+        await expect(page.locator('.ending-card')).toBeVisible();
+        widths.add(await expectFrame(page, `the ${name} ending`, '.ending-card .kept, .ending-card .cost-line, .ending-card .epilogue'));
+      }
+      expect([...widths], 'one content width on every ending').toEqual([viewport.width - 32]);
+      expect(errors).toEqual([]);
+    });
   });
 }
 
