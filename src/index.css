@@ -404,13 +404,14 @@ p { margin: 0 0 var(--gap); }
 /* Where you stand: the goal, which checkpoint (and phase), then the clock with its time bar and scrutiny. */
 .strip { display: grid; gap: 2px; flex: none; }
 .goal { margin: 0; font-weight: 700; font-size: var(--text); line-height: 1.3; }
-.strip-stats { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* Wraps only with large text: the clock then takes the whole width and Scrutiny drops under it. */
+.strip-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
 .stat { display: flex; align-items: center; gap: 6px; }
 /* The clock group: hours to the bus over the bar that shows them, so the bar reads as time and not progress. */
-.stat.time { flex: 1; min-width: 0; flex-direction: column; align-items: stretch; gap: 4px; }
+.stat.time { flex: 1 1 10rem; min-width: 0; flex-direction: column; align-items: stretch; gap: 4px; }
 .clock-line { display: flex; align-items: center; gap: 6px; }
 /* "8 hours until the last bus" is a sentence, so it keeps its case. */
-.stat-label.hours { font-size: var(--text-small); color: var(--paper); white-space: nowrap; }
+.stat-label.hours { font-size: var(--text-small); color: var(--paper); }
 .amber { color: var(--amber-dark); }
 .scrutiny {
   min-height: var(--tap-min);
@@ -434,7 +435,7 @@ p { margin: 0 0 var(--gap); }
 /* The travel reserve: the hours the trip to the bus needs. Its centre sits on the mark. */
 .time-bar .reserve { position: absolute; top: -3px; width: 2px; height: 10px; margin-left: -1px; background: var(--paper); border-radius: 1px; }
 /* The mark's label: a mono caption under the bar, so the white mark is not a mystery. */
-.reserve-label { align-self: flex-start; position: relative; font-family: var(--mono); font-size: 0.75rem; line-height: 1.2; color: #c5cec9; white-space: nowrap; }
+.reserve-label { align-self: flex-start; position: relative; font-family: var(--mono); font-size: 0.75rem; line-height: 1.2; color: #c5cec9; max-width: 100%; }
 /* No letter spacing, so "3 / 3 · Security interview · Secondary inspection" fits one line at 390 px. */
 .progress-label { margin: 0; font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0; text-transform: uppercase; color: #c5cec9; }
 /* Pixel icons (src/ui/art/icons.tsx), 10 cells across, kept crisp. */
