@@ -22,7 +22,9 @@ describe('levels as data', () => {
     expect([START_TIME, MISSION_MIN_TIME]).toEqual([8, 2]);
     // Every card but the one only The funeral deals: how long you stay.
     expect([...a.cards].sort()).toEqual(ALL_CARDS.filter((id) => id !== 'p_days').sort());
+    // There it takes the place of the other stay question and of who pays you.
     expect(LEVELS.funeral.cards.filter((id) => !a.cards.includes(id))).toEqual(['p_days']);
+    expect(a.cards.filter((id) => !LEVELS.funeral.cards.includes(id))).toEqual(['p_stay', 'p_employer']);
     expect(a.rules).toEqual([]);
   });
 

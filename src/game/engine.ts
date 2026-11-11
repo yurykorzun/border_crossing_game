@@ -690,20 +690,9 @@ function eligible(s: RunState, e: Encounter): boolean {
 /** Whether the open issue a follow-up or related card is about is still on the file (Encounter.issue). */
 export const issueOpen = (s: RunState, id: string): boolean => check(ENCOUNTER_BY_ID.get(id)?.issue, s);
 
-/**
- * This desk's core cards in the order they are asked: its two CORE_CARDS, and
- * at the first desk the level's asks (Level.asks) right after the opening card.
- */
-export function coreCards(s: RunState): readonly string[] {
-  const desk = deskOf(s);
-  const [first, second] = CORE_CARDS[desk];
-  const asks = desk === CHECKPOINTS[0] ? levelOf(s).asks ?? [] : [];
-  return [first, ...asks, second];
-}
-
-/** The next of this desk's core cards still to be asked, in coreCards() order. */
+/** The next of this desk's two core cards still to be asked, in CORE_CARDS order. */
 export function coreLeft(s: RunState): Encounter | undefined {
-  const id = coreCards(s).find((c) => !s.seen.includes(c) && dealsCard(s, c));
+  const id = CORE_CARDS[deskOf(s)].find((c) => !s.seen.includes(c) && dealsCard(s, c));
   return id ? ENCOUNTER_BY_ID.get(id) : undefined;
 }
 
@@ -736,14 +725,10 @@ export function routinesLeft(s: RunState): Encounter[] {
  */
 export const MAX_FOLLOW_UPS = 2;
 
-/** How many follow-ups this run has dealt so far. A level's ask takes one too (Level.asks). */
+/** How many follow-ups this run has dealt so far. */
 export function followUpsDealt(s: RunState): number {
   const challenges: readonly string[] = CHALLENGES;
-  const asks = levelOf(s).asks ?? [];
-  return s.seen.filter((id) => {
-    const k = ENCOUNTER_BY_ID.get(id)?.kind;
-    return asks.includes(id) || ((k === 'related' || k === 'followup') && !challenges.includes(id));
-  }).length;
+  return s.seen.filter((id) => { const k = ENCOUNTER_BY_ID.get(id)?.kind; return (k === 'related' || k === 'followup') && !challenges.includes(id); }).length;
 }
 
 /** Checks a run can have run and still be dealt a follow-up that starts one. */
@@ -794,7 +779,7 @@ function breather(s: RunState): Encounter | undefined {
 function restCard(s: RunState): Encounter | undefined {
   const left = routinesLeft(s);
   const calm = left.filter((e) => e.calm);
-  const core = coreCards(s);
+  const core: readonly string[] = CORE_CARDS[deskOf(s)];
   return (s.inspections ? calm[calm.length - 1] : calm[0]) ?? left.find((e) => !core.includes(e.id)) ?? coreLeft(s);
 }
 

@@ -69,7 +69,7 @@ describe('The funeral: a contact statement on file', () => {
     expect(() => newRun({ ...base, seed: 1, statement: 'familyAddress' })).toThrow();
   });
 
-  it('names the statement on the first card and asks how long you stay right after it', () => {
+  it('names the statement on the first card and asks how long you stay as the passport follow-up', () => {
     let s = newRun({ ...base, seed: 1, statement: 'sisterSaysDays' });
     const dealt: string[] = [];
     for (let i = 0; i < 20 && dealt.length < 3; i++) {
@@ -80,7 +80,7 @@ describe('The funeral: a contact statement on file', () => {
       }
       s = step(s, botAction('honest', s, 0)!.action);
     }
-    expect(dealt).toEqual(['p_purpose', 'p_days', 'p_host']);
+    expect(dealt).toEqual(['p_purpose', 'p_host', 'p_days']);
   });
 
   for (const x of STATEMENTS) {
