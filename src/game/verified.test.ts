@@ -158,8 +158,11 @@ describe('the three routes through the hospital note meet at the interview diffe
 });
 
 describe('a contact who confirmed a point is not charged again for it', () => {
+  // On a records day nothing orders the host phoned, so her word at passport settles the address.
+  const lenaRecords: RunSetup = { ...lena, bulletin: 'records' };
+
   it('your mother confirms the address at passport, and the host card at customs adds no hour', () => {
-    const named = choose(at(newRun(lena), 'p_host', 'passport'), 'mother');
+    const named = choose(at(newRun(lenaRecords), 'p_host', 'passport'), 'mother');
     expect(named.exposed).toEqual(['mother']);
     expect(named.calledIn).toEqual(['mother']);
     expect(pointVerified(named, 'accommodation')).toBe(true);
@@ -186,8 +189,18 @@ describe('a contact who confirmed a point is not charged again for it', () => {
   });
 
   it('a card about something else she can confirm still takes the hour', () => {
-    const named = choose(at(newRun(lena), 'p_host', 'passport'), 'mother');
+    const named = choose(at(newRun(lenaRecords), 'p_host', 'passport'), 'mother');
     const medicine = at(named, 'c_medicine', 'customs');
     expect(hours(option(medicine, 'evidence'))).toBe(1);
+  });
+
+  it('on the day every host is phoned, naming her at passport is not yet a confirmation', () => {
+    const named = choose(at(newRun(lena), 'p_host', 'passport'), 'mother');
+    expect(named.exposed).toEqual(['mother']);
+    expect(pointVerified(named, 'accommodation')).toBe(false);
+    // The call at customs is the check, with her hour.
+    const customs = at(named, 'c_host', 'customs');
+    expect(hours(option(customs, 'call'))).toBe(2);
+    expect(choose(customs, 'call').screen.kind).toBe('wait');
   });
 });

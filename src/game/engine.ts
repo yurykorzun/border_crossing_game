@@ -998,7 +998,10 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   n = apply(n, opt.effects);
   // A document shown or a contact who confirmed the point at a desk settles it for the later
   // desks. An inspection is the supervisor's: what it settles is the inspection, not the desk's question.
-  if (s.screen.kind === 'encounter') n = verifyPoints(n, pointsResolved(opt.card, opt.contact ? opt.vouches : undefined, topic));
+  // On the day the bulletin orders that point checked (every host phoned), a name given at a
+  // desk is not yet a confirmation: the check is what confirms it, so it settles nothing here.
+  const vouched = opt.contact && opt.vouches !== BULLETIN_TOPICS[s.bulletin] ? opt.vouches : undefined;
+  if (s.screen.kind === 'encounter') n = verifyPoints(n, pointsResolved(opt.card, vouched, topic));
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;

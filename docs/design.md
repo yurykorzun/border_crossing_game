@@ -180,6 +180,7 @@ Kept, because a person picks them even though the bots don't:
 - `f_host.evidence`, `f_lab.evidence` - a paper saved at the first card (the call, the declaration) can still settle the follow-up. Every bot spends its paper at the first card, so it never gets here holding one.
 - `f_donation.explain`, `f_photo.honest`, `i_brother.honest` - the truth for 1 scrutiny instead of 2-3 hours. The honest bot prefers the slower check and the cautious one avoids scrutiny, and the liar and situational bots rarely get these cards, because they don't unlock the phone or scan on a records day.
 - `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
+- `c_host.mother` - giving your mother's number at customs yourself instead of waiting for the host call. Once she confirmed the address at passport the officer reads it off the file for nothing, and on a day every host is phoned the bots wait for the call. It stays for the person who would rather she hears it from them first.
 - `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
 
 ## Screen rules
