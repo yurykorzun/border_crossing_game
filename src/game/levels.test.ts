@@ -29,7 +29,22 @@ describe('levels as data', () => {
     expect(a.cards.filter((id) => !LEVELS.funeral.cards.includes(id))).toEqual(['p_stay', 'p_employer']);
     // Departure never deals it.
     expect(LEVELS.departure.cards).not.toContain('p_days');
+    expect(a.rules).toEqual([]);
+  });
 
+  it('names only real cards and keys that have English text, numbered 1 up in list order', () => {
+    LEVEL_IDS.forEach((id, i) => {
+      const l = LEVELS[id];
+      expect(l.id).toBe(id);
+      expect(l.number).toBe(i + 1);
+      expect(l.cards.filter((c) => !ALL_CARDS.includes(c)), id).toEqual([]);
+      for (const k of [l.title, l.blurb, l.goalTitle, l.goalBody]) expect(en[k], `${id}: ${k}`).toBeTruthy();
+      expect(new Set(l.rules.map((r) => r.id)).size, id).toBe(l.rules.length);
+    });
+    for (const k of ['ui.level', 'ui.pickLevel', 'ui.levelNumber']) expect(en[k], k).toBeTruthy();
+  });
+
+  it('shows the level list only when more than one level is open (g0q.2)', () => {
     // A fresh save has only Arrival open, so it does not see the list; Departure opens after it.
     expect(showsLevelList([])).toBe(false);
     expect(showsLevelList(['arrival'])).toBe(true);
