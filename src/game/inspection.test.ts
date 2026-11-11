@@ -8,7 +8,7 @@ import { t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { INSPECTIONS } from './content/encounters';
 import { CHECKPOINTS } from './types';
-import { inspectionIssue, knownLine, chooseAction, choices, newRun, options, pointVerified, step } from './engine';
+import { chooseAction, choices, inspectionIssue, knownLine, newRun, pointVerified, step } from './engine';
 import type { Action, RunState } from './types';
 
 const SEEDS = 200;

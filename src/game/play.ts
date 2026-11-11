@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, options, reactionOf, step, travelOf } from './engine';
+import { chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, reactionOf, step, travelOf } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
