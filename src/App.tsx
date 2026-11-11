@@ -20,7 +20,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './game/consequence';
+import { SEPARATOR, caughtLine, consequences, keptLines, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -187,8 +187,9 @@ const stepsFor = (endingsSeen: readonly EndingId[]): readonly SetupStep[] =>
 const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
   t('ui.progressCount', { n: steps.indexOf(step) + 1, total: steps.length });
 
-// Before the first ending (firstRun) there are no choices yet: Setup opens on the
-// begin screen as FIRST_RUN's traveler and packing in Level 1, with no way back to the picks.
+// Before the first ending (firstRun) there is no traveler to choose yet: Setup opens on the
+// begin screen as FIRST_RUN's traveler and packing in Level 1. Back goes to the title, and
+// Change documents opens the packing screen with FIRST_RUN's picks kept.
 function Setup({ bulletin, same, endingsSeen, onExit, onStart }: {
   bulletin: BulletinId;
   same?: RunSetup;
@@ -220,7 +221,11 @@ function Picks({ bulletin, endingsSeen, onExit, onStart }: {
   const move = (delta: number) => setAt(steps[steps.indexOf(at) + delta]);
 
   if (firstRun && character) {
-    return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => onStart(level, character, picked)} />;
+    // No traveler screen yet, so packing goes back and forward to the begin screen.
+    if (at === 'documents') {
+      return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => setAt('begin')} onContinue={() => setAt('begin')} />;
+    }
+    return <BeginStep level={level} picked={picked} traveler={character} onBack={onExit} onChangeDocuments={() => setAt('documents')} onBegin={() => onStart(level, character, picked)} />;
   }
   if (at === 'level') {
     return <LevelStep steps={steps} endingsSeen={endingsSeen} onPick={(id) => { setLevel(id); move(1); }} />;
@@ -243,7 +248,8 @@ function Picks({ bulletin, endingsSeen, onExit, onStart }: {
   if (at === 'documents') {
     return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
   }
-  return <BeginStep level={level} picked={picked} onBack={() => move(-1)} onBegin={() => onStart(level, character, picked)} />;
+  // Change documents is the way to packing, so Back goes one screen further, to the traveler.
+  return <BeginStep level={level} picked={picked} traveler={character} onBack={() => setAt('traveler')} onChangeDocuments={() => setAt('documents')} onBegin={() => onStart(level, character, picked)} />;
 }
 
 /**
@@ -385,49 +391,52 @@ function useMoreBelow() {
 }
 
 /**
- * Setup 4. The mission, the rest of the premise and what you packed, then the one strong button.
- * On the first run there is no Back, and `traveler` names who you cross as, since nobody picked.
- * A same-setup retry also has no Back, and shows the day's `bulletin` again, since it is the same day.
+ * Setup 4, the final check: the mission in four short lines, who you cross as and what
+ * you packed, then Begin the crossing with Change documents and Back beside it.
+ * The hours come from the level data. Cash and the phone wait until they matter.
+ * A same-setup retry has no Back or Change documents, and shows the day's `bulletin`
+ * again, since it is the same day.
  */
-function BeginStep({ level, picked, traveler, bulletin, onBack, onBegin }: {
+function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeDocuments, onBegin }: {
   level: LevelId;
   picked: EvidenceId[];
-  traveler?: CharacterId;
+  traveler: CharacterId;
   bulletin?: BulletinId;
   onBack?: () => void;
+  onChangeDocuments?: () => void;
   onBegin: () => void;
 }) {
-  const packed = EVIDENCE_IDS.filter((id) => picked.includes(id));
   const goal = LEVELS[level];
   return (
     <main className={`setup setup-step begin-step ${bulletin ? 'same-setup' : ''}`}>
       <div className="setup-body">
         <header className="step-head">
-          {onBack && <BackButton onBack={onBack} />}
-          <h2 className="on-dark">{t('ui.beginCrossing')}</h2>
+          <h2 className="on-dark">{t('ui.beforeYouCross')}</h2>
           {bulletin && <p className="muted-dark">{t('ui.sameSetup')}</p>}
         </header>
         {bulletin && <Bulletin bulletin={bulletin} />}
-        {traveler && (
-          <section className="packed-list begin-traveler">
-            <h3 className="mono">{t('ui.yourTraveler')}</h3>
-            <p>{t(`char.${traveler}.name`)}{SEPARATOR}{t(`char.${traveler}.role`)}</p>
-          </section>
-        )}
         <section className="paper mission">
-          <p className="mono">{t('ui.mission')}</p>
           {/* The title says whose care it is, so "his care" in the body reads right. */}
           <h3>{t(goal.goalTitle)}</h3>
-          <p>{t(goal.goalBody, { hours: goal.startTime, travel: goal.minTripTime })}</p>
-          <p className="rule">{t('ui.missionRule', { n: goal.minTripTime })}</p>
+          <p>{t(goal.goalBody)}</p>
+          <p className="mission-clock">
+            <span>{tn('ui.lastBus', goal.startTime)}</span>
+            <span>{tn('ui.allowTravel', goal.minTripTime)}</span>
+          </p>
         </section>
-        <section className="packed-list">
-          <h3 className="mono">{t('ui.yourDocuments')}</h3>
-          <ul>{packed.map((id) => <li key={id}>{t(`ev.${id}.name`)}</li>)}</ul>
+        <section className="packed-list begin-traveler">
+          <p className="begin-who">{t(`char.${traveler}.name`)}{SEPARATOR}{t(`char.${traveler}.role`)}</p>
+          <p className="begin-packed">{t('ui.packedList', { list: packedList(picked) })}</p>
         </section>
       </div>
       <div className="controls">
         <button className="primary" onClick={onBegin}>{t('ui.beginCrossing')}</button>
+        {(onBack || onChangeDocuments) && (
+          <div className="begin-more">
+            {onBack && <button type="button" className="quiet back-quiet" onClick={onBack}><span aria-hidden>‹ </span>{t('ui.back')}</button>}
+            {onChangeDocuments && <button type="button" className="quiet change-docs" onClick={onChangeDocuments}>{t('ui.changeDocuments')}</button>}
+          </div>
+        )}
       </div>
     </main>
   );

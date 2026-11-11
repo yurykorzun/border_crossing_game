@@ -54,7 +54,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   // Mission card sets up the one clock: the last bus in 8 hours.
   const mission = page.locator('.begin-step .mission');
-  await expect(mission).toContainText('The last bus to the hospital leaves in 8 hours');
+  await expect(mission).toContainText('Last bus leaves in 8 hours.');
   await expect(mission).not.toContainText('days of leave');
   await noHorizontalScroll(page, 'begin');
   await page.locator('.begin-step .controls button.primary').click();

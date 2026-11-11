@@ -293,10 +293,16 @@ p { margin: 0 0 var(--gap); }
 .more-below { margin: 0; text-align: center; font-size: var(--text-small); color: var(--amber-dark); }
 /* Continue is the one strong action here, so it is amber once you can take it. */
 .documents-step .controls .primary:enabled { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
-.mission .rule { margin-top: 2px; }
+/* Before you cross (BeginStep): the mission card, then who you are and what you packed, then the buttons. */
+.mission h3 { font-size: var(--text); margin-bottom: 4px; }
 .mission p:last-child { margin-bottom: 0; }
-.packed-list h3 { color: #c5cec9; margin-bottom: 6px; }
-.packed-list ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
+/* The clock: the last bus, then the trip after the border, one line each. */
+.mission-clock { display: grid; gap: 2px; font-weight: 600; }
+.begin-traveler p { margin: 0; }
+.begin-who { font-weight: 600; }
+/* Back and Change documents, side by side under Begin the crossing; Back takes only its width. */
+.begin-more { display: grid; grid-template-columns: auto 1fr; gap: var(--gap); }
+.begin-step .controls .primary { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 /* Traveler (TravelerStep): title, scene slot, stage, premise heading, two cards, history link. */
 /* The level list (LevelStep): one paper button per level, a tap starts it. */
 .levels { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap); }

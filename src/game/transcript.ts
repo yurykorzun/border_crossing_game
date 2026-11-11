@@ -17,7 +17,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
-import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
+import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, packedList, protectedRow, questionKey } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -218,15 +218,19 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   }
   p.add('ui.moreBelow');
   p.add('ui.continue');
-  // Setup 4: Begin the crossing, with the level's goal
+  // Setup 4: Before you cross (BeginStep), the level's goal with its hours, the traveler and the packed list.
   const level = levelOf(setup);
-  p.add('ui.beginCrossing');
-  p.add('ui.mission');
+  p.add('ui.beforeYouCross');
   p.add(level.goalTitle);
-  p.add(level.goalBody, { hours: level.startTime, travel: level.minTripTime });
-  p.add('ui.missionRule', { n: level.minTripTime });
-  p.add('ui.yourDocuments');
-  for (const id of setup.loadout) p.add(`ev.${id}.name`);
+  p.add(level.goalBody);
+  p.add(`ui.lastBus.${level.startTime === 1 ? 'one' : 'other'}`, { n: level.startTime });
+  p.add(`ui.allowTravel.${level.minTripTime === 1 ? 'one' : 'other'}`, { n: level.minTripTime });
+  p.add(`char.${setup.character}.name`);
+  p.add(`char.${setup.character}.role`);
+  p.add('ui.packedList', { list: packedList(setup.loadout) });
+  p.add('ui.beginCrossing');
+  p.add('ui.back');
+  p.add('ui.changeDocuments');
 }
 
 /** StoryContent in src/ui/parts.tsx: My story, from the tool bar or the ending. */

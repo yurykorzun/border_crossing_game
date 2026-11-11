@@ -52,13 +52,19 @@ export const en: Record<string, string> = {
   'ui.preparation': 'Preparation',
   'ui.prepareDocuments': 'Pack your documents',
   'ui.moreBelow': 'More below',
-  // Setup 3: the heading and the one strong button.
+  // Setup 3: the final check. The heading, then the strong button and the two quiet ones beside it.
+  'ui.beforeYouCross': 'Before you cross',
   'ui.beginCrossing': 'Begin the crossing',
-  'ui.yourDocuments': 'Your documents',
-  'ui.yourTraveler': 'Your traveler',
+  'ui.changeDocuments': 'Change documents',
+  // {list} is the packed documents' short labels, joined with commas.
+  'ui.packedList': 'Packed: {list}',
+  // The mission card's clock, with the hours from the level data (Level.startTime and .minTripTime).
+  'ui.lastBus.one': 'Last bus leaves in {n} hour.',
+  'ui.lastBus.other': 'Last bus leaves in {n} hours.',
+  'ui.allowTravel.one': 'Allow {n} hour to reach the station after the border.',
+  'ui.allowTravel.other': 'Allow {n} hours to reach the station after the border.',
   'ui.picked': '{picked} of {count} packed',
   'ui.bulletin': "Today's bulletin",
-  'ui.mission': 'Mission',
   'ui.medicine': "Father's medicine",
   'ui.medicineLost': 'Medicine lost',
   'ui.contacts': 'People',
@@ -172,11 +178,10 @@ export const en: Record<string, string> = {
   'ui.startOver': 'Start over',
   'ui.startOverNote': 'Ends this crossing. Your endings and settings stay.',
   'ui.yourCrossing': 'Your crossing',
-  'ui.missionRule': 'Get through with at least {n} hours left to reach the bus.',
 
   // ── Mission
-  'mission.title': 'Your father has had a stroke',
-  'mission.body': 'The last bus to the hospital leaves in {hours} hours, from a station {travel} hours past the border. You carry his medicine, some cash and your phone.',
+  'mission.title': 'Your father has had a stroke.',
+  'mission.body': "Your mother needs help with his care. You're carrying his medicine.",
 
   // ── Characters
   'char.lena.name': 'Lena',
