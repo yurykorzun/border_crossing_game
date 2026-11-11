@@ -423,7 +423,7 @@ describe('contacts confirm only what they know', () => {
   it('a phoneSearch wait room offers no assist action', () => {
     for (const setup of [lena, mark]) {
       const s = waitRoom(setup, 'phoneSearch', []);
-      expect(waitActions(s).map((w) => w.action)).toEqual(['wait', 'ask']);
+      expect(waitActions(s).map((w) => w.action)).toEqual(['wait', 'explain', 'ask']);
       expect(tryStep(s, { type: 'waitAction', action: 'assist' }).ok).toBe(false);
     }
   });

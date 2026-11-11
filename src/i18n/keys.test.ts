@@ -21,6 +21,12 @@ function contentKeys(): string[] {
     keys.push(`check.${c.id}.title`);
     for (const k of c.cases) keys.push(`check.${c.id}.${k.result}`, `check.${c.id}.hint.${k.result}`);
     keys.push(`check.${c.id}.clear`);
+    // A check in stages: an observation per result, and its own words for each answer.
+    if (c.explain) {
+      for (const k of c.cases) keys.push(`check.${c.id}.observe.${k.result}`);
+      keys.push(`check.${c.id}.wait.label`, `check.${c.id}.ask.label`, `check.${c.id}.ask.detail`);
+      keys.push(`check.${c.id}.explain.label`, `check.${c.id}.explain.detail`, `check.${c.id}.explain.reaction`);
+    }
   }
   for (const ch of Object.values(CHARACTERS)) {
     keys.push(`char.${ch.id}.name`, `char.${ch.id}.blurb`, `char.${ch.id}.role`, `char.${ch.id}.advantage`, `char.${ch.id}.complication`);

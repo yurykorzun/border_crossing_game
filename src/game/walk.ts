@@ -14,7 +14,7 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, costsOf, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
+  callInsDue, check, checkEffects, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
   options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
@@ -143,12 +143,13 @@ const holds = (pairs: readonly [ClaimId, FactId][], s: RunState) => pairs.some((
 /** Cards that challenge a claim, and the claim and fact pairs that let them be dealt. */
 const CHALLENGES: Record<string, readonly [ClaimId, FactId][]> = { i_clarify: INCONSISTENCIES, i_contradiction: CONTRADICTIONS };
 
-/** The effects a move applied, or null for a move that applies none of its own (ack, beat). An assisted check applies only its findings; an ask only the urgency. */
+/** The effects a move applied, or null for a move that applies none of its own (ack, beat). An assisted check applies only its findings; an ask only the urgency; explaining first adds Check.explain. */
 function moveEffects(s: RunState, action: Action): Effect[] | null {
   if (action.type === 'choose') return options(s).find((o) => o.approach.id === action.approach)?.effects ?? null;
   if (action.type === 'waitAction' && s.screen.kind === 'wait')
     return action.action === 'ask' ? [{ fact: 'urgency' }]
-      : action.action === 'assist' ? checkFindings(s, s.screen.check, s.screen.resolved) : checkEffects(s, s.screen.check, s.screen.resolved);
+      : action.action === 'assist' ? checkFindings(s, s.screen.check, s.screen.resolved)
+      : [...(action.action === 'explain' ? explainEffects(s, s.screen.check) : []), ...checkEffects(s, s.screen.check, s.screen.resolved)];
   return null;
 }
 const keeps = <T>(before: T[], after: T[]) => before.every((x) => after.includes(x));

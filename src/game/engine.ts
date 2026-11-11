@@ -530,6 +530,11 @@ export function checkEffects(s: RunState, checkId: CheckId, result: CheckCase): 
   return activeEffects(s, (result.effects ?? []).filter((e) => check(e.when, s)), { check: checkId });
 }
 
+/** What explaining first applies in a check in stages (Check.explain), conditions and reasons resolved. */
+export function explainEffects(s: RunState, checkId: CheckId): Effect[] {
+  return activeEffects(s, (CHECKS[checkId].explain ?? []).filter((e) => check(e.when, s)), { check: checkId });
+}
+
 /** The facts a check result puts on file. A contact can explain them, never erase them. */
 export function checkFindings(s: RunState, checkId: CheckId, result: CheckCase): Effect[] {
   return checkEffects(s, checkId, result).filter((e) => 'fact' in e);
@@ -961,12 +966,23 @@ export function waitActions(s: RunState): { action: WaitAction; blocked: Unavail
   // free contact can confirm what the check is about; nobody vouches away data.
   const out: { action: WaitAction; blocked: Unavailable; contact?: ContactId; vouches?: Topic }[] = [
     { action: 'wait', blocked: null },
+    ...(CHECKS[s.screen.check].explain ? [{ action: 'explain' as const, blocked: null }] : []),
     ...(s.screen.asked ? [] : [{ action: 'ask' as const, blocked: null }]),
   ];
   const contact = assistContact(s);
   // vouches: the check's topic, so the option can say what the contact may confirm.
   const vouches = CHECKS[s.screen.check].topic;
   return contact && vouches ? [...out, { action: 'assist', blocked: null, contact, vouches }] : out;
+}
+
+/** The text key of a waiting-room answer: a check in stages words its own (Check.explain). */
+export const waitKey = (check: CheckId, action: WaitAction, part: 'label' | 'detail' | 'reaction'): string =>
+  CHECKS[check].explain ? `check.${check}.${action}.${part}` : `wait.${action}.${part}`;
+
+/** What you notice once the beats are done in a check in stages, before its result. */
+export function observation(s: RunState): string | undefined {
+  if (s.screen.kind !== 'wait' || !CHECKS[s.screen.check].explain || s.screen.shown < s.screen.beats.length) return undefined;
+  return `check.${s.screen.check}.observe.${s.screen.resolved.result}`;
 }
 
 /** Who could vouch on the check in the waiting room, if anyone. */
@@ -1001,8 +1017,14 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     if (vouched) n = verifyPoints(n, [vouched]);
     result = { result: 'clear' };
   }
+  // Explaining first: you say it before he asks, so the follow-up is already answered.
+  if (how === 'explain' && CHECKS[w.check].explain) {
+    n = say(apply(n, explainEffects(n, w.check)), [{ key: waitKey(w.check, how, 'reaction') }]);
+    result = { ...result, followUp: undefined };
+  }
   n = apply(n, checkEffects(n, w.check, result));
-  n = say(n, [{ key: `check.${w.check}.${result.result}` }]);
+  const line = `check.${w.check}.${result.result}`;
+  n = say(n, [{ key: how === 'explain' && has(`${line}.explained`) ? `${line}.explained` : line }]);
   if (result.followUp && !n.seen.includes(result.followUp)) n = { ...n, pending: [result.followUp, ...n.pending] };
   return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer);
 }

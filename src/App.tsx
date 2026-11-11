@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t, tn } from './i18n';
-import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, options, setupOf, shownCheckpoint, waitActions } from './game/engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -749,6 +749,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
   const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
   const delay = useMemo(() => beatDelayMs(sc.beats[sc.shown] ?? 0, reduceWait), [reduceWait, sc.shown, sc.beats]);
   const beat = sc.shown > 0 ? sc.beats[sc.shown - 1] : null;
+  const seen = observation(s);
   const protectedContact = CHARACTERS[s.character].protectedContact;
 
   useEffect(() => {
@@ -765,7 +766,8 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
         onClick={() => { if (!done) dispatch({ type: 'beat' }); }}
       >
         <h2 className="question">{t(`check.${sc.check}.title`)}</h2>
-        {beat !== null && <p key={beat} className="beat">{t(`beat.${cp}.${beat}`)}</p>}
+        {/* A check in stages ends on what you notice before the result (observation()). */}
+        {seen ? <p className="beat">{t(seen)}</p> : beat !== null && <p key={beat} className="beat">{t(`beat.${cp}.${beat}`)}</p>}
         {!done && <p className="muted skip">{t('ui.tapToSkip')}</p>}
       </section>
       <div className="controls stack">
@@ -776,15 +778,15 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
             disabled={!!w.blocked}
             onClick={() => { sound.result(); dispatch({ type: 'waitAction', action: w.action }); }}
           >
-            {w.action === 'wait' ? t('wait.wait.label') : (
+            {w.action === 'wait' ? t(waitKey(sc.check, 'wait', 'label')) : (
               <>
-                <span className="choice-label">{w.blocked ? t('ui.nameSomeone') : t(`wait.${w.action}.label`, w.contact ? { contact: w.contact } : {})}</span>
+                <span className="choice-label">{w.blocked ? t('ui.nameSomeone') : t(waitKey(sc.check, w.action, 'label'), w.contact ? { contact: w.contact } : {})}</span>
                 <span className={`consequence ${w.blocked ? 'blocked' : ''}`}>
                   <Icon name={w.action === 'ask' ? 'clock' : 'document'} />
                   <span className="consequence-text">
                     {/* A contact reads like the answer cards: what it shares, red only for the protected one. */}
                     <span className={`part ${w.blocked ? 'plain' : w.contact === protectedContact ? 'red' : w.contact ? 'plain' : 'amber'}`}>
-                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(w.contact ? `contact.${w.contact}.shares` : `wait.${w.action}.detail`)}
+                      {w.blocked ? t(`ui.blocked.${w.blocked}`) : t(w.contact ? `contact.${w.contact}.shares` : waitKey(sc.check, w.action, 'detail'))}
                     </span>
                     {/* After the guaranteed cost, the possible gain: "May verify your address". */}
                     {!w.blocked && w.contact && w.vouches && (

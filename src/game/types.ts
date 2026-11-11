@@ -200,6 +200,13 @@ export interface Check {
   cases: CheckCase[];
   /** How many ordinary beats to show from the checkpoint's pool. */
   beats: number;
+  /**
+   * A check in stages: after the beats an observation hints at the direction
+   * (check.<id>.observe.<result>), then you answer narrowly (wait), ask what it
+   * concerns, or explain first, which applies these effects and answers the
+   * follow-up before it is asked. Nothing found is taken off the file.
+   */
+  explain?: Effect[];
 }
 
 /**
@@ -403,7 +410,7 @@ export interface CarriedFile {
   seeded?: true;
 }
 
-export type WaitAction = 'wait' | 'ask' | 'assist';
+export type WaitAction = 'wait' | 'ask' | 'assist' | 'explain';
 
 export type Screen =
   | { kind: 'encounter'; id: string }

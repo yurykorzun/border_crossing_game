@@ -18,7 +18,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextActionKey, packDetail, protectedRow, questionKey } from './consequence';
-import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, options, routinesLeft, shownCheckpoint, waitActions } from './engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, options, observation, routinesLeft, shownCheckpoint, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import { openQuestions } from './save';
@@ -315,13 +315,15 @@ function screenLines(s: RunState, p: Page): void {
     // Waiting in src/App.tsx: what they are doing, then the latest beat.
     const cp = CHECKPOINTS[Math.min(s.checkpoint, 2)];
     p.add(`check.${sc.check}.title`);
-    if (sc.shown > 0) p.add(`beat.${cp}.${sc.beats[sc.shown - 1]}`);
+    const seen = observation(s);
+    if (seen) p.add(seen);
+    else if (sc.shown > 0) p.add(`beat.${cp}.${sc.beats[sc.shown - 1]}`);
     if (sc.shown < sc.beats.length) return p.add('ui.tapToSkip');
     for (const w of waitActions(s)) {
-      if (w.action === 'wait') { p.add('wait.wait.label'); continue; }
+      if (w.action === 'wait') { p.add(waitKey(sc.check, 'wait', 'label')); continue; }
       if (w.blocked) { p.add('ui.nameSomeone'); p.add(`ui.blocked.${w.blocked}`); continue; }
-      p.add(`wait.${w.action}.label`, w.contact ? { contact: w.contact } : {});
-      p.add(w.contact ? `contact.${w.contact}.shares` : `wait.${w.action}.detail`);
+      p.add(waitKey(sc.check, w.action, 'label'), w.contact ? { contact: w.contact } : {});
+      p.add(w.contact ? `contact.${w.contact}.shares` : waitKey(sc.check, w.action, 'detail'));
       if (w.contact && w.vouches) p.add(`contact.${w.contact}.can.${w.vouches}`);
     }
     return;
@@ -418,7 +420,7 @@ export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Leve
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
         ? answerKey(s, action.approach, 'label')
-        : action.type === 'waitAction' ? `wait.${action.action}.label`
+        : action.type === 'waitAction' && sc.kind === 'wait' ? waitKey(sc.check, action.action, 'label')
         : action.type === 'finish' ? 'ui.finishQuickly'
         : action.type === 'turnBack' && sc.kind === 'between' ? `queue.${sc.next}.turnBack`
         : sc.kind === 'between' && !s.reaction ? `queue.${sc.next}.go`

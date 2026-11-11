@@ -457,11 +457,17 @@ export const CHECKS: Record<CheckId, Check> = {
   },
   // Data: nobody can vouch away what is on the phone or in the records.
   // The search report prints and goes with you to the interview.
+  // In stages (Check.explain): the phone goes behind the partition, an observation
+  // points somewhere, then you answer. Background and bulletin fix the result: on a
+  // records day the fund is listed, so the officer asks about that payment; on a
+  // customs day a salary from abroad is read as a transfer, which takes an hour to explain.
   phoneSearch: {
     id: 'phoneSearch', beats: 3,
+    explain: [{ fact: 'donationRecord', when: { background: 'donation' } }, { scrutiny: 1, reason: 'phoneSearch' }],
     cases: [
       { when: { background: 'protestPhoto' }, followUp: 'f_photo', result: 'photo', effects: [PHONE_REPORT] },
-      { when: { background: 'donation' }, followUp: 'f_donation', result: 'donation', effects: [PHONE_REPORT] },
+      { when: { background: 'donation', bulletin: 'records' }, followUp: 'f_donation', result: 'donation', effects: [PHONE_REPORT] },
+      { when: { background: 'foreignEmployer', bulletin: 'customs' }, result: 'misread', effects: [PHONE_REPORT, { time: -1 }] },
       { result: 'clear', effects: [PHONE_REPORT] },
     ],
   },
