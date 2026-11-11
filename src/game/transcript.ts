@@ -341,7 +341,6 @@ function screenLines(s: RunState, p: Page): void {
     // What this officer already knows, on every desk card (knownLine()).
     if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
     p.add(questionKey(s, prefix, sc.id));
-    if (list) p.add('ui.whichDocument');
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);

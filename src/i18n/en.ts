@@ -141,7 +141,6 @@ export const en: Record<string, string> = {
   'ui.blocked.noCard': 'No matching document',
   'ui.blocked.noContact': 'Nobody left to name',
   'ui.showDocument': 'Show a document',
-  'ui.whichDocument': 'Which one?',
   'ui.backToAnswers': 'Back to answers',
   'ui.nameSomeone': 'Name someone',
   'ui.reduceWait': 'Shorter waits',
@@ -179,7 +178,7 @@ export const en: Record<string, string> = {
 
   // ── Mission
   'mission.title': 'Your father has had a stroke',
-  'mission.body': 'Your mother needs help with his care. The last bus to the hospital leaves in {hours} hours, and the station is {travel} hours past the border. You carry his medicine, some cash and your everyday phone.',
+  'mission.body': 'The last bus to the hospital leaves in {hours} hours, from a station {travel} hours past the border. You carry his medicine, some cash and your phone.',
 
   // ── Characters
   'char.lena.name': 'Lena',
@@ -358,7 +357,7 @@ export const en: Record<string, string> = {
   'officer.inspection': 'Supervisor',
   // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
   'officer.passport.priority': 'The clerk checks every stamp and every date.',
-  'officer.customs.priority': 'The inspector cares what you carry, and whether you declare it.',
+  'officer.customs.priority': 'The inspector cares what you carry and what you declare.',
   'officer.interview.priority': "This officer cares who you know and where you've been, not your paperwork.",
   // The security officer's reaction to a political fact coming out at the interview.
   'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
@@ -385,13 +384,13 @@ export const en: Record<string, string> = {
   'msg.from.work': 'Work',
   // On the packing screen, before you choose what to carry (PREPARATION_MESSAGE).
   'msg.prep': "Hope your dad's OK. Do you know when you'll be back? The client meeting is Monday.",
-  'msg.0.0': "The doctor says Dad can hear me. He can't talk yet after the stroke. Come straight to the hospital.",
+  'msg.0.0': "The doctor says Dad can hear me. He can't talk yet. Come straight to the hospital.",
   'msg.0.1.lena': "Don't mention Ilya to anyone. Please.",
   'msg.0.1.mark': "Don't mention Tom to anyone. Please.",
   // The relative's own ordinary line (PERSONAL_LINES). Ilya plays things down so you don't worry.
   'msg.0.personal.lena': "The spare key is still under the ugly flowerpot. Don't tell Mum.",
   'msg.0.personal.mark': "Bad signal here. I'm fine. Kiss Dad for me.",
-  'msg.0.2': 'The passenger ahead says: "I cross here six times a year. Never a problem. Just be polite."',
+  'msg.0.2': 'The passenger ahead says: "I cross here six times a year. Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
   // The one early point to turn back (canTurnBack() in src/game/engine.ts): no desk has asked anything yet.
@@ -403,14 +402,14 @@ export const en: Record<string, string> = {
   'msg.1.after.delay': 'Are you through yet? It has been hours.',
   'msg.1.after.smooth': 'Dad squeezed my hand. The nurse says that is good.',
   'msg.1.1': 'An officer shows the woman ahead which copy is missing.',
-  'msg.1.4': '"Answer only what they ask," a man behind you says. "Then stop talking."',
+  'msg.1.4': '"Answer only what they ask, then stop," a man behind you says.',
   'msg.1.5': 'The inspector taps the steel table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
   'msg.2.after.call.lena': 'Someone from customs called me. They wanted to know about Ilya.',
   'msg.2.after.call.mark': 'Someone from customs called me. They wanted to know about Tom.',
   'msg.2.after.delay': 'Still nothing? Text me when you are through.',
   'msg.2.after.smooth': 'The hospital café closes at six. I saved you a sandwich.',
-  'msg.2.1': 'Your phone is dying. The man on the bench hands you his charger.',
+  'msg.2.1': 'Your phone dies. The man on the bench lends you his charger.',
   'msg.2.3': '"They ask the same thing three ways," he says. "Give the same answer."',
   'msg.2.5': 'A door opens at the end of the corridor. "This way, please."',
   'queue.2.go': 'Follow the officer',
@@ -557,7 +556,7 @@ export const en: Record<string, string> = {
   'enc.i_clarify.q': '"Your file does not quite match what you said."',
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
   'enc.i_clarify.clarify.event': 'Call to passport control',
-  'enc.i_clarify.clarify.reaction': 'The officer adds a line to your entry card, then phones the passport desk to check it.',
+  'enc.i_clarify.clarify.reaction': 'The officer phones the passport desk to check it.',
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
   'enc.i_clarify.accept.label': '"It\'s just a short trip."',
@@ -570,7 +569,7 @@ export const en: Record<string, string> = {
 
   'enc.i_contradiction.q': '"Your file says otherwise."',
   'enc.i_contradiction.apologise.label': '"I\'m sorry. I was scared."',
-  'enc.i_contradiction.apologise.reaction': 'The officer underlines the entry in your file that disproves what you said.',
+  'enc.i_contradiction.apologise.reaction': 'The officer underlines the record that disproves you.',
   'enc.i_contradiction.review.label': 'Ask for a formal review',
   'enc.i_contradiction.review.event': 'Formal review',
   'enc.i_contradiction.review.reaction': 'A form, then another form, then a review of both.',
@@ -667,9 +666,9 @@ export const en: Record<string, string> = {
   'insp.s_medicine.withdraw.label': 'Ask to return with the medicine',
   'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport. An officer walks you to departures.',
 
-  'insp.s_connection.q': 'While they keep you here, the shuttle to the station leaves without you. The next one is an hour later.',
+  'insp.s_connection.q': 'While they keep you here, your shuttle to the station leaves. The next one is an hour later.',
   'insp.s_connection.later.label': 'Take the later shuttle',
-  'insp.s_connection.later.reaction': 'You write down the new time. The supervisor rings ahead to say you will be late, and they confirm where you are staying.',
+  'insp.s_connection.later.reaction': 'The supervisor rings ahead to say you will be late, and they confirm where you are staying.',
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
   'insp.s_connection.drive.reaction': 'A short call. Someone will be waiting past the gate.',
   'insp.s_connection.transfer.label': 'Take the border transfer',

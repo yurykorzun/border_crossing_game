@@ -909,11 +909,13 @@ describe('before admission, scrutiny is a risk', () => {
   });
 
   it('lets a paper on the bulletin topic, shown on the way, settle her, with no draw (4qd.11)', () => {
-    // The records bulletin warns about identity, and the deed covers it.
-    const shown: Partial<RunState> = { loadout: ['deed', 'hotel', 'employerLetter'], used: ['deed'] };
+    // The records bulletin warns about identity, and the deed shown for who you are covers it.
+    const shown: Partial<RunState> = { loadout: ['deed', 'hotel', 'employerLetter'], used: ['deed'], verified: { identity: { desk: 'passport', flags: 0 } } };
     for (const pick of [0, 1, 2]) expect(lastAnswer(1, pick, shown)).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
     // Held but not shown, it settles nothing: what decides is the file.
     expect(lastAnswer(1, 0, { loadout: ['deed', 'hotel', 'employerLetter'] }).n.screen.kind).toBe('inspection');
+    // Shown only for where you stay (4qd.8), the deed leaves who you are open.
+    expect(lastAnswer(1, 0, { ...shown, verified: { accommodation: { desk: 'passport', flags: 0 } } }).n.screen.kind).toBe('inspection');
   });
 
   it('inspects on the bulletin topic when an inspection takes such a paper', () => {

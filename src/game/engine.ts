@@ -814,7 +814,9 @@ function advance(s: RunState, dealer: Dealer): RunState {
  * with included: Mark's second passport is on file before he says a word,
  * and only while an issue on the file is still open (inspectionsFitting()).
  * A paper on the topic the bulletin warned about, shown on the way, settles
- * her. Nothing here is drawn: the same file always gets the same decision,
+ * her once the point it covers was verified there too: since every packed
+ * document is offered (4qd.8), a paper shown for its other question (the deed
+ * for where you stay, on a records day) no longer settles her. Nothing here is drawn: the same file always gets the same decision,
  * and inspect() picks the inspection the same way.
  *
  * This is what puts an inspection in a quarter to a third of runs (`npm run
@@ -831,7 +833,7 @@ function admission(s: RunState, dealer: Dealer): RunState {
   if (s.inspections || s.scrutiny <= 0 || doomed(s) || !inspectionsFitting(s).length) return finish(s);
   const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
   if (rest) return show(s, rest.id);
-  if (coversWarning(s.used, s.bulletin)) return finish(s);
+  if (coversWarning(s.used, s.bulletin) && s.verified?.[BULLETIN_TOPICS[s.bulletin]]) return finish(s);
   return inspect(s, dealer);
 }
 

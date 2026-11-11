@@ -710,7 +710,6 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
         {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
-        {list && <p className="which-document" data-which-document>{t('ui.whichDocument')}</p>}
       </section>
       <div className="controls stack">
         {options(s).map((o) => (
