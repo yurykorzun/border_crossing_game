@@ -20,8 +20,9 @@ Build from the branch whose content should be reviewed. The cover names the bran
 
 ## Check it before saying done
 
-1. Read the first 4 pages and two card pages with the Read tool (`pages: "1-4"`), and look for raw nested conditions, text under the wrong card, and headings left alone at the bottom of a page.
-2. Report what Yury would otherwise ask: the path, the page count, when it was built, and the branch and commit. Say what changed since the last map when you know.
+1. Run `./scripts/verify` when `tools/map.ts` or any content changed, because the map build does not run the project gate and a PDF from a broken branch is not worth reviewing.
+2. Read the first 4 pages and two card pages with the Read tool (`pages: "1-4"`), and look for raw nested conditions, text under the wrong card, and headings left alone at the bottom of a page.
+3. Report what Yury would otherwise ask: the path, the page count, when it was built, and the branch and commit. Say what changed since the last map when you know.
 
 ## Sections
 
