@@ -343,8 +343,8 @@ export const en: Record<string, string> = {
   'fact.bankNotice': 'A bank notice for your donation',
   'fact.relativeContact': 'Another relative',
   'fact.relativeNamed': 'Your mother names another relative',
-  'fact.sisterSaysDays': 'Her sister says three days',
-  'fact.sisterSaysWeeks': 'Her sister says two weeks',
+  'fact.sisterSaysDays': 'Sister says three days',
+  'fact.sisterSaysWeeks': 'Sister says two weeks',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for coming back',
   'claim.shortTrip.recorded': 'Recorded as your reason for coming back',
