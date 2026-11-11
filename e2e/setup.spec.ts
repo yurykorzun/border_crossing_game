@@ -2,12 +2,13 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN } from '../src/game/content/world';
+import { DEFAULT_LEVEL, LEVELS } from '../src/game/content/levels';
 import { openReturning, pickArrival } from './returning';
 
 // The three setup screens at 390x844: Choose your traveler, Pack your documents, Begin the crossing.
 // They show once an ending is seen (openReturning); a fresh save skips to Begin as Lena.
 
-test('fresh save: Start opens the begin screen as Lena with the fixed packing, no traveler or documents screen', async ({ page }) => {
+test('fresh save: Start opens Before you cross as Lena with the fixed packing, no traveler or documents screen', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
@@ -18,10 +19,8 @@ test('fresh save: Start opens the begin screen as Lena with the fixed packing, n
   await expect(page.locator('main.level-step')).toHaveCount(0);
   await expect(page.locator('main.traveler-step')).toHaveCount(0);
   await expect(page.locator('main.documents-step')).toHaveCount(0);
-  await expect(begin.locator('button.back')).toHaveCount(0);
-  await expect(begin.locator('.begin-traveler')).toContainText(`${en['char.lena.name']} · ${en['char.lena.role']}`);
-  const packed = EVIDENCE_IDS.filter((id) => FIRST_RUN.loadout.includes(id)).map((id) => en[`ev.${id}.name`]);
-  await expect(begin.locator('.packed-list:not(.begin-traveler) li')).toHaveText(packed);
+  await expect(begin.locator('.begin-who')).toHaveText(`${en['char.lena.name']} · ${en['char.lena.role']}`);
+  await expect(begin.locator('.begin-packed')).toHaveText("Packed: Mother's letter, hospital note, apartment deed");
 
   await begin.locator('.controls button.primary').click();
   await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
@@ -31,6 +30,86 @@ test('fresh save: Start opens the begin screen as Lena with the fixed packing, n
   expect([...saved.run.loadout].sort()).toEqual([...FIRST_RUN.loadout].sort());
   expect(errors).toEqual([]);
 });
+
+// Before you cross (g0q.3): one heading, the mission card in four short lines with the
+// hours from the level data, the traveler and packed list, and Begin the crossing once,
+// with Change documents and Back beside it.
+for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }]) {
+  test(`Before you cross at ${viewport.width}x${viewport.height}: mission, traveler, packed list, Change documents keeps the picks`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.setViewportSize(viewport);
+    await page.goto('./');
+    await page.locator('.title-screen button.primary').click();
+
+    const begin = page.locator('main.begin-step');
+    await expect(begin.getByRole('heading', { level: 2 })).toHaveText(en['ui.beforeYouCross']);
+    await expect(begin.getByRole('heading', { name: en['ui.beforeYouCross'] })).toBeVisible();
+    const level = LEVELS[DEFAULT_LEVEL];
+    const mission = begin.locator('.mission');
+    await expect(mission.locator('h3')).toHaveText('Your father has had a stroke.');
+    await expect(mission.locator('p').first()).toHaveText("Your mother needs help with his care. You're carrying his medicine.");
+    await expect(mission.locator('.mission-clock span')).toHaveText([
+      `Last bus leaves in ${level.startTime} hours.`,
+      `Allow ${level.minTripTime} hours to reach the station after the border.`,
+    ]);
+    // Cash and the phone wait until they matter; the bus sum is said once.
+    await expect(begin).not.toContainText('cash');
+    await expect(begin).not.toContainText('phone');
+    await expect(begin).not.toContainText('Get through with');
+    await expect(begin.locator('.begin-who')).toHaveText('Lena · Software tester');
+    await expect(begin.locator('.begin-packed')).toHaveText("Packed: Mother's letter, hospital note, apartment deed");
+
+    // "Begin the crossing" once: the primary button, not a heading too.
+    const text = await begin.innerText();
+    expect(text.match(/Begin the crossing/g), text).toHaveLength(1);
+    const go = begin.locator('.controls button.primary');
+    await expect(go).toHaveText('Begin the crossing');
+    const change = begin.getByRole('button', { name: 'Change documents' });
+    const back = begin.getByRole('button', { name: 'Back', exact: true });
+    await expect(change).toBeVisible();
+    await expect(back).toBeVisible();
+    // Everything fits: no page scroll, all three buttons on screen and at least 52 px tall,
+    // and Back and Change documents side by side right under the primary.
+    const m = await page.evaluate(() => {
+      const box = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+      return {
+        page: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        viewport: window.innerHeight,
+        go: box('.begin-step .controls .primary'),
+        back: box('.begin-step .back-quiet'),
+        change: box('.begin-step .change-docs'),
+      };
+    });
+    expect(m.page, 'page scroll').toBeLessThanOrEqual(0);
+    for (const [name, b] of [['Begin', m.go], ['Back', m.back], ['Change documents', m.change]] as const) {
+      expect(b.height, `${name} height`).toBeGreaterThanOrEqual(52);
+      expect(b.bottom, `${name} on screen`).toBeLessThanOrEqual(m.viewport);
+    }
+    expect(Math.abs(m.back.top - m.change.top), 'Back and Change documents on one row').toBeLessThan(1);
+    expect(m.back.top - m.go.bottom, 'the row right under Begin').toBeLessThanOrEqual(16);
+
+    // Change documents opens packing with the picks kept; Continue comes back here.
+    await change.click();
+    const docsScreen = page.locator('main.documents-step');
+    await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
+    const kept = EVIDENCE_IDS.filter((id) => FIRST_RUN.loadout.includes(id)).map((id) => en[`ev.${id}.label`]);
+    await expect(docsScreen.locator('.doc[aria-pressed="true"] strong')).toHaveText(kept);
+    // Swap the deed for the hotel booking, and the check shows the new packing.
+    await docsScreen.locator('.doc', { hasText: en['ev.deed.label'] }).click();
+    await docsScreen.locator('.doc', { hasText: en['ev.hotel.label'] }).click();
+    await docsScreen.locator('.controls button.primary').click();
+    await expect(begin.locator('.begin-packed')).toHaveText("Packed: Hotel booking, mother's letter, hospital note");
+
+    // Packing's Back also returns here, with the new picks; the check's Back goes to the title.
+    await change.click();
+    await docsScreen.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(begin.locator('.begin-packed')).toHaveText("Packed: Hotel booking, mother's letter, hospital note");
+    await back.click();
+    await expect(page.locator('.title-screen')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
 
 test('one ending seen, one level open: Begin goes straight to the traveler, never the level list, and plays today\'s mission', async ({ page }) => {
   const errors: string[] = [];
@@ -61,8 +140,8 @@ test('one ending seen, one level open: Begin goes straight to the traveler, neve
   await page.locator('.documents-step .controls button.primary').click();
   const mission = page.locator('main.begin-step .mission');
   await expect(mission.locator('h3')).toHaveText(en['mission.title']);
-  await expect(mission).toContainText('leaves in 8 hours');
-  await expect(mission).toContainText('2 hours past the border');
+  await expect(mission).toContainText('Last bus leaves in 8 hours.');
+  await expect(mission).toContainText('Allow 2 hours to reach the station after the border.');
   await page.locator('main.begin-step .controls button.primary').click();
   await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
   await expect(page.locator('main.run .strip')).toContainText('8 hours');
@@ -276,27 +355,26 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await stepFits(page, 'documents, 3 packed');
   await cont.click();
 
-  // Screen 3: the mission, the rest of the premise, exactly the packed documents.
+  // Screen 3, Before you cross: the mission, who you are and exactly the packed documents.
   const begin = page.locator('main.begin-step');
-  await expect(begin.getByRole('heading', { name: 'Begin the crossing' })).toBeVisible();
-  await expect(begin.locator('.mission')).toContainText('Get through with at least 2 hours left to reach the bus.');
-  await expect(begin.locator('.mission')).toContainText('medicine');
-  await expect(begin.locator('.mission')).toContainText('cash');
-  await expect(begin.locator('.mission')).toContainText('phone');
+  await expect(begin.getByRole('heading', { name: 'Before you cross' })).toBeVisible();
   // One clock only (67a.11): the title says whose care it is, and no days of leave.
   await expect(begin.locator('.mission')).toContainText('Your father has had a stroke');
+  await expect(begin.locator('.mission')).toContainText('medicine');
   await expect(begin.locator('.mission')).not.toContainText('days');
-  await expect(begin.locator('.packed-list li')).toHaveText(chosen.map((id) => en[`ev.${id}.name`]));
+  await expect(begin.locator('.begin-who')).toHaveText('Lena · Software tester');
+  await expect(begin.locator('.begin-packed')).toHaveText(`Packed: ${en[`ev.${chosen[0]}.label`]}, ${chosen.slice(1).map((id) => en[`ev.${id}.label`].toLowerCase()).join(', ')}`);
   await stepFits(page, 'begin');
 
-  // Back to screen 2: the same documents are still marked Packed.
-  await begin.getByRole('button', { name: 'Back', exact: true }).click();
+  // Change documents: back to packing, the same documents still marked Packed.
+  await begin.getByRole('button', { name: 'Change documents' }).click();
   await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
   await expect(docsScreen.locator('.doc[aria-pressed="true"] strong')).toHaveText(chosen.map((id) => en[`ev.${id}.label`]));
   await expect(docsScreen.locator('.doc.picked .checkbox svg')).toHaveCount(chosen.length);
+  await cont.click();
 
-  // Back to screen 1: Lena is still the pick.
-  await docsScreen.getByRole('button', { name: 'Back', exact: true }).click();
+  // Back from Before you cross skips packing (Change documents goes there) to the traveler: Lena is still the pick.
+  await begin.getByRole('button', { name: 'Back', exact: true }).click();
   const lena = page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena'));
   await expect(lena).toHaveAttribute('aria-checked', 'true');
   await page.locator('.traveler-step .controls button.primary').click();

@@ -3,13 +3,13 @@
 // src/ui/parts.tsx renders it and src/game/transcript.ts writes it down, so both
 // read the same parts.
 
-import { has, own } from '../i18n';
+import { has, own, t } from '../i18n';
 import type { Option } from './engine';
 import type { GameEvent } from './play';
 import { caught, factIds, factTier, knows, travelOf } from './engine';
 import type { ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
-import { CHARACTERS, CONTACTS, EVIDENCE, MAX_SCRUTINY, writesDown } from './content/world';
+import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
 export type PartKind = 'medicine' | 'miss' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -158,6 +158,21 @@ export function packDetail(id: EvidenceId): string[][] {
   const facts = EVIDENCE[id].onUse.flatMap((e) => ('fact' in e ? [e.fact] : []));
   const topics = EVIDENCE[id].topics.map((topic) => `topic.${topic}.helps`);
   return facts.length ? [topics, facts.map((f) => `fact.${f}.reveal`)] : [topics];
+}
+
+/**
+ * The begin screen's "Mother's letter, hospital note, apartment deed": the packed
+ * documents' short labels in packing order, one list, so later items start lower
+ * case (every label is a common noun). BeginStep in src/App.tsx and setupLines()
+ * in src/game/transcript.ts both use it.
+ */
+export function packedList(loadout: readonly EvidenceId[]): string {
+  return EVIDENCE_IDS.filter((id) => loadout.includes(id))
+    .map((id, i) => {
+      const label = t(`ev.${id}.label`);
+      return i ? label.charAt(0).toLowerCase() + label.slice(1) : label;
+    })
+    .join(', ');
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */

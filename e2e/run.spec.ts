@@ -54,7 +54,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   // Mission card sets up the one clock: the last bus in 8 hours.
   const mission = page.locator('.begin-step .mission');
-  await expect(mission).toContainText('The last bus to the hospital leaves in 8 hours');
+  await expect(mission).toContainText('Last bus leaves in 8 hours.');
   await expect(mission).not.toContainText('days of leave');
   await noHorizontalScroll(page, 'begin');
   await page.locator('.begin-step .controls button.primary').click();
@@ -71,7 +71,7 @@ test('plays a full run to an ending at 390x844', async ({ page }) => {
 
   // Time reads as hours until the last bus. Both routine passport cards have a 1-hour
   // option, so the first options screen shows a time cost on an answer's line.
-  await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
+  await expect(page.locator('.strip .stat.time')).toContainText('8 hours until the last bus');
   const timeChips: string[] = [];
   const cards: (AnswerCard & { step: number })[] = [];
 
@@ -300,7 +300,7 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
     if (staged) await expect(buttons.nth(1)).toContainText(en[`check.${check}.explain.label`]);
     await expect(ask).toContainText(staged ? en[`check.${check}.ask.label`] : 'Ask for an update');
     await expect(ask.locator('.consequence')).toHaveText('Your urgency goes on file');
-    await expect(page.locator('.strip .stat.time')).toContainText('8 hours left');
+    await expect(page.locator('.strip .stat.time')).toContainText('8 hours until the last bus');
     await expect(page.locator('.strip .scrutiny')).toContainText('Scrutiny');
 
     if (check === 'medicineLab') {

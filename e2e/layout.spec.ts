@@ -123,12 +123,23 @@ test('the run header, the tray and its pixel icons, at the first checkpoint', as
   const run = page.locator('main.run');
   const strip = run.locator('.strip');
   await expect(strip.locator('.goal')).toHaveText('Reach the hospital');
-  await expect(strip).toContainText('8 hours left');
+  await expect(strip).toContainText('8 hours until the last bus');
   await expect(strip.locator('.stat.time .amber')).toHaveText('8 hours');
   await expect(strip).toContainText('Scrutiny 0/3');
   await expect(strip.locator('.progress-label')).toHaveText('1 / 3 · Passport control');
   await expect(strip.locator('.progress-label .amber')).toHaveText('1 / 3');
   await expect(strip.locator('.time-bar i')).toHaveAttribute('style', /width: 100%/);
+  // The white mark on the bar has a visible label: the travel reserve from the level data.
+  await expect(strip.locator('.reserve-label')).toBeVisible();
+  await expect(strip.locator('.reserve-label')).toHaveText(`${MISSION_MIN_TIME} hours to the station`);
+  // Scrutiny is an outlined button with an info icon that opens its sheet, not a dotted underline.
+  const scrutiny = strip.getByRole('button', { name: 'Scrutiny 0/3' });
+  await expect(scrutiny.locator('svg.icon-info')).toBeVisible();
+  await expect(scrutiny).toHaveCSS('border-top-style', 'solid');
+  await expect(scrutiny.locator('.scrutiny-text')).toHaveCSS('text-decoration-line', 'none');
+  await scrutiny.click();
+  await expect(page.getByRole('dialog')).toContainText('how closely the officers are watching you');
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
   // The game name stays on the setup screens.
   await expect(run).not.toContainText('Purpose of Visit');
 
@@ -151,7 +162,7 @@ test('the run header, the tray and its pixel icons, at the first checkpoint', as
   // A 1-hour answer takes the header to 7 hours and shortens the time bar.
   const oneHour = run.locator('.controls button.choice', { has: page.locator('.consequence .part', { hasText: /: 1 hour$/ }) }).first();
   await oneHour.click();
-  await expect(strip).toContainText('7 hours left');
+  await expect(strip).toContainText('7 hours until the last bus');
   await expect(strip.locator('.time-bar i')).toHaveAttribute('style', /width: 87\.5%/);
   expect(errors).toEqual([]);
 });

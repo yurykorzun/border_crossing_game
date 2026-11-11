@@ -81,11 +81,18 @@ describe('English text', () => {
     expect(Object.entries(en).filter(([, v]) => unit.test(v))).toEqual([]);
   });
 
-  // One clock only: the mission card sets up the last bus, not days of leave.
+  // One clock only: the mission card sets up the last bus, not days of leave (BeginStep).
   it('sets up the last bus on the mission card', () => {
-    expect(en['mission.body']).toMatch(/last bus/);
-    expect(en['mission.body']).toContain('{hours} hours');
-    expect(en['mission.body']).not.toMatch(/days of leave/);
+    expect(en['ui.lastBus.other']).toMatch(/^Last bus/);
+    expect(en['ui.lastBus.other']).toContain('{n} hours');
+    expect(en['ui.allowTravel.other']).toContain('{n} hours');
+    for (const k of ['mission.title', 'mission.body', 'ui.lastBus.other', 'ui.allowTravel.other']) expect(en[k]).not.toMatch(/days of leave/);
+  });
+
+  // The final check says Before you cross; Begin the crossing is only the button (g0q.3).
+  it('heads the final check Before you cross', () => {
+    expect(en['ui.beforeYouCross']).toBe('Before you cross');
+    expect(Object.values(en).filter((v) => v === 'Begin the crossing')).toHaveLength(1);
   });
 
   it('has both plural forms for every plural key', () => {
