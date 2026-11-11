@@ -32,32 +32,27 @@ test('fresh save: Start opens the begin screen as Lena with the fixed packing, n
   expect(errors).toEqual([]);
 });
 
-test('one ending seen: Start shows the level list with Arrival, and Arrival plays today\'s mission', async ({ page }) => {
+test('one ending seen, one level open: Begin goes straight to the traveler, never the level list, and plays today\'s mission', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await openReturning(page);
   await page.locator('.title-screen button.primary').click();
 
-  // The level list comes before the traveler screen, with Level 1 Arrival only for now.
-  const list = page.locator('main.level-step');
-  await expect(list).toBeVisible();
-  await expect(page.locator('main.traveler-step')).toHaveCount(0);
-  await expect(list.locator('.stage-label')).toHaveText('1 / 4 · Crossing');
-  await expect(list.getByRole('heading', { name: en['ui.pickLevel'] })).toBeVisible();
-  const levels = list.getByRole('list', { name: en['ui.pickLevel'] }).locator('button.level');
-  await expect(levels).toHaveCount(1);
-  await expect(levels.locator('.level-name')).toHaveText(['Arrival']);
-  await expect(levels.first()).toContainText('Level 1');
-  await fitsScreen(page, 'level list');
-
-  // Arrival opens the traveler screen, and Back returns to the list.
-  await pickArrival(page);
-  await expect(page.locator('main.traveler-step')).toBeVisible();
+  // Only Level 1 Arrival is open, so there is nothing to choose and no level list (g0q.2).
+  const traveler = page.locator('main.traveler-step');
+  await expect(traveler).toBeVisible();
+  await expect(page.locator('main.level-step')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: en['ui.pickLevel'] })).toHaveCount(0);
+  await expect(traveler.locator('.stage-label')).toHaveText('1 / 3 · Traveler');
   await expect(page.getByRole('radiogroup', { name: 'Choose your traveler' })).toBeVisible();
   await expect(page.locator('main.begin-step')).toHaveCount(0);
-  await page.locator('main.traveler-step').getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(list).toBeVisible();
-  await pickArrival(page);
+
+  // Back from the first step returns to the title; Begin again still skips the list.
+  await traveler.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await page.locator('.title-screen button.primary').click();
+  await expect(traveler).toBeVisible();
+  await expect(page.locator('main.level-step')).toHaveCount(0);
 
   // Through to the begin screen: today's mission, 8 hours with a 2-hour trip.
   await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
@@ -76,12 +71,6 @@ test('one ending seen: Start shows the level list with Arrival, and Arrival play
   expect(saved.run.time).toBe(8);
   expect(errors).toEqual([]);
 });
-
-/** No page scroll on a setup screen. */
-async function fitsScreen(page: Page, where: string) {
-  const scroll = await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight);
-  expect(scroll, `page scroll on ${where}`).toBeLessThanOrEqual(0);
-}
 
 /** The traveler screen: no page scroll, and Continue in view. `bodyMayScroll` for the open history. */
 async function fits(page: Page, where: string, bodyMayScroll = false) {
@@ -111,8 +100,8 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   const screen = page.locator('main.traveler-step');
   await expect(screen.locator('.setup-title')).toHaveText('Purpose of Visit');
   await expect(screen.locator('.traveler-scene')).toBeVisible();
-  await expect(screen.locator('.stage-label')).toHaveText('2 / 4 · Traveler');
-  await expect(screen.locator('.stage-label .amber')).toHaveText('2 / 4');
+  await expect(screen.locator('.stage-label')).toHaveText('1 / 3 · Traveler');
+  await expect(screen.locator('.stage-label .amber')).toHaveText('1 / 3');
   await expect(screen.getByRole('heading', { name: "You're going home. Your father is in the hospital." })).toBeVisible();
 
   // A two-sentence premise at most: count every sentence that ends in . ! or ?
@@ -228,8 +217,8 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   // Screen 2: stage, title and count, the bulletin bar, six rows whose lines do not wrap.
   const docsScreen = page.locator('main.documents-step');
   await expect(docsScreen.getByRole('heading', { name: 'Pack your documents' })).toBeVisible();
-  await expect(docsScreen.locator('.stage-label')).toHaveText('3 / 4 · Preparation');
-  await expect(docsScreen.locator('.stage-label .amber')).toHaveText('3 / 4');
+  await expect(docsScreen.locator('.stage-label')).toHaveText('2 / 3 · Preparation');
+  await expect(docsScreen.locator('.stage-label .amber')).toHaveText('2 / 3');
   await expect(docsScreen.locator('.pack-count')).toHaveText('0 of 3 packed');
 
   // One bar, one icon, and each line is one sentence: exactly one terminal . ! or ?, at the end.

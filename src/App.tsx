@@ -13,10 +13,10 @@ import type { Option, RunSetup } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
-import { DEFAULT_LEVEL, LEVELS, levelRows } from './game/content/levels';
-import { browserStore, load, openQuestions, save, startOver } from './game/save';
+import { DEFAULT_LEVEL, LEVELS, levelRows, showsLevelList } from './game/content/levels';
+import { browserStore, load, save, startOver } from './game/save';
 import { recordRun } from './game/carry';
-import type { SaveData } from './game/save';
+import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
@@ -38,6 +38,8 @@ export default function App() {
 
 function Game() {
   const [data, setData] = useState<SaveData>(() => load(store));
+  // A run saved on an earlier visit waits on the title for Resume crossing or New crossing.
+  const [resumed, setResumed] = useState(() => data.run === null);
   // `same` is set by "Play again with the same setup": the begin screen for that setup, no picks.
   const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number; same?: RunSetup } | null>(null);
 
@@ -53,6 +55,7 @@ function Game() {
   };
 
   const startSetup = () => {
+    setResumed(true);
     const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
     setSetup({ seed, bulletin: BULLETINS[Math.abs(seed) % BULLETINS.length] });
     setData(startOver);
@@ -68,20 +71,22 @@ function Game() {
 
   return (
     <div className="shell" onPointerDown={() => sound.wakeAudio()}>
-      {run ? (
+      {run && resumed ? (
         <Run s={run} dispatch={dispatch} data={data} setData={setData} onRestart={startSetup} onSame={startSame} onStartOver={startSetup} />
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
           same={setup.same}
           endingsSeen={data.endingsSeen}
+          onExit={() => setSetup(null)}
           onStart={(level, character, loadout) => {
             setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
             setSetup(null);
           }}
         />
       ) : (
-        <Title onStart={startSetup} questions={openQuestions(data)} />
+        <Title saved={run !== null} onStart={startSetup} onResume={() => setResumed(true)}
+          settings={data.settings} onSettings={(settings) => setData((d) => ({ ...d, settings }))} />
       )}
     </div>
   );
@@ -129,32 +134,42 @@ function Autoplay({ style }: { style: BotStyle }) {
   );
 }
 
-function Title({ onStart, questions }: { onStart: () => void; questions: string[] }) {
+/**
+ * The title, one group: the name, the border post from the traveler screen, the premise,
+ * then Begin and a quiet Settings. With a saved run Begin becomes Resume crossing, and
+ * New crossing under it drops that run (startOver) and keeps endings and settings.
+ */
+function Title({ saved, onStart, onResume, settings, onSettings }: {
+  saved: boolean;
+  onStart: () => void;
+  onResume: () => void;
+  settings: Settings;
+  onSettings: (next: Settings) => void;
+}) {
+  const [open, setOpen] = useState(false);
   return (
     <main className="title-screen">
       <div className="paper title-card">
         <p className="mono stamp-line">{t('ui.stamp')}</p>
         <h1>{t('ui.title')}</h1>
-        <p>{t('ui.tagline')}</p>
+        <div className="title-scene"><BorderPost /></div>
+        <p className="title-premise">{t('ui.tagline')}</p>
       </div>
       <div className="controls">
-        <OpenQuestions questions={questions} />
-        <button className="primary" onClick={onStart}>{t('ui.start')}</button>
+        {saved ? (
+          <>
+            <button className="primary resume" onClick={onResume}>{t('ui.resume')}</button>
+            <button className="quiet new-crossing" onClick={onStart}>{t('ui.newCrossing')}</button>
+          </>
+        ) : (
+          <button className="primary begin" onClick={onStart}>{t('ui.start')}</button>
+        )}
+        <button className="quiet title-settings" aria-haspopup="dialog" onClick={() => setOpen(true)}>{t('ui.settings')}</button>
       </div>
+      <Sheet open={open} onClose={() => setOpen(false)} title={t('ui.settings')}>
+        <SettingsContent settings={settings} onChange={onSettings} />
+      </Sheet>
     </main>
-  );
-}
-
-/** What the player has not found out yet, one question per ending not seen (openQuestions). Nothing once all are seen. */
-function OpenQuestions({ questions }: { questions: string[] }) {
-  if (questions.length === 0) return null;
-  return (
-    <section className="open-questions" aria-labelledby="open-questions-title">
-      <h2 id="open-questions-title" className="mono">{t('ui.openQuestions')}</h2>
-      <ul>
-        {questions.map((q) => <li key={q}>{t(q)}</li>)}
-      </ul>
-    </section>
   );
 }
 
@@ -164,12 +179,21 @@ function OpenQuestions({ questions }: { questions: string[] }) {
 const SETUP_STEPS = ['level', 'traveler', 'documents', 'begin'] as const;
 type SetupStep = (typeof SETUP_STEPS)[number];
 
+/** The steps this player walks: the level list only when more than one level is open (showsLevelList). */
+const stepsFor = (endingsSeen: readonly EndingId[]): readonly SetupStep[] =>
+  showsLevelList(endingsSeen) ? SETUP_STEPS : SETUP_STEPS.filter((s) => s !== 'level');
+
+/** "2 / 4" on a setup screen, counted over the steps this player walks. */
+const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
+  t('ui.progressCount', { n: steps.indexOf(step) + 1, total: steps.length });
+
 // Before the first ending (firstRun) there are no choices yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1, with no way back to the picks.
-function Setup({ bulletin, same, endingsSeen, onStart }: {
+function Setup({ bulletin, same, endingsSeen, onExit, onStart }: {
   bulletin: BulletinId;
   same?: RunSetup;
   endingsSeen: readonly EndingId[];
+  onExit: () => void;
   onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
 }) {
   if (same) {
@@ -177,32 +201,36 @@ function Setup({ bulletin, same, endingsSeen, onStart }: {
     return <BeginStep level={level} picked={same.loadout} traveler={same.character} bulletin={bulletin}
       onBegin={() => onStart(level, same.character, same.loadout)} />;
   }
-  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} onStart={onStart} />;
+  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} onExit={onExit} onStart={onStart} />;
 }
 
-function Picks({ bulletin, endingsSeen, onStart }: {
+function Picks({ bulletin, endingsSeen, onExit, onStart }: {
   bulletin: BulletinId;
   endingsSeen: readonly EndingId[];
+  /** Back from the first step: the title. */
+  onExit: () => void;
   onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
 }) {
   const firstRun = endingsSeen.length === 0;
-  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : 'level');
+  const steps = stepsFor(endingsSeen);
+  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : steps[0]);
   const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
-  const move = (delta: number) => setAt(SETUP_STEPS[SETUP_STEPS.indexOf(at) + delta]);
+  const move = (delta: number) => setAt(steps[steps.indexOf(at) + delta]);
 
   if (firstRun && character) {
     return <BeginStep level={level} picked={picked} traveler={character} onBegin={() => onStart(level, character, picked)} />;
   }
   if (at === 'level') {
-    return <LevelStep endingsSeen={endingsSeen} onPick={(id) => { setLevel(id); move(1); }} />;
+    return <LevelStep steps={steps} endingsSeen={endingsSeen} onPick={(id) => { setLevel(id); move(1); }} />;
   }
   if (at === 'traveler' || !character) {
     return (
       <TravelerStep
         initial={character}
-        onBack={() => setAt('level')}
+        count={stepCount(steps, 'traveler')}
+        onBack={steps[0] === 'traveler' ? onExit : () => setAt('level')}
         onContinue={(c) => {
           // A traveler with fewer slots keeps only the first picks that still fit.
           setPicked((p) => p.slice(0, CHARACTERS[c].evidenceSlots));
@@ -213,7 +241,7 @@ function Picks({ bulletin, endingsSeen, onStart }: {
     );
   }
   if (at === 'documents') {
-    return <DocumentsStep character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
+    return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
   }
   return <BeginStep level={level} picked={picked} onBack={() => move(-1)} onBegin={() => onStart(level, character, picked)} />;
 }
@@ -222,8 +250,8 @@ function Picks({ bulletin, endingsSeen, onStart }: {
  * Setup 1, once an ending is seen: the level list. Each level is one button, so
  * a tap starts it and the traveler screen follows. Level 1 Arrival is today's mission.
  */
-function LevelStep({ endingsSeen, onPick }: { endingsSeen: readonly EndingId[]; onPick: (id: LevelId) => void }) {
-  const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('level') + 1, total: SETUP_STEPS.length });
+function LevelStep({ steps, endingsSeen, onPick }: { steps: readonly SetupStep[]; endingsSeen: readonly EndingId[]; onPick: (id: LevelId) => void }) {
+  const count = stepCount(steps, 'level');
   return (
     <main className="setup setup-step level-step">
       <div className="setup-body">
@@ -258,7 +286,8 @@ function BackButton({ onBack }: { onBack: () => void }) {
 }
 
 /** Setup 3. Packing is where hours and scrutiny first matter, so both are explained here. */
-function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onContinue }: {
+function DocumentsStep({ count, character, bulletin, picked, setPicked, onBack, onContinue }: {
+  count: string;
   character: CharacterId;
   bulletin: BulletinId;
   picked: EvidenceId[];
@@ -269,7 +298,6 @@ function DocumentsStep({ character, bulletin, picked, setPicked, onBack, onConti
   const slots = CHARACTERS[character].evidenceSlots;
   const toggle = (id: EvidenceId) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < slots ? [...p, id] : p));
-  const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('documents') + 1, total: SETUP_STEPS.length });
   const { ref: bodyRef, more, onScroll } = useMoreBelow();
 
   return (
@@ -410,7 +438,7 @@ function BeginStep({ level, picked, traveler, bulletin, onBack, onBegin }: {
  * selects and only the button moves on. The picked traveler's history waits
  * behind a disclosure, closed until opened.
  */
-function TravelerStep({ initial, onBack, onContinue }: { initial: CharacterId | null; onBack: () => void; onContinue: (c: CharacterId) => void }) {
+function TravelerStep({ initial, count, onBack, onContinue }: { initial: CharacterId | null; count: string; onBack: () => void; onContinue: (c: CharacterId) => void }) {
   const [chosen, setChosen] = useState<CharacterId | null>(initial);
   const [historyOpen, setHistoryOpen] = useState(false);
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
@@ -430,7 +458,6 @@ function TravelerStep({ initial, onBack, onContinue }: { initial: CharacterId | 
     cards.current[next]?.focus();
   };
   const focusable = chosen ?? CHARACTER_IDS[0];
-  const count = t('ui.progressCount', { n: SETUP_STEPS.indexOf('traveler') + 1, total: SETUP_STEPS.length });
 
   return (
     <main className="setup traveler-step">
@@ -508,7 +535,7 @@ function Run({ s, dispatch, data, setData, onRestart, onSame, onStartOver }: {
   const usedBefore = useUsedBefore(s);
   const readBefore = useReadBefore(s.seed, data.beatsSeen);
   // The last officer line still shows before the ending card.
-  if (s.ending && !s.reaction) return <Ending s={s} questions={openQuestions(data)} onRestart={onRestart} onSame={onSame} />;
+  if (s.ending && !s.reaction) return <Ending s={s} onRestart={onRestart} onSame={onSame} />;
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
@@ -818,7 +845,7 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * and the other stats. Then "See border records", which opens the records alone, and
  * "Play again", with "Play again with the same setup" under it (onSame).
  */
-function Ending({ s, questions, onRestart, onSame }: { s: RunState; questions: string[]; onRestart: () => void; onSame?: () => void }) {
+export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () => void; onSame?: () => void }) {
   const [story, setStory] = useState(false);
   const ending = s.ending ?? endingFor(s);
   const text = endingText(s);
@@ -859,8 +886,9 @@ function Ending({ s, questions, onRestart, onSame }: { s: RunState; questions: s
               </div>
             ))}
           </dl>
-          <OpenQuestions questions={questions} />
         </div>
+        {/* One replay prompt about a choice, never a list of endings still to find (g0q.2). */}
+        <p className="replay-prompt">{t('ui.replayPrompt')}</p>
       </section>
       {/* Sticky, so Play again stays in view however long the story above runs (pfi.9). */}
       <div className="controls">

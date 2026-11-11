@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { newRun } from '../src/game/engine';
-import { SAVE_KEY, freshSave } from '../src/game/save';
+import { freshSave } from '../src/game/save';
 import type { RunState } from '../src/game/types';
-import { openReturning, pickArrival } from './returning';
+import { openReturning, openSaved, pickArrival } from './returning';
 
 // One frame on every screen (src/index.css "One frame on every screen" and the type scale in
 // :root): every button at least 52 px tall, main text 18 px on about 26 px, no sans text under
@@ -76,8 +76,7 @@ async function expectFrame(page: Page, where: string, mainSel: string): Promise<
 }
 
 async function openAt(page: Page, run: RunState) {
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-  await page.reload();
+  await openSaved(page, { ...freshSave(), run });
   await expect(page.locator('main.run .controls button').first()).toBeVisible();
 }
 
@@ -92,7 +91,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
       await openReturning(page);
       widths.title = await expectFrame(page, 'title', '.title-card p:not(.mono)');
       await page.locator('.title-screen button.primary').click();
-      widths.level = await expectFrame(page, 'level list', '.level-name');
+      // No level list while only Arrival is open (g0q.2), so the traveler screen comes next.
       await pickArrival(page);
       widths.traveler = await expectFrame(page, 'traveler', '.traveler-name');
       await page.getByRole('radio').first().click();
@@ -140,8 +139,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
       const widths = new Set<number>();
       for (const [name, patch] of endings) {
         const run: RunState = { ...base, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ...patch };
-        await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: [run.ending!] })] as const);
-        await page.reload();
+        await openSaved(page, { ...freshSave(), run, endingsSeen: [run.ending!] });
         await expect(page.locator('.ending-card')).toBeVisible();
         widths.add(await expectFrame(page, `the ${name} ending`, '.ending-card .kept, .ending-card .cost-line, .ending-card .epilogue'));
       }

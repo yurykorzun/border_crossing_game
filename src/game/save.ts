@@ -35,25 +35,17 @@ export interface Store {
 export const SAVE_KEY = 'purpose-of-visit-save';
 export const SAVE_VERSION = 1 as const;
 
-/** Every ending, in the order its open question is listed. */
+/** Every ending the game knows, so a save from an older build drops ids it no longer has. */
 export const ENDINGS: readonly EndingId[] = ['homeInTime', 'homeAtCost', 'tooLate', 'turnedBack'];
-
-/**
- * What the player has not found out yet: one question per ending not seen, as the
- * i18n key `question.<ending>`. Seeing an ending crosses its question off. The list
- * comes from endingsSeen, so an older save keeps its progress with no new field.
- */
-export const openQuestions = (data: Pick<SaveData, 'endingsSeen'>): string[] =>
-  ENDINGS.filter((e) => !data.endingsSeen.includes(e)).map((e) => `question.${e}`);
 
 /** How many different endings the player has seen: what opens a level (levelOpen() in src/game/content/levels.ts). */
 export const distinctEndings = (endingsSeen: readonly EndingId[]): number =>
   new Set(endingsSeen.filter((e) => ENDINGS.includes(e))).size;
 
 /**
- * Start over from the settings sheet: the current run is dropped, and everything kept
- * across runs (endings seen, the carried file, beats read, settings) stays. Without it a
- * reload only resumes the saved run.
+ * New crossing (on the title, under Resume crossing) and Start over (the settings sheet):
+ * the current run is dropped, and everything kept across runs (endings seen, the carried
+ * file, beats read, settings) stays. Without it a reload only offers to resume the saved run.
  */
 export const startOver = (d: SaveData): SaveData => ({ ...d, run: null });
 

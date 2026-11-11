@@ -3,12 +3,12 @@ import type { Page } from '@playwright/test';
 import { knownLine, newRun, options } from '../src/game/engine';
 import { CHECKS, ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
-import { SAVE_KEY, freshSave } from '../src/game/save';
+import { freshSave } from '../src/game/save';
 import { own, t } from '../src/i18n';
 import { en } from '../src/i18n/en';
 import type { CheckId, RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
-import { openReturning, pickArrival } from './returning';
+import { openReturning, openSaved, pickArrival } from './returning';
 
 // One full run on a phone-size screen: title → character → documents → begin → play by
 // always taking the first enabled option → ending card.
@@ -153,8 +153,7 @@ async function answerCards(page: Page): Promise<AnswerCard[]> {
 
 /** Opens the run on a saved state, as a returning player would. */
 async function openAt(page: Page, run: RunState) {
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-  await page.reload();
+  await openSaved(page, { ...freshSave(), run });
   await expect(page.locator('main.run .controls button').first()).toBeVisible();
 }
 
@@ -327,8 +326,7 @@ test('a Home in time ending is a short result card that fits the screen', async 
     ...lenaRun(), time: 5, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime',
     claims: ['familyVisit', 'cashUnderLimit'], logged: { cashUnderLimit: ['customs'] }, facts: { familyAddress: ['customs', 'interview'] },
   };
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['homeInTime'] })] as const);
-  await page.reload();
+  await openSaved(page, { ...freshSave(), run, endingsSeen: ['homeInTime'] });
 
   const card = page.locator('.ending-card');
   await expect(card).toBeVisible();
@@ -403,8 +401,7 @@ for (const [time, text] of [[0, 'missedBus'], [1, 'tooLate']] as const) {
     page.on('pageerror', (err) => errors.push(err.message));
     await page.goto('./');
     const run: RunState = { ...lenaRun(), time, checkpoint: 2, screen: { kind: 'ending' }, reaction: null, ending: 'tooLate' };
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['tooLate'] })] as const);
-    await page.reload();
+    await openSaved(page, { ...freshSave(), run, endingsSeen: ['tooLate'] });
 
     const card = page.locator('.ending-card');
     await expect(card.locator('h1')).toHaveText(en[`ending.${text}.title`]);
@@ -432,8 +429,7 @@ test('a Too late ending still lists the exposed mother, with no severity tag', a
     ...lenaRun(), time: 1, exposed: ['mother'], facts: { urgency: ['customs'] }, checkpoint: 3,
     screen: { kind: 'ending' }, reaction: null, ending: 'tooLate',
   };
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run, endingsSeen: ['tooLate'] })] as const);
-  await page.reload();
+  await openSaved(page, { ...freshSave(), run, endingsSeen: ['tooLate'] });
 
   const card = page.locator('.ending-card');
   await expect(card.locator('h1')).toHaveText('Too late');
@@ -465,8 +461,7 @@ for (const c of endingCases) {
     page.on('pageerror', (err) => errors.push(err.message));
     await page.goto('./');
     const run: RunState = { ...c.run(), checkpoint: 3, screen: { kind: 'ending' }, reaction: null };
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-    await page.reload();
+    await openSaved(page, { ...freshSave(), run });
 
     const card = page.locator('.ending-card');
     await expect(card.locator('h1')).toBeVisible();

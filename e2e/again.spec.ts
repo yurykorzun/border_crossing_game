@@ -5,6 +5,7 @@ import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { SaveData } from '../src/game/save';
 import { t } from '../src/i18n';
 import type { RunState } from '../src/game/types';
+import { openSaved, pickArrival } from './returning';
 
 // Play again with the same setup from the ending, and Start over from the settings sheet mid-run.
 
@@ -12,8 +13,7 @@ const readSave = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.ge
 
 async function openWith(page: Page, data: SaveData) {
   await page.goto('./');
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify(data)] as const);
-  await page.reload();
+  await openSaved(page, data);
 }
 
 test('Play again with the same setup starts the same traveler, packing, bulletin and seed', async ({ page }) => {
@@ -44,7 +44,7 @@ test('Start over in settings mid-run lands on the start of a new run and keeps e
   const settings = { reduceWait: true, reduceMotion: false, sound: false };
   await openWith(page, { ...freshSave(), endingsSeen: ['tooLate'], settings });
   await page.locator('.title-screen button.primary').click();
-  await page.locator('main.level-step button.level[data-level="arrival"]').click();
+  await pickArrival(page);
   await page.getByRole('radio').first().click();
   await page.locator('.traveler-step .controls button.primary').click();
   const docs = page.locator('.documents-step .doc');
@@ -61,16 +61,17 @@ test('Start over in settings mid-run lands on the start of a new run and keeps e
   await page.getByRole('button', { name: t('ui.settings') }).click();
   await page.getByRole('button', { name: t('ui.startOver') }).click();
 
-  // The start of a new run: the level list a returning player sees after Start.
-  await expect(page.locator('main.level-step')).toBeVisible();
+  // The start of a new run: the first setup screen a returning player sees after Begin.
+  await expect(page.locator('main.traveler-step')).toBeVisible();
   await expect(page.locator('main.run')).toHaveCount(0);
   const after = await readSave(page);
   expect(after.run).toBeNull();
   expect(after.endingsSeen).toEqual(['tooLate']);
   expect(after.settings).toEqual(settings);
 
-  // A reload no longer resumes the old run.
+  // A reload no longer offers the old run: Begin, not Resume crossing.
   await page.reload();
-  await expect(page.locator('.title-screen')).toBeVisible();
+  await expect(page.locator('.title-screen button.begin')).toBeVisible();
+  await expect(page.locator('.title-screen button.resume')).toHaveCount(0);
   expect(seed).toBeTruthy();
 });

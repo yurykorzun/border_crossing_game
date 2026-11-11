@@ -4,9 +4,10 @@ import { newRun, options } from '../src/game/engine';
 import { ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
 import { en } from '../src/i18n/en';
-import { SAVE_KEY, freshSave } from '../src/game/save';
+import { freshSave } from '../src/game/save';
 import type { CharacterId, RunState } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
+import { openSaved } from './returning';
 
 // Screen rule 8 in docs/design.md: design for the crowded screen. The longest question in
 // src/i18n/en.ts that has three answers, with all three, at 390x844 and again at 200 percent text.
@@ -54,8 +55,7 @@ function threeAnswers(q: ReturnType<typeof questionsByLength>[number]): { run: R
 }
 
 async function openAt(page: Page, run: RunState) {
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...freshSave(), run })] as const);
-  await page.reload();
+  await openSaved(page, { ...freshSave(), run });
   await expect(page.locator('main.run .controls button').first()).toBeVisible();
 }
 

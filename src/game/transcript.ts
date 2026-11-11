@@ -21,7 +21,6 @@ import { SEPARATOR, caughtLine, consequence, consequences, keptLines, nextAction
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
-import { openQuestions } from './save';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
@@ -136,30 +135,40 @@ function render(fn: () => string, key: string): { key: string; text: string; pro
 }
 
 function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
+  // The title (Title in src/App.tsx): the name, the border post, the premise, Begin and Settings.
   p.add('ui.stamp');
   p.add('ui.title');
+  p.add('scene.traveler', {}, CHROME);
   p.add('ui.tagline');
   p.add('ui.start');
-  // Setup 1: LevelStep, the level list. One tap on a level, so it is not counted as a decision.
-  // The heading and the picked level's row count in this run. The other rows
-  // count once per session (Line.once), so the run does not get longer as levels are added.
-  p.add('ui.title');
-  p.add('ui.level');
-  p.add('ui.progress', { count: t('ui.progressCount', { n: 1, total: 4 }), name: t('ui.level') });
-  p.add('ui.pickLevel');
-  const picked = levelOf(setup).id;
-  for (const l of levels) {
-    const extra = l.id === picked ? {} : ONCE;
-    p.add('ui.levelNumber', { n: l.number }, extra);
-    p.add(l.title, {}, extra);
-    p.add(l.blurb, {}, extra);
+  p.add('ui.settings', {}, CHROME);
+  // Setup 1: LevelStep, the level list, only when more than one level is open
+  // (showsLevelList()); the levels passed here are the open ones. One tap on a level,
+  // so it is not counted as a decision. The heading and the picked level's row count in
+  // this run. The other rows count once per session (Line.once), so the run does not get
+  // longer as levels are added.
+  const list = levels.length > 1;
+  const total = list ? 4 : 3;
+  const at = (n: number) => t('ui.progressCount', { n: list ? n : n - 1, total });
+  if (list) {
+    p.add('ui.title');
+    p.add('ui.level');
+    p.add('ui.progress', { count: at(1), name: t('ui.level') });
+    p.add('ui.pickLevel');
+    const picked = levelOf(setup).id;
+    for (const l of levels) {
+      const extra = l.id === picked ? {} : ONCE;
+      p.add('ui.levelNumber', { n: l.number }, extra);
+      p.add(l.title, {}, extra);
+      p.add(l.blurb, {}, extra);
+    }
   }
-  // Setup 2: TravelerStep. Title, Back, stage label, the premise as the heading, two cards.
+  // Setup 2: TravelerStep. Title, Back (to the list, or to the title), stage label, the premise as the heading, two cards.
   p.add('ui.title');
   p.add('scene.traveler', {}, CHROME);
   p.add('ui.back');
   p.add('ui.traveler');
-  p.add('ui.progress', { count: t('ui.progressCount', { n: 2, total: 4 }), name: t('ui.traveler') });
+  p.add('ui.progress', { count: at(2), name: t('ui.traveler') });
   p.add('ui.premise');
   // The radio group's accessible name: read out, never shown.
   p.add('ui.pickCharacter', {}, CHROME);
@@ -180,7 +189,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
   p.add('scene.preparation', {}, CHROME);
-  const count = t('ui.progressCount', { n: 3, total: 4 });
+  const count = at(3);
   p.add('ui.preparation');
   p.add('ui.progress', { count, name: t('ui.preparation') });
   p.add('ui.prepareDocuments');
@@ -392,10 +401,8 @@ function endingLines(s: RunState, p: Page): void {
   p.add(s.medicine ? 'ui.kept' : 'ui.lost');
   p.add(`contact.${ch.protectedContact}`);
   p.add(protectedRow(s).key);
-  // Open questions, as a first run shows them: every ending but this one.
-  const open = openQuestions({ endingsSeen: s.ending ? [s.ending] : [] });
-  if (open.length) p.add('ui.openQuestions', {}, CHROME);
-  for (const q of open) p.add(q, {}, CHROME);
+  // The one replay prompt under the summary.
+  p.add('ui.replayPrompt');
   p.add('ui.seeOnFile');
   p.add('ui.playAgain');
   // The Border records sheet behind "See what's on file".
