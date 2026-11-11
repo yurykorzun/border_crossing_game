@@ -383,11 +383,6 @@ export interface Level {
   cards: readonly string[];
   /** The rules this level adds. Level 1 adds none. */
   rules: readonly LevelRule[];
-  /**
-   * How many different endings the player must have seen before the level opens
-   * (levelOpen() in src/game/content/levels.ts). Seeing them opens it, not winning. 0: open from the start.
-   */
-  opensAt: number;
 }
 
 /**

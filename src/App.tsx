@@ -78,6 +78,7 @@ function Game() {
           bulletin={setup.bulletin}
           same={setup.same}
           endingsSeen={data.endingsSeen}
+          levelsFinished={data.levelsFinished}
           onExit={() => setSetup(null)}
           onStart={(level, character, loadout) => {
             setData((d) => ({ ...d, run: newRun({ level, character, loadout, bulletin: setup.bulletin, seed: setup.seed }) }));
@@ -180,8 +181,8 @@ const SETUP_STEPS = ['level', 'traveler', 'documents', 'begin'] as const;
 type SetupStep = (typeof SETUP_STEPS)[number];
 
 /** The steps this player walks: the level list only when more than one level is open (showsLevelList). */
-const stepsFor = (endingsSeen: readonly EndingId[]): readonly SetupStep[] =>
-  showsLevelList(endingsSeen) ? SETUP_STEPS : SETUP_STEPS.filter((s) => s !== 'level');
+const stepsFor = (levelsFinished: readonly LevelId[]): readonly SetupStep[] =>
+  showsLevelList(levelsFinished) ? SETUP_STEPS : SETUP_STEPS.filter((s) => s !== 'level');
 
 /** "2 / 4" on a setup screen, counted over the steps this player walks. */
 const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
@@ -190,10 +191,11 @@ const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
 // Before the first ending (firstRun) there is no traveler to choose yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1. Back goes to the title, and
 // Change documents opens the packing screen with FIRST_RUN's picks kept.
-function Setup({ bulletin, same, endingsSeen, onExit, onStart }: {
+function Setup({ bulletin, same, endingsSeen, levelsFinished, onExit, onStart }: {
   bulletin: BulletinId;
   same?: RunSetup;
   endingsSeen: readonly EndingId[];
+  levelsFinished: readonly LevelId[];
   onExit: () => void;
   onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
 }) {
@@ -202,18 +204,19 @@ function Setup({ bulletin, same, endingsSeen, onExit, onStart }: {
     return <BeginStep level={level} picked={same.loadout} traveler={same.character} bulletin={bulletin}
       onBegin={() => onStart(level, same.character, same.loadout)} />;
   }
-  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} onExit={onExit} onStart={onStart} />;
+  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} levelsFinished={levelsFinished} onExit={onExit} onStart={onStart} />;
 }
 
-function Picks({ bulletin, endingsSeen, onExit, onStart }: {
+function Picks({ bulletin, endingsSeen, levelsFinished, onExit, onStart }: {
   bulletin: BulletinId;
   endingsSeen: readonly EndingId[];
+  levelsFinished: readonly LevelId[];
   /** Back from the first step: the title. */
   onExit: () => void;
   onStart: (level: LevelId, c: CharacterId, l: EvidenceId[]) => void;
 }) {
   const firstRun = endingsSeen.length === 0;
-  const steps = stepsFor(endingsSeen);
+  const steps = stepsFor(levelsFinished);
   const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : steps[0]);
   const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
   const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
@@ -228,7 +231,7 @@ function Picks({ bulletin, endingsSeen, onExit, onStart }: {
     return <BeginStep level={level} picked={picked} traveler={character} onBack={onExit} onChangeDocuments={() => setAt('documents')} onBegin={() => onStart(level, character, picked)} />;
   }
   if (at === 'level') {
-    return <LevelStep steps={steps} endingsSeen={endingsSeen} onPick={(id) => { setLevel(id); move(1); }} />;
+    return <LevelStep steps={steps} levelsFinished={levelsFinished} onPick={(id) => { setLevel(id); move(1); }} />;
   }
   if (at === 'traveler' || !character) {
     return (
@@ -253,10 +256,10 @@ function Picks({ bulletin, endingsSeen, onExit, onStart }: {
 }
 
 /**
- * Setup 1, once an ending is seen: the level list. Each level is one button, so
+ * Setup 1, once a second level is open: the level list. Each level is one button, so
  * a tap starts it and the traveler screen follows. Level 1 Arrival is today's mission.
  */
-function LevelStep({ steps, endingsSeen, onPick }: { steps: readonly SetupStep[]; endingsSeen: readonly EndingId[]; onPick: (id: LevelId) => void }) {
+function LevelStep({ steps, levelsFinished, onPick }: { steps: readonly SetupStep[]; levelsFinished: readonly LevelId[]; onPick: (id: LevelId) => void }) {
   const count = stepCount(steps, 'level');
   return (
     <main className="setup setup-step level-step">
@@ -267,12 +270,12 @@ function LevelStep({ steps, endingsSeen, onPick }: { steps: readonly SetupStep[]
           <h2 className="on-dark">{t('ui.pickLevel')}</h2>
         </header>
         <ul className="levels" aria-label={t('ui.pickLevel')}>
-          {levelRows(endingsSeen).map(({ level: l, open, opensAt }) => (
+          {levelRows(levelsFinished).map(({ level: l, open, opensAfter }) => (
             <li key={l.id}>
               <button type="button" className="level" data-level={l.id} disabled={!open} onClick={() => onPick(l.id)}>
                 <span className="mono level-number">{t('ui.levelNumber', { n: l.number })}</span>
                 <strong className="level-name">{t(l.title)}</strong>
-                <span className="level-line">{opensAt ? tn(opensAt.key, opensAt.n) : t(l.blurb)}</span>
+                <span className="level-line">{opensAfter ? t(opensAfter.key, { level: t(opensAfter.level.title) }) : t(l.blurb)}</span>
               </button>
             </li>
           ))}
