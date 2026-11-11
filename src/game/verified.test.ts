@@ -93,11 +93,11 @@ describe('a point verified at passport is not charged again later', () => {
     expect(choose(customs, 'declare').screen.kind).toBe('wait');
   });
 
-  it('a point a supervisor settles in an inspection stays the inspection\'s', () => {
+  it('a paper shown in an inspection settles the open issue it is about (4qd.11)', () => {
     const s: RunState = { ...newRun(lena), reaction: null, checkpoint: 0, slot: 1, screen: { kind: 'inspection', id: 's_supervisor' } };
     const after = choose(s, 'evidence');
     expect(after.used).toEqual(['hospitalNote']);
-    expect(after.verified?.purpose).toBeUndefined();
+    expect(after.verified?.purpose).toEqual({ desk: 'passport', flags: 0 });
   });
 });
 

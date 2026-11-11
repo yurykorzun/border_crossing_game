@@ -634,6 +634,10 @@ export const en: Record<string, string> = {
   // ── Secondary inspections
   // No inspection fits: everything an inspection could take is already given or on file.
   'insp.none': 'A supervisor turns every page of your file. There is nothing left to ask. She sends you back to the desk.',
+  // The open issue each inspection is about (Inspection.issue), on its known-facts line.
+  'insp.issue.medicine': 'Not verified yet: the prescription.',
+  'insp.issue.accommodation': 'Not verified yet: your address here.',
+  'insp.issue.purpose': 'Not verified yet: why you came back.',
   'insp.s_bag.q': 'Secondary room. They empty your suitcase onto a steel table.',
   'insp.s_bag.wait.label': 'Wait while they search',
   'insp.s_bag.wait.event': 'Full search',

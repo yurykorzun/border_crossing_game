@@ -215,6 +215,14 @@ export type InspectionKind = 'search' | 'confiscation' | 'connection' | 'verific
 export interface Inspection {
   id: string;
   kind: InspectionKind;
+  /**
+   * The open issue on the file this inspection is about: a point no desk has
+   * verified (pointVerified() in src/game/engine.ts). It is dealt only while that
+   * point is open, and the screen names it (knownLine()). An answer that shows a
+   * paper or has a contact confirm it settles the point; any other answer
+   * changes it instead (a fact goes on file, the medicine is held, the trip is longer).
+   */
+  issue: Topic;
   /** What a contact could confirm here. Without one, nobody can be named. */
   topic?: Topic;
   when?: Cond;

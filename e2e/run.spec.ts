@@ -230,6 +230,11 @@ test('the passport and customs cards each say what the officer already knows', a
   await expect(line).toHaveText(t(part.key, part.vars));
   await expect(line).not.toHaveText('');
   await noHorizontalScroll(page, 'known-facts line');
+  // A secondary inspection names the open issue it is about instead (4qd.11).
+  const inspection: RunState = { ...lenaRun(), reaction: null, screen: { kind: 'inspection', id: 's_bag' }, checkpoint: 1, slot: 1, inspections: 1, seen: ['p_purpose', 'p_host', 's_bag'] };
+  await openAt(page, inspection);
+  await expect(line).toHaveText('Not verified yet: the prescription.');
+  await noHorizontalScroll(page, 'inspection issue line');
   expect(errors).toEqual([]);
 });
 

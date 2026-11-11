@@ -825,7 +825,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
       const answers = i.approaches.filter((a) => a.kind !== 'withdraw');
       expect(answers.length, i.id).toBeGreaterThanOrEqual(2);
     }
-    expect(INSPECTIONS.filter((i) => i.approaches.some((a) => a.kind === 'withdraw')).map((i) => i.id)).toEqual(['s_medicine', 's_supervisor']);
+    expect(INSPECTIONS.filter((i) => i.approaches.some((a) => a.kind === 'withdraw')).map((i) => i.id)).toEqual(['s_supervisor', 's_medicine']);
   });
 
   it('with LAST_HOURS left, an inspection offers no wait, only a sacrifice', () => {
@@ -903,15 +903,12 @@ describe('before admission, scrutiny is a risk', () => {
     expect(lastAnswer(start + 1, 0, {}, mark).n.screen.kind).toBe('inspection');
   });
 
-  it('lets a paper on the bulletin topic, shown on the way, settle her on two draws of 3', () => {
+  it('lets a paper on the bulletin topic, shown on the way, settle her, with no draw (4qd.11)', () => {
     // The records bulletin warns about identity, and the deed covers it.
     const shown: Partial<RunState> = { loadout: ['deed', 'hotel', 'employerLetter'], used: ['deed'] };
-    for (const pick of [1, 2]) {
-      const pass = lastAnswer(1, pick, shown);
-      expect(pass.draws).toEqual([3]);
-      expect(pass.n.ending).toBe('homeInTime');
-    }
-    expect(lastAnswer(1, 0, shown).n.screen.kind).toBe('inspection');
+    for (const pick of [0, 1, 2]) expect(lastAnswer(1, pick, shown)).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
+    // Held but not shown, it settles nothing: what decides is the file.
+    expect(lastAnswer(1, 0, { loadout: ['deed', 'hotel', 'employerLetter'] }).n.screen.kind).toBe('inspection');
   });
 
   it('inspects on the bulletin topic when an inspection takes such a paper', () => {
