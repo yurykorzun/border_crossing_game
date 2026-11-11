@@ -5,7 +5,7 @@
 // A bot keeps its own random stream (botRng), separate from the run's, so the
 // random style never moves the dealer's picks.
 
-import { DISPROOFS, INCONSISTENCIES } from './content/encounters';
+import { CONTRADICTIONS, INCONSISTENCIES } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import { DEFAULT_LEVEL, LEVEL_IDS } from './content/levels';
 import { legalActions, newRun, noCost, options, step, travelOf } from './engine';
@@ -161,6 +161,9 @@ export function botAction(style: BotStyle, s: RunState, botRng: number, ignore?:
     return { action: legal[Math.floor(r.value * legal.length)], botRng: r.rng };
   }
   if (style === 'situational') return { action: best(legal, (a) => -lookahead(s, a)), botRng };
+  // In the passport queue the scoring styles walk up to the booth: turning back
+  // there is withdrawing, which they rank last everywhere (KIND_RANK, SCORE).
+  if (legal.some((a) => a.type === 'turnBack')) return { action: legal.find((a) => a.type !== 'turnBack')!, botRng };
   if (legal[0].type === 'waitAction') return { action: waitPick(style, legal), botRng };
   const open = new Set(legal.map((a) => (a.type === 'choose' ? a.approach : '')));
   const opts = options(s).filter((o) => !o.blocked && (!ignore || open.has(o.approach.id)));
@@ -210,7 +213,7 @@ export interface BotRun {
   caught: number;
 }
 
-const CHALLENGE_PAIRS: Record<string, readonly (readonly [ClaimId, FactId])[]> = { i_clarify: INCONSISTENCIES, i_contradiction: DISPROOFS };
+const CHALLENGE_PAIRS: Record<string, readonly (readonly [ClaimId, FactId])[]> = { i_clarify: INCONSISTENCIES, i_contradiction: CONTRADICTIONS };
 
 /**
  * Lie claims the challenge card on screen puts to the player: i_clarify for a

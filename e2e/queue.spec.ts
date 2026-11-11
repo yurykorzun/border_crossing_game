@@ -113,8 +113,9 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     await expect(light).toHaveAttribute('data-light', 'green');
     expect(await fill()).not.toBe(red);
 
-    // 5. The walk up to the officer. The checkpoint is named only now.
+    // 5. The walk up to the officer, or the one early point to turn back. The checkpoint is named only now.
     await expect(button).toHaveText('Approach the booth');
+    await expect(run.locator('.controls button.turn-back')).toHaveText(en['queue.0.turnBack']);
     await expect(run.getByText('In the queue')).toHaveCount(1);
     await expectFits(page, 'beat 4');
     await button.click();
@@ -148,6 +149,8 @@ test('a whole Mark run never shows Ilya, and each queue ends in its own button',
     const label = (await option.innerText()).trim();
     if (queueGo.includes(label)) {
       seenGo.push(label);
+      // Only the passport queue offers to leave it (canTurnBack() in src/game/engine.ts).
+      await expect(page.locator('main.run .controls button.turn-back'), label).toHaveCount(seenGo.length === 1 ? 1 : 0);
       // Every queue is a drawn scene, not a blank panel.
       await expect(page.locator('main.run .queue-scene svg.queue-art'), label).toBeVisible();
     }
@@ -157,5 +160,20 @@ test('a whole Mark run never shows Ilya, and each queue ends in its own button',
   // Every run reaches the first booth; later queues show only their own label.
   expect(seenGo[0]).toBe(en['queue.0.go']);
   seenGo.forEach((label, i) => expect(label).toBe(queueGo[i]));
+  expect(errors).toEqual([]);
+});
+
+test('leaving the passport queue ends the crossing, Turned back', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await startRun(page, 'lena');
+  const run = page.locator('main.run');
+  const button = run.locator('.controls button.primary');
+  while ((await button.innerText()).trim() !== en['queue.0.go']) await button.click();
+  await expectFits(page, 'the last passport queue beat');
+  await run.locator('.controls button.turn-back').click();
+  await expect(run.locator('.reaction')).toContainText(en['turnBack.reaction']);
+  await run.locator('.controls button.primary').click();
+  await expect(page.locator('.ending-card')).toContainText(en['ending.turnedBack.title']);
   expect(errors).toEqual([]);
 });

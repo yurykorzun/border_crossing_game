@@ -127,9 +127,9 @@ describe('English terms', () => {
   // Withdrawing is not a refusal: the passport comes back and nothing is stamped,
   // so the reaction must not mention a stamp (the ending is "You turned back").
   it('keeps stamps out of every withdraw reaction', () => {
-    const withdraw = Object.entries(en).filter(([k]) => /^insp\.[^.]+\.withdraw\.reaction$/.test(k));
+    const withdraw = Object.entries(en).filter(([k]) => /^insp\.[^.]+\.withdraw\.reaction$/.test(k) || k === 'turnBack.reaction');
     expect(withdraw.map(([k]) => k).sort()).toEqual(
-      ['insp.s_bag.withdraw.reaction', 'insp.s_connection.withdraw.reaction', 'insp.s_medicine.withdraw.reaction', 'insp.s_supervisor.withdraw.reaction'],
+      ['insp.s_medicine.withdraw.reaction', 'insp.s_supervisor.withdraw.reaction', 'turnBack.reaction'],
     );
     expect(withdraw.filter(([, v]) => /stamp/i.test(v))).toEqual([]);
   });

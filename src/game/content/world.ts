@@ -53,8 +53,13 @@ export const CHARACTERS: Record<CharacterId, Character> = {
  */
 export const CONTACTS: Record<ContactId, Contact> = {
   // The address, the visit and the prescription.
-  // With her address on file, officers visit her instead of phoning.
-  mother: { id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress' },
+  // With her address on file and something about her flagged at a desk (her address,
+  // her account against yours, the relative she named), officers visit her the
+  // following morning instead of phoning. The address on file alone sends nobody.
+  mother: {
+    id: 'mother', abilities: ['accommodation', 'purpose', 'medicine'], home: 'familyAddress',
+    flaggedBy: ['familyAddress', 'hostStatement', 'relativeNamed'],
+  },
   // He can host.
   cousin: { id: 'cousin', abilities: ['accommodation'] },
   // A job offer abroad. With his record on file and flagged, naming him lists him, not only questions him.
@@ -78,14 +83,18 @@ export const POLITICAL_FACTS: readonly FactId[] = ['secondPassport', 'brotherAbr
  * other claim is only said aloud, and My story shows the difference.
  */
 export const OFFICERS: Record<Checkpoint, Officer> = {
+  // The clerk and the security officer read a foreign salary as a question about
+  // loyalty. The employer is a fact once confirmed; that reading stays a suspicion.
   passport: {
     desk: 'passport', priority: 'paperwork', reactions: [],
     writesDown: ['familyVisit', 'shortTrip', 'hotelStay', 'stayingWithFamily'],
+    readings: ['employer'],
   },
-  customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'] },
+  customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'], readings: [] },
   interview: {
     desk: 'interview', priority: 'politics', reactions: [{ reveals: [...POLITICAL_FACTS], scrutiny: 1 }],
     writesDown: ['noOtherFamily', 'neverDonated', 'stayingWithFamily'],
+    readings: ['employer'],
   },
 };
 
@@ -125,6 +134,7 @@ export const FACT_TIERS: Record<FactId, OnFileTier> = {
   hostStatement: 'confirmed',
   bankNotice: 'confirmed',
   relativeContact: 'confirmed',
+  relativeNamed: 'confirmed',
   donationRecord: 'flagged',
   phoneRefused: 'flagged',
 };

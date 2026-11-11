@@ -197,9 +197,9 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   // Her address and the family go on file too; on a records day both reach the desks ahead.
   await expect(rows).toHaveText([
     'Your reason verified.', "On file at Customs: your mother's number.",
-    'Found in the old records: Your registered family address.', 'Confirmed and on file: Another relative of yours.',
+    'Found in the old records: Your registered family address.', 'Confirmed and on file: Your mother names another relative.',
     'Into the shared records for the desks ahead: Your registered family address.',
-    'Into the shared records for the desks ahead: Another relative of yours.',
+    'Into the shared records for the desks ahead: Your mother names another relative.',
   ]);
   // Separate elements: the beat holds no result text, and the rows sit under it.
   await expect(beat).not.toContainText('verified');
@@ -419,12 +419,12 @@ test('a Too late ending still lists the exposed mother, with no severity tag', a
 // the protected contact named and the mother's address on file (pfi.13, pfi.9).
 const endingCases: { name: string; run: () => RunState; worst: string }[] = [
   { name: 'homeInTime', worst: 'exposure.mother.call', run: () => ({ ...lenaRun(), time: 5, exposed: ['mother'], ending: 'homeInTime' }) },
-  { name: 'tooLate', worst: 'exposure.mother.home', run: () => ({ ...lenaRun(), time: 1, exposed: ['mother'], facts: { familyAddress: ['interview'] }, ending: 'tooLate' }) },
+  { name: 'tooLate', worst: 'exposure.mother.home', run: () => ({ ...lenaRun(), time: 1, exposed: ['mother'], facts: { familyAddress: ['interview'] }, flagged: ['familyAddress'], flaggedAt: { familyAddress: 'interview' }, ending: 'tooLate' }) },
   { name: 'missedBus', worst: 'ending.line.medicineLost', run: () => ({ ...lenaRun(), time: 0, medicine: false, ending: 'tooLate' }) },
   { name: 'turnedBack', worst: 'exposure.cousin.protected', run: () => ({ ...lenaRun(), time: 4, exposed: ['cousin'], withdrew: true, ending: 'turnedBack' }) },
   {
     name: 'homeAtCost, the worst case', worst: 'exposure.cousin.protected',
-    run: () => ({ ...lenaRun(), time: 5, medicine: false, exposed: ['mother', 'cousin'], facts: { familyAddress: ['interview'], employer: ['passport'], urgency: ['customs'], cashCount: ['customs'] }, ending: 'homeAtCost' }),
+    run: () => ({ ...lenaRun(), time: 5, medicine: false, exposed: ['mother', 'cousin'], facts: { familyAddress: ['interview'], employer: ['passport'], urgency: ['customs'], cashCount: ['customs'] }, flagged: ['familyAddress'], flaggedAt: { familyAddress: 'interview' }, ending: 'homeAtCost' }),
   },
 ];
 for (const c of endingCases) {
@@ -442,6 +442,8 @@ for (const c of endingCases) {
     await expect(worst).toHaveClass(/worst/);
     await expect(worst.locator('.cost-title')).toHaveText(en[`${c.worst}.title`]);
     await expect(worst.locator('.cost-line')).toHaveText(en[c.worst]);
+    // A person harmed always comes with the reason, before what it did to them.
+    if (c.worst.startsWith('exposure.')) await expect(worst.locator('.cost-reason')).not.toBeEmpty();
     // In reading order: title, kept line, worst heading and line, epilogue, then the run summary with hours left.
     const order = ['h1', '.kept', '.worst .cost-title', '.worst .cost-line', '.epilogue', '.run-summary'];
     const tops: number[] = [];

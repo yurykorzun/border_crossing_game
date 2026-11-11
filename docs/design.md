@@ -42,6 +42,8 @@ Endings (crossing result x mission result):
 3. Too late - admitted with under 2 hours left, so you miss the bus.
 4. Turned back - you withdrew.
 
+Turning back is offered at one set early point: the passport queue, after the clerk's "Next." and before the desk has asked or decided anything ("Leave the queue and go back", `canTurnBack()` in `src/game/engine.ts`). No desk card after it offers a way out. A later inspection offers "Ask to return" only where the situation allows it: the confiscation (they hold the medicine, so you can ask to leave with it) and the supervisor's check (she has not decided yet). The bag search runs to the end, and once the shuttle has gone there is no way back to ask for. `npm run autoplay` prints how often turnedBack is reached, and where.
+
 Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
 ## Run shape
@@ -87,7 +89,7 @@ Each card but the return ticket covers two topics, so a "wrong" pick is rarely u
 | Bulletin | Warning | Topic it points at | What it changes |
 |---|---|---|---|
 | Customs | "Medicines require supporting paperwork today." followed in the same bar by "Cash is checked at customs today." (`bulletin.customs.also`) | Medicine | Declaring the medicine costs 2 hours, and the lab has questions unless your father's condition is on file. "It's under the limit" gets counted anyway, and the total goes with your file |
-| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives is disproved because your mother is phoned |
+| Accommodation | "Hosts are being phoned today." | Accommodation | Customs asks where you will stay, even with no address on file, and nobody answers the host call. "I haven't decided yet" puts no booking on file and costs +1 scrutiny, and denying other relatives meets your mother's account on the phone, which conflicts with yours (testimony, not a disproof) |
 | Records | "IDs are checked against old records." | Identity | A scan or a passport check costs 2 hours and finds your past; facts reach every later desk at once. Denying other relatives is disproved because the old family register lists them |
 
 So the day decides which answer is safe: the same denial or evasion is free on one day and caught on another, and a memorised script cannot tell the days apart.
@@ -133,6 +135,22 @@ The structural parts are machine-checked by the content lint (`lintContent()` in
 
 The rest (anticipation, replay) needs a person: use the playtest script in `docs/playtest.md`.
 
+### Card checklist
+
+Every card, new or changed, must also answer these seven questions (from the review of 2026-11-10, 4qd.3):
+
+1. Why is this question asked now?
+2. How did the officer learn it?
+3. What does each answer claim?
+4. Does the evidence disprove the claim or only raise a question?
+5. Could the player anticipate the type of consequence?
+6. Does the reaction describe the chosen action?
+7. Does the callback preserve the original context?
+
+The rule behind questions 2 and 4: a check can establish facts, but does not prove the officer's interpretation. Confirming that Lena works for a foreign company puts her employer on file; it does not establish political involvement. So the engine keeps three things apart: what exists (the character's background), what the check found (a fact on file) and what the officer infers (a suspicion line, `Officer.readings` in `src/game/content/world.ts`). The card shows "Confirmed and on file: Your employer" under the reaction and "The officer questions your employer's connection." as a reaction line of its own, and no fact on file ever records the reading.
+
+Naming a contact causes harm only with a stated reason the player can see ("Ilya was already questioned about the fundraiser"). Each contact line in the ending carries one (`EndingLine.reason`, `consequences()` in `src/game/consequence.ts`), and his contact card says it before you name him. Recording an address never sends anyone by itself: officers visit your mother only when the run flagged something about her at a desk (her address, her account against yours, or the relative she named; `Contact.flaggedBy`), and the reason names it and the desk ("Customs flagged her address, and it is on the report."). Without that, she gets a phone call. The visit happens the following morning, so it agrees with every epilogue, where she is at the hospital that night.
+
 ## Answers no style picks
 
 `npm run walk` lists every answer the walk offers that no bot style with a purpose (honest, liar, cautious, situational) picks over every setup and seeds 1-10 (`neverPicked()` in `src/game/walk.ts`). The random style is left out, because over enough runs it picks everything once. An answer on that list never changes how the bots play, so it is cut, reworked, or named here with why it stays (`src/game/walk.test.ts` fails on one that is not).
@@ -148,7 +166,6 @@ Kept, because a person picks them even though the bots don't:
 - `f_host.evidence`, `f_lab.evidence` - a paper saved at the first card (the call, the declaration) can still settle the follow-up. Every bot spends its paper at the first card, so it never gets here holding one.
 - `f_donation.explain`, `f_photo.honest`, `i_brother.honest` - the truth for 1 scrutiny instead of 2-3 hours. The honest bot prefers the slower check and the cautious one avoids scrutiny, and the liar and situational bots rarely get these cards, because they don't unlock the phone or scan on a records day.
 - `f_donation.deny`, `f_photo.deny` - the lie with the evidence on the desk, which costs more than the truth. It stays because it's what a frightened person says, and paying for it teaches that lying against the file doesn't work.
-- `s_bag.withdraw` - turning back is one of the four endings, and every inspection offers it as the way out.
 - `s_supervisor.accept` - keeps your mother out of it, at the price of your father's condition on file. The bots spend the paper or call her, because she isn't the protected person.
 
 ## Screen rules
@@ -192,7 +209,15 @@ A claim is in one of three tiers:
 
 1. Unchallenged: nothing on file speaks against it. The claim stands and you saved the time, card or contact a true answer would have cost. "It's under the limit" is free while nobody has counted the cash.
 2. Inconsistency: a fact makes the claim look odd, but does not disprove it (gave no particular reason, just a short trip, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
-3. Disproof: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
+3. Contradiction: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
+
+Every reaction against you says which of three it is (`ReactionKind` in `src/game/types.ts`, `reactionOf()` in `src/game/engine.ts`). On the two challenge cards `catchKind()` in `src/game/content/encounters.ts` decides it, and any other answer that adds scrutiny names its own (`Approach.reacts`). A caught claim is named on the line under the reaction:
+
+- Suspicion: a question raised. An inconsistency, a fact the officer flags for their priority, or what the officer reads into a confirmed fact.
+- Conflicting testimony: someone said otherwise, which you can explain. Your mother's account on the phone (`TESTIMONY`: she says you stay with her, or she names another relative) only conflicts with yours. It is never a proven lie, and the review answer reads "Explain the difference".
+- Disproof: a document or record shows the claim false (the old family register, the cash count, a bank notice, a contact synced on the phone, the donation record on the desk when you deny it). A face in a photo from your phone only raises the question, so denying it is a suspicion.
+
+Only a disproof records the claim as disproved (`RunState.disproved`).
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).
 
@@ -204,7 +229,7 @@ Spot-checks (`spotCheck()` in `src/game/engine.ts`): before you leave each desk,
 
 Randomness picks the claim; the answer keeps the price it shows. After a secondary inspection the desks stop spot-checking. A challenge that applies at the interview is still always dealt there. Before admission a supervisor reads the file once: on a run with no inspection yet that can still make the bus, scrutiny above 0 sends you to a secondary inspection, and a paper on the bulletin's warned topic settles her on two draws of 3.
 
-No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things plus a way out.
+No free exits: every challenge and inspection answer costs something, and the walk checks it (`noFreeExits()` in `src/game/walk.ts`). An inspection shows two answers that cost different things, plus "Ask to return" where its situation allows it.
 
 The pairs live in `INCONSISTENCIES` and `DISPROOFS` in `src/game/content/encounters.ts`, and eval rule 3 and the walk both check a card is only dealt when its pair holds.
 

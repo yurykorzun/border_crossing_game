@@ -3,13 +3,13 @@
 
 import type {
   Action, Approach, BulletinId, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
-import { CHECKPOINTS } from './types';
+import { CHECKPOINTS, FACT_IDS } from './types';
 import {
   BEAT_COUNT, CHARACTERS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
-import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID } from './content/encounters';
+import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, ENCOUNTERS,ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
 import { has, own } from '../i18n';
 import { nextRandom, randomDealer } from './rng';
@@ -318,6 +318,48 @@ export function officerFlags(s: RunState, effects: Effect[]): FactId[] {
   return out;
 }
 
+/**
+ * The facts in `effects` this officer reads something into (Officer.readings) that
+ * come out here for the first time. Each goes on file as a fact; the reading is
+ * a separate suspicion line, because confirming a fact never proves what the
+ * officer infers from it. Only on a desk's own cards, like officerFlags().
+ */
+export function officerReadings(s: RunState, effects: Effect[]): FactId[] {
+  if (s.screen.kind !== 'encounter') return [];
+  const readings = OFFICERS[deskOf(s)].readings;
+  return [...new Set(effects.flatMap((e) => ('fact' in e && readings.includes(e.fact) && !knows(s, e.fact) ? [e.fact] : [])))];
+}
+
+/**
+ * Which of three the challenge card on screen is, and the claim it catches
+ * (catchKind()). Undefined on any other card.
+ */
+export function challengeOf(s: RunState): { claim: ClaimId; fact: FactId; kind: ReactionKind } | undefined {
+  if (s.screen.kind !== 'encounter') return undefined;
+  const id = s.screen.id as (typeof CHALLENGES)[number];
+  if (!CHALLENGES.includes(id)) return undefined;
+  const c = caught(s, id);
+  return c && { claim: c.claim, fact: c.fact, kind: catchKind(id, c.fact) };
+}
+
+/**
+ * Which of three the reaction to this answer is, and on a disproof the claim it
+ * catches and the record that does. A challenge card says it for every answer
+ * (challengeOf()); anywhere else an answer that adds scrutiny says it itself
+ * (Approach.reacts). Undefined for an answer nobody holds against you.
+ */
+export function reactionOf(s: RunState, opt: Option): { kind: ReactionKind; claim?: ClaimId; fact?: FactId } | undefined {
+  const c = challengeOf(s);
+  if (c) return c;
+  const kind = opt.approach.reacts;
+  const held = opt.effects.find((e): e is Extract<Effect, { scrutiny: number }> => 'scrutiny' in e && e.scrutiny > 0);
+  if (!kind || !held) return undefined;
+  if (kind !== 'disproof') return { kind };
+  const said = opt.effects.find((e): e is Extract<Effect, { claim: ClaimId }> => 'claim' in e);
+  const fact = (FACT_IDS as readonly string[]).includes(held.reason) ? (held.reason as FactId) : undefined;
+  return { kind, ...(said ? { claim: said.claim } : {}), ...(fact ? { fact } : {}) };
+}
+
 /** The scrutiny the officer here adds for a flagged fact, with the fact as the reason. */
 const officerScrutiny = (s: RunState) => (f: FactId): Effect => {
   const r = OFFICERS[deskOf(s)].reactions.find((x) => x.reveals.includes(f) && check(x.when, s));
@@ -409,7 +451,10 @@ function apply(s: RunState, effects: Effect[]): RunState {
       // A fact that is the reason scrutiny rises reads as flagged from now on (factTier()).
       const reason = e.reason in FACT_TIERS ? (e.reason as FactId) : undefined;
       const flag = e.scrutiny > 0 && reason && !(n.flagged ?? []).includes(reason);
-      n = { ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)), ...(flag ? { flagged: [...(n.flagged ?? []), reason] } : {}) };
+      n = {
+        ...n, scrutiny: Math.min(MAX_SCRUTINY, Math.max(0, n.scrutiny + e.scrutiny)),
+        ...(flag ? { flagged: [...(n.flagged ?? []), reason], flaggedAt: { ...n.flaggedAt, [reason]: deskOf(n) } } : {}),
+      };
     }
     else if ('fact' in e) n = { ...n, facts: teach(n.facts, e.fact, desksLearning(n.bulletin, deskOf(n))) };
     else if ('send' in e) {
@@ -800,6 +845,8 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const topic = topicOf(card);
   // The statements this card checks are settled now, whatever the answer.
   const due = callInsDue(s, opt.approach, topic);
+  const reacted = reactionOf(s, opt);
+  const readings = officerReadings(s, opt.effects);
   const decided = s.screen.kind === 'encounter' && isCalm(s.screen.id) ? 0 : 1;
   let n: RunState = { ...s, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
@@ -809,9 +856,14 @@ function choose(s: RunState, approachId: string, dealer: Dealer): RunState {
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
-  n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars }]);
+  // A reaction against you says which of three it is, and only a disproof records the claim as disproved.
+  n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars, ...(reacted ? { kind: reacted.kind } : {}) }]);
+  if (reacted?.kind === 'disproof' && reacted.claim && !(n.disproved ?? []).includes(reacted.claim))
+    n = { ...n, disproved: [...(n.disproved ?? []), reacted.claim] };
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
-  for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f } }]);
+  for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f }, kind: 'suspicion' }]);
+  // What the officer reads into a confirmed fact is their suspicion, a line of its own.
+  for (const f of readings) n = say(n, [{ key: `reading.${f}.${deskOf(s)}`, kind: 'suspicion' }]);
   // The call-in hour is a real cost too, so the reaction names whose statement it checks.
   for (const c of due) n = say(n, [{ key: 'calledIn.reaction', vars: { contact: c } }]);
   // The weakness hour is a real cost, so the reaction says what it is spent on.
@@ -845,12 +897,28 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
       if (s.reaction) return { ...s, reaction: null };
       if (s.screen.kind === 'between') return deal(s, dealer);
       return s;
+    case 'turnBack':
+      if (!canTurnBack(s)) return s;
+      // You step out of the passport queue before any desk has asked you anything.
+      return say(finish({ ...s, withdrew: true, decisions: s.decisions + 1 }), [{ key: 'turnBack.reaction' }]);
     case 'finish':
       if (!canFinish(s)) return s;
       // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
       return say(finish({ ...s, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
   }
 }
+
+/**
+ * The one early point where you can still turn back: the queue before the
+ * passport desk, before that desk has asked or decided anything. After it, no
+ * desk card offers a way out, and an inspection offers "Ask to return" only
+ * where its situation allows (the withdraw answers in INSPECTIONS).
+ */
+export const TURN_BACK_QUEUE = 0;
+
+/** Whether turning back is open now: in the passport queue, with nothing else to read first. */
+export const canTurnBack = (s: RunState): boolean =>
+  !s.ending && !s.reaction && s.screen.kind === 'between' && s.screen.next === TURN_BACK_QUEUE;
 
 /** The finish-quickly option shows on a card once the bus is out of reach. */
 export const canFinish = (s: RunState): boolean =>
@@ -861,7 +929,7 @@ export function legalActions(s: RunState): Action[] {
   if (s.ending) return [];
   if (s.reaction) return [{ type: 'ack' }];
   const sc: Screen = s.screen;
-  if (sc.kind === 'between') return [{ type: 'ack' }];
+  if (sc.kind === 'between') return canTurnBack(s) ? [{ type: 'ack' }, { type: 'turnBack' }] : [{ type: 'ack' }];
   if (sc.kind === 'wait') {
     if (sc.shown < sc.beats.length) return [{ type: 'beat' }];
     return waitActions(s).filter((w) => !w.blocked).map((w) => ({ type: 'waitAction', action: w.action }));

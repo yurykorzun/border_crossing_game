@@ -203,7 +203,7 @@ describe('the last bus, on the answer line', () => {
     const parts = line(at('s_bag', 8), 'wait');
     expect(parts.map(text)).toContain('Full search: 3 hours');
     expect(parts.some((p) => p.kind === 'miss' || p.key === 'ui.line.need')).toBe(false);
-    expect(line(at('s_bag', 3), 'withdraw').some((p) => p.kind === 'miss')).toBe(false);
+    expect(line(at('s_medicine', 3), 'withdraw').some((p) => p.kind === 'miss')).toBe(false);
   });
 });
 

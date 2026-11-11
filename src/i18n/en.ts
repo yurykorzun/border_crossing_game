@@ -112,6 +112,10 @@ export const en: Record<string, string> = {
   'change.medicine': 'The medicine is gone.',
   'change.travel.one': 'You now need {n} hour to reach the station.',
   'change.travel.other': 'You now need {n} hours to reach the station.',
+  // A challenge answered says which of three it is (catchKind() in src/game/content/encounters.ts).
+  'change.claim.suspicion': 'A question, not a disproof: "{claim}".',
+  'change.claim.testimony': 'Two accounts differ, nothing proven: "{claim}".',
+  'change.claim.disproof': 'Disproved by the record: "{claim}".',
   'change.onFile.recorded': 'Found in the old records: {fact}.',
   'change.onFile.confirmed': 'Confirmed and on file: {fact}.',
   'change.onFile.flagged': 'Flagged on your file: {fact}.',
@@ -194,7 +198,7 @@ export const en: Record<string, string> = {
   'contact.cousin': 'your cousin Ilya',
   'contact.brother': 'your brother Tom',
   'contact.mother.note': 'At the hospital most of the day.',
-  'contact.cousin.note': 'Your mother asked you not to mention him.',
+  'contact.cousin.note': 'Already questioned once about the fundraiser. Your mother asked you not to mention him.',
   'contact.brother.note': 'Lives across the border. Calls every Sunday.',
   // What each contact can confirm (CONTACTS in src/game/content/world.ts): one line in My story,
   // and the possible gain on an answer that names them, after the guaranteed cost.
@@ -282,6 +286,7 @@ export const en: Record<string, string> = {
   'fact.hostStatement': 'Your mother says you stay with her',
   'fact.bankNotice': 'A bank notice for your donation',
   'fact.relativeContact': 'Another relative of yours',
+  'fact.relativeNamed': 'Your mother names another relative',
   // A claim with no other cost, and a fact an answer gives away, on the line under it.
   'claim.familyVisit.recorded': 'Recorded as your reason for coming back',
   'claim.shortTrip.recorded': 'Recorded as your reason for coming back',
@@ -308,6 +313,7 @@ export const en: Record<string, string> = {
   'fact.hostStatement.reveal': 'Your mother says where you stay',
   'fact.bankNotice.reveal': 'Reveals a bank notice',
   'fact.relativeContact.reveal': 'Reveals another relative',
+  'fact.relativeNamed.reveal': 'Your mother names a relative',
 
   // ── Bulletins: a warning that points at a topic (BULLETIN_TOPICS), never at a document
   'bulletin.customs': 'Medicines require supporting paperwork today.',
@@ -339,6 +345,9 @@ export const en: Record<string, string> = {
   'officer.interview.priority': "This officer cares who you know and where you've been, not your paperwork.",
   // The security officer's reaction to a political fact coming out at the interview.
   'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
+  // What an officer reads into a confirmed fact (Officer.readings): a suspicion, never on file.
+  'reading.employer.passport': "The clerk questions your employer's connection.",
+  'reading.employer.interview': "The officer questions your employer's connection.",
   // Scene names for screen readers (src/ui/art): never shown, so not counted as read.
   'scene.passport': 'The passport booth: the clerk behind the glass',
   'scene.customs': 'The customs inspection table',
@@ -361,6 +370,9 @@ export const en: Record<string, string> = {
   'msg.0.2': 'The passenger ahead says: "Six times this year. Never a problem. Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
+  // The one early point to turn back (canTurnBack() in src/game/engine.ts): no desk has asked anything yet.
+  'queue.0.turnBack': 'Leave the queue and go back',
+  'turnBack.reaction': 'You step out of the line. Nobody stops you. The passport stays in your coat.',
   'msg.1.0': "Hope your dad's OK. Any chance you can make Monday's call?",
   'msg.1.1': 'The woman ahead writes a phone number on her wrist.',
   'msg.1.2': '"My lawyer," she says, and pulls her sleeve down.',
@@ -531,6 +543,13 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.review.label': 'Ask for a formal review',
   'enc.i_contradiction.review.event': 'Formal review',
   'enc.i_contradiction.review.reaction': 'A form, then another form, then a review of both.',
+  // Your mother's account against yours is testimony, not a record, so it can be explained (TESTIMONY).
+  'enc.i_contradiction.hotelStay.hostStatement.apologise.reaction': "The officer writes that your mother's account and yours differ.",
+  'enc.i_contradiction.hotelStay.hostStatement.review.label': 'Explain the difference',
+  'enc.i_contradiction.hotelStay.hostStatement.review.reaction': 'You explain. Both accounts go to a formal review.',
+  'enc.i_contradiction.noOtherFamily.relativeNamed.apologise.reaction': "The officer writes that your mother's account and yours differ.",
+  'enc.i_contradiction.noOtherFamily.relativeNamed.review.label': 'Explain the difference',
+  'enc.i_contradiction.noOtherFamily.relativeNamed.review.reaction': 'You explain. Both accounts go to a formal review.',
 
   'enc.i_employer.q': '"Your employer is registered abroad. What exactly do you do for them?"',
   'enc.i_employer.perk.label': 'Explain your job plainly',
@@ -599,8 +618,6 @@ export const en: Record<string, string> = {
   // Why her word helps here: the search stops once the prescription checks out.
   'insp.s_bag.contact.vouch': 'May verify the prescription, ending the search',
   'insp.s_bag.contact.reaction': 'They make the call, and the search stops early.',
-  'insp.s_bag.withdraw.label': 'Withdraw your entry request',
-  'insp.s_bag.withdraw.reaction': 'They pack your things back into the suitcase. The officer hands back your passport.',
 
   'insp.s_medicine.q': 'They are holding the medicine for testing.',
   'insp.s_medicine.surrender.label': 'Leave without it',
@@ -608,8 +625,8 @@ export const en: Record<string, string> = {
   'insp.s_medicine.wait.label': 'Wait to get it back',
   'insp.s_medicine.wait.event': 'Shift change at the lab',
   'insp.s_medicine.wait.reaction': 'They test the medicine, then the bag comes back.',
-  'insp.s_medicine.withdraw.label': 'Withdraw your entry request',
-  'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport.',
+  'insp.s_medicine.withdraw.label': 'Ask to return with the medicine',
+  'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport. An officer walks you to departures.',
 
   'insp.s_connection.q': 'While they keep you here, the shuttle to the station leaves without you. The next one is an hour later.',
   'insp.s_connection.later.label': 'Take the later shuttle',
@@ -620,8 +637,6 @@ export const en: Record<string, string> = {
   'insp.s_connection.transfer.reaction': 'The driver asks where you are going. The officer writes down the address.',
   'insp.s_connection.evidence.label': 'Show {cardThe} for the transfer',
   'insp.s_connection.evidence.reaction': 'The officer clips it to the transfer form and keeps it.',
-  'insp.s_connection.withdraw.label': 'Withdraw your entry request',
-  'insp.s_connection.withdraw.reaction': 'The officer hands back your passport and points you to departures.',
 
   'insp.s_supervisor.q': 'A supervisor opens your file. "Why are you here?"',
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
@@ -632,7 +647,7 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.contact.label': 'Ask her to call {contact}',
   'insp.s_supervisor.contact.event': 'Phone call',
   'insp.s_supervisor.contact.reaction': 'She calls {contact}, who tells her about your father.',
-  'insp.s_supervisor.withdraw.label': 'Withdraw your entry request',
+  'insp.s_supervisor.withdraw.label': 'Ask to return before she decides',
   'insp.s_supervisor.withdraw.reaction': 'She closes your file and hands back your passport.',
 
   // ── Checks and the waiting room
@@ -727,8 +742,21 @@ export const en: Record<string, string> = {
   // What exposing each person costs them, worst for the one you were asked to protect.
   'exposure.mother.call.title': 'The border calls your mother',
   'exposure.mother.call': "She has to leave your father's bedside to answer questions.",
+  // Each contact line's stated reason (EndingLine.reason): why naming them does this.
+  'exposure.mother.call.reason': 'Her number is on your file.',
+  // A visit needs something about her flagged at a desk, named with the desk (consequences()).
+  'exposure.mother.home.reason.familyAddress': '{desk} flagged her address, and it is on the report.',
+  'exposure.mother.home.reason.hostStatement': '{desk} flagged that her account differs from yours. Her address is on the report.',
+  'exposure.mother.home.reason.relativeNamed': '{desk} flagged the relative she named. Her address is on the report.',
+  // The same, for a save from before the desk was kept.
+  'exposure.mother.home.reason.familyAddress.anywhere': 'A desk flagged her address, and it is on the report.',
+  'exposure.mother.home.reason.hostStatement.anywhere': 'A desk flagged that her account differs from yours. Her address is on the report.',
+  'exposure.mother.home.reason.relativeNamed.anywhere': 'A desk flagged the relative she named. Her address is on the report.',
+  'exposure.cousin.protected.reason': 'Ilya was already questioned about the fundraiser.',
+  'exposure.brother.protected.reason': 'He lives in a country at war with this one.',
+  'exposure.brother.protected.record.reason': 'Your file flags your brother across the border.',
   'exposure.mother.home.title': "Officers go to your mother's address",
-  'exposure.mother.home': 'She has to leave the hospital to give a statement.',
+  'exposure.mother.home': "The following morning, officers come to her address and ask her to come in. She has to leave your father's bedside to give a statement.",
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',
   'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out of it.',
   // Tom's line says why: with his record already flagged on your file he is listed, else he is only questioned.

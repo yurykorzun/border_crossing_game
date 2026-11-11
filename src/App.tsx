@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, t, tn } from './i18n';
-import { answerKey, canFinish, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
+import { answerKey, canFinish, canTurnBack, deskIntro, endingFor, endingText, newRun, options, shownCheckpoint, waitActions } from './game/engine';
 import { playStep } from './game/play';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
@@ -483,7 +483,8 @@ function Run({ s, dispatch, data, setData, onRestart }: {
       {queue !== null ? (
         // Keyed by run and checkpoint, so each queue starts again from its first beat.
         <Queue key={queueAt} next={queue} character={s.character} still={data.settings.reduceMotion}
-          shown={queueShown} setShown={(n) => setBeats({ at: queueAt, n })} onDone={() => dispatch({ type: 'ack' })} />
+          shown={queueShown} setShown={(n) => setBeats({ at: queueAt, n })} onDone={() => dispatch({ type: 'ack' })}
+          onTurnBack={canTurnBack(s) ? () => dispatch({ type: 'turnBack' }) : undefined} />
       ) : (
         <>
           <div className={`scene scene-${CHECKPOINTS[sceneAt]} ${data.settings.reduceMotion ? 'still' : ''}`}>
@@ -560,9 +561,12 @@ function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void 
  * message with its sender, or what is said or seen. Earlier messages stay in My story.
  * The strip already says "In the queue", so the scene does not.
  * The last beat (the clerk's "Next.") swaps Continue for the walk up to the officer, which is the engine's ack.
+ * In the passport queue the last beat also offers to leave the queue (onTurnBack), the one
+ * early point to turn back before any desk decides (canTurnBack() in src/game/engine.ts).
  */
-function Queue({ next, character, still, shown, setShown, onDone }: {
+function Queue({ next, character, still, shown, setShown, onDone, onTurnBack }: {
   next: number; character: CharacterId; still: boolean; shown: number; setShown: (n: number) => void; onDone: () => void;
+  onTurnBack?: () => void;
 }) {
   const beats = queueBeats(next, character);
   const done = shown >= beats.length;
@@ -590,6 +594,7 @@ function Queue({ next, character, still, shown, setShown, onDone }: {
         <button className="primary" autoFocus onClick={done ? onDone : advance}>
           {done ? t(`queue.${next}.go`) : t('ui.continue')}
         </button>
+        {done && onTurnBack && <button className="turn-back" onClick={onTurnBack}>{t(`queue.${next}.turnBack`)}</button>}
       </div>
     </>
   );
@@ -750,6 +755,8 @@ function Ending({ s, questions, onRestart }: { s: RunState; questions: string[];
             {cost.map((l, i) => (
               <li key={i} className={`cost ${l.kind}${i === 0 ? ' worst' : ''}`}>
                 <h2 className="cost-title">{t(`${l.key}.title`, l.vars)}</h2>
+                {/* Why naming them did this (EndingLine.reason), before what it did. */}
+                {l.reason && <p className="cost-reason">{t(l.reason, l.vars)}</p>}
                 <p className="cost-line">{t(l.key, l.vars)}</p>
               </li>
             ))}

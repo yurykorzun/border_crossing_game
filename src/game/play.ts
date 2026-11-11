@@ -2,20 +2,21 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { deskOf, factIds, factTier, legalActions, newRun, options, step, travelOf } from './engine';
+import { deskOf, factIds, factTier, legalActions, newRun, options, reactionOf, step, travelOf } from './engine';
+import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, OnFileTier, RunState, Topic } from './types';
+import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, OnFileTier, ReactionKind, RunState, Topic } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 13;
+export const CONTENT_VERSION = 15;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
@@ -32,6 +33,13 @@ export type GameEvent =
   /** A desk ahead learned the fact: through the shared records (records bulletin) or a call or printout from this desk. */
   | { type: 'factSent'; id: FactId; desks: Checkpoint[]; via: 'records' | 'desk' }
   | { type: 'claimRecorded'; id: ClaimId }
+  /**
+   * A challenge card was answered, or a claim denied against a record on the desk
+   * (reactionOf() in src/game/engine.ts): which of three it is, the claim it
+   * caught and, as `said`, that claim's id in the traveler's own wording
+   * (`noOtherFamily.mark`). Only a disproof records the claim as disproved.
+   */
+  | { type: 'claimChallenged'; claim: ClaimId; said: string; fact: FactId; kind: ReactionKind }
   | { type: 'medicineLost' }
   /** The trip to the bus now takes `hours` (a missed connection). */
   | { type: 'travelChanged'; hours: number }
@@ -89,6 +97,14 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   if (n.time < s.time) ev.push({ type: 'timeSpent', hours: s.time - n.time });
   if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
   for (const id of added(s.claims, n.claims)) ev.push({ type: 'claimRecorded', id });
+  // A challenge card, or a disproof answered anywhere else (f_donation's denial): the claim it catches.
+  const opt = action.type === 'choose' ? options(s).find((o) => o.approach.id === action.approach) : undefined;
+  const reacted = opt && reactionOf(s, opt);
+  const challenge = reacted?.claim && reacted.fact ? { kind: reacted.kind, claim: reacted.claim, fact: reacted.fact } : undefined;
+  if (challenge) {
+    const said = own(`claim.${challenge.claim}`, s.character).slice('claim.'.length);
+    ev.push({ type: 'claimChallenged', ...challenge, said });
+  }
   for (const id of added(factIds(s), factIds(n))) ev.push({ type: 'factRecorded', id, tier: factTier(n, id) });
   const here = deskOf(s);
   for (const id of factIds(n)) {

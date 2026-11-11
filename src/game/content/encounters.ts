@@ -12,13 +12,15 @@
 // official knows"). They travel on only through a channel: the records
 // bulletin, or a `send` effect here (a call between desks, a printout after a check).
 
-import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspection } from '../types';
+import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspection, ReactionKind } from '../types';
 
 /**
  * Three tiers for a claim (docs/design.md "Truth, claims, official knowledge").
  * Unchallenged: nothing on file speaks against it, so it stands for free.
  * Inconsistency: a fact on file makes it look odd. Cheap to clarify (i_clarify).
- * Disproof: a fact on file says the opposite. Expensive (i_contradiction).
+ * Contradiction: a fact on file says the opposite. Expensive (i_contradiction).
+ * A contradiction is a disproof when a record or a document says it, and
+ * conflicting testimony when a person does (TESTIMONY, catchKind()).
  */
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
   // "No reason, a short trip" answers "Why now?" with no reason, so a
@@ -33,16 +35,25 @@ export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
 /** What the clarify answer says. Once you have said it, a spot-check finds an inconsistency explained (spotCheckOf()). */
 export const CLARIFIED_BY: ClaimId = 'familyVisit';
 /** In this order, which also picks the one an apology is charged for (firstCaught). */
-export const DISPROOFS: readonly [ClaimId, FactId][] = [
+export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
   ['noOtherFamily', 'brotherAbroad'],
   ['cashUnderLimit', 'cashCount'],
   // The host call: your mother says you stay with her.
   ['hotelStay', 'hostStatement'],
   // The phone search: a bank notice for the donation.
   ['neverDonated', 'bankNotice'],
-  // A relative synced on the phone, or named by your mother on the host call.
+  // A relative synced on the phone, or listed in the old family register.
   ['noOtherFamily', 'relativeContact'],
+  // Your mother names another relative, on the host call or when customs phones her.
+  ['noOtherFamily', 'relativeNamed'],
 ];
+
+/**
+ * Facts that are someone's account, not a record: what your mother told an
+ * officer on the phone. A claim they speak against is conflicting testimony,
+ * which you can explain, never a proven lie.
+ */
+export const TESTIMONY: readonly FactId[] = ['hostStatement', 'relativeNamed'];
 
 /**
  * The cards that challenge a claim, most expensive first. One that applies is
@@ -53,9 +64,21 @@ export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
 
 /** The claim and fact pairs each challenge card puts to you. */
 export const CHALLENGE_PAIRS: Record<(typeof CHALLENGES)[number], readonly [ClaimId, FactId][]> = {
-  i_contradiction: DISPROOFS,
+  i_contradiction: CONTRADICTIONS,
   i_clarify: INCONSISTENCIES,
 };
+
+/**
+ * Which of three a challenge is (docs/design.md "Truth, claims, official
+ * knowledge"). suspicion: an inconsistency, a question raised. testimony:
+ * someone said otherwise, which you can explain. disproof: a document or
+ * record shows the claim false. Only a disproof records the claim as disproved
+ * (RunState.disproved).
+ */
+export function catchKind(card: (typeof CHALLENGES)[number], fact: FactId): ReactionKind {
+  if (card === 'i_clarify') return 'suspicion';
+  return TESTIMONY.includes(fact) ? 'testimony' : 'disproof';
+}
 
 const anyPair =(pairs: readonly [ClaimId, FactId][]): Cond => ({ any: pairs.map(([c, f]) => ({ claims: [c], facts: [f] })) });
 
@@ -122,7 +145,7 @@ export const ENCOUNTERS: Encounter[] = [
     when: { background: 'secondPassport' },
     approaches: [
       // Honest, and the second passport goes on file: that entry is the reason for the scrutiny.
-      { id: 'both', kind: 'say', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
+      { id: 'both', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
       { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
       { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
     ],
@@ -135,7 +158,9 @@ export const ENCOUNTERS: Encounter[] = [
     when: { background: 'foreignEmployer', claims: ['shortTrip'] },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
-      { id: 'check', kind: 'verify', effects: [{ time: -1 }] },
+      // The register confirms who pays you. That is a fact; what the clerk reads into a
+      // foreign salary stays her suspicion (Officer.readings), never a fact on file.
+      { id: 'check', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }] },
     ],
   },
 
@@ -182,7 +207,7 @@ export const ENCOUNTERS: Encounter[] = [
       // She confirms the visit and names the rest of the family, which goes with your file.
       {
         id: 'mother', kind: 'contact', contacts: ['mother'],
-        effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { fact: 'relativeContact' }, { send: 'printout', facts: ['familyAddress', 'relativeContact'] }],
+        effects: [{ claim: 'familyVisit' }, { fact: 'familyAddress' }, { fact: 'relativeNamed' }, { send: 'printout', facts: ['familyAddress', 'relativeNamed'] }],
       },
     ],
   },
@@ -212,7 +237,7 @@ export const ENCOUNTERS: Encounter[] = [
           { fact: 'relativeContact' },
         ],
       },
-      { id: 'refuse', kind: 'say', effects: [{ fact: 'phoneRefused' }, { scrutiny: 1, reason: 'phoneRefused' }, { time: -1 }] },
+      { id: 'refuse', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'phoneRefused' }, { scrutiny: 1, reason: 'phoneRefused' }, { time: -1 }] },
     ],
   },
 
@@ -227,7 +252,7 @@ export const ENCOUNTERS: Encounter[] = [
       // A short trip with no decided place to stay has no booking to show.
       // On a day hosts are phoned, having no host to name is itself flagged.
       {
-        id: 'undecided', kind: 'say', requires: { noFacts: ['familyAddress'] },
+        id: 'undecided', kind: 'say', reacts: 'suspicion', requires: { noFacts: ['familyAddress'] },
         effects: [
           { fact: 'noBooking', when: { claims: ['shortTrip'] } },
           { fact: 'noBooking', when: { bulletin: 'accommodation' } },
@@ -235,7 +260,7 @@ export const ENCOUNTERS: Encounter[] = [
         ],
       },
       {
-        id: 'undecidedOnFile', kind: 'say', requires: { facts: ['familyAddress'] },
+        id: 'undecidedOnFile', kind: 'say', reacts: 'suspicion', requires: { facts: ['familyAddress'] },
         effects: [{ scrutiny: 1, reason: 'familyAddress' }, { fact: 'noBooking', when: { claims: ['shortTrip'] } }],
       },
     ],
@@ -250,10 +275,15 @@ export const ENCOUNTERS: Encounter[] = [
         effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
       },
       // The day decides whether a denial holds: the old register lists relatives on a
-      // records day, and your mother is phoned on a hosts day. Either way it is disproved.
+      // records day, which disproves it, and your mother is phoned on a hosts day, whose
+      // account only conflicts with yours (TESTIMONY).
       {
         id: 'deny', kind: 'say',
-        effects: [{ claim: 'noOtherFamily' }, { fact: 'relativeContact', when: { any: [{ bulletin: 'records' }, { bulletin: 'accommodation' }] } }],
+        effects: [
+          { claim: 'noOtherFamily' },
+          { fact: 'relativeContact', when: { bulletin: 'records' } },
+          { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
+        ],
       },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
     ],
@@ -283,9 +313,9 @@ export const ENCOUNTERS: Encounter[] = [
   {
     // Disproof: something on file says the opposite of a claim. Expensive.
     id: 'i_contradiction', checkpoint: 'interview', kind: 'related', priority: 4, topic: 'history',
-    when: anyPair(DISPROOFS),
+    when: anyPair(CONTRADICTIONS),
     approaches: [
-      { id: 'apologise', kind: 'say', effects: firstCaught(DISPROOFS, 2) },
+      { id: 'apologise', kind: 'say', effects: firstCaught(CONTRADICTIONS, 2) },
       { id: 'review', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
@@ -296,7 +326,8 @@ export const ENCOUNTERS: Encounter[] = [
     // on file, and Lena's plain answer settles this for free.
     approaches: [
       { id: 'perk', kind: 'perk', effects: [] },
-      { id: 'contract', kind: 'verify', effects: [{ time: -2 }] },
+      // The contract confirms the employer, and only that (Officer.readings).
+      { id: 'contract', kind: 'verify', effects: [{ time: -2 }, { fact: 'employer' }] },
       { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],
   },
@@ -304,7 +335,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'i_brother', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'history',
     when: { facts: ['brotherAbroad'] },
     approaches: [
-      { id: 'honest', kind: 'say', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
+      { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
       { id: 'calls', kind: 'verify', effects: [{ time: -2 }, { fact: 'brotherAbroad' }] },
     ],
   },
@@ -329,9 +360,9 @@ export const ENCOUNTERS: Encounter[] = [
   {
     id: 'f_donation', checkpoint: 'followup', kind: 'followup', topic: 'history',
     approaches: [
-      { id: 'explain', kind: 'say', effects: [{ fact: 'donationRecord' }, { scrutiny: 1, reason: 'donationRecord' }] },
+      { id: 'explain', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'donationRecord' }, { scrutiny: 1, reason: 'donationRecord' }] },
       // The record is on the desk, so denying it is a disproof.
-      { id: 'deny', kind: 'say', effects: [{ claim: 'neverDonated' }, { scrutiny: 2, reason: 'donationRecord' }] },
+      { id: 'deny', kind: 'say', reacts: 'disproof', effects: [{ claim: 'neverDonated' }, { scrutiny: 2, reason: 'donationRecord' }] },
       { id: 'lawyer', kind: 'verify', effects: [{ time: -3 }] },
     ],
   },
@@ -339,8 +370,9 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'f_photo', checkpoint: 'followup', kind: 'followup', topic: 'history',
     approaches: [
       // The photo came from the phone search, which is the only thing that deals this card.
-      { id: 'honest', kind: 'say', effects: [{ scrutiny: 1, reason: 'phoneSearch' }] },
-      { id: 'deny', kind: 'say', effects: [{ scrutiny: 2, reason: 'phoneSearch' }] },
+      // A face in a photo raises the question but is not a record, so even a denial is a suspicion.
+      { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 1, reason: 'phoneSearch' }] },
+      { id: 'deny', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 2, reason: 'phoneSearch' }] },
       { id: 'law', kind: 'verify', effects: [{ time: -2 }] },
     ],
   },
@@ -362,8 +394,8 @@ export const CHECKS: Record<CheckId, Check> = {
         result: 'clear',
         effects: [
           { fact: 'hostStatement' },
-          { fact: 'relativeContact' },
-          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeContact'] },
+          { fact: 'relativeNamed' },
+          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeNamed'] },
         ],
       },
     ],
@@ -398,8 +430,13 @@ export const CHECKS: Record<CheckId, Check> = {
 /**
  * Drawn when scrutiny reaches 3. Each one asks you to pay with something:
  * time, belongings (the medicine or a document), a disclosure, or a person.
- * Every one shows two answers that cost different things, plus a way out, and
- * never more, so a card keeps to three answers on screen. Where a card has more
+ * Every one shows two answers that cost different things, and never more than
+ * three answers on screen. The third, "Ask to return", is there only where the
+ * situation allows it: the medicine is held, so leaving with it is a real
+ * request, or the supervisor has not decided yet. A bag search runs to the end,
+ * and once the shuttle has gone there is no way back to ask for. Turning back
+ * before any desk decides is the passport queue's (canTurnBack() in
+ * src/game/engine.ts). Where a card has more
  * than two ways to pay, the conditions pick which two you see. Apart from the
  * bag search, each changes the problem instead of only costing hours
  * (InspectionKind, checked in checkState). With LAST_HOURS left or fewer any
@@ -427,7 +464,6 @@ export const INSPECTIONS: Inspection[] = [
         requires: { not: { contactFree: ['mother'] }, any: [{ noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
         effects: [{ fact: 'cashCount' }, { fact: 'fatherCondition' }, { send: 'printout', facts: ['cashCount', 'fatherCondition'] }],
       },
-      { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {
@@ -461,7 +497,6 @@ export const INSPECTIONS: Inspection[] = [
         requires: { not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] }, noFacts: ['familyAddress'] },
         effects: [{ fact: 'familyAddress' }],
       },
-      { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
   {

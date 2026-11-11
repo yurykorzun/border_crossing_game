@@ -17,7 +17,7 @@ import { load, save, freshSave } from './save';
 import { nextRandom } from './rng';
 import { allSetups } from './walk';
 import { EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION } from './content/world';
-import { CHECKS, DISPROOFS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
 import type { Action, FactId, FactMap, RunState } from './types';
 
 /** Facts the interview officer knows: the desk most fixtures here are at. */
@@ -52,7 +52,7 @@ describe('relief and pacing', () => {
   it('only harmless facts stay off file, and nothing on the crossing reacts to them', () => {
     for (const card of Object.values(EVIDENCE))
       if (card.settles) for (const e of card.onUse) if ('fact' in e) expect(HARMLESS_FACTS, card.id).toContain(e.fact);
-    const rules = JSON.stringify([ENCOUNTERS, INSPECTIONS, CHECKS, OFFICERS, INCONSISTENCIES, DISPROOFS]);
+    const rules = JSON.stringify([ENCOUNTERS, INSPECTIONS, CHECKS, OFFICERS, INCONSISTENCIES, CONTRADICTIONS]);
     for (const f of HARMLESS_FACTS) expect(rules, f).not.toContain(`"${f}"`);
   });
 
@@ -294,9 +294,9 @@ describe('contact results', () => {
     // Asked, she also gives her address and who else lives there (2op.12); on a records day both reach the desks ahead.
     expect(rows(n)).toEqual([
       'Your reason verified.', "On file at Customs: your mother's number.",
-      'Found in the old records: Your registered family address.', 'Confirmed and on file: Another relative of yours.',
+      'Found in the old records: Your registered family address.', 'Confirmed and on file: Your mother names another relative.',
       'Into the shared records for the desks ahead: Your registered family address.',
-      'Into the shared records for the desks ahead: Another relative of yours.',
+      'Into the shared records for the desks ahead: Your mother names another relative.',
     ]);
   });
 
