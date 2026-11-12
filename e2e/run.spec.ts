@@ -198,7 +198,7 @@ test('a contact who vouches: the story beat, then separate rows for what went on
   // Her address and the family go on file too. On a records day both reach the desks ahead,
   // which their known-facts line shows, so no row repeats them.
   await expect(rows).toHaveText([
-    "On file at Customs: your mother's number.",
+    "Customs has your mother's number.",
     'On record: Your registered family address.', 'Noted: Your mother names another relative.',
   ]);
   // What her call resolves sits under them, apart.
@@ -251,8 +251,8 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   const run = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'accommodation', seed: 7 });
   await openAt(page, { ...run, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText('On record: Your registered family address.');
-  await expect(reaction).toContainText('Passed to Customs: Your registered family address.');
+  // On file and passed on in the same answer: one line names the fact once.
+  await expect(reaction).toContainText('On record, passed to Customs: Your registered family address.');
   await page.locator('main.run .controls button.primary').click();
 
   await page.getByRole('button', { name: 'My story' }).click();

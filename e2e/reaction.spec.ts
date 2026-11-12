@@ -10,10 +10,11 @@ import { openSaved } from './returning';
 // answer, so the player reads them without scrolling.
 
 test('a verified answer shows happened, changed and resolves without scrolling at 390x844', async ({ page }) => {
-  // Lena at passport, asked how long she stays, with the return ticket packed: it answers outright.
-  const base = newRun({ character: 'lena', loadout: ['returnTicket', 'employerLetter', 'deed'], bulletin: 'records', seed: 7 });
-  const run: RunState = { ...base, reaction: null, screen: { kind: 'encounter', id: 'p_stay' }, seen: ['p_stay'], slot: 2 };
-  const index = options(run).findIndex((o) => o.approach.id === 'evidence' && o.card === 'returnTicket');
+  // Lena at passport, asked why she came, with her mother's letter packed: it answers outright
+  // and puts the family address on file, so all three blocks show.
+  const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+  const run: RunState = { ...base, reaction: null, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_host', 'p_purpose'], slot: 3 };
+  const index = options(run).findIndex((o) => o.approach.id === 'evidence' && o.card === 'motherLetter');
   expect(index).toBeGreaterThanOrEqual(0);
 
   await page.goto('./');
@@ -29,7 +30,9 @@ test('a verified answer shows happened, changed and resolves without scrolling a
   const resolves = reaction.locator('[data-line="resolves"]');
   await expect(happened).not.toBeEmpty();
   await expect(changed).not.toBeEmpty();
-  await expect(resolves).toHaveText(en['resolve.stay']);
+  await expect(changed).toContainText(en['fact.familyAddress']);
+  // The letter is spent, said on the line it settles.
+  await expect(resolves).toHaveText("Mother's letter used, reason settled.");
   await expect(reaction).not.toContainText(/disproof|suspicion|testimony/i);
 
   // Nothing scrolled, and each of the three ends inside the screen.
