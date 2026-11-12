@@ -523,6 +523,8 @@ export interface ChangeLine {
   n?: number;
   /** amber: attention or escalation. red: a confirmed serious consequence. */
   tone: 'plain' | 'amber' | 'red';
+  /** What the answer resolves for later (a question now settled), not what it changed. */
+  resolves?: true;
 }
 
 /**

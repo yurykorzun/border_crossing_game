@@ -135,6 +135,7 @@ export const en: Record<string, string> = {
   'ui.line.need.other': 'Bus needs {n} hours left',
   'ui.line.miss': 'Misses the last bus',
   // What changed, one line each under the officer's reaction (changeLines() in src/game/consequence.ts).
+  'change.document': 'Used: {cardThe}.',
   'change.contact.number': "On file at {desk}: {contact}'s number.",
   'change.contact.name': 'You named {contact}.',
   'change.verified.accommodation': 'Address verified.',
@@ -148,14 +149,23 @@ export const en: Record<string, string> = {
   'change.travel.one': 'You now need {n} hour to reach the station.',
   'change.travel.other': 'You now need {n} hours to reach the station.',
   // A challenge answered says which of three it is (catchKind() in src/game/content/encounters.ts).
-  'change.claim.suspicion': 'A question, not a disproof: "{claim}".',
-  'change.claim.testimony': 'Two accounts differ, nothing proven: "{claim}".',
-  'change.claim.disproof': 'Disproved by the record: "{claim}".',
-  'change.onFile.recorded': 'Found in the old records: {fact}.',
-  'change.onFile.confirmed': 'Confirmed: {fact}.',
-  'change.onFile.flagged': 'Flagged: {fact}.',
+  'change.claim.suspicion': 'Doubted, not proven: "{claim}".',
+  'change.claim.testimony': 'Accounts differ, not proven: "{claim}".',
+  'change.claim.disproof': 'A record shows this is false: "{claim}".',
+  'change.onFile.recorded': 'Already on record: {fact}.',
+  'change.onFile.confirmed': 'Now on file: {fact}.',
+  'change.onFile.flagged': 'Marked as a concern: {fact}.',
   'change.sent': 'Passed to {desk}: {fact}.',
   'change.records': 'Shared with the desks ahead: {fact}.',
+  // What an answer resolves (pointSettled, changeLines()): the question officers now take as checked.
+  'resolve.purpose': 'Settled: why you came.',
+  'resolve.accommodation': 'Settled: where you stay.',
+  'resolve.stay': 'Settled: how long you stay.',
+  'resolve.work': 'Settled: your job.',
+  'resolve.money': 'Settled: where the cash is from.',
+  'resolve.medicine': 'Settled: the prescription.',
+  'resolve.identity': 'Settled: who you are.',
+  'resolve.history': 'Settled: your past.',
   // The button under a reaction (nextActionKey()): Continue, or the walk to what comes next.
   'ui.proceed.customs': 'Proceed to customs',
   'ui.proceed.interview': 'Proceed to the interview',
@@ -804,11 +814,11 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'calledIn.reaction': 'You named {contact} earlier. The officer checks that first.',
-  'spot.clear': 'Spot-check: "{claim}". It fits.',
-  'spot.flaw': 'Spot-check: "{claim}". It does not fit.',
-  'spot.answered': 'Spot-check: "{claim}". You have already answered for it.',
+  'spot.clear': 'One more check: "{claim}". It matches the file.',
+  'spot.flaw': 'One more check: "{claim}". It does not match the file.',
+  'spot.answered': 'One more check: "{claim}". You have already explained it.',
   // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
-  'spot.explained': 'Before you go, a spot-check. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
+  'spot.explained': 'One more check. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
   // Under a clarify or contradiction card's question (caughtLine() in src/game/consequence.ts):
   // your own words, the desk where you said them, the fact that catches them.
   // The fact names how it sits on file (caught.line.<tier>, factTier()).

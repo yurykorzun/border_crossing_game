@@ -515,6 +515,8 @@ p { margin: 0 0 var(--gap); }
 .change { font-size: var(--text-small); }
 .change.amber { color: var(--amber-paper); font-weight: 600; }
 .change.red { color: var(--danger-paper); font-weight: 600; }
+/* What it resolves: under the changes, set apart so a settled question reads as its own result. */
+.changes.resolves { margin-top: 8px; padding-top: 8px; }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
 .waiting { cursor: pointer; }
 .waiting .beat { margin: 8px 0 0; color: var(--muted); }

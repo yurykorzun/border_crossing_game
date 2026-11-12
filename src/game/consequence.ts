@@ -176,16 +176,19 @@ export function packedList(loadout: readonly EvidenceId[]): string {
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */
-export const CHANGE_EVENTS = ['contactExposed', 'claimChallenged', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged'] as const;
+export const CHANGE_EVENTS = ['documentUsed', 'contactExposed', 'claimChallenged', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged', 'pointSettled'] as const;
 
 /**
  * What a step changed, one plain line each, built from its events: "Address verified.",
- * "On file at Customs: your mother's number.", "1 hour lost.", "Scrutiny 2/3.". Reaction in src/App.tsx
- * shows them under the officer's line and screenLines() in src/game/transcript.ts
- * writes them down.
+ * "On file at Customs: your mother's number.", "1 hour lost.", "Scrutiny 2/3.", then what it
+ * resolves for later ("The prescription is settled...", marked `resolves`). Reaction in
+ * src/App.tsx shows them under the officer's line (what happened), and screenLines() in
+ * src/game/transcript.ts writes them down.
  */
 export function changeLines(events: GameEvent[], protectedContact: ContactId): ChangeLine[] {
   const out: ChangeLine[] = [];
+  // A document shown is spent: it cannot answer another question.
+  for (const e of events) if (e.type === 'documentUsed') out.push({ key: 'change.document', vars: { cardThe: e.id }, tone: 'plain' });
   // A contact's result says only what happened: "Address verified." when the vouch
   // settled the question, then what went on file and where.
   for (const e of events)
@@ -213,6 +216,9 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
     if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
+  // Last, what the answer resolves: each question now settled for the officers ahead
+  // ("The prescription is settled."). Reaction shows these under the changes, apart from them.
+  for (const e of events) if (e.type === 'pointSettled') out.push({ key: `resolve.${e.topic}`, tone: 'plain', resolves: true });
   return out;
 }
 

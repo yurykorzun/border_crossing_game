@@ -313,7 +313,9 @@ describe('contact results', () => {
     // reach the desks ahead too, which their known-facts line shows, so no row repeats them.
     expect(rows(n)).toEqual([
       'Your reason verified.', "On file at Customs: your mother's number.",
-      'Found in the old records: Your registered family address.', 'Confirmed: Your mother names another relative.',
+      'Already on record: Your registered family address.', 'Now on file: Your mother names another relative.',
+      // Last, what her answer resolves for the desks after this one.
+      'Settled for later desks: why you came.',
     ]);
   });
 

@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, reactionOf, step, travelOf } from './engine';
+import { chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, pointVerified, reactionOf, step, travelOf } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -41,6 +41,12 @@ export type GameEvent =
    */
   | { type: 'claimChallenged'; claim: ClaimId; said: string; fact: FactId; kind: ReactionKind }
   | { type: 'medicineLost' }
+  /**
+   * A question is settled for the officers from here on: a document answered it or
+   * a contact confirmed it (pointVerified() in src/game/engine.ts). It stays settled
+   * until something new is flagged.
+   */
+  | { type: 'pointSettled'; topic: Topic }
   /** The trip to the bus now takes `hours` (a missed connection). */
   | { type: 'travelChanged'; hours: number }
   | { type: 'perkUsed' }
@@ -118,6 +124,8 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
     if (desks.length) ev.push({ type: 'factSent', id, desks, via: s.bulletin === 'records' ? 'records' : 'desk' });
   }
   if (s.medicine && !n.medicine) ev.push({ type: 'medicineLost' });
+  for (const topic of Object.keys(n.verified ?? {}) as Topic[])
+    if (pointVerified(n, topic) && !pointVerified(s, topic)) ev.push({ type: 'pointSettled', topic });
   if (travelOf(n) !== travelOf(s)) ev.push({ type: 'travelChanged', hours: travelOf(n) });
   if (n.checkpoint !== s.checkpoint) ev.push({ type: 'checkpointReached', index: n.checkpoint });
   if (n.screen.kind === 'wait' && s.screen.kind !== 'wait') ev.push({ type: 'checkStarted', id: n.screen.check });

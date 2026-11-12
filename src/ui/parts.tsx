@@ -132,11 +132,14 @@ export function ConsequenceLine({ o, cardKey, s }: { o: Option; cardKey: string;
 
 const partText = (p: Part) => (p.n === undefined ? t(p.key, p.vars) : tn(p.key, p.n, p.vars));
 
-/** Under the officer's reaction: one plain line per thing that changed ("1 hour lost."). */
-export function ChangeLines({ changes }: { changes: ChangeLine[] }) {
+/**
+ * Under the officer's reaction: one plain line per thing that changed ("1 hour lost."),
+ * or with `resolves`, one per question it settled for later.
+ */
+export function ChangeLines({ changes, resolves = false }: { changes: ChangeLine[]; resolves?: boolean }) {
   if (!changes.length) return null;
   return (
-    <ul className="changes">
+    <ul className={resolves ? 'changes resolves' : 'changes'} data-line={resolves ? 'resolves' : 'changed'}>
       {changes.map((c, i) => (
         <li key={c.key + i} className={`change ${c.tone}`}>{c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)}</li>
       ))}
