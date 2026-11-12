@@ -305,26 +305,28 @@ describe('too late endings', () => {
 describe('contact results', () => {
   const rows = (s: RunState) => (s.changes ?? []).map((c) => (c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)));
 
-  it('a vouch that passes: the beat alone, then a verified row and an on-file row naming the desk', () => {
+  it('a vouch that passes: the beat alone, the on-file rows naming the desk, then what it settled', () => {
     const s = at(newRun(lena), 'c_shortTrip', { checkpoint: 1, claims: ['shortTrip'] });
     const n = playStep(s, { type: 'choose', approach: 'mother' });
     expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.']);
     // Asked, she also gives her address and who else lives there (2op.12). On a records day both
     // reach the desks ahead too, which their known-facts line shows, so no row repeats them.
+    // What she confirmed is said once, as the question it settles, last.
     expect(rows(n)).toEqual([
-      'Your reason verified.', "On file at Customs: your mother's number.",
+      "On file at Customs: your mother's number.",
       'On record: Your registered family address.', 'Noted: Your mother names another relative.',
-      // Last, what her answer resolves for the desks after this one.
-      'Settled for later desks: why you came.',
+      'Settled: your reason.',
     ]);
   });
 
-  it('a vouch in the waiting room clears the check and reports the same two rows', () => {
+  it('a vouch in the waiting room clears the check and reports the same rows', () => {
     let s = playStep(at(newRun(lena), 'c_host', { checkpoint: 1 }), { type: 'choose', approach: 'call' });
     s = playStep(s, { type: 'ack' });
     while (s.screen.kind === 'wait' && s.screen.shown < s.screen.beats.length) s = playStep(s, { type: 'beat' });
     const n = playStep(s, { type: 'waitAction', action: 'assist' });
-    expect(rows(n).slice(0, 2)).toEqual(['Address verified.', "On file at Customs: your mother's number."]);
+    expect(rows(n)[0]).toBe("On file at Customs: your mother's number.");
+    expect(rows(n)).toContain('Settled: your address.');
+    expect(rows(n)).not.toContain('Address verified.');
   });
 
   it('a vouch that fails: only the on-file row, no verified row', () => {

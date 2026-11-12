@@ -184,7 +184,7 @@ test('after an answer: the reaction, what changed, and the next action', async (
   expect(errors).toEqual([]);
 });
 
-test('a contact who vouches: the story beat, then separate result rows for what was verified and what went on file', async ({ page }) => {
+test('a contact who vouches: the story beat, then separate rows for what went on file and what it settled', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
@@ -198,7 +198,7 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   // Her address and the family go on file too. On a records day both reach the desks ahead,
   // which their known-facts line shows, so no row repeats them.
   await expect(rows).toHaveText([
-    'Your reason verified.', "On file at Customs: your mother's number.",
+    "On file at Customs: your mother's number.",
     'On record: Your registered family address.', 'Noted: Your mother names another relative.',
   ]);
   // What her call resolves sits under them, apart.
