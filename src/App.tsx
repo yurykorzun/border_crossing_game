@@ -25,7 +25,7 @@ import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
 import type { SceneState } from './ui/art/CheckpointScene';
-import { BorderPost, Desk, EmptyStop, NightBus, Ward } from './ui/art/JourneyScenes';
+import { BorderPost, Desk, EmptyStop, NightBus, PlaneWindow, Ward } from './ui/art/JourneyScenes';
 import { CustomsQueueScene, InterviewQueueScene, QueueScene } from './ui/art/QueueScene';
 import { Icon } from './ui/art/icons';
 
@@ -145,7 +145,7 @@ function Autoplay({ style }: { style: BotStyle }) {
  * then Begin and a quiet Settings. With a saved run Begin becomes Resume crossing, and
  * New crossing under it drops that run (startOver) and keeps endings and settings.
  */
-function Title({ saved, onStart, onResume, settings, onSettings }: {
+export function Title({ saved, onStart, onResume, settings, onSettings }: {
   saved: boolean;
   onStart: () => void;
   onResume: () => void;
@@ -370,7 +370,7 @@ function BackButton({ onBack }: { onBack: () => void }) {
 }
 
 /** Setup 3. Packing is where hours and scrutiny first matter, so both are explained here. */
-function DocumentsStep({ count, character, bulletin, picked, setPicked, onBack, onContinue }: {
+export function DocumentsStep({ count, character, bulletin, picked, setPicked, onBack, onContinue }: {
   count: string;
   character: CharacterId;
   bulletin: BulletinId;
@@ -475,7 +475,7 @@ function useMoreBelow() {
  * A same-setup retry has no Back or Change documents, and shows the day's `bulletin`
  * again, since it is the same day.
  */
-function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeDocuments, onBegin }: {
+export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeDocuments, onBegin }: {
   level: LevelId;
   picked: EvidenceId[];
   traveler: CharacterId;
@@ -525,7 +525,7 @@ function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeDocument
  * selects and only the button moves on. The picked traveler's history waits
  * behind a disclosure, closed until opened.
  */
-function TravelerStep({ initial, count, onBack, onContinue }: { initial: CharacterId | null; count: string; onBack: () => void; onContinue: (c: CharacterId) => void }) {
+export function TravelerStep({ initial, count, onBack, onContinue }: { initial: CharacterId | null; count: string; onBack: () => void; onContinue: (c: CharacterId) => void }) {
   const [chosen, setChosen] = useState<CharacterId | null>(initial);
   const [historyOpen, setHistoryOpen] = useState(false);
   const cards = useRef<(HTMLButtonElement | null)[]>([]);
@@ -948,9 +948,11 @@ export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () =>
         <h1>{t(`ending.${text}.title`)}</h1>
         <div className="arrival">
           <div className="ending-scene">
+            {/* Departure leaves for a flight, so its home endings show the plane, not the ward. */}
             {ending === 'turnedBack' ? <BorderPost closed />
               : text === 'missedBus' ? <EmptyStop medicine={s.medicine} character={s.character} />
-              : ending === 'tooLate' ? <NightBus medicine={s.medicine} character={s.character} />
+              : ending === 'tooLate' ? <NightBus medicine={s.medicine} character={s.character} airport={s.level === 'departure'} />
+              : s.level === 'departure' ? <PlaneWindow />
               : <Ward character={s.character} />}
           </div>
           <p className="epilogue">{t(`ending.${text}.body`)}</p>

@@ -89,3 +89,21 @@ test("Lena's file is not offered to continue Mark's crossing", async ({ page }) 
   expect(await savedFile(page)).toEqual(SAMPLE_FILES.lena);
   expect(errors).toEqual([]);
 });
+
+// Departure is its own story (dap.3): the traveler screen says the flight is in the next
+// country and you cross by land to reach it, and the run plays through to an ending.
+test('Departure says you cross by land to a flight, from the level list to an ending', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await open(page);
+  const premise = page.locator('main.traveler-step h2.premise');
+  await expect(premise).toHaveText(en['departure:ui.premise']);
+  await expect(premise).toContainText('by land');
+  await pickTraveler(page, 'lena');
+  await page.locator('main.record-step button.record-standalone').click();
+  await expect(page.locator('.documents-step .prep-message')).toContainText(en['departure:msg.prep']);
+  await packAndTurnBack(page, 3);
+  await expect(page.locator('.ending-card h1')).not.toHaveText(/Home in time|hospital/i);
+  await expect(page.locator('.ending-card .ending-scene svg')).not.toHaveAttribute('aria-label', /hospital/i);
+  expect(errors).toEqual([]);
+});

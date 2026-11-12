@@ -984,8 +984,12 @@ export const en: Record<string, string> = {
   'enc.d_named.mark.deny.label': '"No family across the border."',
   // Held at the exit desk (d_hold.leave): turned back, with its own end screen (endingText()).
   'ending.held.title': 'Free to go, for now',
-  'ending.held.body': 'They keep your passport for the review. "You are free to go, for now," the officer says. You take the bus back to the hospital. Your father is awake. Your mother makes up the couch again.',
+  'ending.held.body': 'They keep your passport for the review. "You are free to go, for now," the officer says. You take the bus back into town. Your father is awake. Your mother makes up the couch again.',
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
+  'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
+  // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
+  'departure:ui.premise': 'Your flight leaves from the airport in the next country. You cross the border by land to reach it.',
+  'departure:msg.prep': "Flying back this week? The client meeting is still on for Monday.",
   'departure:mission.title': 'Your father needs another week of care.',
   'departure:mission.body': 'On the way in you said five days. It has been twelve.',
   'departure:ui.goal': 'Catch your flight',
@@ -1002,5 +1006,12 @@ export const en: Record<string, string> = {
   'departure:ending.tooLate.body': 'The gate is closed when you reach it. The next flight with a seat leaves in two days. You send your mother the time. She writes that your father is asking for you.',
   'departure:ending.missedBus.body': 'You step past the barrier. The last bus to the airport has gone. You book the next flight on your phone, on a bench under the light. Your mother writes that your father is asleep.',
   'departure:ending.turnedBack.body': 'You take your passport back and walk out of the hall. Your mother calls. You tell her you are staying a few more days. She does not ask why.',
+  'departure:ending.homeInTime.title': 'Made the flight',
+  'departure:ending.homeAtCost.title': 'Made the flight, at a cost',
+  'departure:ending.tooLate.title': 'Missed the flight',
+  // The ending scenes on the way out: the plane when you make it, the bus to the airport when you don't.
+  'departure:scene.bus': 'The medicine box in your hand on a night bus, the airport tower through the rain',
+  'departure:scene.busEmpty': 'Your empty hand on a night bus, the airport tower through the rain',
+  'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
 };
