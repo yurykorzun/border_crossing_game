@@ -3,11 +3,11 @@
 // src/ui/parts.tsx renders it and src/game/transcript.ts writes it down, so both
 // read the same parts.
 
-import { has, own, t } from '../i18n';
+import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
-import type { CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
+import type { Answered, CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -176,21 +176,24 @@ export function packedList(loadout: readonly EvidenceId[]): string {
 }
 
 /** Event types that always get a line under the reaction. A test checks each has its key in en.ts. */
-export const CHANGE_EVENTS = ['contactExposed', 'claimChallenged', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged'] as const;
+export const CHANGE_EVENTS = ['documentUsed', 'contactExposed', 'claimChallenged', 'factRecorded', 'factSent', 'timeSpent', 'scrutinyChanged', 'medicineLost', 'travelChanged', 'pointSettled'] as const;
 
 /**
  * What a step changed, one plain line each, built from its events: "Address verified.",
- * "On file at Customs: your mother's number.", "1 hour lost.", "Scrutiny 2/3.". Reaction in src/App.tsx
- * shows them under the officer's line and screenLines() in src/game/transcript.ts
- * writes them down.
+ * "Customs has your mother's number.", "1 hour lost.", "Scrutiny 2/3.", then what it
+ * resolves for later ("The prescription is settled...", marked `resolves`). Reaction in
+ * src/App.tsx shows them under the officer's line (what happened), and screenLines() in
+ * src/game/transcript.ts writes them down.
  */
 export function changeLines(events: GameEvent[], protectedContact: ContactId): ChangeLine[] {
   const out: ChangeLine[] = [];
+  // A point a contact confirmed and that is now settled says so once, on its resolves line.
+  const settled = new Set(events.flatMap((e) => (e.type === 'pointSettled' ? [e.topic] : [])));
   // A contact's result says only what happened: "Address verified." when the vouch
   // settled the question, then what went on file and where.
   for (const e of events)
     if (e.type === 'contactExposed') {
-      if (e.vouch?.passed) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
+      if (e.vouch?.passed && !settled.has(e.vouch.topic)) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
       out.push({ key: `change.contact.${e.shares}`, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
     }
   // A challenge says which of three it is: a question raised, two accounts that
@@ -199,12 +202,26 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
     if (e.type === 'claimChallenged') out.push({ key: `change.claim.${e.kind}`, vars: { claim: e.said }, tone: e.kind === 'disproof' ? 'red' : 'amber' });
   // Each fact names how it sits on file: found in the old records, confirmed on this
   // crossing, or flagged (factTier() in src/game/engine.ts).
-  for (const e of events) if (e.type === 'factRecorded') out.push({ key: `change.onFile.${e.tier}`, vars: { fact: e.id }, tone: 'plain' });
-  // A fact the line above already names is not named again on its way into the
-  // shared records: the next desk's card shows it on its known-facts line (knownLine()).
-  const named = new Set(events.flatMap((e) => (e.type === 'factRecorded' ? [e.id] : [])));
+  // A fact passed to the next desk in the same step says so on the same line
+  // ("On record, passed to Customs: ..."), so the fact is named once.
+  const passed = new Map<FactId, Checkpoint>();
+  for (const e of events) if (e.type === 'factSent' && e.via === 'desk' && !passed.has(e.id)) passed.set(e.id, e.desks[0]);
+  // Facts that sit on file the same way share one line: "Noted: Your phone was searched. Your brother abroad."
+  const named = new Set<FactId>();
   for (const e of events)
-    if (e.type === 'factSent' && !(e.via === 'records' && named.has(e.id)))
+    if (e.type === 'factRecorded') {
+      const desk = named.has(e.id) ? undefined : passed.get(e.id);
+      named.add(e.id);
+      const last = out[out.length - 1];
+      if (!desk && last?.key === `change.onFile.${e.tier}`) out[out.length - 1] = { ...last, also: [...(last.also ?? []), { key: 'change.alsoFact', vars: { fact: e.id } }] };
+      else out.push(desk
+        ? { key: `change.onFile.${e.tier}.sent`, vars: { fact: e.id, desk }, tone: 'plain' }
+        : { key: `change.onFile.${e.tier}`, vars: { fact: e.id }, tone: 'plain' });
+    }
+  // A fact the lines above already name is not named again on its way on: the next
+  // desk's card shows it on its known-facts line (knownLine()).
+  for (const e of events)
+    if (e.type === 'factSent' && !named.has(e.id))
       out.push(e.via === 'records'
         ? { key: 'change.records', vars: { fact: e.id }, tone: 'plain' }
         : { key: 'change.sent', vars: { fact: e.id, desk: e.desks[0] }, tone: 'plain' });
@@ -213,7 +230,43 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
     if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
-  return out;
+  // Last, what the answer resolves: each question now settled for the officers ahead
+  // ("Prescription settled."). Reaction shows these under the changes, apart from them.
+  // A document shown is spent, and its card greys out. When nothing else changed, that is
+  // the changed line ("Used: Return ticket."). Next to other changes, the first point it
+  // settles names it ("Hospital note used, prescription settled."), folded in, not a line
+  // of its own, so a long run stays inside the 8-minute ceiling (tools/sweep.ts).
+  let doc = events.find((e) => e.type === 'documentUsed')?.id;
+  if (doc && !out.length) {
+    out.push({ key: 'change.document', vars: { cardLabel: doc }, tone: 'plain' });
+    doc = undefined;
+  }
+  const also: NonNullable<ChangeLine['also']> = [];
+  const resolves: ChangeLine[] = [];
+  for (const e of events) {
+    if (e.type !== 'pointSettled') continue;
+    const line = doc ? { key: `resolve.used.${e.topic}`, vars: { cardLabel: doc } } : { key: `resolve.${e.topic}` };
+    doc = undefined;
+    // A point settled again, after a new flag reopened it, goes on the end of a line
+    // already showing, unless a contact's vouch settled it: that swaps the vouch's
+    // "Address verified." for this line (settled, above).
+    const vouched = events.some((v) => v.type === 'contactExposed' && v.vouch?.passed && v.vouch.topic === e.topic);
+    if (e.again && !vouched && out.length) also.push(line);
+    else resolves.push({ ...line, tone: 'plain', resolves: true });
+  }
+  // A document that settled nothing new says "Used: Hotel booking." on the end of the last line.
+  if (doc) also.push({ key: 'change.document', vars: { cardLabel: doc } });
+  if (also.length) {
+    const last = out[out.length - 1];
+    out[out.length - 1] = { ...last, also: [...(last.also ?? []), ...also] };
+  }
+  return [...out, ...resolves];
+}
+
+/** A change line as it reads: its own text, then anything folded onto its end (ChangeLine.also). */
+export function changeText(c: ChangeLine): string {
+  const text = c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars);
+  return [text, ...(c.also ?? []).map((a) => t(a.key, a.vars))].join(' ');
 }
 
 /**
@@ -266,6 +319,95 @@ export function consequences(s: RunState): EndingLine[] {
   return out.sort((a, b) => b.severity - a.severity);
 }
 
+/** One cost under a decisive answer on the ending: "2 hours lost", "Named your mother". */
+export interface DecisiveCost {
+  key: string;
+  vars?: Record<string, string | number>;
+  /** Plural count: render with tn(key, n). */
+  n?: number;
+  tone: Tone;
+}
+
+/** An answer the ending names as deciding the run: where it was given, what it said and what it cost. */
+export interface DecisiveAnswer {
+  desk: Checkpoint;
+  key: string;
+  vars?: Record<string, string>;
+  costs: DecisiveCost[];
+}
+
+export const MIN_DECISIVE = 2;
+export const MAX_DECISIVE = 3;
+
+/**
+ * How much an answer moved the run, for picking the ones that decided it: the
+ * medicine first, then the protected contact named, a statement a record showed
+ * false, anyone else named, then hours (and a missed connection) and scrutiny.
+ * A document spent or a question settled counts a little, so a clean run still
+ * names the papers that carried it.
+ */
+function weight(a: Answered, protectedContact: ContactId): number {
+  return (a.medicine ? 100 : 0)
+    + a.named.reduce((w, c) => w + (c === protectedContact ? 80 : 30), 0)
+    + a.caught.length * 60
+    + (a.hours + a.travel) * 10
+    + a.scrutiny * 5
+    + (a.used.length + a.settled.length) * 2;
+}
+
+/** The costs of one answer in plain words, worst first, or "Cost nothing". */
+function costsOf(s: RunState, a: Answered, protectedContact: ContactId): DecisiveCost[] {
+  const out: DecisiveCost[] = [];
+  if (a.medicine) out.push({ key: 'ending.cost.medicine', tone: 'red' });
+  for (const c of a.caught) out.push({ key: 'ending.cost.caught', vars: { said: own(`said.${c}`, s.character).slice('said.'.length) }, tone: 'red' });
+  for (const c of a.named) out.push({ key: 'ending.cost.named', vars: { contact: c }, tone: c === protectedContact ? 'red' : 'amber' });
+  if (a.hours) out.push({ key: 'ending.cost.hours', n: a.hours, tone: 'plain' });
+  if (a.travel) out.push({ key: 'ending.cost.travel', n: a.travel, tone: 'amber' });
+  if (a.scrutiny) out.push({ key: 'ending.cost.scrutiny', vars: { n: a.scrutiny }, tone: 'amber' });
+  for (const id of a.used) out.push({ key: 'ending.cost.used', vars: { cardLabel: id }, tone: 'plain' });
+  return out.length ? out : [{ key: 'ending.cost.none', tone: 'plain' }];
+}
+
+/**
+ * The two or three answers that decided the run, from its own record
+ * (RunState.answers, written by answered() in src/game/play.ts), in the order they
+ * were given: the ones that moved it most (weight()), and when fewer than two moved
+ * anything, the first answers given to make up two. Each names its desk, the answer
+ * as its button read and what it cost. Empty for a run with no answers (turned back in
+ * the first queue). Ending in src/App.tsx lists them and endingLines() in
+ * src/game/transcript.ts writes them down.
+ */
+export function decisive(s: RunState): DecisiveAnswer[] {
+  const protectedContact = CHARACTERS[s.character].protectedContact;
+  const all = (s.answers ?? []).map((a, i) => ({ a, i, w: weight(a, protectedContact) }));
+  const moved = all.filter((x) => x.w > 0).sort((x, y) => y.w - x.w || x.i - y.i).slice(0, MAX_DECISIVE);
+  const filler = all.filter((x) => x.w === 0).slice(0, Math.max(0, MIN_DECISIVE - moved.length));
+  return [...moved, ...filler]
+    .sort((x, y) => x.i - y.i)
+    .map(({ a }) => ({ desk: a.desk, key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
+}
+
+export type Axis = 'arrival' | 'medicine' | 'contacts';
+export const AXES: readonly Axis[] = ['arrival', 'medicine', 'contacts'];
+
+/**
+ * The ending read on its three axes, one line each (Branching Rules, 2026-11-11):
+ * arrival (on time or late, the hours left against the trip), the medicine (kept or
+ * lost) and contacts (who is on file, or no one). The label is at `ending.axis.<axis>`.
+ * Ending in src/App.tsx shows them under the decisive answers.
+ */
+export function axisLines(s: RunState): { axis: Axis; key: string; vars?: Record<string, string> }[] {
+  const ending = s.ending ?? endingFor(s);
+  const hours = { left: tn('ui.hours', s.time), trip: tn('ui.hours', travelOf(s)) };
+  const arrival = ending === 'turnedBack' ? 'ending.axis.arrival.none' : s.time >= travelOf(s) ? 'ending.axis.arrival.onTime' : 'ending.axis.arrival.late';
+  return [
+    { axis: 'arrival', key: arrival, ...(ending === 'turnedBack' ? {} : { vars: hours }) },
+    { axis: 'medicine', key: s.medicine ? 'ending.axis.medicine.kept' : 'ending.axis.medicine.lost' },
+    s.exposed.length
+      ? { axis: 'contacts', key: 'ending.axis.contacts.named', vars: { names: andList(s.exposed.map((c) => t(`contact.${c}`))) } }
+      : { axis: 'contacts', key: 'ending.axis.contacts.none' },
+  ];
+}
 
 /**
  * What comes back days after a crossing that got you home (rwf.10), or nothing. It
@@ -352,8 +494,27 @@ export function fileLine(s: RunState, card: string): { key: string; vars: Record
     const c = fileSaid(file).find((x) => file.disproved?.includes(x.claim));
     return c && quoteLine(s, 'file.disproved', c);
   }
-  if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: { crossing: t(`level.${file.level}.title`) } };
+  const crossing = { crossing: t(`level.${file.level}.title`) };
+  if (card === 'd_stayed') {
+    const c = fileSaid(file).find((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay');
+    return c ? quoteLine(s, 'file.stayed', c) : { key: 'file.stayed.none', vars: crossing };
+  }
+  if (card === 'd_stay') return { key: `file.stay.${fileStay(file)}`, vars: crossing };
+  if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: crossing };
   return undefined;
+}
+
+/**
+ * The date out the exit desk reads on your entry form (d_stay): the return ticket's
+ * five days or the hotel's three nights when the file kept that document as shown,
+ * none when it showed neither, and in a standalone run (a seeded default file) a
+ * stated stand-in, a short visit, so the question never quotes a crossing nobody played.
+ */
+export function fileStay(file: CarriedFile): 'ticket' | 'hotel' | 'undated' | 'standalone' {
+  if (file.seeded) return 'standalone';
+  if (file.spent.includes('returnTicket')) return 'ticket';
+  if (file.spent.includes('hotel')) return 'hotel';
+  return 'undated';
 }
 
 /**
@@ -389,6 +550,8 @@ export function questionKey(s: RunState, prefix: 'enc' | 'insp', id: string): st
   const base = prefix === 'enc' && id === 'c_host' && !knows(s, 'familyAddress') ? 'enc.c_host.phoned'
     // With nothing on file for the point, the Departure card asks it plainly.
     : prefix === 'enc' && ((id === 'd_entry' && !fileClaim(s.file)) || (id === 'd_named' && !fileContact(s.file))) ? `enc.${id}.unsaid`
+    // The stay question names the date out the file holds (fileStay()); the ticket's five days is the plain one.
+    : prefix === 'enc' && id === 'd_stay' && s.file && fileStay(s.file) !== 'ticket' ? `enc.d_stay.${fileStay(s.file)}`
     : `${prefix}.${id}`;
   return own(`${base}.q`, s.character);
 }

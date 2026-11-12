@@ -232,3 +232,71 @@ describe('a file saved before claims kept their desk and date still carries its 
     for (const l of recap) expect(l).not.toMatch(/[{}—]/);
   });
 });
+
+describe('the desks ask about leaving, from the file (dap.4)', () => {
+  it.each([['lena'], ['mark']] as const)('%s: customs opens with what you take out, never the medicine card', (who) => {
+    for (const file of [SAMPLE_FILES[who], defaultFile(1, who)]) {
+      const s = drive(setupOf(who, file, 7, 'customs'), { d_hold: 'review' });
+      const customs = s.seen.filter((id) => id.startsWith('c_') || id === 'd_out' || id === 'd_declared');
+      expect(customs[0], who).toBe('d_out');
+      expect(s.seen).not.toContain('c_medicine');
+    }
+    expect(LEVELS.departure.cards).not.toContain('c_medicine');
+    expect(LEVELS.departure.core?.customs?.[0]).toBe('d_out');
+  });
+
+  it.each([['lena'], ['mark']] as const)('%s: the passport desk asks where you stayed, not who you will stay with', (who) => {
+    const s = drive(setupOf(who, SAMPLE_FILES[who]), { d_hold: 'review' });
+    expect(s.seen.slice(0, 2)).toEqual(['d_entry', 'd_stayed']);
+    expect(s.seen).not.toContain('p_host');
+    expect(t(questionKey(s, 'enc', 'd_stayed'))).toMatch(/Where did you stay/);
+  });
+
+  it('where you stayed is compared with the entry form: a different place costs the check, the same one does not', () => {
+    const withStay = (claim: 'stayingWithFamily' | 'hotelStay'): CarriedFile => ({
+      ...SAMPLE_FILES.mark,
+      claims: ['familyVisit', claim],
+      said: [...SAMPLE_FILES.mark.said!, { claim, date: '2026-03-09', crossing: 'arrival', desk: 'passport', context: 'p_host' }],
+    });
+    const at = (file: CarriedFile) => ({ ...newRun(setupOf('mark', file)), scrutiny: 0, seen: ['d_entry', 'd_stayed'], screen: { kind: 'encounter', id: 'd_stayed' } } as RunState);
+    expect(text(fileLine(at(withStay('hotelStay')), 'd_stayed'))).toContain(`"${t('said.hotelStay')}"`);
+    expect(text(fileLine(at(SAMPLE_FILES.mark), 'd_stayed'))).toContain('no place to stay');
+    const hoursSpent = (file: CarriedFile, pick: string) => {
+      const s = at(file);
+      const o = options(s).find((x) => x.approach.id === pick)!;
+      const next = step(s, chooseAction(o), dealer);
+      expect(next.scrutiny, `${pick} is no mark against you`).toBe(0);
+      return s.time - next.time;
+    };
+    expect(hoursSpent(withStay('hotelStay'), 'mother')).toBe(1);
+    expect(hoursSpent(withStay('stayingWithFamily'), 'mother')).toBe(0);
+    expect(hoursSpent(withStay('stayingWithFamily'), 'friends')).toBe(1);
+    expect(hoursSpent(withStay('hotelStay'), 'friends')).toBe(1);
+    expect(hoursSpent(SAMPLE_FILES.mark, 'friends')).toBe(0);
+  });
+
+  it('the stay question differs between a file that said five days, a file with no date and standalone', () => {
+    const at = (file: CarriedFile) => ({ ...newRun(setupOf('mark', file)), seen: ['d_stay'], screen: { kind: 'encounter', id: 'd_stay' } } as RunState);
+    const ticket: CarriedFile = { ...SAMPLE_FILES.mark, spent: ['returnTicket'] };
+    const undated: CarriedFile = { ...SAMPLE_FILES.mark, spent: [] };
+    const standalone = defaultFile(1, 'mark');
+    expect(standalone.seeded).toBe(true);
+    const q = (file: CarriedFile) => t(questionKey(at(file), 'enc', 'd_stay'));
+    const line = (file: CarriedFile) => text(fileLine(at(file), 'd_stay'));
+    expect(q(ticket)).toContain('five days');
+    expect(q(undated)).not.toContain('five days');
+    expect(q(undated)).toContain('no date out');
+    expect(q(standalone)).not.toContain('five days');
+    expect(new Set([q(ticket), q(undated), q(standalone)]).size).toBe(3);
+    // Each says where its date comes from, so the default is explained, not assumed.
+    expect(line(ticket)).toContain('return ticket');
+    expect(line(undated)).toContain('no date out');
+    expect(line(standalone)).toMatch(/standalone/i);
+    for (const f of [ticket, undated, standalone]) {
+      expect(q(f)).not.toMatch(/[{}—]/);
+      expect(line(f)).not.toMatch(/[{}—]/);
+    }
+    // A standalone file that happened to show the ticket still asks the standalone question.
+    expect(q({ ...standalone, spent: ['returnTicket'] })).toBe(q(standalone));
+  });
+});

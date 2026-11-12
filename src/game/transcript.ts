@@ -17,7 +17,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf } from './content/levels';
-import { SEPARATOR, caughtLine, consequence, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
+import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -76,8 +76,8 @@ class Page {
   add(key: string, vars: Record<string, string | number> = {}, extra: Partial<Line> = {}): void {
     this.lines.push({ step: this.step, ...render(() => t(key, vars), key), ...extra });
   }
-  plural(key: string, n: number, extra: Partial<Line> = {}): void {
-    this.lines.push({ step: this.step, ...render(() => tn(key, n), key), ...extra });
+  plural(key: string, n: number, extra: Partial<Line> = {}, vars: Record<string, string | number> = {}): void {
+    this.lines.push({ step: this.step, ...render(() => tn(key, n, vars), key), ...extra });
   }
 }
 
@@ -317,10 +317,9 @@ function screenLines(s: RunState, p: Page): void {
   if (s.reaction) {
     // Reaction in src/App.tsx: the officer's line, one line per change, the next-action button.
     for (const r of s.reaction) p.add(r.key, r.vars);
-    for (const c of s.changes ?? []) {
-      if (c.n === undefined) p.add(c.key, c.vars);
-      else p.lines.push({ step: p.step, ...render(() => tn(c.key, c.n!, c.vars), c.key) });
-    }
+    // A line with something folded onto its end (ChangeLine.also) keeps every key, joined.
+    for (const c of s.changes ?? [])
+      p.lines.push({ step: p.step, ...render(() => changeText(c), [c.key, ...(c.also ?? []).map((a) => a.key)].join(SEPARATOR)) });
     return p.add(nextActionKey(s));
   }
   const sc = s.screen;
@@ -429,6 +428,20 @@ function endingLines(s: RunState, p: Page): void {
   p.add(s.medicine ? 'ui.kept' : 'ui.lost');
   p.add(`contact.${ch.protectedContact}`);
   p.add(protectedRow(s).key);
+  // What decided it, decisive() and axisLines(): chrome, like the summary they sit under.
+  p.add('ending.decided.heading', {}, CHROME);
+  for (const d of decisive(s)) {
+    p.add('ending.decided.at', { desk: d.desk }, CHROME);
+    p.add(d.key, d.vars, CHROME);
+    for (const c of d.costs) {
+      if (c.n === undefined) p.add(c.key, c.vars, CHROME);
+      else p.plural(c.key, c.n, CHROME, c.vars);
+    }
+  }
+  for (const l of axisLines(s)) {
+    p.add(`ending.axis.${l.axis}`, {}, CHROME);
+    p.add(l.key, l.vars, CHROME);
+  }
   // The one replay prompt under the summary.
   p.add('ui.replayPrompt');
   p.add('ui.seeOnFile');

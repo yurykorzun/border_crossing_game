@@ -87,6 +87,8 @@ Turning back is offered at one set early point: the passport queue, after the cl
 
 Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
+Under "Your run", "What decided it" names the two or three answers that moved the run most, in the order they were given, each with its desk and what it cost (hours lost, the medicine taken, a person named, a statement a record showed false, scrutiny, a document used). They come from the run's own record, `RunState.answers`, which answered() in src/game/play.ts writes from the same events as the after-answer lines, and decisive() picks them. Three lines follow, one per axis: arrival (on time or late, the hours left against the trip), the medicine (kept or taken) and contacts (who is on file, or no one), from axisLines(). The ending title does not change.
+
 ## Run shape
 
 Prepare → passport control → customs → security interview → result. Between checkpoints, 1-2 phone messages (your mother, your employer, a fellow passenger) carry the wider story and hint at what's next.
@@ -203,7 +205,7 @@ Every card, new or changed, must also answer these seven questions (from the rev
 6. Does the reaction describe the chosen action?
 7. Does the callback preserve the original context?
 
-The rule behind questions 2 and 4: a check can establish facts, but does not prove the officer's interpretation. Confirming that Lena works for a foreign company puts her employer on file; it does not establish political involvement. So the engine keeps three things apart: what exists (the character's background), what the check found (a fact on file) and what the officer infers (a suspicion line, `Officer.readings` in `src/game/content/world.ts`). The card shows "Confirmed: Your employer" under the reaction and "The officer questions your employer's connection." as a reaction line of its own, and no fact on file ever records the reading.
+The rule behind questions 2 and 4: a check can establish facts, but does not prove the officer's interpretation. Confirming that Lena works for a foreign company puts her employer on file; it does not establish political involvement. So the engine keeps three things apart: what exists (the character's background), what the check found (a fact on file) and what the officer infers (a suspicion line, `Officer.readings` in `src/game/content/world.ts`). The card shows "Noted: Your employer." under the reaction and "The officer questions your employer's connection." as a reaction line of its own, and no fact on file ever records the reading.
 
 Naming a contact causes harm only with a stated reason the player can see ("Ilya was already questioned about the fundraiser"). Each contact line in the ending carries one (`EndingLine.reason`, `consequences()` in `src/game/consequence.ts`), and his contact card says it before you name him. Recording an address never sends anyone by itself: officers visit your mother only when the run flagged something about her at a desk (her address, her account against yours, or the relative she named; `Contact.flaggedBy`), and the reason names it and the desk ("Customs flagged her address, and it is on the report."). Without that, she gets a phone call. The visit happens the following morning, so it agrees with every epilogue, where she is at the hospital that night.
 
@@ -231,6 +233,7 @@ Kept, because a person picks them even though the bots don't:
 - `d_named.name` - in Departure, naming the relative your file already holds. It is the same trade as `i_family.name`, a person for an hour, so the bots never take it. It stays for the same reason.
 - `p_photo.evidence` - in Departure, a document for the photo check. Departure's opening card asks for the paper first, so the bots reach the photo check with nothing left that settles it. It stays because in Arrival the same answer gets picked.
 - `f_photo.law` - in Departure, the long legal check of the photo the phone search found. The exit desk asks how much cash you take out, which no document answers (dap.5), so no salary goes on file at customs and the phone search comes only on a flag, which the bots that would take the slow check rarely carry. It stays because in Arrival the same answer gets picked.
+- `i_brother.calls` - in Departure, the two-hour call check about Mark's brother. Only the honest bot took it there, on a records day. Departure's customs desk now opens with what you take out (dap.4), which starts no lab check, so on those runs customs deals the host call instead and the interview never gets to the brother question. It stays because in Arrival the same answer gets picked.
 - `s_connection.drive` - in The funeral, asking your mother or cousin to drive out to the station for you. The bots take it only in the last hours, when the supervisor can no longer ring ahead, and The funeral's passport desk asks how long you stay (free) where Arrival asks the slower stay and employer checks, so they reach the transfer with hours left. It stays because in Arrival the same answer gets picked.
 
 ## Screen rules
@@ -260,7 +263,7 @@ What checks them so far:
 - Claims: what you said ("No reason, a short trip").
 - On file: what officials know ("Your registered family address"), which desk knows it, and how it sits on file.
 
-On file tiers (`FACT_TIERS` in `src/game/content/world.ts`, `factTier()` in `src/game/engine.ts`). Every fact is one of three kinds, and the card names which: My story tags each fact, the line under a reaction says it ("Found in the old records: Your registered family address."), and the line under a challenge card's question says it ("In the old records: ..." / "Confirmed on file: ..." / "Flagged on file: ...").
+On file tiers (`FACT_TIERS` in `src/game/content/world.ts`, `factTier()` in `src/game/engine.ts`). Every fact is one of three kinds, and the card names which: My story tags each fact with its label, the line under a reaction says it in plain words with no label ("On record: Your registered family address.", "Noted: ...", "Marked: ..."), and the line under a challenge card's question says it ("In the old records: ..." / "Confirmed on file: ..." / "Flagged on file: ...").
 
 1. Recorded: the state had it before you arrived, because you are a citizen. The registered family address, the apartment in the land register, and the exit record that shows which passport you left on. A desk that brings one up found it ("He finds your registered address and asks whether your mother still lives there.").
 2. Confirmed: it came out on this crossing, from a document, an answer, a call or a search (your employer, your father's condition, the cash count).
@@ -276,13 +279,15 @@ A claim is in one of three tiers:
 2. Inconsistency: a fact makes the claim look odd, but does not disprove it (gave no particular reason, just a short trip, and your family's address or your father's condition is on file). The cheap clarify card (`i_clarify`): clarify with a new claim for 1 hour (the new story is checked), show a document, or accept +1 scrutiny.
 3. Contradiction: a fact says the opposite (said no other relatives, and your brother abroad or another relative is on file; said under the limit, and the cash count is on file). The expensive card (`i_contradiction`): 3 hours for a formal review or +2 scrutiny. No contact can vouch it away.
 
-Every reaction against you says which of three it is (`ReactionKind` in `src/game/types.ts`, `reactionOf()` in `src/game/engine.ts`). On the two challenge cards `catchKind()` in `src/game/content/encounters.ts` decides it, and any other answer that adds scrutiny names its own (`Approach.reacts`). A caught claim is named on the line under the reaction:
+Every reaction against you says which of three it is (`ReactionKind` in `src/game/types.ts`, `reactionOf()` in `src/game/engine.ts`). On the two challenge cards `catchKind()` in `src/game/content/encounters.ts` decides it, and any other answer that adds scrutiny names its own (`Approach.reacts`). A caught claim is named on the line under the reaction, in plain words: the engine's names for the three kinds stay in the code and never reach the screen ("Doubted, not proven: ...", "Accounts differ, not proven: ...", "A record says otherwise: ..."):
 
 - Suspicion: a question raised. An inconsistency, a fact the officer flags for their priority, or what the officer reads into a confirmed fact.
 - Conflicting testimony: someone said otherwise, which you can explain. Your mother's account on the phone (`TESTIMONY`: she says you stay with her, or she names another relative) only conflicts with yours. It is never a proven lie, and the review answer reads "Explain the difference".
 - Disproof: a document or record shows the claim false (the old family register, the cash count, a bank notice, a contact synced on the phone, the donation record on the desk when you deny it). A face in a photo from your phone only raises the question, so denying it is a suspicion.
 
 Only a disproof records the claim as disproved (`RunState.disproved`).
+
+After an answer (design rule 3, `Reaction` in `src/App.tsx`, `changeLines()` in `src/game/consequence.ts`) the screen shows three blocks: what happened (the officer's reaction), what changed (a document spent, a person named, hours, scrutiny, what went on file) and what it resolves (each question now settled for the officers ahead, from the `pointSettled` event: "Settled for later desks: the prescription."). A settled point opens again when something new is flagged (`pointVerified()`), and the next officer checks it again. A question left open says "not proven" on its changed line.
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).
 

@@ -92,6 +92,8 @@ export interface Cond {
   fileDisproved?: boolean;
   /** What customs kept of the carried file's cash declaration is one of these. Never holds with no file. */
   fileDeclared?: Declaration[];
+  /** The carried file holds one of these claims, quoted or not (Departure's where you stayed, d_stayed). Never holds with no file. */
+  fileClaims?: ClaimId[];
 }
 
 /**
@@ -521,6 +523,47 @@ export interface ChangeLine {
   n?: number;
   /** amber: attention or escalation. red: a confirmed serious consequence. */
   tone: 'plain' | 'amber' | 'red';
+  /** What the answer resolves for later (a question now settled), not what it changed. */
+  resolves?: true;
+  /**
+   * Said at the end of this same line, so the reaction does not grow a line: a point
+   * settled again, or a document spent when nothing else names it ("Scrutiny 1/3. Address
+   * settled."). changeText() in src/game/consequence.ts joins them.
+   */
+  also?: { key: string; vars?: Record<string, string | number> }[];
+}
+
+/**
+ * One answer the player picked, and what it moved: the run's own record, read
+ * from the step's events (answered() in src/game/play.ts), so the ending can name
+ * the answers that decided the run (decisive() in src/game/consequence.ts).
+ * A plain wait in the waiting room adds what it moved to the answer that started the check.
+ */
+export interface Answered {
+  desk: Checkpoint;
+  /** The card or check it was given on. */
+  card: string;
+  /** The approach picked there, or the wait action. */
+  pick: string;
+  /** i18n key of the answer's label, as the button read, with its vars. */
+  key: string;
+  vars?: Record<string, string>;
+  /** Hours lost on this answer. */
+  hours: number;
+  /** Hours the trip to the bus grew by (a missed connection). */
+  travel: number;
+  /** Scrutiny gained (0 when it fell or stayed). */
+  scrutiny: number;
+  /** Contacts it put on file. */
+  named: ContactId[];
+  /** The medicine was taken on this answer. */
+  medicine: boolean;
+  /** Claims a record showed false on this answer. */
+  caught: ClaimId[];
+  /** Documents it spent. */
+  used: EvidenceId[];
+  /** Questions it settled for the desks ahead. */
+  settled: Topic[];
 }
 
 /**
@@ -638,6 +681,8 @@ export interface RunState {
   reaction: LogEntry[] | null;
   /** What the last action changed, shown under the reaction. Set by playStep() in src/game/play.ts. */
   changes?: ChangeLine[] | null;
+  /** Every answer picked so far, in order (Answered). Unset in saves from before it existed. */
+  answers?: Answered[];
   log: LogEntry[];
   decisions: number;
   inspections: number;

@@ -171,20 +171,20 @@ test('after an answer: the reaction, what changed, and the next action', async (
   // Within the checkpoint: the letter puts the address on file, and Continue stays.
   await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText('Found in the old records: Your registered family address.');
+  await expect(reaction).toContainText('On record: Your registered family address.');
   await expect(next).toHaveText('Continue');
 
   // The last passport card (both core cards asked, the follow-up slot spent): the button walks on to customs.
   await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 3, seen: ['p_host', 'p_purpose'] });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText('Found in the old records: Your registered family address.');
+  await expect(reaction).toContainText('On record: Your registered family address.');
   await expect(next).toHaveText('Proceed to customs');
   await next.click();
   await expect(page.locator('main.run .queue-scene')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test('a contact who vouches: the story beat, then separate result rows for what was verified and what went on file', async ({ page }) => {
+test('a contact who vouches: the story beat, then separate rows for what went on file and what it settled', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('./');
@@ -193,14 +193,16 @@ test('a contact who vouches: the story beat, then separate result rows for what 
   await page.getByRole('button', { name: /Ask him to call your mother/ }).click();
   const reaction = page.locator('main.run .panel.reaction');
   const beat = reaction.locator('.story-beat');
-  const rows = reaction.locator('.changes li');
+  const rows = reaction.locator('[data-line="changed"] li');
   await expect(beat).toHaveText('Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.');
   // Her address and the family go on file too. On a records day both reach the desks ahead,
   // which their known-facts line shows, so no row repeats them.
   await expect(rows).toHaveText([
-    'Your reason verified.', "On file at Customs: your mother's number.",
-    'Found in the old records: Your registered family address.', 'Confirmed: Your mother names another relative.',
+    "Customs has your mother's number.",
+    'On record: Your registered family address.', 'Noted: Your mother names another relative.',
   ]);
+  // What her call resolves sits under them, apart.
+  await expect(reaction.locator('[data-line="resolves"] li')).toHaveText([en['resolve.purpose']]);
   // Separate elements: the beat holds no result text, and the rows sit under it.
   await expect(beat).not.toContainText('verified');
   const beatBox = (await beat.boundingBox())!;
@@ -249,8 +251,8 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   const run = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'accommodation', seed: 7 });
   await openAt(page, { ...run, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText('Found in the old records: Your registered family address.');
-  await expect(reaction).toContainText('Passed to Customs: Your registered family address.');
+  // On file and passed on in the same answer: one line names the fact once.
+  await expect(reaction).toContainText('On record, passed to Customs: Your registered family address.');
   await page.locator('main.run .controls button.primary').click();
 
   await page.getByRole('button', { name: 'My story' }).click();
@@ -308,7 +310,7 @@ for (const check of Object.keys(CHECKS) as CheckId[]) {
     if (check === 'medicineLab') {
       // Asking puts the urgency on file and gives the hint, and the reaction says both.
       await buttons.nth(1).click();
-      await expect(page.locator('main.run .panel.reaction')).toContainText('Confirmed: You\'re in a hurry.');
+      await expect(page.locator('main.run .panel.reaction')).toContainText('Noted: You\'re in a hurry.');
       await expect(page.locator('main.run .panel.reaction')).toContainText(en['check.medicineLab.hint.clear']);
       // The hint comes before the decision: back in the waiting room, with the result still to come.
       await page.locator('main.run .controls button.primary').click();

@@ -509,8 +509,29 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
-    // The return ticket: your entry form says five days, and you leave after twelve.
-    // A longer stay is asked about, never proof of a lie: no answer here ends the run.
+    // Where you stayed, against where your entry form said you would. Departure's
+    // second card at the passport desk, in the place of "Who will you stay with?"
+    // (p_host), which only makes sense on the way in. The file line quotes the
+    // entry form's answer (fileLine()). A place that differs from it is no proof of
+    // anything, so the clerk checks it against the entry record: an hour, not a mark.
+    id: 'd_stayed', checkpoint: 'passport', kind: 'routine', topic: 'accommodation',
+    approaches: [
+      { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
+      // The truth names her: her address goes on file. It differs from a hotel on the entry form.
+      {
+        id: 'mother', kind: 'contact', contacts: ['mother'],
+        effects: [{ claim: 'stayingWithFamily' }, { fact: 'familyAddress' }, { time: -1, when: { fileClaims: ['hotelStay'] } }],
+      },
+      // Keeping her address out of it. Free when the entry form names no place, else
+      // the place it names differs from "with friends".
+      { id: 'friends', kind: 'say', effects: [{ time: -1, when: { fileClaims: ['stayingWithFamily', 'hotelStay'] } }] },
+    ],
+  },
+  {
+    // The return date against the file (questionKey()): five days on a return ticket,
+    // three nights on a hotel booking, no date at all, or the stand-in form of a
+    // standalone run. You leave after twelve days. A longer stay is asked about,
+    // never proof of a lie: no answer here ends the run.
     id: 'd_stay', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'stay',
     issue: { any: [{ claims: ['familyVisit'] }, { claims: ['shortTrip'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }] },
     approaches: [
@@ -535,6 +556,20 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'sign', kind: 'say', reacts: 'suspicion', effects: [{ scrutiny: 1, reason: 'entryRecord' }, { time: -1 }] },
       // Leaving without it ends the crossing: turned back, free to go for now (endingText()).
       { id: 'leave', kind: 'withdraw', effects: [] },
+    ],
+  },
+  {
+    // What you take out: Departure's customs opener, in the place of the medicine
+    // card (c_medicine), which asks what you bring in. You take his empty medicine
+    // box, so a pharmacy abroad can match it. A medical note answers it (and
+    // verifies the point, as c_medicine did). Opening the bag settles it in an hour.
+    // Saying what is in it is free, except on a day medicines need paperwork, when
+    // he goes through the bag anyway and it takes longer.
+    id: 'd_out', checkpoint: 'customs', kind: 'routine', topic: 'medicine',
+    approaches: [
+      { id: 'evidence', kind: 'evidence', topic: 'medicine', effects: [] },
+      { id: 'open', kind: 'verify', effects: [{ time: -1 }] },
+      { id: 'say', kind: 'say', effects: [{ time: -2, when: { bulletin: 'customs' } }] },
     ],
   },
   {

@@ -489,7 +489,7 @@ describe('contacts confirm only what they know', () => {
 
   it('Tom never appears as an option on a medicine card', () => {
     const medicine = [...ENCOUNTERS, ...INSPECTIONS].filter((c) => c.topic === 'medicine');
-    expect(medicine.map((c) => c.id).sort()).toEqual(['c_medicine', 'f_lab', 's_bag']);
+    expect(medicine.map((c) => c.id).sort()).toEqual(['c_medicine', 'd_out', 'f_lab', 's_bag']);
     for (const card of medicine)
       for (const exposed of [[], ['mother']] as ContactId[][]) {
         const s = { ...at({ ...newRun(mark), exposed }, card.id), screen: { kind: card.id.startsWith('s_') ? 'inspection' : 'encounter', id: card.id } } as RunState;
@@ -1092,7 +1092,7 @@ describe('exposure needs a stated reason, and each reaction says which of three 
     expect(r.state.disproved).toEqual(['neverDonated']);
     expect(r.events.find((x) => x.type === 'claimChallenged')).toMatchObject({ claim: 'neverDonated', fact: 'donationRecord', kind: 'disproof' });
     const said = changeLines(r.events, 'cousin').find((l) => l.key.startsWith('change.claim.'));
-    expect(t(said!.key, said!.vars)).toBe('Disproved by the record: "Never donated".');
+    expect(t(said!.key, said!.vars)).toBe('Shown untrue: "Never donated".');
     // Explaining it instead keeps the record and makes it a question, not a disproof.
     const e = tryStep(s, { type: 'choose', approach: 'explain' });
     expect(e.ok && e.state.reaction?.[0]?.kind).toBe('suspicion');

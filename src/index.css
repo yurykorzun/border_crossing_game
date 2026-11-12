@@ -515,6 +515,8 @@ p { margin: 0 0 var(--gap); }
 .change { font-size: var(--text-small); }
 .change.amber { color: var(--amber-paper); font-weight: 600; }
 .change.red { color: var(--danger-paper); font-weight: 600; }
+/* What it resolves: under the changes, set apart so a settled question reads as its own result. */
+.changes.resolves { margin-top: 8px; padding-top: 8px; }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
 .waiting { cursor: pointer; }
 .waiting .beat { margin: 8px 0 0; color: var(--muted); }
@@ -775,6 +777,18 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: v
 .result-row dd { margin: 0; font-weight: 600; }
 /* Red only for a confirmed serious consequence: the medicine lost, the protected contact called in. */
 .result-row dd.red { color: var(--danger-paper); }
+/* What decided it (dap.7): the answers, each with its desk and cost, then the three axes. */
+.decided { margin-top: 12px; }
+.decided h3 { margin: 0 0 2px; color: var(--muted); }
+.decisive { margin: 0; padding: 6px 0 0 18px; border-top: 1px solid var(--paper-2); font-size: var(--text-small); line-height: 1.3; }
+.decisive-answer { margin: 0 0 6px; overflow-wrap: anywhere; }
+.decisive-answer > span { display: block; }
+.decisive-desk { color: var(--muted); }
+.decisive-label { font-weight: 600; }
+.decisive-cost .tone-amber { color: var(--amber-paper); }
+.decisive-cost .tone-red { color: var(--danger-paper); }
+.axes { list-style: none; margin: 0; padding: 6px 0 0; border-top: 1px solid var(--paper-2); font-size: var(--text-small); line-height: 1.3; }
+.axis { margin: 0 0 2px; overflow-wrap: anywhere; }
 .ending-row { display: flex; gap: var(--gap); }
 .ending-row > button { flex: 1 1 0; min-width: 0; text-align: center; padding: 6px 10px; line-height: 1.25; }
 .ending .controls .see-file, .ending .controls .play-same { background: transparent; color: var(--paper); align-items: center; justify-content: center; font-weight: 600; }
