@@ -716,7 +716,7 @@ function useUsedBefore(s: RunState): Record<number, number> {
 
 /**
  * The story beat ("Your mother answers on the second ring."), then the result rows under
- * it, one per change ("Visit verified.", "On file at Customs: your mother's number."),
+ * it, one per change ("Visit verified.", "Customs has your mother's number."),
  * then what it resolves for later ("The prescription is settled."), then a button that says
  * what comes next. Happened, changed and resolves are separate blocks, so what happened in
  * the scene never reads as one paragraph with what it changed.

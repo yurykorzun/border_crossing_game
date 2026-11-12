@@ -313,9 +313,9 @@ describe('contact results', () => {
     // reach the desks ahead too, which their known-facts line shows, so no row repeats them.
     // What she confirmed is said once, as the question it settles, last.
     expect(rows(n)).toEqual([
-      "On file at Customs: your mother's number.",
+      "Customs has your mother's number.",
       'On record: Your registered family address.', 'Noted: Your mother names another relative.',
-      'Settled: your reason.',
+      'Reason settled.',
     ]);
   });
 
@@ -324,14 +324,14 @@ describe('contact results', () => {
     s = playStep(s, { type: 'ack' });
     while (s.screen.kind === 'wait' && s.screen.shown < s.screen.beats.length) s = playStep(s, { type: 'beat' });
     const n = playStep(s, { type: 'waitAction', action: 'assist' });
-    expect(rows(n)[0]).toBe("On file at Customs: your mother's number.");
-    expect(rows(n)).toContain('Settled: your address.');
+    expect(rows(n)[0]).toBe("Customs has your mother's number.");
+    expect(rows(n)).toContain('Address settled.');
     expect(rows(n)).not.toContain('Address verified.');
   });
 
   it('a vouch that fails: only the on-file row, no verified row', () => {
     const lines = changeLines([{ type: 'contactExposed', id: 'mother', desk: 'customs', shares: 'number', vouch: { topic: 'accommodation', passed: false } }], 'cousin');
-    expect(lines.map((c) => t(c.key, c.vars))).toEqual(["On file at Customs: your mother's number."]);
+    expect(lines.map((c) => t(c.key, c.vars))).toEqual(["Customs has your mother's number."]);
   });
 
   it('naming someone who confirms nothing reports only that they were named', () => {

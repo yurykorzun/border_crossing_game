@@ -7,9 +7,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Reaction } from './App';
 import { BOT_STYLES, playRun, setupFor } from './game/bots';
+import { changeText } from './game/consequence';
 import { newRun } from './game/engine';
 import { playStep } from './game/play';
-import type { RunState } from './game/types';
+import type { RunState, Topic } from './game/types';
 import { en } from './i18n/en';
 import { StoryRecords } from './ui/parts';
 
@@ -39,11 +40,19 @@ describe('the reaction after a verified answer', () => {
     const changed = block(markup, 'changed');
     const resolves = block(markup, 'resolves');
     expect(happened).not.toBe('');
-    // A no-cost answer still changes one thing: the document is spent.
-    expect(changed).toBe('Used: Return ticket.');
-    expect(resolves).toBe(en['resolve.stay']);
-    expect(markup.indexOf('data-line="happened"')).toBeLessThan(markup.indexOf('data-line="changed"'));
-    expect(markup.indexOf('data-line="changed"')).toBeLessThan(markup.indexOf('data-line="resolves"'));
+    // A no-cost answer still changes one thing: the document is spent, said on the line it settles.
+    expect(changed).toBe('');
+    expect(resolves).toBe('Return ticket used, stay settled.');
+    expect(markup.indexOf('data-line="happened"')).toBeLessThan(markup.indexOf('data-line="resolves"'));
+  });
+
+  it('names the spent document next to another change (border_crossing_game-dap.28)', () => {
+    // The mother's letter at p_purpose puts the family address on file and is spent.
+    const base = newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 });
+    const s = playStep({ ...base, screen: { kind: 'encounter', id: 'p_purpose' }, slot: 3, seen: ['p_host', 'p_purpose'] }, { type: 'choose', approach: 'evidence' });
+    const m = reaction(s);
+    expect(block(m, 'changed')).toContain(en['fact.familyAddress']);
+    expect(block(m, 'resolves')).toContain("Mother's letter used");
   });
 
   it('keeps the engine words and the tier labels off it', () => {
@@ -67,7 +76,7 @@ describe('every reaction the bots reach', () => {
 
   it('reaches challenges, on-file facts and settled questions', () => {
     const keys = new Set(screens.flatMap((s) => (s.changes ?? []).map((c) => c.key.split('.').slice(0, 2).join('.'))));
-    for (const k of ['change.claim', 'change.onFile', 'resolve.stay']) expect([...keys].some((x) => x.startsWith(k)), k).toBe(true);
+    for (const k of ['change.claim', 'change.onFile', 'resolve.']) expect([...keys].some((x) => x.startsWith(k)), k).toBe(true);
   });
 
   it('never says disproof, suspicion or testimony, and never shows a tier label', () => {
@@ -77,8 +86,35 @@ describe('every reaction the bots reach', () => {
 
   it('shows the resolves block only for a question it settled', () => {
     for (const s of screens) {
-      const settled = (s.changes ?? []).filter((c) => c.resolves).map((c) => en[c.key as keyof typeof en]);
+      const settled = (s.changes ?? []).filter((c) => c.resolves).map(changeText);
       expect(block(reaction(s), 'resolves')).toBe(settled.join(' '));
+    }
+  });
+});
+
+describe('a point reopened by a new flag and settled again (border_crossing_game-dap.28)', () => {
+  // Every bot step that settles a point a new flag had reopened, with its reaction.
+  const again: { s: RunState; topic: string }[] = [];
+  for (const style of BOT_STYLES)
+    for (let i = 0; i < 120; i++) {
+      const setup = setupFor(i);
+      let s = newRun(setup);
+      for (const action of playRun(style, setup).actions) {
+        const n = playStep(s, action);
+        for (const [topic, v] of Object.entries(n.verified ?? {}))
+          if (n.reaction && s.verified?.[topic as Topic] && v.flags === (n.flagged ?? []).length && s.verified[topic as Topic]!.flags !== (s.flagged ?? []).length)
+            again.push({ s: n, topic });
+        s = n;
+      }
+    }
+
+  it('says it is settled, in a line that shows anyway', () => {
+    expect(again.length).toBeGreaterThan(0);
+    for (const { s, topic } of again) {
+      const lines = s.changes ?? [];
+      const keys = lines.flatMap((c) => [c.key, ...(c.also ?? []).map((a) => a.key)]);
+      expect(keys.some((k) => k === `resolve.${topic}` || k === `resolve.used.${topic}`), `${topic}: ${keys.join(', ')}`).toBe(true);
+      expect(text(reaction(s))).toContain(changeText(lines.find((c) => [c.key, ...(c.also ?? []).map((a) => a.key)].some((k) => k.endsWith(`.${topic}`) && k.startsWith('resolve.')))!));
     }
   });
 });

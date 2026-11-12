@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { andList, own, t, tn } from '../i18n';
 import { deskOf, factIds, factTier, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
 import type { Option } from '../game/engine';
-import { SEPARATOR, consequence } from '../game/consequence';
+import { SEPARATOR, changeText, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
 import type { ChangeLine, RunState } from '../game/types';
 import type { Settings } from '../game/save';
@@ -141,7 +141,7 @@ export function ChangeLines({ changes, resolves = false }: { changes: ChangeLine
   return (
     <ul className={resolves ? 'changes resolves' : 'changes'} data-line={resolves ? 'resolves' : 'changed'}>
       {changes.map((c, i) => (
-        <li key={c.key + i} className={`change ${c.tone}`}>{c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)}</li>
+        <li key={c.key + i} className={`change ${c.tone}`}>{changeText(c)}</li>
       ))}
     </ul>
   );

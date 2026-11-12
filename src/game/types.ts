@@ -525,6 +525,12 @@ export interface ChangeLine {
   tone: 'plain' | 'amber' | 'red';
   /** What the answer resolves for later (a question now settled), not what it changed. */
   resolves?: true;
+  /**
+   * Said at the end of this same line, so the reaction does not grow a line: a point
+   * settled again, or a document spent when nothing else names it ("Scrutiny 1/3. Address
+   * settled."). changeText() in src/game/consequence.ts joins them.
+   */
+  also?: { key: string; vars?: Record<string, string | number> }[];
 }
 
 /**

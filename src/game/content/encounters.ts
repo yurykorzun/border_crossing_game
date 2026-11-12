@@ -523,7 +523,7 @@ export const ENCOUNTERS: Encounter[] = [
         effects: [{ claim: 'stayingWithFamily' }, { fact: 'familyAddress' }, { time: -1, when: { fileClaims: ['hotelStay'] } }],
       },
       // Keeping her address out of it. Free when the entry form names no place, else
-      // the place it names differs from "here and there".
+      // the place it names differs from "with friends".
       { id: 'friends', kind: 'say', effects: [{ time: -1, when: { fileClaims: ['stayingWithFamily', 'hotelStay'] } }] },
     ],
   },
