@@ -468,7 +468,7 @@ export const en: Record<string, string> = {
   'msg.prep': 'Hope your dad\'s OK. Back for Monday\'s client meeting?',
   'msg.0.0': 'The doctor says Dad can hear me. Come straight here.',
   // Departure's in its place (QueueBeat.levels): you leave Dad in her care.
-  'msg.0.0.departure': 'Dad slept well. I am with him. Text me from the gate.',
+  'msg.0.0.departure': 'Dad asked if you have your passport. Call from the gate.',
   'msg.0.1.lena': 'Don\'t mention Ilya. He was questioned once about the fundraiser. Another mention could get him called in.',
   'msg.0.1.mark': 'Don\'t mention Tom. Please.',
   // The funeral: what her sister told the border (QueueBeat.fact).
@@ -504,7 +504,7 @@ export const en: Record<string, string> = {
   'msg.2.after.call.mark': 'Customs called me. They asked about Tom.',
   'msg.2.after.delay': 'Still nothing? Text me when you are through.',
   'msg.2.after.smooth': 'The hospital café closes at six. I saved you a sandwich.',
-  'msg.2.after.smooth.departure': 'Dad ate some soup. Text me when you board.',
+  'msg.2.after.smooth.departure': 'Dad says he will wave at the planes.',
   'msg.2.1': 'Your phone dies. The man beside you lends his charger.',
   'msg.2.3': '"They ask everything three ways," he says. "Answer the same."',
   'msg.2.5': '"This way, please," an officer calls.',
@@ -1108,9 +1108,7 @@ export const en: Record<string, string> = {
   'departure:ui.allowTravel.one': 'Allow {n} hour to reach the airport after the border.',
   'departure:ui.allowTravel.other': 'Allow {n} hours to reach the airport after the border.',
   'departure:msg.1.cash': 'The sign says to declare cash over 10,000. You are taking out 14,000.',
-  'departure:msg.0.0': 'Dad asked if you have your passport. Call from the gate.',
   'departure:msg.1.after.smooth': 'Dad ate some soup. The nurse says that is good.',
-  'departure:msg.2.after.smooth': 'Dad says he will wave at the planes.',
   'departure:ending.homeInTime.body': 'The plane lifts over the river. Your mother sends a photo: your father in the chair by the window. You keep it open until the screen goes dark.',
   'departure:ending.homeAtCost.body': 'You make the flight. Not everything you carried comes with you. Your mother writes that your father asked if you got through. You write back that it was fine.',
   'departure:ending.homeAtCost.kept.body': 'You make the flight. A name you gave stays on file at the border. Your mother writes that your father asked if you got through. You write back that it was fine.',
