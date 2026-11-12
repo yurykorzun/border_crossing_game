@@ -55,7 +55,7 @@ function endingScreen(level: LevelId, ending: EndingId, patch: Partial<RunState>
     ...newRun({ level, character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7, file }),
     checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending, ...patch,
   };
-  const markup = html(Ending, { s: run, onRestart: noop, onSame: noop });
+  const markup = html(Ending, { s: run, onChoose: noop, onRetry: noop, onNext: noop });
   return { title: part(markup, /<h1>(.*?)<\/h1>/), alt: part(markup, /<div class="ending-scene"><svg[^>]*aria-label="([^"]*)"/) };
 }
 

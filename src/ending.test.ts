@@ -1,11 +1,13 @@
-// The ending card (Ending in src/App.tsx), rendered to markup: one replay prompt about a
-// choice, and no "Still to find out" list of the endings left to see (g0q.2).
+// The ending card (Ending in src/App.tsx), rendered to markup: the next steps as buttons
+// (dap.8), and no "Still to find out" list of the endings left to see (g0q.2).
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Ending } from './App';
 import { newRun } from './game/engine';
+import { setStory, t } from './i18n';
 import { en } from './i18n/en';
+import { SAMPLE_FILES } from './game/carry';
 import type { EndingId, RunState } from './game/types';
 
 const ENDED: [EndingId, Partial<RunState>][] = [
@@ -20,7 +22,7 @@ const markup = (ending: EndingId, patch: Partial<RunState>) => {
     ...newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 }),
     checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending, ...patch,
   };
-  return renderToStaticMarkup(createElement(Ending, { s: run, onRestart: () => {}, onSame: () => {} }));
+  return renderToStaticMarkup(createElement(Ending, { s: run, onChoose: () => {}, onRetry: () => {}, onNext: () => {} }));
 };
 
 const count = (html: string, text: string) => html.split(text).length - 1;
@@ -50,7 +52,7 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
       at(html, en['exposure.mother.call.title']),
       at(html, 'class="beat-line"'),
       at(html, 'class="run-summary"'),
-      at(html, `>${en['ui.playAgain']}<`),
+      at(html, `>${t('ui.continueTo', { level: 'Departure' })}<`),
     ];
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(at(html, `>${en['ui.seeOnFile']}<`)).toBeGreaterThan(at(html, 'class="run-summary"'));
@@ -117,14 +119,47 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
 });
 
 describe('the ending screen', () => {
-  it('shows one replay prompt on every ending, and no list of endings still to find', () => {
-    expect(en['ui.replayPrompt']).toBe('What would change if you packed different documents?');
+  it('points at a choice with Retry, and shows no list of endings still to find', () => {
     for (const [ending, patch] of ENDED) {
       const html = markup(ending, patch);
-      expect(count(html, 'class="replay-prompt"'), ending).toBe(1);
-      expect(count(html, en['ui.replayPrompt']), ending).toBe(1);
+      expect(count(html, '>Retry Arrival<'), ending).toBe(1);
       expect(html, ending).not.toContain('open-questions');
       expect(html, ending).not.toContain('Still to find out');
+    }
+  });
+});
+
+// Every ending says what comes next as a button (docs/design.md rule 7, dap.8).
+describe('the next steps on the ending', () => {
+  const buttons = (html: string) => [...html.matchAll(/<button[^>]*class="([^"]*)"[^>]*>(.*?)<\/button>/g)].map((m) => [m[1], m[2]])
+    .filter(([cls]) => cls !== "close");
+
+  it('after Arrival: Retry Arrival and Choose a crossing quiet, Continue to Departure the strong one', () => {
+    for (const [ending, patch] of ENDED) {
+      expect(buttons(markup(ending, patch)), ending).toEqual([
+        ['choice see-file', en['ui.seeOnFile']],
+        ['choice retry', 'Retry Arrival'],
+        ['choice choose-crossing', 'Choose a crossing'],
+        ['primary continue-next', 'Continue to Departure'],
+      ]);
+    }
+  });
+
+  it('after Departure, the last level on the list: Retry Departure, and Choose a crossing is the strong one', () => {
+    setStory('departure');
+    try {
+      const run: RunState = {
+        ...newRun({ level: 'departure', character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7, file: SAMPLE_FILES.lena }),
+        checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'homeInTime',
+      };
+      const html = renderToStaticMarkup(createElement(Ending, { s: run, onChoose: () => {}, onRetry: () => {}, onNext: () => {} }));
+      expect(buttons(html)).toEqual([
+        ['choice see-file', t('ui.seeOnFile')],
+        ['choice retry', 'Retry Departure'],
+        ['primary choose-crossing', 'Choose a crossing'],
+      ]);
+    } finally {
+      setStory(undefined);
     }
   });
 });

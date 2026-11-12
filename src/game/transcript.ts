@@ -16,7 +16,7 @@ import type { BotRun } from './bots';
 import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
-import { LISTED_LEVELS, levelOf } from './content/levels';
+import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
 import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
@@ -194,6 +194,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
     p.add('ui.back');
     p.add('ui.progress', { count: t('ui.progressCount', { n: list ? 3 : 2, total }), name: t('ui.record.title') });
     for (const l of recordLines(setup.file)) p.add(l.key, l.vars ?? {});
+    p.add('ui.record.carries');
     p.add('ui.record.continue', { traveler: name });
     p.add('ui.record.standalone');
     p.add('ui.record.standaloneNote');
@@ -442,10 +443,12 @@ function endingLines(s: RunState, p: Page): void {
     p.add(`ending.axis.${l.axis}`, {}, CHROME);
     p.add(l.key, l.vars, CHROME);
   }
-  // The one replay prompt under the summary.
-  p.add('ui.replayPrompt');
   p.add('ui.seeOnFile');
-  p.add('ui.playAgain');
+  // The next steps (dap.8): Retry this level, Choose a crossing, and Continue to the next level when one follows.
+  p.add('ui.retry', { level: t(levelOf(s).title) });
+  p.add('ui.pickLevel');
+  const next = nextLevel(levelOf(s).id);
+  if (next) p.add('ui.continueTo', { level: t(levelOf({ level: next }).title) });
   // The Border records sheet behind "See what's on file".
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.close', {}, CHROME);

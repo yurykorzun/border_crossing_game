@@ -57,6 +57,8 @@ export const en: Record<string, string> = {
   'ui.record.named': 'Named: {contact}',
   'ui.record.disproved': 'A record did not match "{said}"',
   'ui.record.continue': "Continue {traveler}'s crossing",
+  // One line on what carrying the file changes: the exit desks ask from it (dap.8).
+  'ui.record.carries': 'The exit desks ask about what this file holds.',
   'ui.record.standalone': 'Play standalone',
   'ui.record.standaloneNote': 'Your saved file stays as it is.',
   'ui.record.noFile': "No file from {traveler}'s crossing in. Play standalone, or finish Arrival as {traveler} first.",
@@ -201,9 +203,6 @@ export const en: Record<string, string> = {
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
-  // The one replay prompt on the ending card. It points at a choice, not at another ending,
-  // so it never lists what endings exist (g0q.2).
-  'ui.replayPrompt': 'What would change if you packed different documents?',
   // Ending card (Ending in src/App.tsx)
   'ui.crossingComplete': 'Crossing complete',
   'ui.crossingRefused': 'Request withdrawn',
@@ -216,8 +215,10 @@ export const en: Record<string, string> = {
   'ui.notNamed': 'Not named',
   'ui.seeOnFile': 'See border records',
   'ui.borderRecords': 'Border records',
-  'ui.playAgain': 'Play again',
-  'ui.playSameSetup': 'Play again with the same setup',
+  // The ending's next steps (dap.8): the same setup again, the next level as this traveler
+  // with this run's file, or the level list (ui.pickLevel). {level} is the level's title.
+  'ui.retry': 'Retry {level}',
+  'ui.continueTo': 'Continue to {level}',
   'ui.sameSetup': 'Same traveler, same documents, same day. Try another approach.',
   'ui.startOver': 'Start over',
   'ui.startOverNote': 'Ends this crossing. Your endings and settings stay.',

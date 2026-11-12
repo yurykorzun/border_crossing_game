@@ -219,7 +219,7 @@ test('the packing screen shows one message, and a queue beat read on an earlier 
   await expect(page.locator('.ending-card')).toBeVisible();
 
   // Second run: the first beat was read before, and one tap goes past every read beat to the booth.
-  await page.locator('button.play-again').click();
+  await page.locator('button.choose-crossing').click();
   await pickArrival(page);
   await page.getByRole('radio').first().click();
   await page.locator('.traveler-step .controls button.primary').click();

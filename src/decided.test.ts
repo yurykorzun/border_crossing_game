@@ -56,7 +56,7 @@ describe('the ending names the choices that decided it', () => {
         expect(d.costs.length).toBeGreaterThan(0);
       }
 
-      const html = renderToStaticMarkup(createElement(Ending, { s, onRestart: () => {}, onSame: () => {} }));
+      const html = renderToStaticMarkup(createElement(Ending, { s, onChoose: () => {}, onRetry: () => {}, onNext: () => {} }));
       const shown = plain(html);
       expect(shown).toContain(t('ending.decided.heading'));
       expect(html.split('class="decisive-answer"').length - 1).toBe(decided.length);

@@ -13,7 +13,7 @@ import type { Option, RunSetup } from './game/engine';
 import { INSPECTION_BY_ID } from './game/content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './game/content/queues';
 import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, FIRST_RUN, beatDelayMs } from './game/content/world';
-import { DEFAULT_LEVEL, LEVELS, levelRows, showsLevelList } from './game/content/levels';
+import { DEFAULT_LEVEL, LEVELS, levelRows, nextLevel, showsLevelList } from './game/content/levels';
 import { browserStore, load, save, startOver } from './game/save';
 import { defaultFile, ownFile, recordRun } from './game/carry';
 import type { SaveData, Settings } from './game/save';
@@ -38,10 +38,12 @@ export default function App() {
 
 function Game() {
   const [data, setData] = useState<SaveData>(() => load(store));
-  // A run saved on an earlier visit waits on the title for Resume crossing or New crossing.
-  const [resumed, setResumed] = useState(() => data.run === null);
-  // `same` is set by "Play again with the same setup": the begin screen for that setup, no picks.
-  const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number; same?: RunSetup } | null>(null);
+  // An unfinished run saved on an earlier visit waits on the title for Resume crossing or
+  // New crossing. A finished one opens on its ending, where the next steps are (dap.8).
+  const [resumed, setResumed] = useState(() => data.run === null || !!data.run.ending);
+  // `same` is set by Retry on the ending: the begin screen for that setup, no picks.
+  // `next` is set by "Continue to ...": that level as the same traveler, from their file.
+  const [setup, setSetup] = useState<{ bulletin: BulletinId; seed: number; same?: RunSetup; next?: NextLevel } | null>(null);
 
   useEffect(() => save(store, data), [data]);
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
@@ -57,11 +59,23 @@ function Game() {
     setData((d) => recordRun(d, next));
   };
 
+  const newDay = () => {
+    const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
+    return { seed, bulletin: BULLETINS[Math.abs(seed) % BULLETINS.length] };
+  };
+
   const startSetup = () => {
     setResumed(true);
-    const seed = (Date.now() ^ Math.floor(Math.random() * 1e9)) | 0;
-    setSetup({ seed, bulletin: BULLETINS[Math.abs(seed) % BULLETINS.length] });
+    setSetup(newDay());
     setData(startOver);
+  };
+
+  // The next level as the ended run's traveler. The ended run is recorded first (recordRun()
+  // leaves an already recorded run as it is), so the saved file is this run's file.
+  const startNext = (level: LevelId) => {
+    if (!run) return;
+    setSetup({ ...newDay(), next: { level, character: run.character } });
+    setData((d) => startOver(recordRun(d, run)));
   };
 
   // The ended run's traveler, packing, bulletin and seed, so the deal comes out the same.
@@ -75,11 +89,12 @@ function Game() {
   return (
     <div className="shell" onPointerDown={() => sound.wakeAudio()}>
       {run && resumed ? (
-        <Run s={run} dispatch={dispatch} data={data} setData={setData} onRestart={startSetup} onSame={startSame} onStartOver={startSetup} />
+        <Run s={run} dispatch={dispatch} data={data} setData={setData} onChoose={startSetup} onRetry={startSame} onNext={startNext} onStartOver={startSetup} />
       ) : setup ? (
         <Setup
           bulletin={setup.bulletin}
           same={setup.same}
+          next={setup.next}
           endingsSeen={data.endingsSeen}
           levelsFinished={data.levelsFinished}
           savedFile={data.file}
@@ -91,7 +106,7 @@ function Game() {
           }}
         />
       ) : (
-        <Title saved={run !== null} onStart={startSetup} onResume={() => setResumed(true)}
+        <Title saved={run !== null && !run.ending} onStart={startSetup} onResume={() => setResumed(true)}
           settings={data.settings} onSettings={(settings) => setData((d) => ({ ...d, settings }))} />
       )}
     </div>
@@ -136,7 +151,7 @@ function Autoplay({ style }: { style: BotStyle }) {
   const shown = { ...data, endingsSeen: s.ending && !data.endingsSeen.includes(s.ending) ? [...data.endingsSeen, s.ending] : data.endingsSeen };
   return (
     <div className="shell" data-autoplay={style}>
-      <Run s={s} dispatch={dispatch} data={shown} setData={setData} onRestart={() => setAuto(autoRun(randomIndex()))} />
+      <Run s={s} dispatch={dispatch} data={shown} setData={setData} onChoose={() => setAuto(autoRun(randomIndex()))} />
     </div>
   );
 }
@@ -196,6 +211,9 @@ const stepsFor = (levelsFinished: readonly LevelId[], level: LevelId): readonly 
 /** Starts a run: the level, traveler and packing, and the file a level that reads one opens with. */
 type OnStart = (level: LevelId, c: CharacterId, l: EvidenceId[], file?: CarriedFile) => void;
 
+/** "Continue to ..." from an ending: the next level, as the traveler who just finished. */
+interface NextLevel { level: LevelId; character: CharacterId }
+
 /** "2 / 4" on a setup screen, counted over the steps this player walks. */
 const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
   t('ui.progressCount', { n: steps.indexOf(step) + 1, total: steps.length });
@@ -203,9 +221,10 @@ const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
 // Before the first ending (firstRun) there is no traveler to choose yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1. Back goes to the title, and
 // Change documents opens the packing screen with FIRST_RUN's picks kept.
-function Setup({ bulletin, same, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
+function Setup({ bulletin, same, next, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
   bulletin: BulletinId;
   same?: RunSetup;
+  next?: NextLevel;
   endingsSeen: readonly EndingId[];
   levelsFinished: readonly LevelId[];
   savedFile: CarriedFile | null;
@@ -219,11 +238,13 @@ function Setup({ bulletin, same, endingsSeen, levelsFinished, savedFile, seed, o
     return <BeginStep level={level} picked={same.loadout} traveler={same.character} bulletin={bulletin}
       onBegin={() => onStart(level, same.character, same.loadout, same.file)} />;
   }
-  return <Picks bulletin={bulletin} endingsSeen={endingsSeen} levelsFinished={levelsFinished} savedFile={savedFile} seed={seed} onExit={onExit} onStart={onStart} />;
+  return <Picks bulletin={bulletin} next={next} endingsSeen={endingsSeen} levelsFinished={levelsFinished} savedFile={savedFile} seed={seed} onExit={onExit} onStart={onStart} />;
 }
 
-function Picks({ bulletin, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
+function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
   bulletin: BulletinId;
+  /** Set from an ending's "Continue to ...": that level and traveler, picked already. */
+  next?: NextLevel;
   endingsSeen: readonly EndingId[];
   levelsFinished: readonly LevelId[];
   savedFile: CarriedFile | null;
@@ -232,14 +253,15 @@ function Picks({ bulletin, endingsSeen, levelsFinished, savedFile, seed, onExit,
   onExit: () => void;
   onStart: OnStart;
 }) {
-  const firstRun = endingsSeen.length === 0;
-  const [level, setLevel] = useState<LevelId>(DEFAULT_LEVEL);
+  const firstRun = endingsSeen.length === 0 && !next;
+  const [level, setLevel] = useState<LevelId>(next?.level ?? DEFAULT_LEVEL);
   // The file the run opens with, picked on the record step (RecordStep).
   const [file, setFile] = useState<CarriedFile | undefined>(undefined);
   const steps = stepsFor(levelsFinished, level);
-  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : steps[0]);
+  // Continuing opens on the step after the traveler: in Departure, the traveler's file.
+  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : next ? steps[steps.indexOf('traveler') + 1] : steps[0]);
   setStory(level);
-  const [character, setCharacter] = useState<CharacterId | null>(firstRun ? FIRST_RUN.character : null);
+  const [character, setCharacter] = useState<CharacterId | null>(next?.character ?? (firstRun ? FIRST_RUN.character : null));
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
   const move = (delta: number) => setAt(steps[steps.indexOf(at) + delta]);
   const begin = (c: CharacterId) => onStart(level, c, picked, LEVELS[level].readsFile ? file : undefined);
@@ -317,6 +339,8 @@ function RecordStep({ count, traveler, saved, onBack, onPick }: {
           <section className="paper file-record" data-record>
             <h2>{t(title.key)}</h2>
             <ul>{lines.map((l, i) => <li key={i}>{t(l.key, l.vars)}</li>)}</ul>
+            {/* What carrying it changes, in one line (dap.8). */}
+            <p className="record-carries">{t('ui.record.carries')}</p>
           </section>
         ) : (
           <p className="muted-dark record-none" data-record-none>{t('ui.record.noFile', { traveler: name })}</p>
@@ -607,14 +631,17 @@ export function TravelerStep({ initial, count, onBack, onContinue }: { initial: 
   );
 }
 
-function Run({ s, dispatch, data, setData, onRestart, onSame, onStartOver }: {
+function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOver }: {
   s: RunState;
   dispatch: (a: Action) => void;
   data: SaveData;
   setData: React.Dispatch<React.SetStateAction<SaveData>>;
-  onRestart: () => void;
-  /** "Play again with the same setup" on the ending. Unset in autoplay. */
-  onSame?: () => void;
+  /** "Choose a crossing" on the ending: the level list. */
+  onChoose: () => void;
+  /** "Retry ..." on the ending, the same setup again. Unset in autoplay. */
+  onRetry?: () => void;
+  /** "Continue to ..." on the ending, the next level as this traveler. Unset in autoplay. */
+  onNext?: (level: LevelId) => void;
   /** Start over in the settings sheet. Unset in autoplay. */
   onStartOver?: () => void;
 }) {
@@ -623,7 +650,7 @@ function Run({ s, dispatch, data, setData, onRestart, onSame, onStartOver }: {
   const usedBefore = useUsedBefore(s);
   const readBefore = useReadBefore(s.seed, data.beatsSeen);
   // The last officer line still shows before the ending card.
-  if (s.ending && !s.reaction) return <Ending s={s} onRestart={onRestart} onSame={onSame} />;
+  if (s.ending && !s.reaction) return <Ending s={s} onChoose={onChoose} onRetry={onRetry} onNext={onNext} />;
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
@@ -935,11 +962,21 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * happened after, under one time heading ("The following morning"): each cost worst
  * first, and the later beat (laterBeat()) as its own line with the choice that caused it.
  * Then the run summary, where the medicine and the protected contact show (and only
- * there), and the buttons: "See border records", which opens the records alone, and
- * "Play again", with "Play again with the same setup" beside it (onSame).
+ * there), and the buttons, each a next step that says where it goes (dap.8): "See border
+ * records", which opens the records alone, "Retry Arrival" (the same setup, onRetry),
+ * "Choose a crossing" (the level list, onChoose) and, when a level follows this one,
+ * "Continue to Departure" as the strong one (onNext). With no level after it, Choose a
+ * crossing is the strong one.
  */
-export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () => void; onSame?: () => void }) {
+export function Ending({ s, onChoose, onRetry, onNext }: {
+  s: RunState;
+  onChoose: () => void;
+  onRetry?: () => void;
+  onNext?: (level: LevelId) => void;
+}) {
   const [story, setStory] = useState(false);
+  const level = s.level ?? DEFAULT_LEVEL;
+  const next = onNext ? nextLevel(level) : undefined;
   const ending = s.ending ?? endingFor(s);
   const text = endingText(s);
   const cost = consequences(s);
@@ -1025,17 +1062,18 @@ export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () =>
             ))}
           </ul>
         </section>
-        {/* One replay prompt about a choice, never a list of endings still to find (g0q.2). */}
-        <p className="replay-prompt">{t('ui.replayPrompt')}</p>
       </section>
-      {/* Sticky, so Play again stays in view however long the story above runs (pfi.9). */}
+      {/* Sticky, so the next steps stay in view however long the story above runs (pfi.9). */}
       <div className="controls">
-        {/* The two quiet buttons share one row, so the ending still fits the phone with all three. */}
+        {/* The quiet buttons share one row, so the ending still fits the phone with all of them. */}
         <div className="ending-row">
           <button className="choice see-file" aria-haspopup="dialog" onClick={() => setStory(true)}>{t('ui.seeOnFile')}</button>
-          {onSame && <button className="choice play-same" onClick={onSame}>{t('ui.playSameSetup')}</button>}
+          {onRetry && <button className="choice retry" onClick={onRetry}>{t('ui.retry', { level: t(LEVELS[level].title) })}</button>}
+          {next && <button className="choice choose-crossing" onClick={onChoose}>{t('ui.pickLevel')}</button>}
         </div>
-        <button className="primary play-again" onClick={onRestart}>{t('ui.playAgain')}</button>
+        {next && onNext
+          ? <button className="primary continue-next" onClick={() => onNext(next)}>{t('ui.continueTo', { level: t(LEVELS[next].title) })}</button>
+          : <button className="primary choose-crossing" onClick={onChoose}>{t('ui.pickLevel')}</button>}
       </div>
       {/* The records alone: the epilogue and the consequences stay on the ending screen above. */}
       <Sheet open={story} onClose={() => setStory(false)} title={t('ui.borderRecords')}>

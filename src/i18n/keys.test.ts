@@ -48,8 +48,8 @@ function contentKeys(): string[] {
     keys.push(`queue.${n}.go`);
     for (const b of beats) keys.push(b.key, ...(b.from ? [`msg.from.${b.from}`] : []));
   });
-  // The title with a saved run, and the ending card's one replay prompt.
-  keys.push('ui.resume', 'ui.newCrossing', 'ui.replayPrompt');
+  // The title with a saved run, and the ending's next steps.
+  keys.push('ui.resume', 'ui.newCrossing', 'ui.retry', 'ui.continueTo', 'ui.pickLevel');
   return keys;
 }
 

@@ -357,7 +357,7 @@ test('a Home in time ending is a short result card that fits the screen', async 
     return { doc: document.documentElement.scrollHeight <= window.innerHeight, main: main.scrollHeight <= main.clientHeight };
   });
   expect(fits, 'ending scrolls').toEqual({ doc: true, main: true });
-  await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Continue to Departure', exact: true })).toBeInViewport();
 
   // See border records opens Border records alone: no epilogue, no costs, no biography.
   await page.getByRole('button', { name: 'See border records' }).click();
@@ -378,8 +378,8 @@ test('a Home in time ending is a short result card that fits the screen', async 
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(sheet).toHaveCount(0);
 
-  // Play again goes back to the level list, then to picking a traveler.
-  await page.getByRole('button', { name: 'Play again', exact: true }).click();
+  // Choose a crossing goes back to the level list, then to picking a traveler.
+  await page.getByRole('button', { name: 'Choose a crossing', exact: true }).click();
   await pickArrival(page);
   await expect(page.locator('.traveler-step')).toBeVisible();
   await expect(page.getByRole('radio').first()).toBeVisible();
@@ -498,7 +498,7 @@ const endingCases: { name: string; run: () => RunState; worst: string; beat?: tr
   },
 ];
 for (const c of endingCases) {
-  test(`the ${c.name} ending reads title, arrival, what happened after, then the summary, with Play again in view`, async ({ page }) => {
+  test(`the ${c.name} ending reads title, arrival, what happened after, then the summary, with the next steps in view`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
     await page.goto('./');
@@ -544,10 +544,10 @@ for (const c of endingCases) {
     // No on-file count and no severity tag on any consequence.
     await expect(card).not.toContainText(/on file now|Minor|Serious|Severe/);
     await expect(card.locator('.tag')).toHaveCount(0);
-    // Play again is on screen without scrolling.
+    // The next steps are on screen without scrolling.
     const scrolled = await page.evaluate(() => ({ doc: window.scrollY, main: document.querySelector('main.ending')!.scrollTop }));
     expect(scrolled).toEqual({ doc: 0, main: 0 });
-    await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport({ ratio: 1 });
+    for (const name of ['Retry Arrival', 'Choose a crossing', 'Continue to Departure']) await expect(page.getByRole('button', { name, exact: true }), name).toBeInViewport({ ratio: 1 });
     await noHorizontalScroll(page, `${c.name} ending`);
     // The sheet button names the sheet it opens (pfi.18).
     await expect(page.getByRole('button', { name: "See what's on file" })).toHaveCount(0);

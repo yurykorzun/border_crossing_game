@@ -143,13 +143,15 @@ test('with one level open the level list never shows, fresh or returning', async
   await expect(page.getByText(en['ui.pickLevel'])).toHaveCount(0);
 });
 
-test('a finished crossing shows one replay prompt and no list of endings left', async ({ page }) => {
+test('a finished crossing opens on its ending, with no Resume crossing and no list of endings left', async ({ page }) => {
   const run: RunState = { ...lenaRun(), time: 0, checkpoint: 3, screen: { kind: 'ending' }, reaction: null, ending: 'tooLate' };
   await withSave(page, { ...freshSave(), run, endingsSeen: ['tooLate'] });
-  await page.locator('.title-screen button.resume').click();
+  // Nothing left to resume: the ending and its next steps, not the title (dap.8).
   const card = page.locator('.ending-card');
-  await expect(card.locator('.replay-prompt')).toHaveCount(1);
-  await expect(card.locator('.replay-prompt')).toHaveText(en['ui.replayPrompt']);
+  await expect(card).toBeVisible();
+  await expect(page.locator('main.title-screen')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: en['ui.resume'] })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Retry Arrival', exact: true })).toBeVisible();
   await expect(page.locator('.open-questions')).toHaveCount(0);
   await expect(page.getByText('Still to find out')).toHaveCount(0);
 });
