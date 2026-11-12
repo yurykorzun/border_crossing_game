@@ -416,6 +416,11 @@ export interface Level {
    * the first queue says it (QueueBeat.fact).
    */
   statements?: readonly FactId[];
+  /**
+   * Left off the level list until it has its own story: its content, saves and tests
+   * stay, and a saved run on it still resumes (LISTED_LEVELS in src/game/content/levels.ts).
+   */
+  hidden?: true;
 }
 
 /**

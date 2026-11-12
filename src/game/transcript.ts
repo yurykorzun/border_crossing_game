@@ -16,7 +16,7 @@ import type { BotRun } from './bots';
 import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
-import { LEVELS, LEVEL_IDS, levelOf } from './content/levels';
+import { LISTED_LEVELS, levelOf } from './content/levels';
 import { SEPARATOR, caughtLine, consequence, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
@@ -441,9 +441,9 @@ function endingLines(s: RunState, p: Page): void {
 
 /**
  * Replays a bot run from its setup and records every screen. `levels` is the
- * level list on the first setup screen: every level (LEVEL_IDS) unless a test passes its own.
+ * level list on the first setup screen: the listed levels (LISTED_LEVELS) unless a test passes its own.
  */
-export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])): Transcript {
+export function transcriptOf(run: BotRun, setup: RunSetup, levels: readonly Level[] = LISTED_LEVELS): Transcript {
   // The level's own wording, as the app shows it (setStory() in src/i18n/index.ts).
   const before = getStory();
   setStory(setup.level);
