@@ -7,9 +7,11 @@ import { MISSION_MIN_TIME, START_TIME } from './world';
 import { ENCOUNTERS, INSPECTIONS, STATEMENTS } from './encounters';
 
 /** Cards only Departure deals: the desks open with your carried file (rwf.3). */
-const DEPARTURE_ONLY = ['d_entry', 'd_stay', 'd_hold', 'd_declared', 'd_named'];
-/** Arrival cards Departure asks in its own words, from the file: why you came, how long, your cash, your family. */
-const DEPARTURE_REPLACES = ['p_purpose', 'p_stay', 'c_cash', 'i_family'];
+const DEPARTURE_ONLY = ['d_entry', 'd_stayed', 'd_stay', 'd_hold', 'd_out', 'd_declared', 'd_named'];
+/** Arrival cards Departure asks in its own words, from the file: why you came, where and how long you stayed, what you carry, your cash, your family. */
+const DEPARTURE_REPLACES = ['p_purpose', 'p_host', 'p_stay', 'c_medicine', 'c_cash', 'i_family'];
+/** The lab follow-up only the medicine card's declaration deals (medicineLab), so Departure never reaches it. */
+const DEPARTURE_UNREACHED = ['f_lab'];
 /** Cards only The funeral deals: how long you stay, against her sister's statement (rwf.4). */
 const FUNERAL_ONLY = ['p_days'];
 /** Passport follow-ups The funeral asks how long you stay in place of (p_days). */
@@ -33,9 +35,10 @@ export const LEVELS: Record<LevelId, Level> = {
     cards: without(DEPARTURE_ONLY, FUNERAL_ONLY),
     rules: [],
   },
-  // Level 2: the return ticket. Your father needs another week of care, and on the way
-  // in you said five days. Every desk opens with the file from your last crossing
-  // (RunSetup.file): what you said, who you named, what customs kept.
+  // Level 2: the return ticket. Your father needs another week of care, and you leave
+  // after twelve days. Every desk opens with the file from your last crossing
+  // (RunSetup.file): what you said, where you would stay, what date out you showed,
+  // who you named, what customs kept.
   departure: {
     id: 'departure',
     number: 2,
@@ -45,8 +48,8 @@ export const LEVELS: Record<LevelId, Level> = {
     goalBody: 'departure:mission.body',
     startTime: START_TIME,
     minTripTime: MISSION_MIN_TIME,
-    cards: without(DEPARTURE_REPLACES, FUNERAL_ONLY),
-    core: { passport: ['d_entry', 'p_host'], customs: ['c_medicine', 'd_declared'], interview: ['d_named', 'i_employer'] },
+    cards: without(DEPARTURE_REPLACES, DEPARTURE_UNREACHED, FUNERAL_ONLY),
+    core: { passport: ['d_entry', 'd_stayed'], customs: ['d_out', 'd_declared'], interview: ['d_named', 'i_employer'] },
     readsFile: true,
     rules: [
       // Giving the reason your file already holds, and explaining the longer stay.

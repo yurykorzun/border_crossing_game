@@ -173,6 +173,11 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.d_declared.count': { always: 1, most: 1 },
     'enc.d_declared.under': { always: 0, most: 1 },
     'enc.d_named.why': { always: 1, most: 1 },
+    // Departure's where you stayed and customs opener (dap.4), new, so they have no earlier price.
+    'enc.d_stayed.mother': { always: 0, most: 1 },
+    'enc.d_stayed.friends': { always: 0, most: 1 },
+    'enc.d_out.open': { always: 1, most: 1 },
+    'enc.d_out.say': { always: 0, most: 2 },
   };
 
   it('every answer that costs time has a non-empty event text, at the same hours as before', () => {

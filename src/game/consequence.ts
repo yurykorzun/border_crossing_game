@@ -352,8 +352,27 @@ export function fileLine(s: RunState, card: string): { key: string; vars: Record
     const c = fileSaid(file).find((x) => file.disproved?.includes(x.claim));
     return c && quoteLine(s, 'file.disproved', c);
   }
-  if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: { crossing: t(`level.${file.level}.title`) } };
+  const crossing = { crossing: t(`level.${file.level}.title`) };
+  if (card === 'd_stayed') {
+    const c = fileSaid(file).find((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay');
+    return c ? quoteLine(s, 'file.said', c) : { key: 'file.stayed.none', vars: crossing };
+  }
+  if (card === 'd_stay') return { key: `file.stay.${fileStay(file)}`, vars: crossing };
+  if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: crossing };
   return undefined;
+}
+
+/**
+ * The date out the exit desk reads on your entry form (d_stay): the return ticket's
+ * five days or the hotel's three nights when the file kept that document as shown,
+ * none when it showed neither, and in a standalone run (a seeded default file) a
+ * stated stand-in, a short visit, so the question never quotes a crossing nobody played.
+ */
+export function fileStay(file: CarriedFile): 'ticket' | 'hotel' | 'undated' | 'standalone' {
+  if (file.seeded) return 'standalone';
+  if (file.spent.includes('returnTicket')) return 'ticket';
+  if (file.spent.includes('hotel')) return 'hotel';
+  return 'undated';
 }
 
 /**
@@ -389,6 +408,8 @@ export function questionKey(s: RunState, prefix: 'enc' | 'insp', id: string): st
   const base = prefix === 'enc' && id === 'c_host' && !knows(s, 'familyAddress') ? 'enc.c_host.phoned'
     // With nothing on file for the point, the Departure card asks it plainly.
     : prefix === 'enc' && ((id === 'd_entry' && !fileClaim(s.file)) || (id === 'd_named' && !fileContact(s.file))) ? `enc.${id}.unsaid`
+    // The stay question names the date out the file holds (fileStay()); the ticket's five days is the plain one.
+    : prefix === 'enc' && id === 'd_stay' && s.file && fileStay(s.file) !== 'ticket' ? `enc.d_stay.${fileStay(s.file)}`
     : `${prefix}.${id}`;
   return own(`${base}.q`, s.character);
 }

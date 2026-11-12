@@ -489,7 +489,7 @@ describe('contacts confirm only what they know', () => {
 
   it('Tom never appears as an option on a medicine card', () => {
     const medicine = [...ENCOUNTERS, ...INSPECTIONS].filter((c) => c.topic === 'medicine');
-    expect(medicine.map((c) => c.id).sort()).toEqual(['c_medicine', 'f_lab', 's_bag']);
+    expect(medicine.map((c) => c.id).sort()).toEqual(['c_medicine', 'd_out', 'f_lab', 's_bag']);
     for (const card of medicine)
       for (const exposed of [[], ['mother']] as ContactId[][]) {
         const s = { ...at({ ...newRun(mark), exposed }, card.id), screen: { kind: card.id.startsWith('s_') ? 'inspection' : 'encounter', id: card.id } } as RunState;

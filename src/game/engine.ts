@@ -218,6 +218,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.fileNamed !== undefined && (fileContact(s.file) !== undefined) !== cond.fileNamed) return false;
   if (cond.fileDisproved !== undefined && !!s.file?.disproved?.length !== cond.fileDisproved) return false;
   if (cond.fileDeclared && !(s.file?.declared && cond.fileDeclared.includes(s.file.declared))) return false;
+  if (cond.fileClaims && !cond.fileClaims.some((c) => s.file?.claims.includes(c))) return false;
   return true;
 }
 

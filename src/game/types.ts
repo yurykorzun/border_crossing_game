@@ -92,6 +92,8 @@ export interface Cond {
   fileDisproved?: boolean;
   /** What customs kept of the carried file's cash declaration is one of these. Never holds with no file. */
   fileDeclared?: Declaration[];
+  /** The carried file holds one of these claims, quoted or not (Departure's where you stayed, d_stayed). Never holds with no file. */
+  fileClaims?: ClaimId[];
 }
 
 /**
