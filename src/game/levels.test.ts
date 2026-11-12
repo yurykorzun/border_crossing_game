@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS, LISTED_LEVELS, dealsCard, isLevelId, levelOf, levelRows, showsLevelList } from './content/levels';
+import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS, LISTED_LEVELS, dealsCard, isLevelId, levelOf, levelRows, nextLevel, showsLevelList } from './content/levels';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { MISSION_MIN_TIME, START_TIME } from './content/world';
 import { newRun, travelOf } from './engine';
@@ -54,6 +54,12 @@ describe('levels as data', () => {
     const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2 }];
     expect(showsLevelList([], two)).toBe(false);
     expect(showsLevelList(['arrival'], two)).toBe(true);
+  });
+
+  it('names the level an ending continues to: Departure after Arrival, none after the last or a hidden one (dap.8)', () => {
+    expect(nextLevel('arrival')).toBe('departure');
+    expect(nextLevel('departure')).toBeUndefined();
+    expect(nextLevel('funeral')).toBeUndefined();
   });
 
   it('keeps The funeral off the level list until it has its own story (dap.2)', () => {

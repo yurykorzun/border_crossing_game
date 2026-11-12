@@ -72,7 +72,7 @@ for (const [id, own, other] of [['lena', 'Ilya', 'Tom'], ['mark', 'Tom', 'Ilya']
     // 1. The phone vibrates: Mom's first message, alone under the scene.
     await expect(msg).toContainText(en['msg.0.0']);
     await expect(msg.locator('.msg-from')).toHaveText('Mom');
-    await expect(msg).toContainText("The doctor says Dad can hear me. Come straight to the hospital.");
+    await expect(msg).toContainText("The doctor says Dad can hear me. Come straight here.");
     await expect(button).toHaveText('Continue');
 
     // 2. A tap on the scene: the warning about this traveler's own protected contact replaces it.
@@ -219,7 +219,7 @@ test('the packing screen shows one message, and a queue beat read on an earlier 
   await expect(page.locator('.ending-card')).toBeVisible();
 
   // Second run: the first beat was read before, and one tap goes past every read beat to the booth.
-  await page.locator('button.play-again').click();
+  await page.locator('button.choose-crossing').click();
   await pickArrival(page);
   await page.getByRole('radio').first().click();
   await page.locator('.traveler-step .controls button.primary').click();

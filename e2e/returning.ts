@@ -29,13 +29,14 @@ export async function pickArrival(page: Page) {
 }
 
 /**
- * Reloads onto a saved game. A saved run waits on the title (g0q.2), so this taps
- * Resume crossing to reach it, as a returning player would.
+ * Reloads onto a saved game. An unfinished run waits on the title (g0q.2), so this taps
+ * Resume crossing to reach it, as a returning player would. A finished run opens on its
+ * ending, where the next steps are (dap.8), so there is nothing to tap.
  */
 export async function openSaved(page: Page, data: SaveData) {
   await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify(data)] as const);
   await page.reload();
-  if (data.run) await resume(page);
+  if (data.run && !data.run.ending) await resume(page);
 }
 
 /** Taps Resume crossing on the title. */

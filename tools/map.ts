@@ -131,7 +131,7 @@ ${box('Title screen', `${txt('ui.stamp')}<br><b>${txt('ui.title')}</b><br>${txt(
 ${arrow('Begin')}
 ${box('Choose a crossing (level list)', `Shown only once more than one level is open. “${txt('ui.pickLevel')}”: ${LV.map((l) => `<b>${txt(l.title)}</b>: ${txt(l.blurb)}`).join(' · ')} Locked rows say “${txt('ui.levelOpensAfter')}”.`, 'opt')}
 ${arrow()}
-${box('Departure only: Your file', `“${txt('ui.record.title')}”: what you said on Arrival, who you named, what customs kept. [${txt('ui.record.continue')}] or [${txt('ui.record.standalone')}] (${txt('ui.record.standaloneNote')}).`, 'opt')}
+${box('Departure only: Your file', `“${txt('ui.record.title')}”: what you said on Arrival, who you named, what customs kept. ${txt('ui.record.carries')} [${txt('ui.record.continue')}] or [${txt('ui.record.standalone')}] (${txt('ui.record.standaloneNote')}).`, 'opt')}
 ${arrow()}
 ${box('Setup 1: Choose your traveler', `Premise: “${txt('ui.premise')}” · “${txt('ui.pickCharacter')}”: ${W.CHARACTER_IDS.map((c) => `<b>${txt(`char.${c}.name`)}</b> (${txt(`char.${c}.role`)}): ${txt(`char.${c}.blurb`)} Advantage: ${txt(`char.${c}.advantage`)} Complication: ${txt(`char.${c}.complication`)}`).join(' · ')}<br>[${txt('ui.continueAs')}]`)}
 ${arrow()}
@@ -149,7 +149,7 @@ ${box('Secondary inspection', `A supervisor takes you aside. Each answer costs s
 ${arrow()}
 ${box('Admission and spot-check', `Before you are let through, a spot-check can test one thing you said. Then “${txt('finish.reaction')}”`)}
 ${arrow()}
-${box('Ending', 'Whether you made the last bus with time to spare, who you exposed, what happened to the medicine. Then a later beat: what the file you left behind did afterwards. Finishing a level opens the next one.')}
+${box('Ending', 'Whether you made the last bus with time to spare, who you exposed, what happened to the medicine. Then a later beat: what the file you left behind did afterwards. Finishing a level opens the next one. Buttons: [' + txt('ui.seeOnFile') + '] [Retry Arrival] [' + txt('ui.pickLevel') + '] [Continue to Departure]; after the last level, Choose a crossing is the strong one. A finished run reopens on its ending, so the title offers Resume crossing only for an unfinished one.')}
 </div>
 <h2>The two numbers that decide a run</h2>
 <p><b>Time:</b> you start with ${W.START_TIME} hours until the last bus and need ${W.MISSION_MIN_TIME} hours left for the trip after the border. Checks, calls and waits spend hours. <b>Scrutiny:</b> starts at 0 (Mark at ${W.CHARACTERS.mark.startScrutiny}), max ${W.MAX_SCRUTINY}. ${txt('ui.scrutinyHelp.what')} ${txt('ui.scrutinyHelp.max')}</p>

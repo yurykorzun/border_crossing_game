@@ -7,7 +7,7 @@ import { t } from '../src/i18n';
 import type { RunState } from '../src/game/types';
 import { openSaved, pickArrival } from './returning';
 
-// Play again with the same setup from the ending, and Start over from the settings sheet mid-run.
+// Retry Arrival from the ending (the same setup), and Start over from the settings sheet mid-run.
 
 const readSave = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), SAVE_KEY) as Promise<SaveData>;
 
@@ -16,13 +16,13 @@ async function openWith(page: Page, data: SaveData) {
   await openSaved(page, data);
 }
 
-test('Play again with the same setup starts the same traveler, packing, bulletin and seed', async ({ page }) => {
+test('Retry Arrival starts the same traveler, packing, bulletin and seed', async ({ page }) => {
   const setup = { ...setupFor(2), bulletin: 'records' as const };
   const ended: RunState = { ...playRun('honest', setup).final, reaction: null };
   await openWith(page, { ...freshSave(), endingsSeen: [ended.ending!], run: ended });
 
   await expect(page.locator('.ending-card')).toBeVisible();
-  await page.getByRole('button', { name: t('ui.playSameSetup') }).click();
+  await page.getByRole('button', { name: 'Retry Arrival', exact: true }).click();
 
   // The begin screen for the same setup: the same day's bulletin, the same traveler, no picks.
   const begin = page.locator('.begin-step.same-setup');

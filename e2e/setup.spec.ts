@@ -48,10 +48,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
     const level = LEVELS[DEFAULT_LEVEL];
     const mission = begin.locator('.mission');
     await expect(mission.locator('h3')).toHaveText('Your father has had a stroke.');
-    await expect(mission.locator('p').first()).toHaveText("Your mother needs help with his care. You're carrying his medicine.");
+    await expect(mission.locator('p').first()).toHaveText("Your mother needs help with him. You carry his medicine.");
     await expect(mission.locator('.mission-clock span')).toHaveText([
       `Last bus leaves in ${level.startTime} hours.`,
-      `Allow ${level.minTripTime} hours to reach the station after the border.`,
+      `Allow ${level.minTripTime} hours from the border to the station.`,
     ]);
     // Cash and the phone wait until they matter; the bus sum is said once.
     await expect(begin).not.toContainText('cash');
@@ -141,7 +141,7 @@ test('one ending seen, one level open: Begin goes straight to the traveler, neve
   const mission = page.locator('main.begin-step .mission');
   await expect(mission.locator('h3')).toHaveText(en['mission.title']);
   await expect(mission).toContainText('Last bus leaves in 8 hours.');
-  await expect(mission).toContainText('Allow 2 hours to reach the station after the border.');
+  await expect(mission).toContainText('Allow 2 hours from the border to the station.');
   await page.locator('main.begin-step .controls button.primary').click();
   await expect(page.locator('main.run .strip')).toContainText('1 / 3 · In the queue');
   await expect(page.locator('main.run .strip')).toContainText('8 hours');

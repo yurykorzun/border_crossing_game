@@ -57,6 +57,8 @@ export const en: Record<string, string> = {
   'ui.record.named': 'Named: {contact}',
   'ui.record.disproved': 'A record did not match "{said}"',
   'ui.record.continue': "Continue {traveler}'s crossing",
+  // One line on what carrying the file changes: the exit desks ask from it (dap.8).
+  'ui.record.carries': 'The exit desks ask about what this file holds.',
   'ui.record.standalone': 'Play standalone',
   'ui.record.standaloneNote': 'Your saved file stays as it is.',
   'ui.record.noFile': "No file from {traveler}'s crossing in. Play standalone, or finish Arrival as {traveler} first.",
@@ -80,7 +82,7 @@ export const en: Record<string, string> = {
   'ui.lastBus.one': 'Last bus leaves in {n} hour.',
   'ui.lastBus.other': 'Last bus leaves in {n} hours.',
   'ui.allowTravel.one': 'Allow {n} hour to reach the station after the border.',
-  'ui.allowTravel.other': 'Allow {n} hours to reach the station after the border.',
+  'ui.allowTravel.other': 'Allow {n} hours from the border to the station.',
   'ui.picked': '{picked} of {count} packed',
   'ui.bulletin': "Today's bulletin",
   'ui.medicine': "Father's medicine",
@@ -187,6 +189,10 @@ export const en: Record<string, string> = {
   'ui.proceed.ending': 'See how it ends',
   // Once the bus is out of reach (doomed() in src/game/engine.ts), the card offers to finish quickly.
   'ui.doomed': 'You will not make the bus now.',
+  // First-run explanations (src/game/explain.ts): shown once, the first time each matters.
+  'explain.time': 'Lost hours come off your time to the bus.',
+  'explain.scrutiny': 'At Scrutiny 3/3, a supervisor takes you to inspection.',
+  'explain.caught': 'A record speaks against your words. Every answer here costs something.',
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
   'ui.blocked.noCard': 'No matching document',
@@ -201,9 +207,6 @@ export const en: Record<string, string> = {
   'ui.inQueue': 'In the queue',
   'ui.inInspection': '{name} · Secondary inspection',
   'ui.portraitOf': 'Passport photo of {name}',
-  // The one replay prompt on the ending card. It points at a choice, not at another ending,
-  // so it never lists what endings exist (g0q.2).
-  'ui.replayPrompt': 'What would change if you packed different documents?',
   // Ending card (Ending in src/App.tsx)
   'ui.crossingComplete': 'Crossing complete',
   'ui.crossingRefused': 'Request withdrawn',
@@ -216,8 +219,10 @@ export const en: Record<string, string> = {
   'ui.notNamed': 'Not named',
   'ui.seeOnFile': 'See border records',
   'ui.borderRecords': 'Border records',
-  'ui.playAgain': 'Play again',
-  'ui.playSameSetup': 'Play again with the same setup',
+  // The ending's next steps (dap.8): the same setup again, the next level as this traveler
+  // with this run's file, or the level list (ui.pickLevel). {level} is the level's title.
+  'ui.retry': 'Retry {level}',
+  'ui.continueTo': 'Continue to {level}',
   'ui.sameSetup': 'Same traveler, same documents, same day. Try another approach.',
   'ui.startOver': 'Start over',
   'ui.startOverNote': 'Ends this crossing. Your endings and settings stay.',
@@ -225,7 +230,7 @@ export const en: Record<string, string> = {
 
   // ── Mission
   'mission.title': 'Your father has had a stroke.',
-  'mission.body': "Your mother needs help with his care. You're carrying his medicine.",
+  'mission.body': "Your mother needs help with him. You carry his medicine.",
   // The funeral: an old friend's, while your father is still in care.
   'funeral:mission.title': "An old friend's funeral is tomorrow.",
   'funeral:mission.body': "Her family wants it quiet. You carry Dad's medicine.",
@@ -241,6 +246,7 @@ export const en: Record<string, string> = {
   'funeral:ending.homeInTime.body': 'You reach the hall before the service ends. Your old classmates make room on the bench. Her sister nods at you from the front. Afterwards you stand outside with the others, and nobody says much.',
   'funeral:ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Her sister asks how the trip was. You tell her it was fine. Later you read your messages twice and think about who you can still call.',
   'funeral:ending.tooLate.body': 'By the time you get there, the service is over. The chairs are stacked by the wall. Her sister gives you the program and a cup of tea. You read the name on it until they turn off the lights.',
+  'funeral:ending.missedBus.lost': 'You reach her family in the morning, not tonight.',
   'funeral:ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send her sister the time and sit on a bench under the light. She writes that they will wait. You read it until the screen goes dark.',
 
   // ── Characters
@@ -351,7 +357,7 @@ export const en: Record<string, string> = {
   'claim.cashUnderLimit': 'Cash under the limit',
   'claim.stayDays': 'Staying three days',
   'claim.stayWeeks': 'Staying two weeks',
-  'fact.familyAddress': 'Your registered family address',
+  'fact.familyAddress': 'Your family address',
   'fact.employer': 'Your employer',
   'fact.fatherCondition': "Your father's condition",
   'fact.departureDate': 'Your departure date',
@@ -427,9 +433,9 @@ export const en: Record<string, string> = {
   'officer.followup': 'Officer',
   'officer.inspection': 'Supervisor',
   // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
-  'officer.passport.priority': 'The clerk checks every stamp and every date.',
+  'officer.passport.priority': 'The clerk checks every stamp and date.',
   'officer.customs.priority': 'The inspector cares what you carry and declare.',
-  'officer.interview.priority': 'This officer cares who you know, not your papers.',
+  'officer.interview.priority': 'This officer cares who you know, not papers.',
   // The security officer's reaction to a political fact coming out at the interview.
   'officer.interview.flags': '{fact}: the officer marks it as a security matter.',
   // What an officer reads into a confirmed fact (Officer.readings): a suspicion, never on file.
@@ -456,9 +462,9 @@ export const en: Record<string, string> = {
   'msg.from.work': 'Work',
   'msg.from.sister': 'Her sister',
   // On the packing screen, before you choose what to carry (PREPARATION_MESSAGE).
-  'msg.prep': 'Hope your dad\'s OK. Will you be back for Monday\'s client meeting?',
-  'msg.0.0': 'The doctor says Dad can hear me. Come straight to the hospital.',
-  'msg.0.1.lena': 'Don\'t mention Ilya. Please.',
+  'msg.prep': 'Hope your dad\'s OK. Back for Monday\'s client meeting?',
+  'msg.0.0': 'The doctor says Dad can hear me. Come straight here.',
+  'msg.0.1.lena': 'Don\'t mention Ilya. He was questioned once about the fundraiser. Another mention could get him called in.',
   'msg.0.1.mark': 'Don\'t mention Tom. Please.',
   // The funeral: what her sister told the border (QueueBeat.fact).
   'msg.0.sister.sisterSaysDays': 'I told the border three days.',
@@ -477,19 +483,19 @@ export const en: Record<string, string> = {
   'msg.1.after.call.lena': 'Passport control just called me. They asked about Ilya.',
   'msg.1.after.call.mark': 'Passport control just called me. They asked about Tom.',
   'msg.1.after.delay': 'Are you through yet? It has been hours.',
-  'msg.1.after.smooth': 'Dad squeezed my hand. The nurse says that is good.',
+  'msg.1.after.smooth': 'Dad squeezed my hand. The nurse says that\'s good.',
   'msg.1.1': 'An officer shows the woman ahead which copy is missing.',
   // Before the cash question (c_cash): the amount you carry, and that it is over the limit.
-  'msg.1.cash': 'The sign says to declare cash over 10,000. You carry 14,000.',
-  'msg.1.5': 'The inspector taps the steel table. "Bags here."',
+  'msg.1.cash': 'Declare cash over 10,000, the sign says. You carry 14,000.',
+  'msg.1.5': 'The inspector taps the table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
   'msg.2.after.call.lena': 'Customs called me. They asked about Ilya.',
   'msg.2.after.call.mark': 'Customs called me. They asked about Tom.',
   'msg.2.after.delay': 'Still nothing? Text me when you are through.',
   'msg.2.after.smooth': 'The hospital café closes at six. I saved you a sandwich.',
-  'msg.2.1': 'Your phone dies. The man on the bench lends you his charger.',
+  'msg.2.1': 'Your phone dies. The man beside you lends his charger.',
   'msg.2.3': '"They ask everything three ways," he says. "Answer the same."',
-  'msg.2.5': 'A door opens down the corridor. "This way, please."',
+  'msg.2.5': '"This way, please," an officer calls.',
   'queue.2.go': 'Follow the officer',
 
   // ── Passport control
@@ -522,7 +528,7 @@ export const en: Record<string, string> = {
   'enc.p_stay.father.reaction': 'She checks the reason with the hospital, then types it into your entry card.',
   'enc.p_stay.unsure.label': '"I don\'t know yet."',
   'enc.p_stay.unsure.event': 'Residence register check',
-  'enc.p_stay.unsure.reaction': 'She enters an open stay and checks whether you are still registered at an address here.',
+  'enc.p_stay.unsure.reaction': 'She enters an open stay and checks the address register.',
 
   // The funeral: her sister's statement is on file at every desk (fact.sisterSays*).
   'enc.p_days.q': '"How long will you stay?"',
@@ -562,14 +568,14 @@ export const en: Record<string, string> = {
   'enc.c_cash.evidence.reaction': 'He reads the salary line and notes the company name.',
   'enc.c_cash.count.label': 'Let him count your cash',
   'enc.c_cash.count.event': 'Cash count',
-  'enc.c_cash.count.reaction': 'He counts it twice and writes the total on a form.',
+  'enc.c_cash.count.reaction': 'He counts it twice and writes down the total.',
   'enc.c_cash.under.label': '"My savings. It\'s under the limit."',
   'enc.c_cash.under.reaction': 'He writes it down without counting.',
   'enc.c_cash.under.bulletin.customs.reaction': 'Cash is checked today. He counts yours anyway and clips the total to your file.',
 
   'enc.c_pen.q': '"Long queue. Need a pen for the form?"',
   'enc.c_pen.yes.label': '"Yes, thanks."',
-  'enc.c_pen.yes.reaction': 'He lends you his and points where to sign.',
+  'enc.c_pen.yes.reaction': 'He lends you his pen.',
 
   'enc.c_shortTrip.q': '"No reason, and a pensioner\'s prescriptions in the bag?"',
   'enc.c_shortTrip.admit.label': '"I came back for my father."',
@@ -604,9 +610,9 @@ export const en: Record<string, string> = {
   // ── Security interview
   'enc.p_host.q': '"Who will you stay with?"',
   'enc.p_host.evidence.label': 'Show {cardThe}',
-  'enc.p_host.evidence.reaction': 'The clerk copies the address into a file.',
+  'enc.p_host.evidence.reaction': 'The clerk copies the address.',
   'enc.p_host.mother.label': "Give {contact}'s address",
-  'enc.p_host.mother.reaction': 'The clerk writes down her address and number.',
+  'enc.p_host.mother.reaction': 'The clerk notes her address and number.',
   'enc.p_host.undecided.label': '"I haven\'t decided yet."',
   'enc.p_host.undecided.reaction': '"You came all this way without a place to sleep?" The clerk moves on.',
   'enc.p_host.undecided.bulletin.accommodation.reaction': '"Hosts are phoned today, and you have none to name?" The clerk flags it.',
@@ -741,7 +747,7 @@ export const en: Record<string, string> = {
   'insp.issue.medicine': 'Not verified yet: the prescription.',
   'insp.issue.accommodation': 'Not verified yet: your address here.',
   'insp.issue.purpose': 'Not verified yet: why you came back.',
-  'insp.s_bag.q': 'Secondary room. They empty your suitcase onto a table.',
+  'insp.s_bag.q': 'Secondary room. They empty your suitcase.',
   'insp.s_bag.wait.label': 'Wait while they search',
   'insp.s_bag.wait.event': 'Full search',
   'insp.s_bag.wait.reaction': 'They count your cash and search every pocket.',
@@ -762,22 +768,22 @@ export const en: Record<string, string> = {
   'insp.s_medicine.withdraw.label': 'Ask to return with the medicine',
   'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport. An officer walks you to departures.',
 
-  'insp.s_connection.q': 'Your shuttle to the station has left. The next one is an hour later.',
+  'insp.s_connection.q': 'Your shuttle has left. The next is in an hour.',
   'insp.s_connection.later.label': 'Take the later shuttle',
-  'insp.s_connection.later.reaction': 'The supervisor rings ahead and confirms where you are staying.',
+  'insp.s_connection.later.reaction': 'The supervisor rings ahead to confirm where you stay.',
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
   'insp.s_connection.drive.reaction': 'A short call. Someone will be waiting past the gate.',
   'insp.s_connection.transfer.label': 'Take the border transfer',
   'insp.s_connection.transfer.reaction': 'The driver asks where you are going. The officer writes down the address.',
   'insp.s_connection.evidence.label': 'Show {cardThe} for the transfer',
-  'insp.s_connection.evidence.reaction': 'The officer clips it to the transfer form and keeps it.',
+  'insp.s_connection.evidence.reaction': 'The officer clips it to the transfer form.',
 
   'insp.s_supervisor.q': 'A supervisor opens your file. "Why are you here?"',
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
   'insp.s_supervisor.evidence.reaction': 'She keeps it for the file and waves you on.',
   'insp.s_supervisor.accept.label': 'Let her phone the hospital',
   'insp.s_supervisor.accept.event': 'Call to the hospital',
-  'insp.s_supervisor.accept.reaction': 'The hospital confirms your father is a patient. She writes it down.',
+  'insp.s_supervisor.accept.reaction': 'The hospital confirms your father is a patient.',
   'insp.s_supervisor.contact.label': 'Ask her to call {contact}',
   'insp.s_supervisor.contact.event': 'Phone call',
   'insp.s_supervisor.contact.reaction': 'She calls {contact}, who tells her about your father.',
@@ -791,7 +797,7 @@ export const en: Record<string, string> = {
   'check.hostCall.hint.clear': '"They are calling your host."',
   'check.hostCall.hint.noAnswer': '"Nobody is picking up at that number."',
   'check.medicineLab.title': "They're testing the medicine.",
-  'check.medicineLab.clear': 'The cool bag comes back. Nothing is missing.',
+  'check.medicineLab.clear': 'The cool bag comes back, nothing missing.',
   'check.medicineLab.lab': 'The bag comes back with a note instead of a stamp.',
   'check.medicineLab.hint.clear': '"Routine."',
   'check.medicineLab.hint.lab': '"The lab has questions."',
@@ -880,6 +886,7 @@ export const en: Record<string, string> = {
   'ending.tooLate.title': 'Too late',
   'ending.tooLate.body': 'By the time you reach the hospital, visiting hours are over. Your mother is asleep in the corridor. You sit down next to her and do not wake her. A nurse says you can see your father at eight. You watch the door until it gets light.',
   'ending.missedBus.title': 'Missed the bus',
+  'ending.missedBus.lost': 'You reach the hospital tomorrow. Tonight your mother is alone with him.',
   'ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send your mother the time and sit on a bench under the light. She writes that your father is stable. You read it until the screen goes dark.',
   'ending.turnedBack.title': 'You turned back',
   'ending.turnedBack.body': 'You sit in the departures hall with your passport back in your coat. Your mother calls. You let it ring. The next bus back leaves in the morning. You write her a message three times and delete it three times.',
@@ -914,10 +921,10 @@ export const en: Record<string, string> = {
   // What comes back days later (laterBeat()): when, what happens, and the choice that caused it.
   // It states what an office does, never what you feel, and never scores the harm.
   'later.statement.when': 'Three days later',
-  'later.statement': 'A letter asks you to come to an office and explain your statement at {desk}.',
-  'later.statement.reason': 'Because {desk} wrote down "{said}", and a record on file says otherwise.',
+  'later.statement': 'A letter asks you to come and explain your statement at {desk}.',
+  'later.statement.reason': 'Because {desk} wrote down "{said}", and a record says otherwise.',
   'later.relative.when': 'Three days later',
-  'later.relative': 'A man who gives no name phones the other relative on your file. He asks when they last saw you.',
+  'later.relative': 'An unnamed man phones the other relative on your file. He asks when they last saw you.',
   'later.relative.reason': 'Because {desk} flagged another relative on your file.',
   'later.donation.when': 'A week later',
   'later.donation': 'Your bank writes that your account is under review and holds a payment.',
@@ -942,7 +949,7 @@ export const en: Record<string, string> = {
   'exposure.brother.protected.reason': 'He lives in a country at war with this one.',
   'exposure.brother.protected.record.reason': 'Your file flags your brother across the border.',
   'exposure.mother.home.title': "Officers go to your mother's address",
-  'exposure.mother.home': "Officers ask her to come in. She has to leave your father's bedside to give a statement.",
+  'exposure.mother.home': "Officers ask her to come in. She leaves your father's bedside to give a statement.",
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',
   'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out of it.',
   // Tom's line says why: with his record already flagged on your file he is listed, else he is only questioned.
@@ -1088,6 +1095,7 @@ export const en: Record<string, string> = {
   'departure:ending.homeInTime.body': 'The plane lifts over the river. Your mother sends a photo: your father in the chair by the window. You keep it open until the screen goes dark.',
   'departure:ending.homeAtCost.body': 'You make the flight. Not everything you carried comes with you. Your mother writes that your father asked if you got through. You write back that it was fine.',
   'departure:ending.tooLate.body': 'The gate is closed when you reach it. The next flight with a seat leaves in two days. You send your mother the time. She writes that your father is asking for you.',
+  'departure:ending.missedBus.lost': 'Tonight\'s flight leaves without you. The next one costs you another day.',
   'departure:ending.missedBus.body': 'You step past the barrier. The last bus to the airport has gone. You book the next flight on your phone, on a bench under the light. Your mother writes that your father is asleep.',
   'departure:ending.turnedBack.body': 'You take your passport back and walk out of the hall. Your mother calls. You tell her you are staying a few more days. She does not ask why.',
   'departure:ending.homeInTime.title': 'Made the flight',

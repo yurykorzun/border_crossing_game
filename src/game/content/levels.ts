@@ -120,6 +120,16 @@ export const LISTED_LEVELS: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id])
 export const levelOpen = (index: number, levelsFinished: readonly LevelId[], levels: readonly Level[] = LISTED_LEVELS): boolean =>
   index === 0 || levelsFinished.includes(levels[index - 1].id);
 
+/**
+ * The level that follows `level` on the list, which finishing `level` opens (levelOpen()):
+ * what the ending offers as "Continue to ...". None after the last listed level, or for a
+ * hidden one, which is not on the list.
+ */
+export const nextLevel = (level: LevelId, levels: readonly Level[] = LISTED_LEVELS): LevelId | undefined => {
+  const i = levels.findIndex((l) => l.id === level);
+  return i < 0 ? undefined : levels[i + 1]?.id;
+};
+
 /** One row of the level list. A locked row names the level that opens it: `ui.levelOpensAfter` with {level} its title. */
 export interface LevelRow {
   level: Level;

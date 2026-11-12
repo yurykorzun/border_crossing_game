@@ -65,11 +65,11 @@ for (const text of ['homeAtCost', 'missedBus']) {
       await expect(axes.nth(i)).toHaveText(`${t(`ending.axis.${l.axis}`)}: ${t(l.key, l.vars)}`);
       await readable(page, axes.nth(i), `${l.axis} line`);
     }
-    // "Your run" is still there to read, and Play again stays in view.
+    // "Your run" is still there to read, and the next step stays in view.
     await readable(page, card.locator('.run-summary h3'), 'Your run');
     await expect(card.locator('.run-summary h3')).toHaveText(t('ui.runSummary'));
     await readable(page, card.locator('.run-summary .result-rows'), 'the summary rows');
-    await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('button', { name: 'Continue to Departure', exact: true })).toBeInViewport({ ratio: 1 });
     const width = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(width).toBeLessThanOrEqual(390);
     expect(errors).toEqual([]);

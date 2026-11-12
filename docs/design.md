@@ -80,7 +80,7 @@ Endings (crossing result x mission result):
 
 1. Home in time - admitted, 2+ hours left, medicine kept, protected person safe.
 2. Home, at a cost - admitted, 2+ hours left, but the medicine is gone or the protected person was exposed.
-3. Too late - admitted with under 2 hours left, so you miss the bus.
+3. Too late - admitted with under 2 hours left, so you miss the bus. With no hours left at all it is "Missed the bus", and a line under the title says what that costs: you reach the hospital tomorrow, and tonight your mother is alone with him (`ending.missedBus.lost`).
 4. Turned back - you withdrew.
 
 Turning back is offered at one set early point: the passport queue, after the clerk's "Next." and before the desk has asked or decided anything ("Leave the queue and go back", `canTurnBack()` in `src/game/engine.ts`). No desk card after it offers a way out. A later inspection offers "Ask to return" only where the situation allows it: the confiscation (they hold the medicine, so you can ask to leave with it) and the supervisor's check (she has not decided yet). The bag search runs to the end, and once the shuttle has gone there is no way back to ask for. `npm run autoplay` prints how often turnedBack is reached, and where.
@@ -94,6 +94,8 @@ Under "Your run", "What decided it" names the two or three answers that moved th
 Prepare → passport control → customs → security interview → result. Between checkpoints, 1-2 phone messages (your mother, your employer, a fellow passenger) carry the wider story and hint at what's next.
 
 Each checkpoint deals two encounter cards: one routine, one related to your background or earlier answers. Before you leave, the desk spot-checks one claim you made (see Claims and On file). Follow-ups from checks, a challenge card when a spot-check finds a flaw, and 0-2 secondary inspections come on top. A run is about 7-11 decisions: packing, then usually 6-10 at the desks (`npm run autoplay` prints the mean per style).
+
+On a first run, three rules are explained in one short line each, the first time each one matters, and never again once shown (`src/game/explain.ts`, `SaveData.explained`): time under the first reaction that loses an hour ("Lost hours come off your time to the bus."), scrutiny under the first reaction that moves it, and a caught claim on the first challenge card. The transcript reads them as a first run would, so they count toward the 8-minute ceiling; to make room, dap.9 shortened lines every Arrival run reads (the queue messages, the officers' priority lines, the mission card, a few reactions and the later letter).
 
 ## Resources
 
@@ -122,10 +124,10 @@ Each person wants something ordinary, and that is what pulls on you, not a score
 
 - Your mother wants your father cared for and the family together. She volunteers what she thinks proves you innocent (on the host call she names the rest of the family unasked), and what she says is her account: testimony you can explain, never a disproof (`TESTIMONY` in `src/game/content/encounters.ts`).
 - Ilya wants to help without getting involved. He plays a problem down so you don't worry.
-- Your employer wants a return date. Work writes before you pack ("Do you know when you'll be back? The client meeting is Monday."), which pulls against the passport clerk's stay question.
+- Your employer wants a return date. Work writes before you pack ("Hope your dad's OK. Back for Monday's client meeting?"), which pulls against the passport clerk's stay question.
 - The officer wants a complete file before the shift ends. Sometimes that means a small kindness, like showing the woman ahead which copy is missing.
 
-Your mother, Ilya and Tom each say one ordinary thing in the passport queue before any card can offer to name them (`PERSONAL_LINES` in `src/game/content/queues.ts`). The packing screen shows one message, from work. Between desks your mother's message follows what happened at the desk just left (`queueMood()` in `src/game/engine.ts`): after a call she says the officer asked about your relative, after a delay of 2 hours or more she asks if you are through, else she writes something ordinary about the hospital or food. Queues offer no choice, because nothing in them changes what comes next. A beat read on an earlier run can be skipped with one tap.
+Your mother, Ilya and Tom each say one ordinary thing in the passport queue before any card can offer to name them (`PERSONAL_LINES` in `src/game/content/queues.ts`). Before that, your mother's message about Ilya says why he stays out of the file: he was questioned once about the fundraiser, and another mention could get him called in (`msg.0.1.lena`). The packing screen shows one message, from work. Between desks your mother's message follows what happened at the desk just left (`queueMood()` in `src/game/engine.ts`): after a call she says the officer asked about your relative, after a delay of 2 hours or more she asks if you are through, else she writes something ordinary about the hospital or food. Queues offer no choice, because nothing in them changes what comes next. A beat read on an earlier run can be skipped with one tap.
 
 ## Evidence cards (pick 3)
 
@@ -261,9 +263,9 @@ What checks them so far:
 
 - Truth: fixed by your character ("My story" panel).
 - Claims: what you said ("No reason, a short trip").
-- On file: what officials know ("Your registered family address"), which desk knows it, and how it sits on file.
+- On file: what officials know ("Your family address"), which desk knows it, and how it sits on file.
 
-On file tiers (`FACT_TIERS` in `src/game/content/world.ts`, `factTier()` in `src/game/engine.ts`). Every fact is one of three kinds, and the card names which: My story tags each fact with its label, the line under a reaction says it in plain words with no label ("On record: Your registered family address.", "Noted: ...", "Marked: ..."), and the line under a challenge card's question says it ("In the old records: ..." / "Confirmed on file: ..." / "Flagged on file: ...").
+On file tiers (`FACT_TIERS` in `src/game/content/world.ts`, `factTier()` in `src/game/engine.ts`). Every fact is one of three kinds, and the card names which: My story tags each fact with its label, the line under a reaction says it in plain words with no label ("On record: Your family address.", "Noted: ...", "Marked: ..."), and the line under a challenge card's question says it ("In the old records: ..." / "Confirmed on file: ..." / "Flagged on file: ...").
 
 1. Recorded: the state had it before you arrived, because you are a citizen. The registered family address, the apartment in the land register, and the exit record that shows which passport you left on. A desk that brings one up found it ("He finds your registered address and asks whether your mother still lives there.").
 2. Confirmed: it came out on this crossing, from a document, an answer, a call or a search (your employer, your father's condition, the cash count).
@@ -356,6 +358,8 @@ English first, built for translation from day one:
 Someone returning for a funeral, a parent collecting a child, an emigrant renewing documents. Each has different resources and something different to lose. A familiar officer or passenger can reappear across runs. Build these only after the first mission is fun.
 
 Each story is a level: a record in `src/game/content/levels.ts` with its name and goal text keys, its start time, its minimum trip time, the cards it can deal and the one rule it adds. Level 1 Arrival is the first mission above, with no new rule. A run's setup names its level beside the traveler, packing and bulletin. A level opens once the player has finished the one before it, with any ending (`levelOpen()`), and a locked row on the list names that level; endings stay a collection to fill, not a key. The level list comes before the traveler screen only when more than one level is open (`showsLevelList()`); with Arrival alone there is no list, and a first run plays Arrival straight from the begin screen. A level marked `hidden` stays off the list (`LISTED_LEVELS`) but keeps its content and tests, and a saved run on it still resumes. Level 3 The funeral is hidden until it has its own story, because it shares Arrival's core cards and carries Dad's medicine, so it reads as the hospital mission. `npm run walk`, `npm run autoplay` and `npx tsx tools/eval.ts` run every level (or one, with `--level`), so each is checked by the same rules. `npm run walk -- --ignore <rule>` plays bots that never make the picks a level rule's heeders make, and a rule earns its place when ignoring it gets home in time less often.
+
+Every ending offers the next step as a button (rule 7): "Retry Arrival" replays the same setup, "Continue to Departure" opens the next listed level (`nextLevel()`) as the same traveler on their file screen, with this run's file, and "Choose a crossing" opens the level list. After the last listed level, Choose a crossing is the strong button. The file screen says in one line what carrying the file changes (`ui.record.carries`). A finished run reopens on its ending, so the title shows Resume crossing only for an unfinished run. Retry took over the old replay prompt, which also kept Arrival's longest run under 8 minutes.
 
 ## Prototype scope
 
