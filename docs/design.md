@@ -8,6 +8,47 @@ The central decision: "Do I spend my evidence now, lose time, or put someone els
 
 This merges five design notes from 2026-11-07: the original pitch (one mission, three checks, visible consequences), storylets (small encounters picked by a director, truth vs claims vs official knowledge), resources (time, evidence, contacts, scrutiny), the waiting room (delays as active uncertainty) and the setting (present day, ordinary life). Where they disagreed, the resource note wins on rules, because it is the most concrete one. The original concern cards became "On file" cards, so the player still sees exactly what officials know.
 
+## Development rules
+
+Yury set these on 2026-11-11, after a playtest where every level read as the hospital mission and the choices did not visibly change the outcome. Every new mission, card and change is judged against them, and reviewers check them on every bead.
+
+1. A mission is a complete story. It has its own traveler, direction, reason, goal and endings, and it does not borrow the premise of another mission. Fill in the mission checklist below before writing any cards for it.
+2. Every decision has a believable purpose. Each option is something a real person in that seat might do, for a reason they could say out loud. No option exists only to be the wrong one.
+3. After each answer, show what happened, what changed and what this resolves. What happened is the officer's reaction. What changed is the resource, the file or the risk that moved. What it resolves is which question is now closed and which is still open.
+4. Disclosure can help. Telling the truth or showing a document has to be able to settle a question, not only add risk, so honesty is a real choice and not always the losing one.
+5. Keep truth, testimony and suspicion apart. Truth is what really happened, testimony is what the traveler said, and suspicion is what the officer believes. The game tracks all three separately and the screen never mixes them up.
+6. Build characters around decisions. A traveler's background exists so they face different decisions, not just different text. Two travelers on the same mission should face different hard choices.
+7. Continuation is explicit. Every ending says what comes next and offers it as a button (Retry, Continue to the next part, Choose a crossing). The player never has to guess whether the story goes on.
+8. Balance for interesting choices. Tune costs so that more than one option is worth taking, not toward a set share of unhappy endings. The existing eval thresholds stay as they are until Yury decides otherwise.
+9. Test at three levels. Rules tests check the engine (`npm test`). Automated play checks whole runs and the screens (`npm run autoplay`, `npm run e2e`). A person plays the built game once from start to end before a change counts as done.
+10. Make small playable changes. Each change leaves the game playable end to end, and is small enough to try in one sitting.
+
+Recommended order:
+
+1. Write these rules down (this section).
+2. Make each mission a complete story with the checklist below, and hide any mission that does not have one yet.
+3. Make the questions and answers fit that story, so an answer establishes what the question asks.
+4. Show what happened, what changed and what it resolves after each answer.
+5. Make each ending name the choices that decided it, and offer the explicit continuation.
+6. Explain time, scrutiny and lies the first time they matter.
+7. Build the travelers around different decisions.
+8. Balance last, once the choices above are readable.
+
+Test at all three levels after each step, not only at the end.
+
+### Mission checklist
+
+Every mission answers all of these before its cards are written:
+
+- Who travels
+- Direction (arriving or leaving)
+- Why they travel
+- Goal (what counts as making it)
+- Carried items (what they bring and what each one is for)
+- Protected person (who could be put at risk, and how)
+- What is mechanically different from the other missions
+- Success, compromise and failure (what each ending looks like)
+
 ## Setting
 
 Present day. A fictional country people left but still have family, homes and obligations inside. Everything is familiar: a delayed bus, weak airport Wi-Fi, an unanswered message from a parent, a passport disappearing behind glass.
