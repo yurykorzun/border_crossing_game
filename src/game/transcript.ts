@@ -12,6 +12,7 @@
 // changes, change it here too, or the transcript stops being what the player reads.
 
 import { andList, getStory, has, own, setStory, t, tn } from '../i18n';
+import { explanationsDue } from './explain';
 import type { BotRun } from './bots';
 import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from './content/encounters';
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
@@ -312,8 +313,12 @@ function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void
 }
 
 /** What the panel shows for this state. */
-function screenLines(s: RunState, p: Page): void {
+function screenLines(s: RunState, p: Page, explained: string[] = []): void {
   if (s.ending && !s.reaction) return endingLines(s, p);
+  // First-run explanations (src/game/explain.ts): a transcript is a first run, so each
+  // shows once, at its trigger, and counts as read like any other line.
+  const explain = explanationsDue(s, explained);
+  explained.push(...explain);
   chromeLines(s, p);
   if (s.reaction) {
     // Reaction in src/App.tsx: the officer's line, one line per change, the next-action button.
@@ -321,6 +326,7 @@ function screenLines(s: RunState, p: Page): void {
     // A line with something folded onto its end (ChangeLine.also) keeps every key, joined.
     for (const c of s.changes ?? [])
       p.lines.push({ step: p.step, ...render(() => changeText(c), [c.key, ...(c.also ?? []).map((a) => a.key)].join(SEPARATOR)) });
+    for (const e of explain) p.add(`explain.${e}`);
     return p.add(nextActionKey(s));
   }
   const sc = s.screen;
@@ -370,6 +376,7 @@ function screenLines(s: RunState, p: Page): void {
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);
+    for (const e of explain) p.add(`explain.${e}`);
     for (const o of options(s)) {
       if (o.blocked === 'noCard' || o.documents) p.add('ui.showDocument');
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
@@ -399,6 +406,8 @@ function endingLines(s: RunState, p: Page): void {
   p.add('ui.title', {}, CHROME);
   p.add(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete');
   p.add(`ending.${text}.title`);
+  // What missing the bus costs, under the title (dap.9).
+  if (has(`ending.${text}.lost`)) p.add(`ending.${text}.lost`);
   const scene = ending === 'turnedBack' ? 'scene.turnedBack'
     : text === 'missedBus' ? (s.medicine ? 'scene.emptyStop' : 'scene.emptyStopEmpty')
     : ending === 'tooLate' ? (s.medicine ? 'scene.bus' : 'scene.busEmpty')
@@ -477,10 +486,11 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
   const lines: Line[] = [...first.lines];
   const happenings: Happening[] = [];
   let decisions = 1 + setup.loadout.length;
+  const explained: string[] = [];
   let beatMs = 0;
   run.actions.forEach((action, i) => {
     const page = new Page(i);
-    screenLines(s, page);
+    screenLines(s, page, explained);
     const sc = s.screen;
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
@@ -517,7 +527,7 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
     s = n;
   });
   const last = new Page(run.actions.length);
-  screenLines(s, last);
+  screenLines(s, last, explained);
   lines.push(...last.lines);
   // The run can end on an officer's last line; the player taps Continue, then reads the ending.
   if (s.ending && s.reaction) {

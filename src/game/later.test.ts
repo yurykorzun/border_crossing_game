@@ -38,8 +38,8 @@ describe('a beat days after you get home', () => {
     expect(fileOf(s).ending).toBe('homeInTime');
     // Read as "Three days later: ...", with the choice that caused it on the next line.
     expect(`${t(`later.${beat!.id}.when`)}: ${t(`later.${beat!.id}`, beat!.vars)}`)
-      .toBe('Three days later: A letter asks you to come to an office and explain your statement at Customs.');
-    expect(t(`later.${beat!.id}.reason`, beat!.vars)).toBe('Because Customs wrote down "My savings. It\'s under the limit", and a record on file says otherwise.');
+      .toBe('Three days later: A letter asks you to come and explain your statement at Customs.');
+    expect(t(`later.${beat!.id}.reason`, beat!.vars)).toBe('Because Customs wrote down "My savings. It\'s under the limit", and a record says otherwise.');
     // Played runs too: every Home in time run with a beat keeps its ending in the file.
     const won = runs.map((r) => r.final).filter((f) => f.ending === 'homeInTime' && laterBeat(f));
     expect(won.length).toBeGreaterThan(0);

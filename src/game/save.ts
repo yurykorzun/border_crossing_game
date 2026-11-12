@@ -31,6 +31,11 @@ export interface SaveData {
    * them with one tap. Unset in saves from before it existed: none read.
    */
   beatsSeen: string[];
+  /**
+   * First-run explanations already shown (Explanation in src/game/explain.ts), so each
+   * shows once. Unset in saves from before it existed: none shown.
+   */
+  explained: string[];
   settings: Settings;
 }
 
@@ -52,7 +57,7 @@ export const distinctEndings = (endingsSeen: readonly EndingId[]): number =>
 /**
  * New crossing (on the title, under Resume crossing) and Start over (the settings sheet):
  * the current run is dropped, and everything kept across runs (endings seen, the carried
- * file, beats read, settings) stays. Without it a reload only offers to resume the saved run.
+ * file, beats read, explanations shown, settings) stays. Without it a reload only offers to resume the saved run.
  */
 export const startOver = (d: SaveData): SaveData => ({ ...d, run: null });
 
@@ -98,6 +103,7 @@ export const freshSave = (): SaveData => ({
   levelsFinished: [],
   file: null,
   beatsSeen: [],
+  explained: [],
   settings: { reduceWait: false, reduceMotion: false, sound: true },
 });
 
@@ -116,6 +122,7 @@ export function load(store: Store): SaveData {
       levelsFinished: loadFinished(data.levelsFinished, endingsSeen),
       file: loadFile(data.file),
       beatsSeen: isList(data.beatsSeen) ? data.beatsSeen : [],
+      explained: isList(data.explained) ? data.explained : [],
       settings: { ...base.settings, ...(data.settings ?? {}) },
     };
   } catch {

@@ -33,7 +33,7 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
   it('recorded: the clerk finds your registered address in the old records', () => {
     const n = playStep(at(newRun(lena), 'p_purpose', 0), { type: 'choose', approach: 'evidence' });
     expect(factTier(n, 'familyAddress')).toBe('recorded');
-    expect(onFileLines(n)).toEqual(['On record: Your registered family address.']);
+    expect(onFileLines(n)).toEqual(['On record: Your family address.']);
   });
 
   it('confirmed: the employer letter puts your employer on file on this crossing', () => {
@@ -70,11 +70,11 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
       return t(line.key, line.vars);
     };
     expect(facing('i_clarify', 'shortTrip', 'familyAddress'))
-      .toBe('You said: "No reason, a short trip" (Passport control). In the old records: Your registered family address.');
+      .toBe('You said: "No reason, a short trip" (Passport control). In the old records: Your family address.');
     expect(facing('i_contradiction', 'noOtherFamily', 'relativeContact'))
       .toBe('You said: "I have no other relatives here" (Passport control). Confirmed: Another relative.');
     expect(facing('i_clarify', 'shortTrip', 'familyAddress', { flagged: ['familyAddress'] }))
-      .toBe('You said: "No reason, a short trip" (Passport control). Flagged on file: Your registered family address.');
+      .toBe('You said: "No reason, a short trip" (Passport control). Flagged on file: Your family address.');
   });
 });
 

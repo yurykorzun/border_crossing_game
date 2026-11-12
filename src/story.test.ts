@@ -107,7 +107,7 @@ describe('Arrival keeps its text', () => {
     const a = setupText('arrival');
     expect(a.stamp).toBe('HALDEN CENTRAL · ARRIVALS');
     expect(a.premise).toBe("You're going home. Your father is in the hospital.");
-    expect(a.packing).toContain("Hope your dad's OK. Will you be back for Monday's client meeting?");
+    expect(a.packing).toContain("Hope your dad's OK. Back for Monday's client meeting?");
     expect(a.mission).toContain(en['mission.title']);
     expect(a.mission).toContain(en['mission.body']);
   });

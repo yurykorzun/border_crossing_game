@@ -517,6 +517,9 @@ p { margin: 0 0 var(--gap); }
 .change.red { color: var(--danger-paper); font-weight: 600; }
 /* What it resolves: under the changes, set apart so a settled question reads as its own result. */
 .changes.resolves { margin-top: 8px; padding-top: 8px; }
+/* A first-run explanation (src/game/explain.ts): how this rule works, once, under what triggered it. */
+.explain { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px dashed var(--bg-line); }
+.explain p { margin: 0; font-size: var(--text-small); line-height: 1.35; color: var(--muted); }
 .inspection { border-inline-start: 6px solid var(--danger-paper); }
 .waiting { cursor: pointer; }
 .waiting .beat { margin: 8px 0 0; color: var(--muted); }
@@ -745,6 +748,8 @@ ul.facts, .people, .record { margin: 0; padding-inline-start: 18px; font-size: v
 /* The story reads at body size in the sans face: the arrival, what it cost, what came back later. */
 .ending-card .cost-line, .ending-card .cost-reason, .ending-card .epilogue, .ending-card .beat-line, .ending-card .beat-reason { font-size: var(--text); line-height: var(--leading); font-weight: 400; }
 .ending-card .epilogue { margin: 8px 0 0; }
+/* What this ending costs, under its title (the missed bus). */
+.ending-card .lost { margin: 0 0 8px; font-size: var(--text); line-height: var(--leading); }
 /* What happened after, under one time heading ("The following morning"). */
 .later { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--paper-2); }
 .later-heading { margin: 0 0 4px; color: var(--muted); font-size: var(--text-small); font-weight: 600; }

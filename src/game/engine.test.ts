@@ -314,7 +314,7 @@ describe('contact results', () => {
     // What she confirmed is said once, as the question it settles, last.
     expect(rows(n)).toEqual([
       "Customs has your mother's number.",
-      'On record: Your registered family address.', 'Noted: Your mother names another relative.',
+      'On record: Your family address.', 'Noted: Your mother names another relative.',
       'Reason settled.',
     ]);
   });

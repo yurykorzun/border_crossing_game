@@ -293,7 +293,7 @@ describe('what changed, under the reaction', () => {
       'cousin',
     );
     expect(lines.map((c) => (c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)))).toEqual([
-      'On record: Your registered family address.',
+      'On record: Your family address.',
       '1 hour lost.',
       'Scrutiny 2/3.',
     ]);

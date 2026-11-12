@@ -171,13 +171,13 @@ test('after an answer: the reaction, what changed, and the next action', async (
   // Within the checkpoint: the letter puts the address on file, and Continue stays.
   await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText('On record: Your registered family address.');
+  await expect(reaction).toContainText('On record: Your family address.');
   await expect(next).toHaveText('Continue');
 
   // The last passport card (both core cards asked, the follow-up slot spent): the button walks on to customs.
   await openAt(page, { ...lenaRun(), screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 3, seen: ['p_host', 'p_purpose'] });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
-  await expect(reaction).toContainText('On record: Your registered family address.');
+  await expect(reaction).toContainText('On record: Your family address.');
   await expect(next).toHaveText('Proceed to customs');
   await next.click();
   await expect(page.locator('main.run .queue-scene')).toBeVisible();
@@ -199,7 +199,7 @@ test('a contact who vouches: the story beat, then separate rows for what went on
   // which their known-facts line shows, so no row repeats them.
   await expect(rows).toHaveText([
     "Customs has your mother's number.",
-    'On record: Your registered family address.', 'Noted: Your mother names another relative.',
+    'On record: Your family address.', 'Noted: Your mother names another relative.',
   ]);
   // What her call resolves sits under them, apart.
   await expect(reaction.locator('[data-line="resolves"] li')).toHaveText([en['resolve.purpose']]);
@@ -252,13 +252,13 @@ test('My story shows which desk knows each fact', async ({ page }) => {
   await openAt(page, { ...run, screen: { kind: 'encounter', id: 'p_purpose' }, checkpoint: 0, slot: 1 });
   await page.getByRole('button', { name: /Show your mother's letter/ }).click();
   // On file and passed on in the same answer: one line names the fact once.
-  await expect(reaction).toContainText('On record, passed to Customs: Your registered family address.');
+  await expect(reaction).toContainText('On record, passed to Customs: Your family address.');
   await page.locator('main.run .controls button.primary').click();
 
   await page.getByRole('button', { name: 'My story' }).click();
   const sheet = page.locator('dialog.sheet[open]');
   const row = sheet.locator('.record li[data-fact="familyAddress"]');
-  await expect(row).toContainText('Your registered family address');
+  await expect(row).toContainText('Your family address');
   // Found in the old records, not something new she told them.
   await expect(row.locator('.tier')).toHaveText('In the old records');
   // Passport control and customs know it; the interview does not.
@@ -367,7 +367,7 @@ test('a Home in time ending is a short result card that fits the screen', async 
   // Each item written out with the desks that have it, and no ON FILE badge or help paragraph.
   await expect(sheet.locator('li[data-claim="cashUnderLimit"] .desks')).toHaveText('Recorded at Customs');
   await expect(sheet.locator('li[data-claim="familyVisit"] .desks')).toHaveText('Said aloud, not recorded');
-  await expect(sheet.locator('li[data-fact="familyAddress"]')).toHaveText(/Your registered family address\s*In the old records\s*Customs and Security interview have this on file/);
+  await expect(sheet.locator('li[data-fact="familyAddress"]')).toHaveText(/Your family address\s*In the old records\s*Customs and Security interview have this on file/);
   await expect(sheet.locator('.tag')).toHaveCount(0);
   await expect(sheet).not.toContainText('Each desk sees');
   const sizes = await sheet.locator('.record li > *').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)));
@@ -524,8 +524,8 @@ for (const c of endingCases) {
     for (const sel of order) tops.push((await card.locator(sel).boundingBox())!.y);
     expect(tops, order.join(' > ')).toEqual([...tops].sort((a, b) => a - b));
     if (c.beat) {
-      await expect(card.locator('.beat-line')).toHaveText(`${en['later.statement.when']}: A letter asks you to come to an office and explain your statement at Customs.`);
-      await expect(card.locator('.beat-reason')).toHaveText('Because Customs wrote down "My savings. It\'s under the limit", and a record on file says otherwise.');
+      await expect(card.locator('.beat-line')).toHaveText(`${en['later.statement.when']}: A letter asks you to come and explain your statement at Customs.`);
+      await expect(card.locator('.beat-reason')).toHaveText('Because Customs wrote down "My savings. It\'s under the limit", and a record says otherwise.');
       // The beat is a line after the crossing's result, which it leaves as it was.
       await expect(card.locator('h1')).toHaveText(en[`ending.${run.ending}.title`]);
     } else await expect(card.locator('.beat')).toHaveCount(0);

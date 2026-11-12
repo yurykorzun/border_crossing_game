@@ -7,6 +7,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, setStory, t, tn } from './i18n';
 import { answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
+import { explanationsDue, markShown } from './game/explain';
+import type { Explanation } from './game/explain';
 import { botAction, botSeed, isBotStyle, setupFor } from './game/bots';
 import type { BotStyle } from './game/bots';
 import type { Option, RunSetup } from './game/engine';
@@ -138,12 +140,16 @@ function Autoplay({ style }: { style: BotStyle }) {
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
   useEffect(() => {
     if (s.ending && !s.reaction) return;
-    const timer = setTimeout(() => setAuto((a) => {
+    const timer = setTimeout(() => {
+      // An explanation on this screen counts as shown once the bot acts, as it does for a player.
+      setData((d) => ({ ...d, explained: markShown(d.explained, explanationsDue(s, d.explained)) }));
+      setAuto((a) => {
       // The officer's last line is dismissed like a player would, then the ending card shows.
       if (a.s.ending) return a.s.reaction ? { ...a, s: playStep(a.s, { type: 'ack' }) } : a;
       const pick = botAction(style, a.s, a.botRng);
       return pick ? { s: playStep(a.s, pick.action), botRng: pick.botRng } : a;
-    }), AUTOPLAY_STEP_MS);
+      });
+    }, AUTOPLAY_STEP_MS);
     return () => clearTimeout(timer);
   }, [s, style]);
 
@@ -649,6 +655,13 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
   const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
   const readBefore = useReadBefore(s.seed, data.beatsSeen);
+  // First-run explanations this screen triggers (src/game/explain.ts). They stay up while
+  // the screen shows and are marked shown when the player acts on it, so each shows once.
+  const explain = explanationsDue(s, data.explained);
+  const act = (a: Action) => {
+    if (explain.length) setData((d) => ({ ...d, explained: markShown(d.explained, explain) }));
+    dispatch(a);
+  };
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} onChoose={onChoose} onRetry={onRetry} onNext={onNext} />;
 
@@ -686,7 +699,7 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
             </div>
             <div className="flicker" aria-hidden />
           </div>
-          <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} />
+          <Panel s={s} dispatch={act} reduceWait={data.settings.reduceWait} explain={explain} />
         </>
       )}
       {/* The tray stays on every run screen, so story, evidence and settings are always one tap away. */}
@@ -748,7 +761,7 @@ function useUsedBefore(s: RunState): Record<number, number> {
  * what comes next. Happened, changed and resolves are separate blocks, so what happened in
  * the scene never reads as one paragraph with what it changed.
  */
-export function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) => void }) {
+export function Reaction({ s, dispatch, explain = [] }: { s: RunState; dispatch: (a: Action) => void; explain?: readonly Explanation[] }) {
   const changes = s.changes ?? [];
   return (
     <>
@@ -758,6 +771,7 @@ export function Reaction({ s, dispatch }: { s: RunState; dispatch: (a: Action) =
         </div>
         <ChangeLines changes={changes.filter((c) => !c.resolves)} />
         <ChangeLines changes={changes.filter((c) => c.resolves)} resolves />
+        <Explain ids={explain} />
       </section>
       <div className="controls">
         <button className="primary" autoFocus onClick={() => dispatch({ type: 'ack' })}>{t(nextActionKey(s))}</button>
@@ -823,8 +837,14 @@ function Queue({ next, s, still, readBefore, onRead, shown, setShown, onDone, on
 /** Questions up to this many characters ("Purpose of your visit?") show as a heading with no card. */
 const SHORT_QUESTION = 40;
 
-function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean }) {
-  if (s.reaction) return <Reaction s={s} dispatch={dispatch} />;
+/** First-run explanations (src/game/explain.ts), one short line each, under what triggered them. */
+function Explain({ ids }: { ids: readonly Explanation[] }) {
+  if (!ids.length) return null;
+  return <div className="explain" data-explain>{ids.map((e) => <p key={e} data-explain-id={e}>{t(`explain.${e}`)}</p>)}</div>;
+}
+
+function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean; explain: readonly Explanation[] }) {
+  if (s.reaction) return <Reaction s={s} dispatch={dispatch} explain={explain} />;
   const sc = s.screen;
 
   // Queue renders the between screen; Run only gets here with an officer line still showing.
@@ -857,6 +877,7 @@ function Panel({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Action)
         {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
+        <Explain ids={explain} />
       </section>
       <div className="controls stack">
         {options(s).map((o) => (
@@ -988,6 +1009,8 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
       <section className="paper ending-card">
         <p className="mono outcome">{t(ending === 'turnedBack' ? 'ui.crossingRefused' : 'ui.crossingComplete')}</p>
         <h1>{t(`ending.${text}.title`)}</h1>
+        {/* What this ending costs, under its title (dap.9): missing the bus says what is lost. */}
+        {has(`ending.${text}.lost`) && <p className="lost">{t(`ending.${text}.lost`)}</p>}
         <div className="arrival">
           <div className="ending-scene">
             {/* Departure leaves for a flight, so its home endings show the plane, not the ward. */}

@@ -604,7 +604,7 @@ describe('what each official knows: facts travel between desks only through a ch
   it('the reaction says where a fact was sent', () => {
     const r = tryStep({ ...lenaWith('accommodation'), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
     expect(r.ok && r.events).toContainEqual({ type: 'factSent', id: 'familyAddress', desks: ['customs'], via: 'desk' });
-    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Passed to Customs: Your registered family address.');
+    expect(t('change.sent', { fact: 'familyAddress', desk: 'customs' })).toBe('Passed to Customs: Your family address.');
   });
 });
 
@@ -746,7 +746,7 @@ describe('officers with one stated priority each (fsx.10)', () => {
     expect(deskIntro({ ...first, slot: 2 })).toBeUndefined();
     expect(deskIntro({ ...first, reaction: [{ key: 'ui.continue' }] })).toBeUndefined();
     expect(deskIntro({ ...at(newRun(lena), 'i_family'), checkpoint: 2 })).toBe('interview');
-    expect(t('officer.passport.priority')).toBe('The clerk checks every stamp and every date.');
+    expect(t('officer.passport.priority')).toBe('The clerk checks every stamp and date.');
   });
 });
 

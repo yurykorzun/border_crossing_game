@@ -78,7 +78,7 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
   it('keeps the crossing result and shows the later beat as its own line after it', () => {
     const html = markup('homeInTime', withBoth);
     expect(html).toContain('<h1>Home in time</h1>');
-    expect(html).toContain('<strong class="beat-when">Three days later:</strong> A letter asks you to come to an office and explain your statement at Customs.');
+    expect(html).toContain('<strong class="beat-when">Three days later:</strong> A letter asks you to come and explain your statement at Customs.');
     expect(html).toContain('Because Customs wrote down');
     expect(at(html, 'class="beat-line"')).toBeGreaterThan(at(html, '<h1>'));
     // A clean run has neither the heading nor a beat.
