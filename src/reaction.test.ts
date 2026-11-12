@@ -40,10 +40,11 @@ describe('the reaction after a verified answer', () => {
     const changed = block(markup, 'changed');
     const resolves = block(markup, 'resolves');
     expect(happened).not.toBe('');
-    // A no-cost answer still changes one thing: the document is spent, said on the line it settles.
-    expect(changed).toBe('');
-    expect(resolves).toBe('Return ticket used, stay settled.');
-    expect(markup.indexOf('data-line="happened"')).toBeLessThan(markup.indexOf('data-line="resolves"'));
+    // A no-cost answer still changes one thing: the document is spent.
+    expect(changed).toBe('Used: Return ticket.');
+    expect(resolves).toBe(en['resolve.stay']);
+    expect(markup.indexOf('data-line="happened"')).toBeLessThan(markup.indexOf('data-line="changed"'));
+    expect(markup.indexOf('data-line="changed"')).toBeLessThan(markup.indexOf('data-line="resolves"'));
   });
 
   it('names the spent document next to another change (border_crossing_game-dap.28)', () => {

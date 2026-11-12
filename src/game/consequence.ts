@@ -232,10 +232,15 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
   // Last, what the answer resolves: each question now settled for the officers ahead
   // ("Prescription settled."). Reaction shows these under the changes, apart from them.
-  // A document shown is spent, and its card greys out: the first point it settles names
-  // it ("Hospital note used, prescription settled."), folded in, not a line of its own,
-  // so a long run stays inside the 8-minute ceiling (tools/sweep.ts).
+  // A document shown is spent, and its card greys out. When nothing else changed, that is
+  // the changed line ("Used: Return ticket."). Next to other changes, the first point it
+  // settles names it ("Hospital note used, prescription settled."), folded in, not a line
+  // of its own, so a long run stays inside the 8-minute ceiling (tools/sweep.ts).
   let doc = events.find((e) => e.type === 'documentUsed')?.id;
+  if (doc && !out.length) {
+    out.push({ key: 'change.document', vars: { cardLabel: doc }, tone: 'plain' });
+    doc = undefined;
+  }
   const also: NonNullable<ChangeLine['also']> = [];
   const resolves: ChangeLine[] = [];
   for (const e of events) {
@@ -249,12 +254,8 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
     if (e.again && !vouched && out.length) also.push(line);
     else resolves.push({ ...line, tone: 'plain', resolves: true });
   }
-  // A document that settled nothing new says "Used: Hotel booking." on the end of the
-  // last line, or on its own when nothing else changed.
-  if (doc) {
-    if (out.length) also.push({ key: 'change.document', vars: { cardLabel: doc } });
-    else out.push({ key: 'change.document', vars: { cardLabel: doc }, tone: 'plain' });
-  }
+  // A document that settled nothing new says "Used: Hotel booking." on the end of the last line.
+  if (doc) also.push({ key: 'change.document', vars: { cardLabel: doc } });
   if (also.length) {
     const last = out[out.length - 1];
     out[out.length - 1] = { ...last, also: [...(last.also ?? []), ...also] };
