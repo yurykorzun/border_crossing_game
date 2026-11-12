@@ -158,6 +158,7 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
   },
   employerLetter: {
     id: 'employerLetter',
+    // Where your cash is from (c_cash), never how much you take out (d_declared has no document answer).
     topics: ['work', 'money'],
     onUse: [{ fact: 'employer' }],
   },
@@ -183,6 +184,8 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     onUse: [{ fact: 'property' }],
     // Asked who you are or where you will stay, the registered owner's name and house are the whole answer.
     settles: ['identity', 'accommodation'],
+    // Shown for where you stay, it confirms who you are too: the registered owner's name and ID number.
+    forwards: ['identity'],
   },
 };
 

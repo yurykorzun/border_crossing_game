@@ -278,7 +278,7 @@ export const en: Record<string, string> = {
   'ev.motherLetter.name': 'Letter from your mother',
   'ev.motherLetter.desc': 'Signed, with her address. Answers purpose and accommodation. Puts the family address on file.',
   'ev.employerLetter.name': 'Employer letter',
-  'ev.employerLetter.desc': 'Salary and position. Answers work and money. Puts your employer on file.',
+  'ev.employerLetter.desc': 'Salary and position. Answers work and where your cash is from. Puts your employer on file.',
   'ev.hospitalNote.name': 'Hospital note',
   'ev.hospitalNote.desc': "Your father's admission, with his prescriptions. Answers medicine and purpose. Puts his condition on file.",
   'ev.returnTicket.name': 'Return ticket',
@@ -440,7 +440,7 @@ export const en: Record<string, string> = {
   'msg.0.sister.sisterSaysWeeks': 'I told the border two weeks.',
 
   // The relative's own ordinary line (PERSONAL_LINES). Ilya plays things down so you don't worry.
-  'msg.0.personal.lena': 'The spare key is under the ugly flowerpot. Don\'t tell Mum.',
+  'msg.0.personal.lena': 'The spare key is under the ugly flowerpot. Don\'t tell Mom.',
   'msg.0.personal.mark': 'Bad signal here. Kiss Dad for me.',
   'msg.0.2': 'The passenger ahead says: "Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
@@ -454,7 +454,8 @@ export const en: Record<string, string> = {
   'msg.1.after.delay': 'Are you through yet? It has been hours.',
   'msg.1.after.smooth': 'Dad squeezed my hand. The nurse says that is good.',
   'msg.1.1': 'An officer shows the woman ahead which copy is missing.',
-  'msg.1.4': '"Answer only what they ask," a man behind you says.',
+  // Before the cash question (c_cash): the amount you carry, and that it is over the limit.
+  'msg.1.cash': 'The sign says to declare cash over 10,000. You carry 14,000.',
   'msg.1.5': 'The inspector taps the steel table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
   'msg.2.after.call.lena': 'Customs called me. They asked about Ilya.',
@@ -507,10 +508,10 @@ export const en: Record<string, string> = {
   'enc.p_secondPassport.q': '"You left on a foreign passport. You hold two?"',
   'enc.p_secondPassport.both.label': '"Yes, I have both."',
   'enc.p_secondPassport.both.reaction': 'She flags "dual national" on your file.',
-  'enc.p_secondPassport.evidence.label': 'Show {cardThe}',
-  'enc.p_secondPassport.evidence.reaction': '"So you still own property here." She hands it back.',
   'enc.p_secondPassport.handOver.label': 'Hand over both passports',
   'enc.p_secondPassport.handOver.event': 'Records check',
+  'enc.p_secondPassport.handOver.verified.label': 'Hand over both passports, as already checked',
+  'enc.p_secondPassport.handOver.verified.reaction': 'Your name already matches the owner on the deed. She notes the second passport and hands both back.',
   'enc.p_secondPassport.handOver.reaction': 'She runs both passports through the records.',
 
   'enc.p_employer.q': '"Your residence permit abroad says you work there. A short trip home, on a foreign salary. Who pays you?"',
@@ -530,8 +531,8 @@ export const en: Record<string, string> = {
   'enc.c_medicine.declare.verified.label': 'Declare it, as already checked',
   'enc.c_medicine.declare.verified.reaction': 'He reads the prescription details already on your file and nods at the cool bag.',
 
-  // Asked about the cash itself: income (the employer letter) or a declaration answers it, not a ticket.
-  'enc.c_cash.q': '"Where is your cash from?"',
+  // Asked how much and where from: the count shows how much, the employer letter where from, not a ticket.
+  'enc.c_cash.q': '"How much cash, and where from?"',
   'enc.c_cash.evidence.label': 'Show {cardThe}',
   'enc.c_cash.evidence.reaction': 'He reads the salary line and notes the company name.',
   'enc.c_cash.count.label': 'Let him count your cash',
@@ -920,7 +921,7 @@ export const en: Record<string, string> = {
   'file.context.p_host': 'where you would stay',
   'file.context.p_stay': 'how long you would stay',
   'file.context.c_shortTrip': 'about your trip',
-  'file.context.c_cash': 'where your cash was from',
+  'file.context.c_cash': 'how much cash you carried and where from',
   'file.context.i_family': 'about other relatives',
   'file.context.i_clarify': 'about your reason',
   'file.context.f_donation': 'about a donation',
@@ -957,8 +958,6 @@ export const en: Record<string, string> = {
   'enc.d_hold.leave.label': 'Withdraw, leave the passport',
   'enc.d_hold.leave.reaction': 'She gives you a slip with a number and keeps the passport.',
   'enc.d_declared.q': '"How much cash are you taking out?"',
-  'enc.d_declared.evidence.label': 'Show {cardThe}',
-  'enc.d_declared.evidence.reaction': 'He reads the salary line against your file.',
   'enc.d_declared.count.label': 'Let him count your cash',
   'enc.d_declared.count.event': 'Cash count',
   'enc.d_declared.count.reaction': 'He counts it and writes the total next to the old one.',
@@ -998,6 +997,7 @@ export const en: Record<string, string> = {
   'departure:ui.lastBus.other': 'Last bus to the airport leaves in {n} hours.',
   'departure:ui.allowTravel.one': 'Allow {n} hour to reach the airport after the border.',
   'departure:ui.allowTravel.other': 'Allow {n} hours to reach the airport after the border.',
+  'departure:msg.1.cash': 'The sign says to declare cash over 10,000. You are taking out 14,000.',
   'departure:msg.0.0': 'Dad asked if you have your passport. Call from the gate.',
   'departure:msg.1.after.smooth': 'Dad ate some soup. The nurse says that is good.',
   'departure:msg.2.after.smooth': 'Dad says he will wave at the planes.',

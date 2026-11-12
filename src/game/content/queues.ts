@@ -61,7 +61,8 @@ export const QUEUES: readonly (readonly QueueBeat[])[] = [
   [
     ...motherAfter(1),
     beat('msg.1.1', 'narration', { kindness: true }),
-    beat('msg.1.4', 'speech'),
+    // How much cash you carry, before the inspector asks (c_cash, d_declared).
+    beat('msg.1.cash', 'narration'),
     beat('msg.1.5', 'speech'),
   ],
   [

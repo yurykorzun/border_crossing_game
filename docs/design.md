@@ -72,7 +72,7 @@ Lena carries mostly the first (the donation, her cousin) plus a foreign employer
 
 ## First mission: your father's stroke
 
-The last bus to the hospital leaves in 8 hours, from a station 2 hours past the border. You carry his medicine, some cash and your phone.
+The last bus to the hospital leaves in 8 hours, from a station 2 hours past the border. You carry his medicine, 14,000 in cash and your phone. Cash over 10,000 has to be declared, and the customs queue gives both numbers before the inspector asks (`msg.1.cash`), so "It's under the limit" is a lie the player knows they are telling.
 
 Requirement: be admitted and reach the last bus with at least 2 hours left. The bus to the hospital leaves in 8 hours, and you need 2 hours to reach the station, so the crossing can spend up to 6.
 
@@ -133,7 +133,7 @@ Each document answers named questions, so a decision is which problem to solve, 
 |---|---|---|
 | Hotel booking (`hotel`) | Where you stay (`accommodation`), how long you stay (`stay`) | You claim a hotel stay, can't back a family stay |
 | Letter from mother (`motherLetter`) | Why you came (`purpose`), where you stay (`accommodation`) | The family address |
-| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`) | Your employer |
+| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`), not how much: only a count shows that, so the exit desk's "How much cash are you taking out?" takes no document | Your employer |
 | Hospital note (`hospitalNote`) | What the medicine is (`medicine`), why you came (`purpose`) | Your father's condition |
 | Return ticket (`returnTicket`) | How long you stay (`stay`), not the cash: a ticket says when you leave, not what you carry | A fixed departure date |
 | Apartment deed (`deed`) | Who you are (`identity`, its registered address, not the photo), where you stay (`accommodation`) | Your property inside |
@@ -169,7 +169,7 @@ Rules:
 2. Randomness picks the problem, the chosen solution has a predictable result.
 3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
-5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity or where you stay, the return ticket for length of stay; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). The ticket used to settle the cash question (dhv.3); the realism review of 2026-11-10 (4qd.1) moved it to length of stay, because a flight out says nothing about the cash you carry, which the employer letter (income) or a declaration answers. Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
+5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity or where you stay, the return ticket for length of stay; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). The ticket used to settle the cash question (dhv.3); the realism review of 2026-11-10 (4qd.1) moved it to length of stay, because a flight out says nothing about the cash you carry. The map review (dap.5) split the cash question the same way: customs asks how much and where from, the count answers how much and the employer letter where from. The deed no longer answers "You hold two?", because a deed says who owns a flat, not how many passports you hold; on a records day the clerk asks about the photo first (`p_photo`, which the deed does answer), and about the passports only when the photo is not in question. A deed shown for where you stay confirms who you are as well (`forwards`), so handing over both passports after it takes an hour and no records scan. Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
 
 ### Encounter checklist
 
@@ -230,6 +230,7 @@ Kept, because a person picks them even though the bots don't:
 - `d_hold.leave` - in Departure, walking out without your passport when the exit desk holds it over a claim your last crossing showed false. It ends the crossing (free to go, for now), and every bot waits for the review or signs instead. It stays as the choice of someone who won't spend three more hours at that desk.
 - `d_named.name` - in Departure, naming the relative your file already holds. It is the same trade as `i_family.name`, a person for an hour, so the bots never take it. It stays for the same reason.
 - `p_photo.evidence` - in Departure, a document for the photo check. Departure's opening card asks for the paper first, so the bots reach the photo check with nothing left that settles it. It stays because in Arrival the same answer gets picked.
+- `f_photo.law` - in Departure, the long legal check of the photo the phone search found. The exit desk asks how much cash you take out, which no document answers (dap.5), so no salary goes on file at customs and the phone search comes only on a flag, which the bots that would take the slow check rarely carry. It stays because in Arrival the same answer gets picked.
 - `s_connection.drive` - in The funeral, asking your mother or cousin to drive out to the station for you. The bots take it only in the last hours, when the supervisor can no longer ring ahead, and The funeral's passport desk asks how long you stay (free) where Arrival asks the slower stay and employer checks, so they reach the transfer with hours left. It stays because in Arrival the same answer gets picked.
 
 ## Screen rules

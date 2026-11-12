@@ -217,17 +217,21 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
-    id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 3, topic: 'identity',
+    // At the photo's priority and listed after it: on a records day the clerk first matches
+    // your face to an address on file (p_photo), which a deed answers, then asks about the passports.
+    id: 'p_secondPassport', checkpoint: 'passport', kind: 'related', priority: 2, topic: 'identity',
     // Only on a records day, when the clerk reads the old exit records closely.
     // Dealt every day, it made Mark's longest runs go over 8 minutes (rwf.15).
     when: { background: 'secondPassport', bulletin: 'records' },
     // The exit record shows which passport he left on (Character.onFile).
     issue: { facts: ['secondPassport'] },
+    // No document answers it: a deed shows who owns a flat, not how many passports you hold.
     approaches: [
       // Honest, and the second passport goes on file: that entry is the reason for the scrutiny.
       { id: 'both', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'secondPassport' }, { scrutiny: 1, reason: 'secondPassport' }] },
-      { id: 'evidence', kind: 'evidence', topic: 'identity', effects: [] },
-      { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck' },
+      // With who you are already confirmed at this desk (the deed shown for where you stay), she
+      // only notes the second passport: no records scan, so nothing new comes up.
+      { id: 'handOver', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'records' } }], check: 'recordsCheck', ifVerified: [{ time: -1 }] },
     ],
   },
   {
@@ -271,6 +275,9 @@ export const ENCOUNTERS: Encounter[] = [
     ],
   },
   {
+    // How much you carry and where it is from. The count shows how much, the employer
+    // letter where it is from (a salary). The amount is over the limit, and the customs
+    // queue says so first (msg.1.cash).
     id: 'c_cash', checkpoint: 'customs', kind: 'routine', topic: 'money',
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'money', effects: [] },
@@ -532,9 +539,9 @@ export const ENCOUNTERS: Encounter[] = [
   },
   {
     // Cash going out: the officer has what customs kept of your declaration on the way in.
+    // Asked the amount, as on the way in (c_cash): a salary line is not a total, so no document answers it.
     id: 'd_declared', checkpoint: 'customs', kind: 'routine', topic: 'money',
     approaches: [
-      { id: 'evidence', kind: 'evidence', topic: 'money', effects: [] },
       { id: 'count', kind: 'verify', effects: [{ time: -1 }, { fact: 'cashCount' }] },
       {
         id: 'under', kind: 'say',
