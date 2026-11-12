@@ -847,7 +847,8 @@ export const DELAY_HOURS = 2;
 /**
  * How the desk just finished went, for your mother's next message: an officer
  * phoned her (you named her to vouch for you, or the host call reached her; a
- * lift you arranged with her is not a call), it took
+ * lift you arranged with her is not a call; callRelative when you named your
+ * relative at that desk too), it took
  * DELAY_HOURS or more, or neither. Only the message changes: nothing here
  * costs time or adds a choice.
  */
@@ -855,8 +856,19 @@ export function queueMood(s: RunState): QueueMood {
   const start = s.deskStart;
   if (!start) return 'smooth';
   const answered = s.log.slice(start.log).some((l) => l.key === 'check.hostCall.clear');
-  if (start.phoned || answered) return 'call';
+  if (start.phoned || answered) return relativeNamedHere(s) ? 'callRelative' : 'call';
   return start.time - s.time >= DELAY_HOURS ? 'delay' : 'smooth';
+}
+
+/**
+ * Whether you named your relative (Ilya or Tom) at this desk. Only then can your mother
+ * say the officer asked about him: when she names the family on the host call, he did
+ * not ask. A save from before deskStart.exposed existed reads as not named.
+ */
+function relativeNamedHere(s: RunState): boolean {
+  const start = s.deskStart;
+  if (start?.exposed === undefined) return false;
+  return s.exposed.slice(start.exposed).some((c) => c !== 'mother');
 }
 
 /** Marks that an officer phoned your mother at this desk (queueMood). */
@@ -1211,7 +1223,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   if (opt.card) n = { ...n, used: [...n.used, opt.card] };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
   // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
-  if (opt.contact === 'mother' && !opt.approach.namesOnly) n = phoned(n);
+  if ((opt.contact === 'mother' && !opt.approach.namesOnly) || opt.approach.phonesMother) n = phoned(n);
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
   n = apply(n, opt.effects);
   // A document shown or a contact who confirmed the point at a desk settles it for the later
@@ -1278,7 +1290,7 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     }
     case 'ack':
       if (s.reaction) return { ...s, reaction: null };
-      if (s.screen.kind === 'between') return deal({ ...s, deskStart: { time: s.time, log: s.log.length } });
+      if (s.screen.kind === 'between') return deal({ ...s, deskStart: { time: s.time, log: s.log.length, exposed: s.exposed.length } });
       return s;
     case 'turnBack':
       if (!canTurnBack(s)) return s;

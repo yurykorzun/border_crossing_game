@@ -467,6 +467,8 @@ export const en: Record<string, string> = {
   // On the packing screen, before you choose what to carry (PREPARATION_MESSAGE).
   'msg.prep': 'Hope your dad\'s OK. Back for Monday\'s client meeting?',
   'msg.0.0': 'The doctor says Dad can hear me. Come straight here.',
+  // Departure's in its place (QueueBeat.levels): you leave Dad in her care.
+  'msg.0.0.departure': 'Dad slept well. I am with him. Text me from the gate.',
   'msg.0.1.lena': 'Don\'t mention Ilya. He was questioned once about the fundraiser. Another mention could get him called in.',
   'msg.0.1.mark': 'Don\'t mention Tom. Please.',
   // The funeral: what her sister told the border (QueueBeat.fact).
@@ -476,6 +478,9 @@ export const en: Record<string, string> = {
   // The relative's own ordinary line (PERSONAL_LINES). Ilya plays things down so you don't worry.
   'msg.0.personal.lena': 'The spare key is under the ugly flowerpot. Don\'t tell Mom.',
   'msg.0.personal.mark': 'Bad signal here. Kiss Dad for me.',
+  // Departure's in their place: you are leaving, so no key and no kiss.
+  'msg.0.personal.lena.departure': 'Safe flight. I will sit with your dad on Sunday.',
+  'msg.0.personal.mark.departure': 'Bad signal here. Tell me how Dad is.',
   'msg.0.2': 'The passenger ahead says: "Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
@@ -483,6 +488,8 @@ export const en: Record<string, string> = {
   'queue.0.turnBack': 'Leave the queue and go back',
   'turnBack.reaction': 'You step out of the line. Nobody stops you. The passport stays in your coat.',
   // Your mother's message after a desk follows how it went (QueueMood): a call, a delay, or a smooth desk.
+  // After a call she names your relative only when you named him at that desk (callRelative).
+  'msg.1.after.call': 'Passport control just called me about you.',
   'msg.1.after.call.lena': 'Passport control just called me. They asked about Ilya.',
   'msg.1.after.call.mark': 'Passport control just called me. They asked about Tom.',
   'msg.1.after.delay': 'Are you through yet? It has been hours.',
@@ -492,10 +499,12 @@ export const en: Record<string, string> = {
   'msg.1.cash': 'Declare cash over 10,000, the sign says. You carry 14,000.',
   'msg.1.5': 'The inspector taps the table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
+  'msg.2.after.call': 'Customs just called me about you.',
   'msg.2.after.call.lena': 'Customs called me. They asked about Ilya.',
   'msg.2.after.call.mark': 'Customs called me. They asked about Tom.',
   'msg.2.after.delay': 'Still nothing? Text me when you are through.',
   'msg.2.after.smooth': 'The hospital café closes at six. I saved you a sandwich.',
+  'msg.2.after.smooth.departure': 'Dad ate some soup. Text me when you board.',
   'msg.2.1': 'Your phone dies. The man beside you lends his charger.',
   'msg.2.3': '"They ask everything three ways," he says. "Answer the same."',
   'msg.2.5': '"This way, please," an officer calls.',
