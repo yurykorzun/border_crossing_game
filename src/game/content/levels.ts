@@ -85,6 +85,9 @@ export const LEVELS: Record<LevelId, Level> = {
       heedsWhen: STATEMENTS.map((x) => ({ pick: `p_days.${STAY_ANSWER[x.agrees]}`, when: { facts: [x.fact] } })),
     }],
     statements: STATEMENTS.map((x) => x.fact),
+    // Off the level list until it has its own story (dap.2): it shares Arrival's core
+    // cards and carries Dad's medicine, so it reads as the hospital mission.
+    hidden: true,
   },
 };
 
@@ -103,14 +106,15 @@ const DEALS = new Map(LEVEL_IDS.map((id) => [id, new Set(LEVELS[id].cards)]));
 /** Whether this level can deal the encounter or inspection `card`. */
 export const dealsCard = (s: { level?: LevelId }, card: string): boolean => DEALS.get(s.level ?? DEFAULT_LEVEL)!.has(card);
 
-const ALL_LEVELS = (): Level[] => LEVEL_IDS.map((id) => LEVELS[id]);
+/** The levels the level list shows, in list order: every level but a hidden one (Level.hidden). */
+export const LISTED_LEVELS: readonly Level[] = LEVEL_IDS.map((id) => LEVELS[id]).filter((l) => !l.hidden);
 
 /**
  * Whether the level at `index` of `levels` (list order) is open: the first always is, and
  * any other once the player has finished the one before it, with any ending (rwf.12).
  * Endings stay a collection to fill, not a key, so nobody has to lose a relative to move on.
  */
-export const levelOpen = (index: number, levelsFinished: readonly LevelId[], levels: readonly Level[] = ALL_LEVELS()): boolean =>
+export const levelOpen = (index: number, levelsFinished: readonly LevelId[], levels: readonly Level[] = LISTED_LEVELS): boolean =>
   index === 0 || levelsFinished.includes(levels[index - 1].id);
 
 /** One row of the level list. A locked row names the level that opens it: `ui.levelOpensAfter` with {level} its title. */
@@ -121,11 +125,11 @@ export interface LevelRow {
 }
 
 /** The level list for a player who has finished `levelsFinished`, in list order. */
-export const levelRows = (levelsFinished: readonly LevelId[], levels: readonly Level[] = ALL_LEVELS()): LevelRow[] =>
+export const levelRows = (levelsFinished: readonly LevelId[], levels: readonly Level[] = LISTED_LEVELS): LevelRow[] =>
   levels.map((level, i) => (levelOpen(i, levelsFinished, levels)
     ? { level, open: true }
     : { level, open: false, opensAfter: { key: 'ui.levelOpensAfter', level: levels[i - 1] } }));
 
 /** Whether setup shows the level list: only when there is a choice, more than one level open (g0q.2). */
-export const showsLevelList = (levelsFinished: readonly LevelId[], levels: readonly Level[] = ALL_LEVELS()): boolean =>
+export const showsLevelList = (levelsFinished: readonly LevelId[], levels: readonly Level[] = LISTED_LEVELS): boolean =>
   levelRows(levelsFinished, levels).filter((r) => r.open).length > 1;

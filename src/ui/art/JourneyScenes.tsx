@@ -1,5 +1,6 @@
 // The scenes around the run: the border post on the traveler screen, the desk you
-// pack at, and the ending (the hospital ward when you get home, the night bus when you
+// pack at, and the ending (the hospital ward when you get home, or the plane window when
+// you make the flight in Departure, the night bus when you
 // arrive too late, the empty stop if the bus left without
 // you, or the border post again if you turned back). Same pixel grid and palette as the checkpoint scenes; each fills its
 // box with `slice`, anchored at the bottom, so a short box crops the sky first.
@@ -220,17 +221,35 @@ export function EmptyStop({ medicine, character }: { medicine: boolean; characte
 /** Rain streaks on the bus window, fixed. */
 const RAIN: readonly [number, number][] = [[6, 4], [12, 9], [17, 5], [23, 11], [29, 6], [34, 13], [40, 4], [46, 10], [51, 6], [57, 12], [9, 14], [43, 15], [26, 15]];
 
-/** The ending after admission: your hand on the medicine box on a night bus, the hospital through a rainy window. */
-export function NightBus({ medicine, character }: { medicine: boolean; character: CharacterId }) {
+/**
+ * The ending after admission: your hand on the medicine box on a night bus, the hospital
+ * through a rainy window. On the way out (`airport`, Departure) the window shows the
+ * airport instead: a low terminal and the control tower with its lit cab.
+ */
+export function NightBus({ medicine, character, airport = false }: { medicine: boolean; character: CharacterId; airport?: boolean }) {
   return (
     <Scene label={t(medicine ? 'scene.bus' : 'scene.busEmpty')} w={64} h={30} name="bus">
       <rect className="art-booth" x="0" y="0" width="64" height="30" />
       <rect className="art-night" x="3" y="2" width="58" height="16" />
-      {/* The hospital: a tall block with lit windows, low town on either side. */}
       <rect className="art-hill" x="3" y="13" width="58" height="5" />
-      <rect className="art-hospital" x="34" y="5" width="16" height="13" />
-      {[7, 10, 13].map((y) => [36, 40, 44].map((x) => <rect key={`${x}.${y}`} className="art-window-lit" x={x} y={y} width="2" height="1" />))}
-      <rect className="art-lamp" x="40" y="3" width="4" height="2" />
+      {airport ? (
+        <>
+          {/* The airport: a long low terminal with a lit strip, the tower beside it. */}
+          <rect className="art-hospital" x="33" y="12" width="26" height="6" />
+          <rect className="art-window-lit" x="35" y="14" width="22" height="1" />
+          <rect className="art-hospital" x="38" y="5" width="2" height="7" />
+          <rect className="art-hospital" x="36" y="3" width="6" height="2" />
+          <rect className="art-window-lit" x="37" y="3" width="4" height="1" />
+          <rect className="art-lamp" x="38" y="2" width="2" height="1" />
+        </>
+      ) : (
+        <>
+          {/* The hospital: a tall block with lit windows, low town on either side. */}
+          <rect className="art-hospital" x="34" y="5" width="16" height="13" />
+          {[7, 10, 13].map((y) => [36, 40, 44].map((x) => <rect key={`${x}.${y}`} className="art-window-lit" x={x} y={y} width="2" height="1" />))}
+          <rect className="art-lamp" x="40" y="3" width="4" height="2" />
+        </>
+      )}
       {RAIN.map(([x, y]) => <rect key={`${x}.${y}`} className="art-rain" x={x} y={y} width="1" height="2" />)}
       <rect className="art-booth" x="31" y="2" width="1" height="16" />
       <rect className="art-glass" x="3" y="2" width="58" height="16" />
@@ -293,6 +312,36 @@ export function Ward({ character }: { character: CharacterId }) {
       <rect className="art-seat-edge" x="20" y="23" width="13" height="1" />
       {[21, 26, 27, 31].map((x) => <rect key={x} className="art-steel-leg" x={x} y="24" width="1" height="3" />)}
       <Pixels rows={ASLEEP} palette={{ h: `art-hair-${character}`, s: 'art-skin', c: `art-coat-${character}` }} x={21} y={18} />
+    </Scene>
+  );
+}
+
+/** Town lights along the river far below the plane, fixed. */
+const RIVER_LIGHTS: readonly [number, number][] = [[14, 19], [17, 20], [21, 19], [26, 21], [30, 20], [35, 21], [39, 19], [44, 20], [48, 21]];
+
+/**
+ * The ending when you make the flight (Departure's Made the flight, with a cost or
+ * without): a plane window at night, the wing across it, and a town along a river below.
+ * Same 64x30 box as NightBus, so the ending card keeps its height.
+ */
+export function PlaneWindow() {
+  return (
+    <Scene label={t('scene.plane')} w={64} h={30} name="plane">
+      <rect className="art-wall" x="0" y="0" width="64" height="30" />
+      {/* The window: its frame, the night, the ground far below with the river through it. */}
+      <rect className="art-booth" x="10" y="3" width="44" height="24" />
+      <rect className="art-night" x="12" y="5" width="40" height="12" />
+      <rect className="art-night-low" x="12" y="17" width="40" height="8" />
+      <rect className="art-glass-solid" x="12" y="22" width="40" height="1" />
+      {RIVER_LIGHTS.map(([x, y]) => <rect key={`${x}.${y}`} className="art-window-lit" x={x} y={y} width="1" height="1" />)}
+      {/* The wing, from the left edge, with its light at the tip. */}
+      <rect className="art-steel" x="12" y="14" width="18" height="2" />
+      <rect className="art-steel-edge" x="12" y="16" width="14" height="1" />
+      <rect className="art-lamp" x="30" y="14" width="1" height="1" />
+      <rect className="art-glass" x="12" y="5" width="40" height="20" />
+      {/* The seat back in front of you. */}
+      <rect className="art-seat" x="0" y="27" width="64" height="3" />
+      <rect className="art-seat-edge" x="0" y="27" width="64" height="1" />
     </Scene>
   );
 }

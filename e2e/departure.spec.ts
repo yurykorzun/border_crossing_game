@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
 import { SAMPLE_FILES } from '../src/game/carry';
+import { newRun } from '../src/game/engine';
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { SaveData } from '../src/game/save';
 import { CHARACTER_IDS } from '../src/game/content/world';
@@ -87,5 +88,36 @@ test("Lena's file is not offered to continue Mark's crossing", async ({ page }) 
   await record.locator('button.record-standalone').click();
   await packAndTurnBack(page, 4);
   expect(await savedFile(page)).toEqual(SAMPLE_FILES.lena);
+  expect(errors).toEqual([]);
+});
+
+// Departure is its own story (dap.3): the traveler screen says the flight is in the next
+// country and you cross by land to reach it, and the run plays through to an ending.
+test('Departure says you cross by land to a flight, from the level list to an ending', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await open(page);
+  const premise = page.locator('main.traveler-step h2.premise');
+  await expect(premise).toHaveText(en['departure:ui.premise']);
+  await expect(premise).toContainText('by land');
+  await pickTraveler(page, 'lena');
+  await page.locator('main.record-step button.record-standalone').click();
+  await expect(page.locator('.documents-step .prep-message')).toContainText(en['departure:msg.prep']);
+  await packAndTurnBack(page, 3);
+  await expect(page.locator('.ending-card h1')).not.toHaveText(/Home in time|hospital/i);
+  await expect(page.locator('.ending-card .ending-scene svg')).not.toHaveAttribute('aria-label', /hospital/i);
+  expect(errors).toEqual([]);
+});
+
+test('A saved Departure run waits on a title with the DEPARTURES stamp', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const run = newRun({ level: 'departure', character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'customs', seed: 4, file: SAMPLE_FILES.lena });
+  await page.goto('./');
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...SAVED, run })] as const);
+  await page.reload();
+  await expect(page.locator('.title-screen .stamp-line')).toHaveText(en['departure:ui.stamp']);
+  await page.locator('.title-screen button.resume').click();
+  await expect(page.locator('main.run')).toBeVisible();
   expect(errors).toEqual([]);
 });

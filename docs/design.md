@@ -8,6 +8,47 @@ The central decision: "Do I spend my evidence now, lose time, or put someone els
 
 This merges five design notes from 2026-11-07: the original pitch (one mission, three checks, visible consequences), storylets (small encounters picked by a director, truth vs claims vs official knowledge), resources (time, evidence, contacts, scrutiny), the waiting room (delays as active uncertainty) and the setting (present day, ordinary life). Where they disagreed, the resource note wins on rules, because it is the most concrete one. The original concern cards became "On file" cards, so the player still sees exactly what officials know.
 
+## Development rules
+
+Yury set these on 2026-11-11, after a playtest where every level read as the hospital mission and the choices did not visibly change the outcome. Every new mission, card and change is judged against them, and reviewers check them on every bead.
+
+1. A mission is a complete story. It has its own traveler, direction, reason, goal and endings, and it does not borrow the premise of another mission. Fill in the mission checklist below before writing any cards for it.
+2. Every decision has a believable purpose. Each option is something a real person in that seat might do, for a reason they could say out loud. No option exists only to be the wrong one.
+3. After each answer, show what happened, what changed and what this resolves. What happened is the officer's reaction. What changed is the resource, the file or the risk that moved. What it resolves is which question is now closed and which is still open.
+4. Disclosure can help. Telling the truth or showing a document has to be able to settle a question, not only add risk, so honesty is a real choice and not always the losing one.
+5. Keep truth, testimony and suspicion apart. Truth is what really happened, testimony is what the traveler said, and suspicion is what the officer believes. The game tracks all three separately and the screen never mixes them up.
+6. Build characters around decisions. A traveler's background exists so they face different decisions, not just different text. Two travelers on the same mission should face different hard choices.
+7. Continuation is explicit. Every ending says what comes next and offers it as a button (Retry, Continue to the next part, Choose a crossing). The player never has to guess whether the story goes on.
+8. Balance for interesting choices. Tune costs so that more than one option is worth taking, not toward a set share of unhappy endings. The existing eval thresholds stay as they are until Yury decides otherwise.
+9. Test at three levels. Rules tests check the engine (`npm test`). Automated play checks whole runs and the screens (`npm run autoplay`, `npm run e2e`). A person plays the built game once from start to end before a change counts as done.
+10. Make small playable changes. Each change leaves the game playable end to end, and is small enough to try in one sitting.
+
+Recommended order:
+
+1. Write these rules down (this section).
+2. Make each mission a complete story with the checklist below, and hide any mission that does not have one yet.
+3. Make the questions and answers fit that story, so an answer establishes what the question asks.
+4. Show what happened, what changed and what it resolves after each answer.
+5. Make each ending name the choices that decided it, and offer the explicit continuation.
+6. Explain time, scrutiny and lies the first time they matter.
+7. Build the travelers around different decisions.
+8. Balance last, once the choices above are readable.
+
+Test at all three levels after each step, not only at the end.
+
+### Mission checklist
+
+Every mission answers all of these before its cards are written:
+
+- Who travels
+- Direction (arriving or leaving)
+- Why they travel
+- Goal (what counts as making it)
+- Carried items (what they bring and what each one is for)
+- Protected person (who could be put at risk, and how)
+- What is mechanically different from the other missions
+- Success, compromise and failure (what each ending looks like)
+
 ## Setting
 
 Present day. A fictional country people left but still have family, homes and obligations inside. Everything is familiar: a delayed bus, weak airport Wi-Fi, an unanswered message from a parent, a passport disappearing behind glass.
@@ -31,7 +72,7 @@ Lena carries mostly the first (the donation, her cousin) plus a foreign employer
 
 ## First mission: your father's stroke
 
-The last bus to the hospital leaves in 8 hours, from a station 2 hours past the border. You carry his medicine, some cash and your phone.
+The last bus to the hospital leaves in 8 hours, from a station 2 hours past the border. You carry his medicine, 14,000 in cash and your phone. Cash over 10,000 has to be declared, and the customs queue gives both numbers before the inspector asks (`msg.1.cash`), so "It's under the limit" is a lie the player knows they are telling.
 
 Requirement: be admitted and reach the last bus with at least 2 hours left. The bus to the hospital leaves in 8 hours, and you need 2 hours to reach the station, so the crossing can spend up to 6.
 
@@ -92,7 +133,7 @@ Each document answers named questions, so a decision is which problem to solve, 
 |---|---|---|
 | Hotel booking (`hotel`) | Where you stay (`accommodation`), how long you stay (`stay`) | You claim a hotel stay, can't back a family stay |
 | Letter from mother (`motherLetter`) | Why you came (`purpose`), where you stay (`accommodation`) | The family address |
-| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`) | Your employer |
+| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`), not how much: only a count shows that, so the exit desk's "How much cash are you taking out?" takes no document | Your employer |
 | Hospital note (`hospitalNote`) | What the medicine is (`medicine`), why you came (`purpose`) | Your father's condition |
 | Return ticket (`returnTicket`) | How long you stay (`stay`), not the cash: a ticket says when you leave, not what you carry | A fixed departure date |
 | Apartment deed (`deed`) | Who you are (`identity`, its registered address, not the photo), where you stay (`accommodation`) | Your property inside |
@@ -128,7 +169,7 @@ Rules:
 2. Randomness picks the problem, the chosen solution has a predictable result.
 3. Officials only challenge a claim they could plausibly catch: a clarify or contradiction encounter needs both your claim and an On file fact that speaks against it.
 4. Earlier disclosures change later encounters through the director, not through hand-written branches.
-5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity or where you stay, the return ticket for length of stay; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). The ticket used to settle the cash question (dhv.3); the realism review of 2026-11-10 (4qd.1) moved it to length of stay, because a flight out says nothing about the cash you carry, which the employer letter (income) or a declaration answers. Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
+5. Most things cost; preparation and luck sometimes earn a no-cost answer. A no-cost answer spends no time, scrutiny or contact and puts no new fact on file, though it may use a document card (`noCost()` in `src/game/engine.ts`). Preparation: a document that settles the question keeps a harmless fact off file (the deed for identity or where you stay, the return ticket for length of stay; `settles` and `HARMLESS_FACTS` in `src/game/content/world.ts`). The ticket used to settle the cash question (dhv.3); the realism review of 2026-11-10 (4qd.1) moved it to length of stay, because a flight out says nothing about the cash you carry. The map review (dap.5) split the cash question the same way: customs asks how much and where from, the count answers how much and the employer letter where from. The deed no longer answers "You hold two?", because a deed says who owns a flat, not how many passports you hold; on a records day the clerk asks about the photo first (`p_photo`, which the deed does answer), and about the passports only when the photo is not in question. A deed shown for where you stay confirms who you are as well (`forwards`), so handing over both passports after it takes an hour and no records scan. Luck: a calm routine card (a helpful inspector, a glass of water) with one free answer. The honest bot averages at least 1 per run (`npm run autoplay`).
 
 ### Encounter checklist
 
@@ -189,6 +230,7 @@ Kept, because a person picks them even though the bots don't:
 - `d_hold.leave` - in Departure, walking out without your passport when the exit desk holds it over a claim your last crossing showed false. It ends the crossing (free to go, for now), and every bot waits for the review or signs instead. It stays as the choice of someone who won't spend three more hours at that desk.
 - `d_named.name` - in Departure, naming the relative your file already holds. It is the same trade as `i_family.name`, a person for an hour, so the bots never take it. It stays for the same reason.
 - `p_photo.evidence` - in Departure, a document for the photo check. Departure's opening card asks for the paper first, so the bots reach the photo check with nothing left that settles it. It stays because in Arrival the same answer gets picked.
+- `f_photo.law` - in Departure, the long legal check of the photo the phone search found. The exit desk asks how much cash you take out, which no document answers (dap.5), so no salary goes on file at customs and the phone search comes only on a flag, which the bots that would take the slow check rarely carry. It stays because in Arrival the same answer gets picked.
 - `s_connection.drive` - in The funeral, asking your mother or cousin to drive out to the station for you. The bots take it only in the last hours, when the supervisor can no longer ring ahead, and The funeral's passport desk asks how long you stay (free) where Arrival asks the slower stay and employer checks, so they reach the transfer with hours left. It stays because in Arrival the same answer gets picked.
 
 ## Screen rules
@@ -308,7 +350,7 @@ English first, built for translation from day one:
 
 Someone returning for a funeral, a parent collecting a child, an emigrant renewing documents. Each has different resources and something different to lose. A familiar officer or passenger can reappear across runs. Build these only after the first mission is fun.
 
-Each story is a level: a record in `src/game/content/levels.ts` with its name and goal text keys, its start time, its minimum trip time, the cards it can deal and the one rule it adds. Level 1 Arrival is the first mission above, with no new rule. A run's setup names its level beside the traveler, packing and bulletin. A level opens once the player has finished the one before it, with any ending (`levelOpen()`), and a locked row on the list names that level; endings stay a collection to fill, not a key. The level list comes before the traveler screen only when more than one level is open (`showsLevelList()`); with Arrival alone there is no list, and a first run plays Arrival straight from the begin screen. `npm run walk`, `npm run autoplay` and `npx tsx tools/eval.ts` run every level (or one, with `--level`), so each is checked by the same rules. `npm run walk -- --ignore <rule>` plays bots that never make the picks a level rule's heeders make, and a rule earns its place when ignoring it gets home in time less often.
+Each story is a level: a record in `src/game/content/levels.ts` with its name and goal text keys, its start time, its minimum trip time, the cards it can deal and the one rule it adds. Level 1 Arrival is the first mission above, with no new rule. A run's setup names its level beside the traveler, packing and bulletin. A level opens once the player has finished the one before it, with any ending (`levelOpen()`), and a locked row on the list names that level; endings stay a collection to fill, not a key. The level list comes before the traveler screen only when more than one level is open (`showsLevelList()`); with Arrival alone there is no list, and a first run plays Arrival straight from the begin screen. A level marked `hidden` stays off the list (`LISTED_LEVELS`) but keeps its content and tests, and a saved run on it still resumes. Level 3 The funeral is hidden until it has its own story, because it shares Arrival's core cards and carries Dad's medicine, so it reads as the hospital mission. `npm run walk`, `npm run autoplay` and `npx tsx tools/eval.ts` run every level (or one, with `--level`), so each is checked by the same rules. `npm run walk -- --ignore <rule>` plays bots that never make the picks a level rule's heeders make, and a rule earns its place when ignoring it gets home in time less often.
 
 ## Prototype scope
 

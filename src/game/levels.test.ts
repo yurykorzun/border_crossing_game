@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS, dealsCard, isLevelId, levelOf, showsLevelList } from './content/levels';
+import { DEFAULT_LEVEL, LEVELS, LEVEL_IDS, LISTED_LEVELS, dealsCard, isLevelId, levelOf, levelRows, showsLevelList } from './content/levels';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
 import { MISSION_MIN_TIME, START_TIME } from './content/world';
 import { newRun, travelOf } from './engine';
 import { pickKey, playRun, ruleOf, ruleShares, setupFor } from './bots';
 import { allSetups } from './walk';
+import { SAVE_KEY, freshSave, load } from './save';
+import type { Store } from './save';
 import { en } from '../i18n/en';
 import type { Level, LevelRule, RunState } from './types';
 
@@ -52,6 +54,30 @@ describe('levels as data', () => {
     const two: Level[] = [LEVELS.arrival, { ...LEVELS.arrival, id: 'second' as Level['id'], number: 2 }];
     expect(showsLevelList([], two)).toBe(false);
     expect(showsLevelList(['arrival'], two)).toBe(true);
+  });
+
+  it('keeps The funeral off the level list until it has its own story (dap.2)', () => {
+    // It shares Arrival's core cards and carries Dad's medicine, so it reads as the hospital mission.
+    expect(LEVELS.funeral.hidden).toBe(true);
+    expect(LISTED_LEVELS.map((l) => l.id)).toEqual(['arrival', 'departure']);
+    // With Arrival and Departure finished, the list shows those two, both open, and nothing locked after them.
+    expect(levelRows(['arrival', 'departure']).map((r) => [r.level.id, r.open])).toEqual([['arrival', true], ['departure', true]]);
+    expect(showsLevelList(['arrival', 'departure'])).toBe(true);
+    // Its content stays: it is still a level a setup or a saved run can name.
+    expect(isLevelId('funeral')).toBe(true);
+    expect(LEVEL_IDS).toContain('funeral');
+  });
+
+  it('loads a save that already holds funeral progress, run under way and all', () => {
+    const map = new Map<string, string>();
+    const store: Store = { get: (k) => map.get(k) ?? null, set: (k, v) => void map.set(k, v) };
+    const run = newRun({ level: 'funeral', character: 'lena', loadout: ['hotel', 'hospitalNote', 'returnTicket'], bulletin: 'customs', seed: 4 });
+    map.set(SAVE_KEY, JSON.stringify({ ...freshSave(), endingsSeen: ['tooLate'], levelsFinished: ['arrival', 'departure', 'funeral'], run }));
+    const d = load(store);
+    expect(d.levelsFinished).toEqual(['arrival', 'departure', 'funeral']);
+    expect(d.run?.level).toBe('funeral');
+    expect(levelOf(d.run!).id).toBe('funeral');
+    expect(levelRows(d.levelsFinished).map((r) => r.level.id)).toEqual(['arrival', 'departure']);
   });
 
   it('tells a level id from anything else', () => {

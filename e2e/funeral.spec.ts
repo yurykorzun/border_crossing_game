@@ -1,58 +1,46 @@
-// The funeral (border_crossing_game-rwf.4): Level 3, open once Departure is finished.
-// Her sister has told the border how long you stay, so the first queue has her message
-// and the passport desk has her statement on file from the first card.
+// The funeral (border_crossing_game-rwf.4): Level 3. Off the level list until it has its
+// own story (dap.2), so with Arrival and Departure finished the list shows those two only.
+// A save that already holds funeral progress still loads, and its run resumes: her sister
+// has told the border how long you stay, so the first queue has her message.
 import { expect, test } from '@playwright/test';
 import { en } from '../src/i18n/en';
-import { openReturning } from './returning';
-import { CHARACTER_IDS } from '../src/game/content/world';
+import { openReturning, openSaved } from './returning';
+import { newRun } from '../src/game/engine';
+import { freshSave } from '../src/game/save';
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }]) {
-  test(`The funeral opens after Departure and starts with her sister's statement (${viewport.width}x${viewport.height})`, async ({ page }) => {
+  test(`The funeral is off the level list and a saved funeral run resumes (${viewport.width}x${viewport.height})`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
     await page.setViewportSize(viewport);
 
-    // Arrival finished only: The funeral is listed but locked, and names Departure.
-    await openReturning(page, ['arrival']);
-    await page.locator('.title-screen button.primary').click();
-    const locked = page.locator('main.level-step button.level[data-level="funeral"]');
-    await expect(locked).toBeDisabled();
-    await expect(locked).toContainText('Level 3');
-    await expect(locked).toContainText(en['ui.levelOpensAfter'].replace('{level}', en['level.departure.title']));
-
-    // Departure finished too: it opens.
+    // Arrival and Departure finished: the list shows those two, and no funeral row.
     await openReturning(page, ['arrival', 'departure']);
     await page.locator('.title-screen button.primary').click();
-    const row = page.locator('main.level-step button.level[data-level="funeral"]');
-    await expect(row).toBeEnabled();
-    await expect(row).toContainText(en['level.funeral.blurb']);
-    await row.click();
-    await page.getByRole('radio').nth(CHARACTER_IDS.indexOf('lena')).click();
-    await page.locator('.traveler-step .controls button.primary').click();
-    const docs = page.locator('.documents-step .doc');
-    for (let i = 0; i < 3; i++) await docs.nth(i).click();
-    await page.locator('.documents-step .controls button.primary').click();
+    const rows = page.locator('main.level-step button.level');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toHaveAttribute('data-level', 'arrival');
+    await expect(rows.nth(1)).toHaveAttribute('data-level', 'departure');
+    await expect(page.getByText(en['level.funeral.title'])).toHaveCount(0);
 
-    // Its own goal on Before you cross.
-    const mission = page.locator('main.begin-step .mission');
-    await expect(mission.locator('h3')).toHaveText(en['funeral:mission.title']);
-    await expect(mission).toContainText(en['funeral:mission.body']);
-    await page.screenshot({ path: `test-results/funeral-begin-${viewport.height}.png` });
-    await page.locator('main.begin-step .controls button.primary').click();
+    // A save with funeral progress: finished once, and a run under way on it.
+    const run = newRun({ level: 'funeral', character: 'lena', loadout: ['hotel', 'hospitalNote', 'returnTicket'], bulletin: 'customs', seed: 4 });
+    await openSaved(page, { ...freshSave(), endingsSeen: ['tooLate'], levelsFinished: ['arrival', 'departure', 'funeral'], run });
 
     // The first queue: her sister's message, one of the two statements.
-    const run = page.locator('main.run');
+    const shown = page.locator('main.run');
     const said = [en['msg.0.sister.sisterSaysDays'], en['msg.0.sister.sisterSaysWeeks']];
     let seen = false;
     for (let i = 0; i < 12 && !seen; i++) {
-      const text = await run.innerText();
+      const text = await shown.innerText();
       seen = said.some((m) => text.includes(m));
-      if (!seen) await run.locator('.controls button.primary').click();
+      if (!seen) await shown.locator('.controls button.primary').click();
     }
     expect(seen, "her sister's message in the first queue").toBe(true);
     await page.screenshot({ path: `test-results/funeral-queue-${viewport.height}.png` });
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('purpose-of-visit-save') ?? '{}'));
     expect(saved.run.level).toBe('funeral');
+    expect(saved.levelsFinished).toEqual(['arrival', 'departure', 'funeral']);
     expect(errors).toEqual([]);
   });
 }
