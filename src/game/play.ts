@@ -173,6 +173,7 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   }
   if (s.medicine && !n.medicine) ev.push({ type: 'medicineLost' });
   // Said once per run: a point opened again by a new flag and then settled again is not news.
+  // Saying it again puts Arrival over the 8-minute ceiling (tools/sweep.ts, border_crossing_game-dap.28).
   for (const topic of Object.keys(n.verified ?? {}) as Topic[])
     if (pointVerified(n, topic) && !s.verified?.[topic]) ev.push({ type: 'pointSettled', topic });
   if (travelOf(n) !== travelOf(s)) ev.push({ type: 'travelChanged', hours: travelOf(n) });

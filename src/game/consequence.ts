@@ -217,7 +217,9 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
   // A document shown is spent, and its card greys out. When that is all that changed
-  // (an answer that settles the question at no other cost), the line says so.
+  // (an answer that settles the question at no other cost), the line says so. Saying it
+  // next to other changes too puts Arrival and The funeral over the 8-minute ceiling
+  // (tools/sweep.ts), so that waits for room elsewhere (border_crossing_game-dap.28).
   if (!out.length)
     for (const e of events) if (e.type === 'documentUsed') out.push({ key: 'change.document', vars: { cardLabel: e.id }, tone: 'plain' });
   // Last, what the answer resolves: each question now settled for the officers ahead
