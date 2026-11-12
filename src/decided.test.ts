@@ -8,15 +8,27 @@ import { Ending } from './App';
 import { BOT_STYLES, playRun, setupFor } from './game/bots';
 import type { BotRun } from './game/bots';
 import { MAX_DECISIVE, MIN_DECISIVE, axisLines, decisive } from './game/consequence';
-import { endingText, travelOf } from './game/engine';
+import { endingText, newRun, travelOf } from './game/engine';
+import { tryStep } from './game/play';
 import { t, tn } from './i18n';
 import { CHECKPOINTS } from './game/types';
+
+/**
+ * A bot run with its final state played again through tryStep(), as the game moves a
+ * run, so the state carries the answers it picked (RunState.answers).
+ */
+function played(style: (typeof BOT_STYLES)[number], i: number): BotRun {
+  const run = playRun(style, setupFor(i));
+  let s = newRun(setupFor(i));
+  for (const a of run.actions) s = tryStep(s, a).state;
+  return { ...run, final: s };
+}
 
 /** The first bot run, over styles and seeds, whose ending reads `text`. */
 function seededRun(text: string): BotRun {
   for (let i = 0; i < 300; i++)
     for (const style of BOT_STYLES) {
-      const run = playRun(style, setupFor(i));
+      const run = played(style, i);
       if (endingText(run.final) === text) return run;
     }
   throw new Error(`no seeded run ends ${text}`);
@@ -71,7 +83,7 @@ describe('the ending names the choices that decided it', () => {
   it('picks the answers that moved the run most, and lists them in the order they were given', () => {
     // A run where the medicine was taken lists that answer, whatever else happened.
     const lost = seededRun('homeAtCost');
-    const withMedicine = [lost, ...BOT_STYLES.flatMap((style) => Array.from({ length: 60 }, (_, i) => playRun(style, setupFor(i))))]
+    const withMedicine = [lost, ...BOT_STYLES.flatMap((style) => Array.from({ length: 60 }, (_, i) => played(style, i)))]
       .filter((r) => (r.final.answers ?? []).some((a) => a.medicine));
     expect(withMedicine.length).toBeGreaterThan(0);
     for (const r of withMedicine) {

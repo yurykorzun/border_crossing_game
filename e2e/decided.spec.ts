@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import { BOT_STYLES, playRun, setupFor } from '../src/game/bots';
 import { axisLines, decisive } from '../src/game/consequence';
-import { endingText } from '../src/game/engine';
+import { endingText, newRun } from '../src/game/engine';
+import { tryStep } from '../src/game/play';
 import { freshSave } from '../src/game/save';
 import { t } from '../src/i18n';
 import type { RunState } from '../src/game/types';
@@ -15,7 +16,9 @@ import { openSaved } from './returning';
 function seeded(text: string): RunState {
   for (let i = 0; i < 300; i++)
     for (const style of BOT_STYLES) {
-      const s = playRun(style, setupFor(i)).final;
+      // Played again through tryStep(), as the game moves a run, so it carries its answers.
+      let s = newRun(setupFor(i));
+      for (const a of playRun(style, setupFor(i)).actions) s = tryStep(s, a).state;
       // The last officer line already read, so the save opens on the ending itself.
       if (endingText(s) === text) return { ...s, reaction: null, changes: null };
     }
