@@ -242,7 +242,7 @@ describe('the desks ask about leaving, from the file (dap.4)', () => {
       expect(s.seen).not.toContain('c_medicine');
     }
     expect(LEVELS.departure.cards).not.toContain('c_medicine');
-    expect(LEVELS.departure.core?.customs[0]).toBe('d_out');
+    expect(LEVELS.departure.core?.customs?.[0]).toBe('d_out');
   });
 
   it.each([['lena'], ['mark']] as const)('%s: the passport desk asks where you stayed, not who you will stay with', (who) => {
