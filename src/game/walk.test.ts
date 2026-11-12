@@ -27,6 +27,17 @@ for (const level of LEVEL_IDS) {
       expect(report.problems.map((p) => `${p.rule}: ${p.detail}`)).toEqual([]);
     });
 
+    // dap.31: every approach of every reachable state, through afterAnswerLines() in checkMove().
+    if (level === 'arrival' || level === 'departure')
+      it('shows after-answer lines only for what the answer touched', () => {
+        const lines = report.problems.filter((p) => /Checks out|settles \[|bag search/.test(p.detail));
+        expect(lines.map((p) => p.detail)).toEqual([]);
+        // The rule was really exercised: clean passes shown, questions settled, bag searches answered.
+        expect(report.afterAnswer.checksOut).toBeGreaterThan(0);
+        expect(report.afterAnswer.settles).toBeGreaterThan(0);
+        if (level === 'departure') expect(report.afterAnswer.bagSearches).toBeGreaterThan(0);
+      });
+
     it('really branches on the dealer', () => {
       expect(report.chanceNodes).toBeGreaterThan(0);
     });

@@ -14,7 +14,7 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
+  callInsDue, check, checkEffects, claimsTouched, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
   choices, optionFor, options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
@@ -135,6 +135,14 @@ export interface WalkReport {
   setups: SetupResult[];
   /** (state, action) pairs where the dealer had more than one card to deal. */
   chanceNodes: number;
+  /** Moves afterAnswerLines() looked at: a "Checks out" shown, a question settled, a bag search answered. */
+  afterAnswer: AfterAnswerTally;
+}
+
+export interface AfterAnswerTally {
+  checksOut: number;
+  settles: number;
+  bagSearches: number;
 }
 
 /**
@@ -301,8 +309,38 @@ export function checkState(s: RunState): string[] {
   return bad;
 }
 
+/** The topics a move settled for the desks ahead: verified now, freshly or again. */
+const settledBy = (s: RunState, n: RunState): string[] =>
+  Object.keys(n.verified ?? {}).filter((t) => n.verified?.[t as keyof RunState['verified']] !== s.verified?.[t as keyof RunState['verified']]);
+
+/**
+ * The after-answer lines say what this answer did (border_crossing_game-dap.31): a
+ * spot-check's "Checks out" names only a claim the move's own effects touch
+ * (claimsTouched()), a move that settles a question shows no officer's doubt or
+ * challenge next to it, and a bag search (Encounter.noCallIns) names no contact.
+ */
+export function afterAnswerLines(s: RunState, n: RunState, action: Action, tally?: AfterAnswerTally): string[] {
+  const bad: string[] = [];
+  const said = n.log.slice(s.log.length);
+  const where = s.screen.kind === 'encounter' || s.screen.kind === 'inspection' ? `${s.screen.id}.${'approach' in action ? action.approach : action.type}` : `${s.screen.kind} ${JSON.stringify(action)}`;
+  const touched = claimsTouched(moveEffects(s, action) ?? []);
+  for (const l of said)
+    if (l.key === 'spot.clear' && tally) tally.checksOut++;
+  for (const l of said)
+    if (l.key === 'spot.clear' && !touched.includes(String(l.vars?.claim).split('.')[0] as ClaimId))
+      bad.push(`"Checks out: ${l.vars?.claim}" under ${where}, which touches [${touched}]`);
+  const settled = settledBy(s, n);
+  if (settled.length && tally) tally.settles++;
+  const doubts = said.filter((l) => l.key.startsWith('reading.') || /^officer\.\w+\.flags$/.test(l.key));
+  if (settled.length && doubts.length) bad.push(`${where} settles [${settled}] and says ${doubts.map((l) => l.key)}`);
+  const card = s.screen.kind === 'encounter' ? ENCOUNTER_BY_ID.get(s.screen.id) : undefined;
+  if (card?.noCallIns && action.type === 'choose' && (s.calledIn ?? []).length && tally) tally.bagSearches++;
+  if (card?.noCallIns && said.some((l) => l.key === 'calledIn.reaction')) bad.push(`the bag search ${where} names a contact`);
+  return bad;
+}
+
 /** The rules every move must keep, comparing the state before and after. */
-export function checkMove(s: RunState, n: RunState, action: Action): string[] {
+export function checkMove(s: RunState, n: RunState, action: Action, tally?: AfterAnswerTally): string[] {
   const bad: string[] = [];
   if (!keeps(s.used, n.used)) bad.push('a spent document came back');
   if (!keeps(s.exposed, n.exposed)) bad.push('a contact exposure disappeared');
@@ -407,6 +445,7 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     const lost = checkFindings(s, s.screen.check, s.screen.resolved).flatMap((e) => ('fact' in e && !knows(n, e.fact, deskOf(s)) ? [e.fact] : []));
     if (lost.length) bad.push(`${lost} found by ${s.screen.check} is not on file after a contact vouched`);
   }
+  bad.push(...afterAnswerLines(s, n, action, tally));
   // A double tap, or resolving the same check twice, must be refused.
   if ((action.type === 'choose' || action.type === 'waitAction') && tryStep(n, action).ok)
     bad.push(`${JSON.stringify(action)} could be played twice in a row`);
@@ -477,6 +516,7 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     offered: new Map(),
     setups: [],
     chanceNodes: 0,
+    afterAnswer: { checksOut: 0, settles: 0, bagSearches: 0 },
   };
 
   // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
@@ -553,7 +593,7 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
               problem('every action moves', `${JSON.stringify(a)} changed nothing on ${JSON.stringify(s.screen)}`, move);
               continue;
             }
-            for (const d of checkMove(s, o.state, a)) problem('move rules', d, move);
+            for (const d of checkMove(s, o.state, a, report.afterAnswer)) problem('move rules', d, move);
             path.push(move);
             const [g, b, c] = visit(o.state);
             path.pop();

@@ -185,6 +185,12 @@ export interface Encounter {
    * decision. Only the dealer's breather deals one (breather() in src/game/engine.ts).
    */
   calm?: true;
+  /**
+   * The officer searches your things himself (Departure's bag at customs, d_out), so
+   * no contact called in earlier is checked on this card: their hour waits for a
+   * later card that asks what they can confirm (callInsDue() in src/game/engine.ts).
+   */
+  noCallIns?: true;
   /** related cards: higher wins. Consequences of answers beat background. */
   priority?: number;
   when?: Cond;

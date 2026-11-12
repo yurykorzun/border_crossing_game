@@ -554,6 +554,8 @@ export function deskIntro(s: RunState): Checkpoint | undefined {
 export function callInsDue(s: RunState, a: Approach, topic: Topic | undefined): ContactId[] {
   // A point already verified has nothing left to check, so it takes no hour.
   if (a.kind === 'withdraw' || s.screen.kind === 'inspection' || (topic && pointVerified(s, topic))) return [];
+  // A bag search is the officer looking for himself (Encounter.noCallIns), so nobody's statement is checked on it.
+  if (s.screen.kind === 'encounter' && ENCOUNTER_BY_ID.get(s.screen.id)?.noCallIns) return [];
   return (s.calledIn ?? []).filter((c) => canConfirm(c, topic));
 }
 
@@ -861,7 +863,7 @@ export function queueMood(s: RunState): QueueMood {
 const phoned = (s: RunState): RunState => (s.deskStart ? { ...s, deskStart: { ...s.deskStart, phoned: true } } : s);
 
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
-function advance(s: RunState, dealer: Dealer): RunState {
+function advance(s: RunState, dealer: Dealer, touched: ClaimId[] = []): RunState {
   if (s.withdrew) return finish(s);
   const rest = breather(s);
   if (rest) return show(s, rest.id);
@@ -873,7 +875,7 @@ function advance(s: RunState, dealer: Dealer): RunState {
     if (!s.seen.includes(id) && issueOpen(s, id) && followUpRoom(s, fromCheck(id))) return show(s, id);
   }
   if (!coreLeft(s) && (s.slot > FOLLOW_UP_SLOT || !relatedCard(s))) {
-    if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer), dealer);
+    if (!(s.spotChecked ?? []).includes(deskOf(s))) return advance(spotCheck(s, dealer, touched), dealer);
     const challenge = pendingChallenge(s);
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
@@ -937,6 +939,17 @@ function pendingChallenge(s: RunState): string | undefined {
  * said what the clarify answer says (CLARIFIED_BY), so checking that takes
  * SPOT_CHECK_HOURS; else flaw, and `card` is the challenge to answer.
  */
+/**
+ * The claims `effects` touch: the ones they make, and the ones a fact they put on
+ * file is paired against (CHALLENGE_PAIRS). A spot-check's clean pass names only these.
+ */
+export function claimsTouched(effects: Effect[]): ClaimId[] {
+  const facts = effects.flatMap((e) => ('fact' in e ? [e.fact] : []));
+  const made = effects.flatMap((e) => ('claim' in e ? [e.claim] : []));
+  const paired = Object.values(CHALLENGE_PAIRS).flatMap((pairs) => pairs.flatMap(([c, f]) => (facts.includes(f) ? [c] : [])));
+  return [...new Set([...made, ...paired])];
+}
+
 export type SpotResult = { result: 'clear' | 'answered' | 'explained' } | { result: 'flaw'; card: (typeof CHALLENGES)[number] };
 
 export function spotCheckOf(s: RunState, c: ClaimId): SpotResult {
@@ -990,26 +1003,8 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
 /** Where you first said `c`; a save from before saidAt existed names the first desk that wrote it down, else this one. */
 const saidDesk = (s: RunState, c: ClaimId): Checkpoint => s.saidAt?.[c] ?? loggedAt(s, c)[0] ?? deskOf(s);
 
-/**
- * Each desk spot-checks one claim you made before you leave it, once: the
- * dealer picks which, among the claims on file (written down at some desk, so
- * one only said aloud to an officer who does not write it down is never
- * checked). A claim that fits what this desk has on file passes
- * cleanly, at no cost. A flaw opens a check and the check decides
- * (spotCheckOf()): the challenge card is queued like a follow-up, so the pacing
- * rule still puts a routine card first, and its answers keep the price they
- * show. Randomness picks the problem; the answer is a known cost. A challenge
- * that applies at the interview is still always dealt there (pendingChallenge()).
- */
-function spotCheck(s: RunState, dealer: Dealer): RunState {
-  const n: RunState = { ...s, spotChecked: [...(s.spotChecked ?? []), deskOf(s)] };
-  // After a secondary inspection the whole file has been read, so the desks stop
-  // spot-checking. It also keeps a long run inside the decision budget.
-  const onFile = s.claims.filter((c) => loggedAt(s, c).length);
-  if (!onFile.length || s.inspections) return n;
-  const r = dealer(s.rng, onFile.length);
-  const claimed = onFile[r.index];
-  const found = spotCheckOf(s, claimed);
+/** The line a spot-check of `claimed` shows, with what `found` says. */
+export function spotLine(s: RunState, claimed: ClaimId, found: SpotResult): LogEntry {
   // The claim in this traveler's own wording when there is one: Mark's denial is
   // claim.noOtherFamily.mark, about the border, not Lena's relatives here.
   const vars: Record<string, string> = { claim: own(`claim.${claimed}`, s.character).slice('claim.'.length), hours: String(SPOT_CHECK_HOURS) };
@@ -1020,7 +1015,35 @@ function spotCheck(s: RunState, dealer: Dealer): RunState {
     const [, fact] = CHALLENGE_PAIRS.i_clarify.find(([c, f]) => c === claimed && knows(s, f))!;
     Object.assign(vars, { said: claimed, desk: saidDesk(s, claimed), fact });
   }
-  const checked = say({ ...n, rng: r.rng }, [{ key: `spot.${found.result}`, vars }]);
+  return { key: `spot.${found.result}`, vars };
+}
+
+/**
+ * Each desk spot-checks one claim you made before you leave it, once: the
+ * dealer picks which, among the claims on file (written down at some desk, so
+ * one only said aloud to an officer who does not write it down is never
+ * checked). A claim that fits what this desk has on file passes
+ * cleanly, at no cost. A flaw opens a check and the check decides
+ * (spotCheckOf()): the challenge card is queued like a follow-up, so the pacing
+ * rule still puts a routine card first, and its answers keep the price they
+ * show. The check shows under the last answer, so a clean pass says "Checks
+ * out" only when that answer touched the claim (`touched`, claimsTouched()).
+ * Randomness picks the problem; the answer is a known cost. A challenge
+ * that applies at the interview is still always dealt there (pendingChallenge()).
+ */
+function spotCheck(s: RunState, dealer: Dealer, touched: ClaimId[]): RunState {
+  const n: RunState = { ...s, spotChecked: [...(s.spotChecked ?? []), deskOf(s)] };
+  // After a secondary inspection the whole file has been read, so the desks stop
+  // spot-checking. It also keeps a long run inside the decision budget.
+  const onFile = s.claims.filter((c) => loggedAt(s, c).length);
+  if (!onFile.length || s.inspections) return n;
+  const r = dealer(s.rng, onFile.length);
+  const claimed = onFile[r.index];
+  const found = spotCheckOf(s, claimed);
+  // A clean pass costs nothing, so its line shows only after an answer that touched the
+  // claim (claimsTouched()): under any other answer it would read as that answer's result.
+  if (found.result === 'clear' && !touched.includes(claimed)) return { ...n, rng: r.rng };
+  const checked = say({ ...n, rng: r.rng }, [spotLine(s, claimed, found)]);
   if (found.result === 'explained') return { ...checked, time: Math.max(0, checked.time - SPOT_CHECK_HOURS) };
   if (found.result === 'flaw') return { ...checked, pending: [...checked.pending, found.card] };
   return checked;
@@ -1130,6 +1153,8 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
   const w = s.screen;
   let result = w.resolved;
   let n = s;
+  // What this move put on file, so a clean spot-check after it names only a claim it touched.
+  const touched: Effect[] = [];
   // Asking puts your urgency on file and tells you how it is going. You stay in
   // the waiting room, so the hint can decide whether to wait or call someone.
   if (how === 'ask') {
@@ -1144,7 +1169,9 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
     n = say(n, [{ key: 'wait.assist.reaction', vars: { contact: c } }]);
     // The finding stays on file; the contact only settles what it means, so
     // the check clears with no follow-up and no scrutiny from it.
-    n = apply(n, checkFindings(n, w.check, result));
+    const found = checkFindings(n, w.check, result);
+    touched.push(...found);
+    n = apply(n, found);
     // What the contact confirmed stays verified for the desks after this one.
     const vouched = CHECKS[w.check].topic;
     if (vouched) n = verifyPoints(n, [vouched]);
@@ -1152,14 +1179,18 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
   }
   // Explaining first: you say it before he asks, so the follow-up is already answered.
   if (how === 'explain' && CHECKS[w.check].explain) {
-    n = say(apply(n, explainEffects(n, w.check)), [{ key: waitKey(w.check, how, 'reaction') }]);
+    const explained = explainEffects(n, w.check);
+    touched.push(...explained);
+    n = say(apply(n, explained), [{ key: waitKey(w.check, how, 'reaction') }]);
     result = { ...result, followUp: undefined };
   }
-  n = apply(n, checkEffects(n, w.check, result));
+  const effects = checkEffects(n, w.check, result);
+  touched.push(...effects);
+  n = apply(n, effects);
   const line = `check.${w.check}.${result.result}`;
   n = say(n, [{ key: how === 'explain' && has(`${line}.explained`) ? `${line}.explained` : line }]);
   if (result.followUp && !n.seen.includes(result.followUp)) n = { ...n, pending: [result.followUp, ...n.pending] };
-  return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer);
+  return advance({ ...n, decisions: n.decisions + (how === 'wait' ? 0 : 1) }, dealer, claimsTouched(touched));
 }
 
 // ── Choosing
@@ -1189,11 +1220,13 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   // On the day the bulletin orders that point checked (every host phoned), a name given at a
   // desk is not yet a confirmation: the check is what confirms it, so it settles nothing here.
   const vouched = opt.contact && opt.vouches !== BULLETIN_TOPICS[s.bulletin] ? opt.vouches : undefined;
+  let settles = false;
   if (s.screen.kind === 'encounter') {
     const points = pointsResolved(opt.card, vouched, topic);
     // A record check that confirmed the point (Approach.confirms) settles it like a document.
     if (opt.approach.confirms && topic && !points.includes(topic)) points.push(topic);
     n = verifyPoints(n, points);
+    settles = points.length > 0;
   } else if (opt.card || vouched || opt.approach.confirms) {
     const issue = inspectionIssue(s);
     if (issue) n = verifyPoints(n, [issue]);
@@ -1207,8 +1240,10 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
     n = { ...n, disproved: [...(n.disproved ?? []), reacted.claim] };
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
   for (const f of opt.flagged ?? []) n = say(n, [{ key: `officer.${deskOf(s)}.flags`, vars: { fact: f }, kind: 'suspicion' }]);
-  // What the officer reads into a confirmed fact is their suspicion, a line of its own.
-  for (const f of readings) n = say(n, [{ key: `reading.${f}.${deskOf(s)}`, kind: 'suspicion' }]);
+  // What the officer reads into a confirmed fact is their suspicion, a line of its own,
+  // unless the same answer settled the question: a paper or record that settles the job
+  // and a doubt about the same employer would say two opposite things at once.
+  if (!settles) for (const f of readings) n = say(n, [{ key: `reading.${f}.${deskOf(s)}`, kind: 'suspicion' }]);
   // The call-in hour is a real cost too, so the reaction names whose statement it checks.
   for (const c of due) n = say(n, [{ key: 'calledIn.reaction', vars: { contact: c } }]);
   // The weakness hour is a real cost, so the reaction says what it is spent on.
@@ -1218,7 +1253,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   if (opt.approach.kind === 'withdraw') return finish({ ...n, withdrew: true });
   if (s.screen.kind === 'inspection') n = { ...n, scrutiny: SCRUTINY_AFTER_INSPECTION };
   if (opt.approach.check && !usesVerified(s, opt.approach, topic)) return startWait(n, opt.approach.check);
-  return advance(n, dealer);
+  return advance(n, dealer, claimsTouched(opt.effects));
 }
 
 /**

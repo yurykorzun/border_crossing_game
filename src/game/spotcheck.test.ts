@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { own, t } from '../i18n';
 import { CHALLENGE_PAIRS, CONTRADICTIONS, CORE_CARDS, INCONSISTENCIES } from './content/encounters';
 import { SPOT_CHECK_HOURS } from './content/world';
-import { newRun, spotCheckOf, step } from './engine';
+import { newRun, spotCheckOf, spotLine, step } from './engine';
 import type { RunSetup } from './engine';
 import type { Dealer } from './rng';
 import { CHECKPOINTS, FACT_IDS } from './types';
@@ -49,7 +49,7 @@ const choose = (desk: Checkpoint): Action => ({ type: 'choose', approach: LAST_C
 describe('spot-checks', () => {
   // The criterion: a claim that matches every fact on file never fires, at any desk.
   it.each(CHECKPOINTS.flatMap((d) => CLAIMS.map((c) => [d, c] as const)))(
-    'at %s, "%s" with every fitting fact on file passes cleanly and costs nothing',
+    'at %s, "%s" with every fitting fact on file passes cleanly, costs nothing and says nothing under an answer that did not touch it',
     (desk, c) => {
       const s = leaving(desk, [c], fitting(c));
       expect(spotCheckOf(s, c)).toEqual({ result: 'clear' });
@@ -59,9 +59,18 @@ describe('spot-checks', () => {
       expect(n.scrutiny).toBe(s.scrutiny);
       expect(n.pending).toEqual([]);
       expect(n.screen.kind === 'encounter' && n.screen.id in CHALLENGE_PAIRS).toBe(false);
-      expect(n.reaction).toContainEqual({ key: 'spot.clear', vars: { claim: c, hours: String(SPOT_CHECK_HOURS) } });
+      // The last answer touched no claim, so "Checks out" would read as its result (dap.31).
+      expect(n.reaction?.some((l) => l.key === 'spot.clear')).toBe(false);
     },
   );
+
+  it('says "Checks out" under an answer that made the claim', () => {
+    // Saying your cash is under the limit is the last answer at customs, and the check picks that claim.
+    const s = { ...leaving('customs', [], fitting('cashUnderLimit'), { bulletin: 'records' as const }), screen: { kind: 'encounter' as const, id: 'c_cash' }, seen: [...CORE_CARDS.customs] };
+    const n = step(s, { type: 'choose', approach: 'under' }, picks(0));
+    expect(n.spotChecked).toContain('customs');
+    expect(n.reaction).toContainEqual({ key: 'spot.clear', vars: { claim: 'cashUnderLimit', hours: String(SPOT_CHECK_HOURS) } });
+  });
 
   it('checks each desk once, with the claim the dealer picks', () => {
     const s = leaving('customs', ['familyVisit', 'shortTrip'], ['familyAddress']);
@@ -160,16 +169,18 @@ describe('spot-checks', () => {
     'for %s, a spot-check of "%s" shows that traveler\'s own claim wording',
     (who, c) => {
       const s = { ...leaving('customs', [c], fitting(c)), character: who };
-      const line = step(s, choose('customs'), picks(0)).reaction?.find((l) => l.key === 'spot.clear');
-      expect(line).toBeDefined();
-      const text = t(line!.key, line!.vars);
+      const line = spotLine(s, c, spotCheckOf(s, c));
+      expect(line.key).toBe('spot.clear');
+      const text = t(line.key, line.vars);
       expect(text).toContain(`"${t(own(`claim.${c}`, who))}"`);
     },
   );
 
   it('Mark hears his own denial, not Lena\'s', () => {
-    const s = { ...leaving('customs', ['noOtherFamily'], fitting('noOtherFamily')), character: 'mark' as const };
+    // His denial caught by the brother abroad on file, so the line shows under any answer.
+    const s = { ...leaving('customs', ['noOtherFamily'], ['brotherAbroad']), character: 'mark' as const };
     const line = step(s, choose('customs'), picks(0)).reaction?.find((l) => l.key.startsWith('spot.'));
+    expect(line?.key).toBe('spot.flaw');
     expect(line?.vars?.claim).toBe('noOtherFamily.mark');
     const text = t(line!.key, line!.vars);
     expect(text).toContain(`"${t('claim.noOtherFamily.mark')}"`);
