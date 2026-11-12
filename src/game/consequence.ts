@@ -3,11 +3,11 @@
 // src/ui/parts.tsx renders it and src/game/transcript.ts writes it down, so both
 // read the same parts.
 
-import { has, own, t } from '../i18n';
+import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
-import type { CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
+import type { Answered, CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -276,6 +276,95 @@ export function consequences(s: RunState): EndingLine[] {
   return out.sort((a, b) => b.severity - a.severity);
 }
 
+/** One cost under a decisive answer on the ending: "2 hours lost", "Named your mother". */
+export interface DecisiveCost {
+  key: string;
+  vars?: Record<string, string | number>;
+  /** Plural count: render with tn(key, n). */
+  n?: number;
+  tone: Tone;
+}
+
+/** An answer the ending names as deciding the run: where it was given, what it said and what it cost. */
+export interface DecisiveAnswer {
+  desk: Checkpoint;
+  key: string;
+  vars?: Record<string, string>;
+  costs: DecisiveCost[];
+}
+
+export const MIN_DECISIVE = 2;
+export const MAX_DECISIVE = 3;
+
+/**
+ * How much an answer moved the run, for picking the ones that decided it: the
+ * medicine first, then the protected contact named, a statement a record showed
+ * false, anyone else named, then hours (and a missed connection) and scrutiny.
+ * A document spent or a question settled counts a little, so a clean run still
+ * names the papers that carried it.
+ */
+function weight(a: Answered, protectedContact: ContactId): number {
+  return (a.medicine ? 100 : 0)
+    + a.named.reduce((w, c) => w + (c === protectedContact ? 80 : 30), 0)
+    + a.caught.length * 60
+    + (a.hours + a.travel) * 10
+    + a.scrutiny * 5
+    + (a.used.length + a.settled.length) * 2;
+}
+
+/** The costs of one answer in plain words, worst first, or "Cost nothing". */
+function costsOf(s: RunState, a: Answered, protectedContact: ContactId): DecisiveCost[] {
+  const out: DecisiveCost[] = [];
+  if (a.medicine) out.push({ key: 'ending.cost.medicine', tone: 'red' });
+  for (const c of a.caught) out.push({ key: 'ending.cost.caught', vars: { said: own(`said.${c}`, s.character).slice('said.'.length) }, tone: 'red' });
+  for (const c of a.named) out.push({ key: 'ending.cost.named', vars: { contact: c }, tone: c === protectedContact ? 'red' : 'amber' });
+  if (a.hours) out.push({ key: 'ending.cost.hours', n: a.hours, tone: 'plain' });
+  if (a.travel) out.push({ key: 'ending.cost.travel', n: a.travel, tone: 'amber' });
+  if (a.scrutiny) out.push({ key: 'ending.cost.scrutiny', vars: { n: a.scrutiny }, tone: 'amber' });
+  for (const id of a.used) out.push({ key: 'ending.cost.used', vars: { cardLabel: id }, tone: 'plain' });
+  return out.length ? out : [{ key: 'ending.cost.none', tone: 'plain' }];
+}
+
+/**
+ * The two or three answers that decided the run, from its own record
+ * (RunState.answers, written by answered() in src/game/play.ts), in the order they
+ * were given: the ones that moved it most (weight()), and when fewer than two moved
+ * anything, the first answers given to make up two. Each names its desk, the answer
+ * as its button read and what it cost. Empty for a run with no answers (turned back in
+ * the first queue). Ending in src/App.tsx lists them and endingLines() in
+ * src/game/transcript.ts writes them down.
+ */
+export function decisive(s: RunState): DecisiveAnswer[] {
+  const protectedContact = CHARACTERS[s.character].protectedContact;
+  const all = (s.answers ?? []).map((a, i) => ({ a, i, w: weight(a, protectedContact) }));
+  const moved = all.filter((x) => x.w > 0).sort((x, y) => y.w - x.w || x.i - y.i).slice(0, MAX_DECISIVE);
+  const filler = all.filter((x) => x.w === 0).slice(0, Math.max(0, MIN_DECISIVE - moved.length));
+  return [...moved, ...filler]
+    .sort((x, y) => x.i - y.i)
+    .map(({ a }) => ({ desk: a.desk, key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
+}
+
+export type Axis = 'arrival' | 'medicine' | 'contacts';
+export const AXES: readonly Axis[] = ['arrival', 'medicine', 'contacts'];
+
+/**
+ * The ending read on its three axes, one line each (Branching Rules, 2026-11-11):
+ * arrival (on time or late, the hours left against the trip), the medicine (kept or
+ * lost) and contacts (who is on file, or no one). The label is at `ending.axis.<axis>`.
+ * Ending in src/App.tsx shows them under the decisive answers.
+ */
+export function axisLines(s: RunState): { axis: Axis; key: string; vars?: Record<string, string> }[] {
+  const ending = s.ending ?? endingFor(s);
+  const hours = { left: tn('ui.hours', s.time), trip: tn('ui.hours', travelOf(s)) };
+  const arrival = ending === 'turnedBack' ? 'ending.axis.arrival.none' : s.time >= travelOf(s) ? 'ending.axis.arrival.onTime' : 'ending.axis.arrival.late';
+  return [
+    { axis: 'arrival', key: arrival, ...(ending === 'turnedBack' ? {} : { vars: hours }) },
+    { axis: 'medicine', key: s.medicine ? 'ending.axis.medicine.kept' : 'ending.axis.medicine.lost' },
+    s.exposed.length
+      ? { axis: 'contacts', key: 'ending.axis.contacts.named', vars: { names: andList(s.exposed.map((c) => t(`contact.${c}`))) } }
+      : { axis: 'contacts', key: 'ending.axis.contacts.none' },
+  ];
+}
 
 /**
  * What comes back days after a crossing that got you home (rwf.10), or nothing. It

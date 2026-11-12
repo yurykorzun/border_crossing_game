@@ -256,7 +256,7 @@ describe('replay and save', () => {
       const store = new Map<string, string>();
       save({ get: (k) => store.get(k) ?? null, set: (k, v) => void store.set(k, v) }, { ...freshSave(), run: p.states[mid] });
       let s = load({ get: (k) => store.get(k) ?? null, set: () => {} }).run!;
-      for (const m of p.moves.slice(mid)) s = step(s, m.action);
+      for (const m of p.moves.slice(mid)) s = tryStep(s, m.action).state;
       expect(s).toEqual(p.states[p.states.length - 1]);
     }
   });
@@ -359,7 +359,10 @@ function playouts(n: number): { setup: RunSetup; moves: Move[]; states: RunState
     while (!s.ending) {
       const acts = legalActions(s);
       const action = acts[roll(acts.length)];
-      s = step(s, action);
+      // Through tryStep(), as the game and replay() move a run, so the answers are written down too (RunState.answers).
+      const r = tryStep(s, action);
+      if (!r.ok) throw new Error(`legal action ${JSON.stringify(action)} rejected`);
+      s = r.state;
       moves.push({ action });
       states.push(s);
       if (moves.length > 200) throw new Error('run did not end in 200 moves');

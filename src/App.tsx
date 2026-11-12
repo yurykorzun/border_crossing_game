@@ -20,7 +20,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, caughtLine, consequences, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './game/consequence';
+import { SEPARATOR, axisLines, caughtLine, consequences, decisive, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -944,6 +944,7 @@ export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () =>
   const text = endingText(s);
   const cost = consequences(s);
   const later = laterBeat(s);
+  const decided = decisive(s);
   return (
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
@@ -1000,6 +1001,30 @@ export function Ending({ s, onRestart, onSame }: { s: RunState; onRestart: () =>
             ))}
           </dl>
         </div>
+        {/* The answers that decided the run, from its own record, then the three axes they moved (dap.7). */}
+        <section className="decided">
+          <h3 className="mono">{t('ending.decided.heading')}</h3>
+          {decided.length > 0 && (
+            <ol className="decisive">
+              {decided.map((d, i) => (
+                <li key={i} className="decisive-answer">
+                  <span className="decisive-desk">{t('ending.decided.at', { desk: d.desk })}</span>
+                  <span className="decisive-label">{t(d.key, d.vars)}</span>
+                  <span className="decisive-cost">
+                    {d.costs.map((c, j) => (
+                      <span key={j} className={`tone-${c.tone}`}>{j > 0 && SEPARATOR}{c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)}</span>
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <ul className="axes">
+            {axisLines(s).map((l) => (
+              <li key={l.axis} className={`axis axis-${l.axis}`}><strong>{t(`ending.axis.${l.axis}`)}:</strong> {t(l.key, l.vars)}</li>
+            ))}
+          </ul>
+        </section>
         {/* One replay prompt about a choice, never a list of endings still to find (g0q.2). */}
         <p className="replay-prompt">{t('ui.replayPrompt')}</p>
       </section>

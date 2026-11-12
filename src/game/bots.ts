@@ -14,6 +14,7 @@ import { nextRandom } from './rng';
 import type { Action, ClaimId, EndingId, FactId, Level, LevelId, LevelRule, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import { allSetups, outcomes } from './walk';
+import { answered, eventsBetween } from './play';
 
 export type BotStyle = 'honest' | 'liar' | 'cautious' | 'random' | 'situational';
 export const BOT_STYLES: readonly BotStyle[] = ['honest', 'liar', 'cautious', 'random', 'situational'];
@@ -275,7 +276,9 @@ function playWith(style: BotRun['style'], setup: RunSetup, pickFor: Picker): Bot
       if (o) lies += traits(s, o).lies;
     }
     if (pick.action.type === 'waitAction' && sc.kind === 'wait') choices.push({ card: sc.check, pick: pick.action.action });
-    s = step(s, pick.action);
+    // Written down as the game writes it (answered()), so a bot run's ending names its answers too.
+    const n = step(s, pick.action);
+    s = answered(s, n, pick.action, eventsBetween(s, n, pick.action));
     botRng = pick.botRng;
     actions.push(pick.action);
   }

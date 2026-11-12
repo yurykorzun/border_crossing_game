@@ -87,6 +87,8 @@ Turning back is offered at one set early point: the passport queue, after the cl
 
 Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
+Under "Your run", "What decided it" names the two or three answers that moved the run most, in the order they were given, each with its desk and what it cost (hours lost, the medicine taken, a person named, a statement a record showed false, scrutiny, a document used). They come from the run's own record, `RunState.answers`, which answered() in src/game/play.ts writes from the same events as the after-answer lines, and decisive() picks them. Three lines follow, one per axis: arrival (on time or late, the hours left against the trip), the medicine (kept or taken) and contacts (who is on file, or no one), from axisLines(). The ending title does not change.
+
 ## Run shape
 
 Prepare → passport control → customs → security interview → result. Between checkpoints, 1-2 phone messages (your mother, your employer, a fellow passenger) carry the wider story and hint at what's next.

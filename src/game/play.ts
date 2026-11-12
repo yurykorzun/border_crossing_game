@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, pointVerified, reactionOf, step, travelOf } from './engine';
+import { answerKey, chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, pointVerified, reactionOf, step, travelOf, waitActions, waitKey } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -10,7 +10,7 @@ import { CHARACTERS } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, OnFileTier, ReactionKind, RunState, Topic } from './types';
+import type { Action, Answered, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, OnFileTier, ReactionKind, RunState, Topic } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
@@ -77,7 +77,8 @@ export function tryStep(s: RunState, given: Action, dealer: Dealer = randomDeale
   const action = first ? chooseAction(first) : given;
   if (!legalActions(s).some((a) => sameAction(a, action))) return { ok: false, state: s, reason: 'notAllowed' };
   const n = step(s, action, dealer);
-  return { ok: true, state: n, events: eventsBetween(s, n, action) };
+  const events = eventsBetween(s, n, action);
+  return { ok: true, state: answered(s, n, action, events), events };
 }
 
 /**
@@ -88,8 +89,55 @@ export function tryStep(s: RunState, given: Action, dealer: Dealer = randomDeale
 export function playStep(s: RunState, action: Action, dealer: Dealer = randomDealer): RunState {
   const n = step(s, action, dealer);
   if (n === s) return s;
-  const changes = n.reaction ? changeLines(eventsBetween(s, n, action), CHARACTERS[n.character].protectedContact) : null;
-  return { ...n, changes };
+  const events = eventsBetween(s, n, action);
+  const changes = n.reaction ? changeLines(events, CHARACTERS[n.character].protectedContact) : null;
+  return { ...answered(s, n, action, events), changes };
+}
+
+/**
+ * `n` with the answer `action` picked written down (RunState.answers), from the same
+ * events the reaction's lines are built from: the hours, the trip, scrutiny gained,
+ * who went on file, the medicine, a claim a record showed false, a document spent and
+ * what it settled. Only answers count: opening the document list, an ask in the
+ * waiting room or a tap on Continue does not. A plain wait adds what the check cost
+ * to the answer that started it, because that answer is what the hours were for.
+ */
+export function answered(s: RunState, n: RunState, action: Action, events: GameEvent[]): RunState {
+  const sc = s.screen;
+  const moved = {
+    hours: events.reduce((h, e) => h + (e.type === 'timeSpent' ? e.hours : 0), 0),
+    travel: Math.max(0, travelOf(n) - travelOf(s)),
+    scrutiny: Math.max(0, n.scrutiny - s.scrutiny),
+    named: events.flatMap((e) => (e.type === 'contactExposed' ? [e.id] : [])),
+    medicine: events.some((e) => e.type === 'medicineLost'),
+    caught: events.flatMap((e) => (e.type === 'claimChallenged' && e.kind === 'disproof' ? [e.claim] : [])),
+    used: events.flatMap((e) => (e.type === 'documentUsed' ? [e.id] : [])),
+    settled: events.flatMap((e) => (e.type === 'pointSettled' ? [e.topic] : [])),
+  };
+  const answers = s.answers ?? [];
+  const add = (a: Answered): RunState => ({ ...n, answers: [...answers, a] });
+  if (action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')) {
+    const o = optionFor(s, action);
+    if (!o || o.documents || n.documentList) return n;
+    const vars: Record<string, string> = {};
+    if (o.card) vars.card = vars.cardThe = o.card;
+    if (o.contact) vars.contact = vars.contactMine = o.contact;
+    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved });
+  }
+  if (action.type !== 'waitAction' || sc.kind !== 'wait' || action.action === 'ask') return n;
+  const last = answers[answers.length - 1];
+  if (action.action === 'wait') {
+    if (!last) return n;
+    const merged: Answered = {
+      ...last,
+      hours: last.hours + moved.hours, travel: last.travel + moved.travel, scrutiny: last.scrutiny + moved.scrutiny,
+      named: [...last.named, ...moved.named], medicine: last.medicine || moved.medicine,
+      caught: [...last.caught, ...moved.caught], used: [...last.used, ...moved.used], settled: [...last.settled, ...moved.settled],
+    };
+    return { ...n, answers: [...answers.slice(0, -1), merged] };
+  }
+  const contact = waitActions(s).find((w) => w.action === action.action)?.contact;
+  return add({ desk: deskOf(s), card: sc.check, pick: action.action, key: waitKey(sc.check, action.action, 'label'), ...(contact ? { vars: { contact } } : {}), ...moved });
 }
 
 const added = <T>(before: T[], after: T[]) => after.filter((x) => !before.includes(x));

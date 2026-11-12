@@ -528,6 +528,39 @@ export interface ChangeLine {
 }
 
 /**
+ * One answer the player picked, and what it moved: the run's own record, read
+ * from the step's events (answered() in src/game/play.ts), so the ending can name
+ * the answers that decided the run (decisive() in src/game/consequence.ts).
+ * A plain wait in the waiting room adds what it moved to the answer that started the check.
+ */
+export interface Answered {
+  desk: Checkpoint;
+  /** The card or check it was given on. */
+  card: string;
+  /** The approach picked there, or the wait action. */
+  pick: string;
+  /** i18n key of the answer's label, as the button read, with its vars. */
+  key: string;
+  vars?: Record<string, string>;
+  /** Hours lost on this answer. */
+  hours: number;
+  /** Hours the trip to the bus grew by (a missed connection). */
+  travel: number;
+  /** Scrutiny gained (0 when it fell or stayed). */
+  scrutiny: number;
+  /** Contacts it put on file. */
+  named: ContactId[];
+  /** The medicine was taken on this answer. */
+  medicine: boolean;
+  /** Claims a record showed false on this answer. */
+  caught: ClaimId[];
+  /** Documents it spent. */
+  used: EvidenceId[];
+  /** Questions it settled for the desks ahead. */
+  settled: Topic[];
+}
+
+/**
  * What each official knows: every fact that came out, and the desks that know
  * it, in CHECKPOINTS order. A fact is known where it came out and travels on
  * only through a channel (Channel, or the records bulletin).
@@ -642,6 +675,8 @@ export interface RunState {
   reaction: LogEntry[] | null;
   /** What the last action changed, shown under the reaction. Set by playStep() in src/game/play.ts. */
   changes?: ChangeLine[] | null;
+  /** Every answer picked so far, in order (Answered). Unset in saves from before it existed. */
+  answers?: Answered[];
   log: LogEntry[];
   decisions: number;
   inspections: number;
