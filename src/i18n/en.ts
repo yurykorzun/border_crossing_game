@@ -960,7 +960,7 @@ export const en: Record<string, string> = {
   'file.stay.ticket': 'Kept from {crossing}: your return ticket, a flight out in five days.',
   'file.stay.hotel': 'Kept from {crossing}: your hotel booking, three nights.',
   'file.stay.undated': 'Kept from {crossing}: no date out on your entry form.',
-  'file.stay.standalone': 'Played standalone, with no crossing of yours on file: your entry form says a short visit.',
+  'file.stay.standalone': 'Played standalone, so a stand-in entry form is on file. It says a short visit.',
   'enc.d_stay.evidence.label': 'Show {cardThe}',
   'enc.d_stay.evidence.reaction': 'She reads the new date and hands it back.',
   'enc.d_stay.father.label': '"My father needs another week of care."',
