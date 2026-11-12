@@ -121,3 +121,14 @@ describe('Arrival keeps its text', () => {
     expect(endingScreen('arrival', 'turnedBack', { time: 6 }).title).toBe('You turned back');
   });
 });
+
+// The funeral is off the level list (dap.2), so its e2e resumes a saved run and never
+// reaches Before you cross. Its goal there is checked here instead.
+describe('The funeral keeps its own mission', () => {
+  it('Before you cross shows the funeral goal, not Arrival\'s', () => {
+    const f = setupText('funeral');
+    expect(f.mission).toContain(en['funeral:mission.title']);
+    expect(f.mission).toContain(decode(en['funeral:mission.body']));
+    expect(f.mission).not.toContain(en['mission.title']);
+  });
+});

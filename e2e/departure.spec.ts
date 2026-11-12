@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { en } from '../src/i18n/en';
 import { SAMPLE_FILES } from '../src/game/carry';
+import { newRun } from '../src/game/engine';
 import { SAVE_KEY, freshSave } from '../src/game/save';
 import type { SaveData } from '../src/game/save';
 import { CHARACTER_IDS } from '../src/game/content/world';
@@ -105,5 +106,18 @@ test('Departure says you cross by land to a flight, from the level list to an en
   await packAndTurnBack(page, 3);
   await expect(page.locator('.ending-card h1')).not.toHaveText(/Home in time|hospital/i);
   await expect(page.locator('.ending-card .ending-scene svg')).not.toHaveAttribute('aria-label', /hospital/i);
+  expect(errors).toEqual([]);
+});
+
+test('A saved Departure run waits on a title with the DEPARTURES stamp', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  const run = newRun({ level: 'departure', character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'customs', seed: 4, file: SAMPLE_FILES.lena });
+  await page.goto('./');
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [SAVE_KEY, JSON.stringify({ ...SAVED, run })] as const);
+  await page.reload();
+  await expect(page.locator('.title-screen .stamp-line')).toHaveText(en['departure:ui.stamp']);
+  await page.locator('.title-screen button.resume').click();
+  await expect(page.locator('main.run')).toBeVisible();
   expect(errors).toEqual([]);
 });

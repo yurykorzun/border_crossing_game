@@ -47,8 +47,9 @@ function Game() {
   useEffect(() => sound.setMuted(!data.settings.sound), [data.settings.sound]);
 
   const run = data.run;
-  // A run shows in its level's own wording; setup sets the level it is on (Picks).
-  setStory(run && resumed ? run.level : undefined);
+  // A run shows in its level's own wording, and so does the title it waits on (a saved
+  // Departure run shows the DEPARTURES stamp); setup sets the level it is on (Picks).
+  setStory(run ? run.level : undefined);
   const dispatch = (a: Action) => {
     if (!run) return;
     if (a.type === 'choose') sound.stamp();
