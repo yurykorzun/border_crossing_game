@@ -187,13 +187,13 @@ export const CHANGE_EVENTS = ['documentUsed', 'contactExposed', 'claimChallenged
  */
 export function changeLines(events: GameEvent[], protectedContact: ContactId): ChangeLine[] {
   const out: ChangeLine[] = [];
-  // A document shown is spent: it cannot answer another question.
-  for (const e of events) if (e.type === 'documentUsed') out.push({ key: 'change.document', vars: { cardThe: e.id }, tone: 'plain' });
+  // A point a contact confirmed and that is now settled says so once, on its resolves line.
+  const settled = new Set(events.flatMap((e) => (e.type === 'pointSettled' ? [e.topic] : [])));
   // A contact's result says only what happened: "Address verified." when the vouch
   // settled the question, then what went on file and where.
   for (const e of events)
     if (e.type === 'contactExposed') {
-      if (e.vouch?.passed) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
+      if (e.vouch?.passed && !settled.has(e.vouch.topic)) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
       out.push({ key: `change.contact.${e.shares}`, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
     }
   // A challenge says which of three it is: a question raised, two accounts that
@@ -216,6 +216,10 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
     if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
+  // A document shown is spent, and its card greys out. When that is all that changed
+  // (an answer that settles the question at no other cost), the line says so.
+  if (!out.length)
+    for (const e of events) if (e.type === 'documentUsed') out.push({ key: 'change.document', vars: { cardLabel: e.id }, tone: 'plain' });
   // Last, what the answer resolves: each question now settled for the officers ahead
   // ("The prescription is settled."). Reaction shows these under the changes, apart from them.
   for (const e of events) if (e.type === 'pointSettled') out.push({ key: `resolve.${e.topic}`, tone: 'plain', resolves: true });

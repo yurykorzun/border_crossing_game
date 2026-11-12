@@ -33,19 +33,19 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
   it('recorded: the clerk finds your registered address in the old records', () => {
     const n = playStep(at(newRun(lena), 'p_purpose', 0), { type: 'choose', approach: 'evidence' });
     expect(factTier(n, 'familyAddress')).toBe('recorded');
-    expect(onFileLines(n)).toEqual(['Already on record: Your registered family address.']);
+    expect(onFileLines(n)).toEqual(['On record: Your registered family address.']);
   });
 
   it('confirmed: the employer letter puts your employer on file on this crossing', () => {
     const n = playStep(at(newRun(lena), 'c_cash', 1), { type: 'choose', approach: 'evidence' });
     expect(factTier(n, 'employer')).toBe('confirmed');
-    expect(onFileLines(n)).toEqual(['Now on file: Your employer.']);
+    expect(onFileLines(n)).toEqual(['Noted: Your employer.']);
   });
 
   it('flagged: a refused search is flagged the moment it is on file', () => {
     const n = playStep(at(newRun(lena), 'c_phone', 1), { type: 'choose', approach: 'refuse' });
     expect(factTier(n, 'phoneRefused')).toBe('flagged');
-    expect(onFileLines(n)).toEqual(['Marked as a concern: You refused a phone search.']);
+    expect(onFileLines(n)).toEqual(['Marked: You refused a phone search.']);
   });
 
   it('a recorded fact becomes flagged once it is the reason scrutiny rises', () => {
@@ -54,7 +54,7 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
     const n = playStep(at(newRun(mark), 'p_secondPassport', 0), { type: 'choose', approach: 'both' });
     expect(n.scrutiny).toBe(2);
     expect(factTier(n, 'secondPassport')).toBe('flagged');
-    expect(onFileLines(n)).toEqual(['Marked as a concern: Your second passport.']);
+    expect(onFileLines(n)).toEqual(['Marked: Your second passport.']);
     // A fact that came out without raising scrutiny keeps its tier.
     const quiet = playStep(at(newRun(lena), 'p_purpose', 0), { type: 'choose', approach: 'evidence' });
     expect(quiet.flagged ?? []).toEqual([]);

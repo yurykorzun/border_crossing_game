@@ -1092,7 +1092,7 @@ describe('exposure needs a stated reason, and each reaction says which of three 
     expect(r.state.disproved).toEqual(['neverDonated']);
     expect(r.events.find((x) => x.type === 'claimChallenged')).toMatchObject({ claim: 'neverDonated', fact: 'donationRecord', kind: 'disproof' });
     const said = changeLines(r.events, 'cousin').find((l) => l.key.startsWith('change.claim.'));
-    expect(t(said!.key, said!.vars)).toBe('A record shows this is false: "Never donated".');
+    expect(t(said!.key, said!.vars)).toBe('A record says otherwise: "Never donated".');
     // Explaining it instead keeps the record and makes it a question, not a disproof.
     const e = tryStep(s, { type: 'choose', approach: 'explain' });
     expect(e.ok && e.state.reaction?.[0]?.kind).toBe('suspicion');

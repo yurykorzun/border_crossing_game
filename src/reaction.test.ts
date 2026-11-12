@@ -40,7 +40,7 @@ describe('the reaction after a verified answer', () => {
     const resolves = block(markup, 'resolves');
     expect(happened).not.toBe('');
     // A no-cost answer still changes one thing: the document is spent.
-    expect(changed).toBe('Used: your return ticket.');
+    expect(changed).toBe('Used: Return ticket.');
     expect(resolves).toBe(en['resolve.stay']);
     expect(markup.indexOf('data-line="happened"')).toBeLessThan(markup.indexOf('data-line="changed"'));
     expect(markup.indexOf('data-line="changed"')).toBeLessThan(markup.indexOf('data-line="resolves"'));

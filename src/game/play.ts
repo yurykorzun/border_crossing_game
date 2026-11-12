@@ -44,7 +44,7 @@ export type GameEvent =
   /**
    * A question is settled for the officers from here on: a document answered it or
    * a contact confirmed it (pointVerified() in src/game/engine.ts). It stays settled
-   * until something new is flagged.
+   * until something new is flagged. Only the first time in a run.
    */
   | { type: 'pointSettled'; topic: Topic }
   /** The trip to the bus now takes `hours` (a missed connection). */
@@ -124,8 +124,9 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
     if (desks.length) ev.push({ type: 'factSent', id, desks, via: s.bulletin === 'records' ? 'records' : 'desk' });
   }
   if (s.medicine && !n.medicine) ev.push({ type: 'medicineLost' });
+  // Said once per run: a point opened again by a new flag and then settled again is not news.
   for (const topic of Object.keys(n.verified ?? {}) as Topic[])
-    if (pointVerified(n, topic) && !pointVerified(s, topic)) ev.push({ type: 'pointSettled', topic });
+    if (pointVerified(n, topic) && !s.verified?.[topic]) ev.push({ type: 'pointSettled', topic });
   if (travelOf(n) !== travelOf(s)) ev.push({ type: 'travelChanged', hours: travelOf(n) });
   if (n.checkpoint !== s.checkpoint) ev.push({ type: 'checkpointReached', index: n.checkpoint });
   if (n.screen.kind === 'wait' && s.screen.kind !== 'wait') ev.push({ type: 'checkStarted', id: n.screen.check });
