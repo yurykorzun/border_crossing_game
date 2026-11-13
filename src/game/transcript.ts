@@ -320,25 +320,16 @@ function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void
   });
 }
 
-/** What the panel shows for this state. */
 /**
- * The status lines next to the answers (the time budget, the supervisor's point) as
- * last read. One shown again unchanged on the next card is glanced at, not read again,
- * so it counts as chrome. The time budget is read once: after that only its number
- * changes, which is read at a glance like the hours in the top strip.
+ * The time budget line (afford()) as last read: the key of its sentence. It sits on the
+ * scene beside the top strip it is worked out from, so once its sentence is read only
+ * its number changes, and that number is read at a glance like the hours in the top
+ * strip (chrome). A different sentence ("You cannot afford another hour.") is read again.
  */
-type StatusRead = Map<'afford' | 'supervisor', string>;
+type StatusRead = { afford?: string };
 
-/** Adds status line `slot`, counted as read only when its text changed since it was last shown. */
-function status(p: Page, read: StatusRead, slot: 'afford' | 'supervisor', add: (extra: Partial<Line>) => void): void {
-  const at = p.lines.length;
-  add({});
-  const line = p.lines[at];
-  if (read.get(slot) === line.text || (slot === 'afford' && read.has(slot))) p.lines[at] = { ...line, chrome: true };
-  read.set(slot, line.text);
-}
-
-function screenLines(s: RunState, p: Page, explained: string[] = [], read: StatusRead = new Map()): void {
+/** What the panel shows for this state. */
+function screenLines(s: RunState, p: Page, explained: string[] = [], read: StatusRead = {}): void {
   if (s.ending && !s.reaction) return endingLines(s, p);
   // First-run explanations (src/game/explain.ts): a transcript is a first run, so each
   // shows once, at its trigger, and counts as read like any other line.
@@ -399,10 +390,16 @@ function screenLines(s: RunState, p: Page, explained: string[] = [], read: Statu
     if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
     // At the last desk, the point the supervisor announced (supervisorLine()).
     const supervisor = list ? undefined : supervisorLine(s);
-    if (supervisor) status(p, read, 'supervisor', (extra) => p.add(supervisor, {}, extra));
+    // Read on every card it shows, like the known line above it.
+    if (supervisor) p.add(supervisor);
     // The time budget over the question and its answers (afford()), until the bus is lost.
     const budget = finishing ? undefined : afford(s);
-    if (budget) status(p, read, 'afford', (extra) => (budget.n ? p.plural(budget.key, budget.n, extra) : p.add(budget.key, {}, extra)));
+    if (budget) {
+      const glance = read.afford === budget.key ? CHROME : {};
+      if (budget.n) p.plural(budget.key, budget.n, glance);
+      else p.add(budget.key, {}, glance);
+      read.afford = budget.key;
+    }
     p.add(questionKey(s, prefix, sc.id), questionVars(s, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
@@ -523,7 +520,7 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
   const happenings: Happening[] = [];
   let decisions = 1 + setup.loadout.length;
   const explained: string[] = [];
-  const read: StatusRead = new Map();
+  const read: StatusRead = {};
   let beatMs = 0;
   run.actions.forEach((action, i) => {
     const page = new Page(i);
