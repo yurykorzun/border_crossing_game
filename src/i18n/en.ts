@@ -52,10 +52,12 @@ export const en: Record<string, string> = {
   // Departure opens with the traveler's record (RecordStep in src/App.tsx).
   'ui.record.title': 'Your file',
   'ui.record.none': 'Nothing you said went on file.',
-  'ui.record.said': '{date}, {desk}: "{said}"',
-  'ui.record.said.undated': '"{said}"',
+  // Your words are the answer you chose; an answer that was an act says what you did (saidPart()).
+  'ui.record.said': '{date}, {desk}: "{words}"',
+  'ui.record.said.undated': '"{words}"',
+  'ui.record.did': '{date}, {desk}: {did}',
   'ui.record.named': 'Named: {contact}',
-  'ui.record.disproved': 'A record did not match "{said}"',
+  'ui.record.disproved': 'A record did not match "{words}"',
   'ui.record.shown': '{date}, {desk}: you showed {cardThe}',
   'ui.record.disproved.shown': 'A record did not match {cardThe}',
   'ui.record.continue': "Continue {traveler}'s crossing",
@@ -69,6 +71,12 @@ export const en: Record<string, string> = {
   'ui.continueAs': 'Continue as {name}',
   // The history link under the cards: a disclosure, closed until opened.
   'ui.readHistory': "Read {name}'s history",
+  // The labels on the five traveler details (TravelerStep).
+  'ui.traveler.why': 'Why now',
+  'ui.traveler.can': 'Can',
+  'ui.traveler.asked': 'Officials may look at',
+  'ui.traveler.protects': 'Protects',
+  'ui.traveler.wants': 'Wants',
   'ui.back': 'Back',
   // Setup 2: packing. The stage label, the title and a live count; the rules wait for the run.
   'ui.preparation': 'Preparation',
@@ -114,6 +122,8 @@ export const en: Record<string, string> = {
   'known.fact.flagged': 'Flagged: {fact}.',
   'known.claim': 'Written down: {claim}.',
   'known.none': 'Nothing on your file yet.',
+  // On a card that asks about some facts (Encounter.asks) when none of them is on file here.
+  'known.asked.none': 'Nothing on file about this yet.',
   'ui.and': 'and',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
@@ -241,6 +251,8 @@ export const en: Record<string, string> = {
   // The funeral's own wording of shared keys (setStory() in src/i18n/index.ts):
   // you are going to a funeral, not to the hospital.
   'funeral:ui.goal': 'Reach the funeral',
+  'funeral:char.lena.why': 'Back after six years for an old friend\'s funeral.',
+  'funeral:char.mark.why': 'Lives abroad. An old friend\'s funeral is here.',
   'funeral:ui.premise': "You're going home. An old friend has died.",
   'funeral:ev.hotel.desc': 'Three nights near the hall. Answers accommodation and length of stay. Does not prove a family stay.',
   'funeral:scene.bus': 'A night bus, the town through the rain',
@@ -259,15 +271,28 @@ export const en: Record<string, string> = {
   'char.lena.blurb': 'Software tester for a foreign company. Left six years ago.',
   'char.lena.role': 'Software tester',
   'char.lena.advantage': 'Resolve one work question without a document.',
-  'char.lena.complication': 'Employer checks take one extra hour.',
-  // The one line on the traveler card.
-  'char.lena.card': 'Resolve one work question without a document.',
+  // The thread players remember, so it is on her card and her Before you cross screen
+  // before any desk can raise it. The extra hour on employer checks is in char.lena.can.
+  'char.lena.complication': 'An old donation to a fund now on a government list.',
+  // The one line on the traveler card: her strength and her complication.
+  'char.lena.card': 'Settles one work question · An old donation',
+  // The five details behind "Read Lena's history" (TravelerStep): why now, what she can do,
+  // what officials might look at (char.lena.complication), whom she protects, what she wants.
+  'char.lena.why': 'Back after six years to help her father.',
+  'char.lena.can': 'Settles one work question from what she knows. Checks on her employer take an extra hour.',
+  'char.lena.protects': 'Her cousin Ilya, questioned once about the fundraiser.',
+  'char.lena.wants': 'To keep her life abroad her own, and say no more than she must.',
   'char.mark.name': 'Mark',
   'char.mark.blurb': 'Holds a second passport. Left four years ago.',
   'char.mark.role': 'Dual citizen',
   'char.mark.advantage': 'Pack 4 documents instead of 3.',
-  'char.mark.complication': 'Start with Scrutiny 1/3.',
+  // Situational: only a card about travel history asks about it (TRAVEL_HISTORY_CARDS).
+  'char.mark.complication': 'Two passports. A desk that reads his travel history checks both.',
   'char.mark.card': 'Pack 4 documents · Start at Scrutiny 1/3',
+  'char.mark.why': 'Lives abroad. His father is in the hospital here.',
+  'char.mark.can': 'Packs 4 documents instead of 3.',
+  'char.mark.protects': 'His brother Tom, across the border.',
+  'char.mark.wants': 'To let his papers settle every question.',
 
   // History: a short name for the traveler card, the full line for the detail under the cards.
   'bg.foreignEmployer.short': 'Foreign employer',
@@ -763,6 +788,14 @@ export const en: Record<string, string> = {
   'insp.issue.medicine': 'Not verified yet: the prescription.',
   'insp.issue.accommodation': 'Not verified yet: your address here.',
   'insp.issue.purpose': 'Not verified yet: why you came back.',
+  // The same issue once a document or contact has settled it (pointVerified()).
+  'insp.issue.medicine.verified': 'Already checked: the prescription.',
+  'insp.issue.accommodation.verified': 'Already checked: your address here.',
+  'insp.issue.purpose.verified': 'Already checked: why you came back.',
+  // Checked at a desk, then a new flag on the file opened it again (pointVerified()).
+  'insp.issue.medicine.reopened': 'Reopened by a new flag: the prescription.',
+  'insp.issue.accommodation.reopened': 'Reopened by a new flag: your address here.',
+  'insp.issue.purpose.reopened': 'Reopened by a new flag: why you came back.',
   'insp.s_bag.q': 'Secondary room. They empty your suitcase.',
   'insp.s_bag.wait.label': 'Wait while they search',
   'insp.s_bag.wait.event': 'Full search',
@@ -851,17 +884,23 @@ export const en: Record<string, string> = {
   'wait.assist.label': 'Ask {contact} to vouch for you',
   'wait.assist.reaction': "You give them {contact}'s number.",
   'calledIn.reaction': 'You named {contact} earlier. The officer checks that first.',
-  'spot.clear': 'Checks out: "{claim}".',
-  'spot.flaw': 'Does not check out: "{claim}".',
-  'spot.answered': 'Checked: "{claim}". You have already answered for it.',
+  // The claim by its label, not in quotes: "Back for family" is the file's entry, not words you said.
+  'spot.clear': 'Checks out: {claim}.',
+  'spot.flaw': 'Does not check out: {claim}.',
+  'spot.answered': 'Checked: {claim}. You have already answered for it.',
   // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
   'spot.explained': 'Checked before you go. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
+  'spot.explained.shown': 'Checked before you go. You showed {cardThe} ({desk}). On file: {fact}. You have since explained, so checking takes {hours} hours.',
   // Under a clarify or contradiction card's question (caughtLine() in src/game/consequence.ts):
   // your own words, the desk where you said them, the fact that catches them.
   // The fact names how it sits on file (caught.line.<tier>, factTier()).
   'caught.line.recorded': 'You said: "{said}" ({desk}). In the old records: {fact}.',
   'caught.line.confirmed': 'You said: "{said}" ({desk}). Confirmed: {fact}.',
   'caught.line.flagged': 'You said: "{said}" ({desk}). Flagged on file: {fact}.',
+  // A claim only a document you showed made: the document, never words you did not say.
+  'caught.line.recorded.shown': 'You showed {cardThe} ({desk}). In the old records: {fact}.',
+  'caught.line.confirmed.shown': 'You showed {cardThe} ({desk}). Confirmed: {fact}.',
+  'caught.line.flagged.shown': 'You showed {cardThe} ({desk}). Flagged on file: {fact}.',
   // A claim in the words you said it, as the answer that made it reads (minus its quotes).
   'said.familyVisit': 'My family needs me here',
   'said.stayingWithFamily': 'I am staying with my mother',
@@ -993,13 +1032,15 @@ export const en: Record<string, string> = {
 
   // ── Departure (rwf.3): the desks open with your file from the way in.
   // A file line under a question quotes what the file holds (fileLine() in src/game/consequence.ts).
-  'file.said': '{crossing}, {date}, {desk}. Asked {context}: "{said}".',
-  'file.disproved': '{crossing}, {date}, {desk}, {context}: "{said}". A record did not match.',
-  'file.said.undated': '{crossing}: "{said}".',
-  'file.disproved.undated': '{crossing}: a record did not match "{said}".',
+  // {words} is the answer you chose (saidPart()); {did} what you did, for an answer that was an act.
+  'file.said': '{crossing}, {date}, {desk}. Asked {context}: "{words}".',
+  'file.said.did': '{crossing}, {date}, {desk}. Asked {context}, {did}.',
+  'file.disproved': '{crossing}, {date}, {desk}, {context}: "{words}". A record did not match.',
+  'file.said.undated': '{crossing}: "{words}".',
+  'file.disproved.undated': '{crossing}: a record did not match "{words}".',
   'file.said.shown': '{crossing}, {date}, {desk}. Asked {context}, you showed {cardThe}.',
   'file.disproved.shown': '{crossing}, {date}, {desk}, {context}: you showed {cardThe}. A record did not match.',
-  'file.declared.under': 'Kept from {crossing}: "Under the limit."',
+  'file.declared.under': 'Kept from {crossing}: your cash, declared under the limit.',
   'file.declared.counted': 'Kept from {crossing}: your cash, counted.',
   'file.declared.shown': 'Kept from {crossing}: a paper for your cash.',
   'file.declared.none': 'Kept from {crossing}: no cash declaration.',
@@ -1039,8 +1080,13 @@ export const en: Record<string, string> = {
   'enc.d_stayed.friends.event': 'Record check',
   'enc.d_stayed.friends.reaction': 'She writes "friends" and looks at your entry form again.',
   // Where your entry form said you would stay, in your words (the p_host answer).
-  'file.stayed': 'On your entry form: "{said}".',
-  'file.stayed.undated': 'On your entry form: "{said}".',
+  'file.stayed': 'On your entry form: "{words}".',
+  'file.stayed.did': 'On your entry form: {did}.',
+  'file.stayed.undated': 'On your entry form: "{words}".',
+  // What an answer that was an act did, for the file (saidPart()): did.<card>.<answer>.
+  'did.p_host.mother': "you gave {contact}'s address",
+  'did.c_shortTrip.mother': 'you asked him to call {contact}',
+  'did.d_stayed.mother': "you gave {contact}'s address",
   'file.stayed.shown': 'On your entry form: {cardThe}.',
   'file.stayed.none': 'Kept from {crossing}: no place to stay on your entry form.',
   // The stay question in the words of the carried file (questionKey()): the date out it holds, none, or standalone.
@@ -1112,6 +1158,9 @@ export const en: Record<string, string> = {
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
   'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
   // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
+  // Why now, when you leave: Dad stays in care (char.<id>.why).
+  'departure:char.lena.why': 'Flying back to work, with her father in care.',
+  'departure:char.mark.why': 'Going back to his life abroad, with his father in care.',
   'departure:ui.premise': 'Your flight leaves from the airport in the next country. You cross the border by land to reach it.',
   'departure:msg.prep': "Flying back this week? The client meeting is still on for Monday.",
   'departure:mission.title': 'Your father needs another week of care.',

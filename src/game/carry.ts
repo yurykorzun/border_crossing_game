@@ -30,7 +30,7 @@ function declarationOf(s: RunState): Declaration {
 
 /**
  * The file a finished run leaves behind: its claims, each with the date, crossing, desk
- * and card it was said on, the claims a record showed false, what customs kept of your
+ * and card it was said on and the answer it was said with, the claims a record showed false, what customs kept of your
  * cash, the contacts it named, the documents kept and spent, and what came back days
  * later (laterBeat()), so the next crossing opens with it.
  */
@@ -45,7 +45,7 @@ export function fileOf(s: RunState): CarriedFile {
     crossing: level,
     desk: (s.saidAt?.[claim] ?? s.logged?.[claim]?.[0] ?? deskOf(s)) as Checkpoint,
     context: s.saidOn?.[claim] ?? '',
-    ...(s.shownBy?.[claim] ? { shown: s.shownBy[claim] } : {}),
+    ...(s.shownBy?.[claim] ? { shown: s.shownBy[claim] } : s.saidAs?.[claim] ? { answer: s.saidAs[claim] } : {}),
   }));
   return {
     ...(later ? { later } : {}),

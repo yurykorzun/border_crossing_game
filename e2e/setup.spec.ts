@@ -199,7 +199,8 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   // One bold name line and one short line per card, and the portrait.
   await expect(lena.locator('.traveler-name')).toHaveText('Lena · Software tester');
   await expect(mark.locator('.traveler-name')).toHaveText('Mark · Dual citizen');
-  await expect(lena.locator('.traveler-line')).toHaveText('Resolve one work question without a document.');
+  // Lena's line names her old donation, before any desk can raise it (dap.10).
+  await expect(lena.locator('.traveler-line')).toHaveText('Settles one work question · An old donation');
   await expect(mark.locator('.traveler-line')).toHaveText('Pack 4 documents · Start at Scrutiny 1/3');
   for (const card of [lena, mark]) {
     await expect(card).toHaveAttribute('aria-checked', 'false');
@@ -232,6 +233,8 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(detail.locator('li')).toHaveText(CHARACTERS.lena.background.map((b) => en[`bg.${b}`]));
+  // The five details: why now, what she can do, what officials may look at, whom she protects, what she wants.
+  await expect(detail.locator('.traveler-details dd')).toHaveText(['why', 'can', 'complication', 'protects', 'wants'].map((k) => en[`char.lena.${k}`]));
   await expect(detail).toBeVisible();
   await fits(page, 'Lena picked, history open', true);
   await expect(cont).toBeInViewport();
@@ -248,6 +251,7 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   await markToggle.click();
   await expect(markToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(detail.locator('li')).toHaveText(CHARACTERS.mark.background.map((b) => en[`bg.${b}`]));
+  await expect(detail.locator('.traveler-details dd')).toHaveText(['why', 'can', 'complication', 'protects', 'wants'].map((k) => en[`char.mark.${k}`]));
   await fits(page, 'Mark picked, history open', true);
 
   await cont.click();

@@ -14,12 +14,17 @@ import { newRun, options, waitActions } from './engine';
 import type { RunSetup } from './engine';
 import { EXPLANATIONS, explanationsDue, explanationsOn, markShown } from './explain';
 import type { Explanation } from './explain';
+import { recordRun } from './carry';
 import { playStep } from './play';
+import { SAVE_KEY, freshSave, load, save, startOver } from './save';
+import type { Store } from './save';
 import { transcriptOf } from './transcript';
 import type { RunState } from './types';
 
 /** A long Mark run that loses hours, gains scrutiny and meets a challenge card (the sweep's longest). */
 const MARK: RunSetup = { level: 'arrival', character: 'mark', loadout: ['hotel', 'employerLetter', 'hospitalNote', 'deed'], bulletin: 'records', seed: 128 };
+/** The same packing on another day, a later run that reaches all three triggers too. */
+const LATER: RunSetup = { ...MARK, seed: 139 };
 
 /** Every screen of a bot run, in order, as the player sees them. */
 function screens(setup: RunSetup, style: (typeof BOT_STYLES)[number] = 'random'): RunState[] {
@@ -33,7 +38,7 @@ function screens(setup: RunSetup, style: (typeof BOT_STYLES)[number] = 'random')
   return out;
 }
 
-/** Plays the screens the way src/App.tsx Run does: shows what is due, marks it shown when the player acts. */
+/** Plays the screens the way src/App.tsx Run does: shows what is due and marks it shown as it shows. */
 function play(all: RunState[], shown: string[]): { at: Record<string, number[]>; shown: string[] } {
   const at: Record<string, number[]> = {};
   all.forEach((s, i) => {
@@ -54,6 +59,7 @@ describe('first-run explanations', () => {
 
   it('the test run reaches all three triggers, more than once for time and scrutiny', () => {
     for (const e of EXPLANATIONS) expect(first[e], e).toBeGreaterThan(-1);
+    for (const e of EXPLANATIONS) expect(screens(LATER).some((s) => explanationsOn(s).includes(e)), `later ${e}`).toBe(true);
     expect(all.filter((s) => explanationsOn(s).includes('time')).length).toBeGreaterThan(1);
     expect(all.filter((s) => explanationsOn(s).includes('scrutiny')).length).toBeGreaterThan(1);
   });
@@ -66,7 +72,7 @@ describe('first-run explanations', () => {
   it('on a second run, from the same save, none shows', () => {
     const { shown } = play(all, []);
     expect([...shown].sort()).toEqual([...EXPLANATIONS].sort());
-    const again = play(screens({ ...MARK, seed: 190 }), shown);
+    const again = play(screens(LATER), shown);
     expect(again.at).toEqual({});
     expect(play(all, shown).at).toEqual({});
   });
@@ -131,5 +137,62 @@ describe('the stakes come before the strategy', () => {
     // Too late with hours left is not the missed bus, so it has no such line.
     const late = renderToStaticMarkup(createElement(Ending, { s: { ...run, time: 1 }, onChoose: () => {}, onRetry: () => {}, onNext: () => {} }));
     expect(late).not.toContain('class="lost"');
+  });
+});
+
+describe('the save keeps what was shown (dap.40)', () => {
+  /** localStorage as a Map, so save() and load() run as they do in the browser. */
+  const memory = (): Store => {
+    const m = new Map<string, string>();
+    return { get: (k) => m.get(k) ?? null, set: (k, v) => void m.set(k, v) };
+  };
+
+  /**
+   * Plays the screens the way src/App.tsx Game does, through the save: each screen is
+   * recorded (recordRun()), what it shows is marked shown as it shows (useExplanations()),
+   * and the save is written and read back after every screen, as a reload would.
+   */
+  function playSaved(store: Store, all: RunState[]): Record<string, number[]> {
+    const at: Record<string, number[]> = {};
+    all.forEach((s, i) => {
+      let d = recordRun(load(store), s);
+      const due = explanationsDue(s, d.explained);
+      for (const e of due) (at[e] ??= []).push(i);
+      d = { ...d, explained: markShown(d.explained, due) };
+      save(store, d);
+      // A reload on this very screen: the run comes back, and nothing shows again.
+      const back = load(store);
+      expect(back.run, `screen ${i}`).toEqual(s);
+      expect(explanationsDue(back.run!, back.explained), `reload on screen ${i}`).toEqual([]);
+    });
+    return at;
+  }
+
+  it('time, scrutiny and a caught claim each show once on the first run and are in the save from that screen on', () => {
+    const store = memory();
+    const at = playSaved(store, screens(MARK));
+    for (const e of EXPLANATIONS) expect(at[e], e).toHaveLength(1);
+    expect([...load(store).explained].sort()).toEqual([...EXPLANATIONS].sort());
+  });
+
+  it('Retry, New crossing and a later run on the same save show none of them', () => {
+    const store = memory();
+    playSaved(store, screens(MARK));
+    // Retry and New crossing drop the run and keep the rest (startOver()).
+    save(store, startOver(load(store)));
+    expect(load(store).explained).toHaveLength(EXPLANATIONS.length);
+    expect(playSaved(store, screens(MARK))).toEqual({});
+    save(store, startOver(load(store)));
+    expect(playSaved(store, screens(LATER))).toEqual({});
+  });
+
+  it('a save from before the list existed loads as none shown, and a written list loads back', () => {
+    const store = memory();
+    const { explained, ...old } = freshSave();
+    expect(explained).toEqual([]);
+    store.set(SAVE_KEY, JSON.stringify(old));
+    expect(load(store).explained).toEqual([]);
+    save(store, { ...load(store), explained: ['time'] });
+    expect(load(store).explained).toEqual(['time']);
   });
 });

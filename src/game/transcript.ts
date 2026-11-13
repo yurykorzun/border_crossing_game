@@ -189,6 +189,11 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   // unless opened, so its words are not counted as read (chrome, like the sheets).
   const name = t(`char.${setup.character}.name`);
   p.add('ui.readHistory', { name });
+  // The five details (TRAVELER_DETAILS in src/App.tsx) sit in the same closed history, so they are chrome too.
+  for (const key of ['why', 'can', 'complication', 'protects', 'wants']) {
+    p.add(`ui.traveler.${key === 'complication' ? 'asked' : key}`, {}, CHROME);
+    p.add(`char.${setup.character}.${key}`, {}, { who: setup.character, ...CHROME });
+  }
   for (const b of CHARACTERS[setup.character].background) p.add(`bg.${b}`, {}, { who: setup.character, ...CHROME });
   p.add('ui.continueAs', { name });
   if (record && setup.file) {
@@ -243,6 +248,8 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add(`ui.allowTravel.${level.minTripTime === 1 ? 'one' : 'other'}`, { n: level.minTripTime });
   p.add(`char.${setup.character}.name`);
   p.add(`char.${setup.character}.role`);
+  // What officials may look at, under the name: Lena's donation before any desk (BeginStep).
+  p.add(`char.${setup.character}.complication`, {}, { who: setup.character });
   p.add('ui.packedList', { list: packedList(setup.loadout) });
   p.add('ui.beginCrossing');
   p.add('ui.back');

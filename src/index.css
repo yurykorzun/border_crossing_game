@@ -300,6 +300,7 @@ p { margin: 0 0 var(--gap); }
 .mission-clock { display: grid; gap: 2px; font-weight: 600; }
 .begin-traveler p { margin: 0; }
 .begin-who { font-weight: 600; }
+.begin-complication { font-size: var(--text-small); }
 /* Back and Change documents, side by side under Begin the crossing; Back takes only its width. */
 .begin-more { display: grid; grid-template-columns: auto 1fr; gap: var(--gap); }
 .begin-step .controls .primary { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
@@ -394,8 +395,13 @@ p { margin: 0 0 var(--gap); }
 .history-toggle::after { content: ' ▾'; text-decoration: none; display: inline-block; margin-inline-start: 4px; }
 .history-toggle[aria-expanded='true']::after { content: ' ▴'; }
 .history-toggle:focus-visible { outline: 3px solid var(--amber-dark); outline-offset: 2px; }
-.history-detail { margin: 0; padding-inline-start: 18px; font-size: var(--text-small); display: grid; gap: 4px; }
+.history-detail { margin: 0; font-size: var(--text-small); display: grid; gap: 8px; }
 .history-detail[hidden] { display: none; }
+/* The five traveler details: a short label over each line. */
+.traveler-details { margin: 0; display: grid; gap: 4px; }
+.traveler-details dt { font-weight: 600; }
+.traveler-details dd { margin: 0; }
+.history-background { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
 /* Continue is the one strong action here, so it is amber once you can take it. */
 .traveler-step .controls .primary:enabled { background: var(--amber-dark); border-color: var(--amber-dark); color: var(--ink); }
 

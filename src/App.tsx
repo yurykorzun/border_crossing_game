@@ -141,8 +141,6 @@ function Autoplay({ style }: { style: BotStyle }) {
   useEffect(() => {
     if (s.ending && !s.reaction) return;
     const timer = setTimeout(() => {
-      // An explanation on this screen counts as shown once the bot acts, as it does for a player.
-      setData((d) => ({ ...d, explained: markShown(d.explained, explanationsDue(s, d.explained)) }));
       setAuto((a) => {
       // The officer's last line is dismissed like a player would, then the ending card shows.
       if (a.s.ending) return a.s.reaction ? { ...a, s: playStep(a.s, { type: 'ack' }) } : a;
@@ -535,6 +533,8 @@ export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeD
         </section>
         <section className="packed-list begin-traveler">
           <p className="begin-who">{t(`char.${traveler}.name`)}{SEPARATOR}{t(`char.${traveler}.role`)}</p>
+          {/* On the first run this is the only traveler card, so Lena's donation shows here before any desk (dap.10). */}
+          <p className="begin-complication">{t(`char.${traveler}.complication`)}</p>
           <p className="begin-packed">{t('ui.packedList', { list: packedList(picked) })}</p>
         </section>
       </div>
@@ -550,6 +550,15 @@ export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeD
     </main>
   );
 }
+
+/**
+ * Each traveler's five details on the traveler screen, as [label, char.<id>.<key>]:
+ * why now, the capability, what ordinary officials may look at (the complication),
+ * whom they protect and what they want.
+ */
+export const TRAVELER_DETAILS = [
+  ['why', 'why'], ['can', 'can'], ['asked', 'complication'], ['protects', 'protects'], ['wants', 'wants'],
+] as const;
 
 /**
  * Setup 2. The premise is the heading; the cards are a radio group, so a tap
@@ -622,9 +631,20 @@ export function TravelerStep({ initial, count, onBack, onContinue }: { initial: 
             >
               {t('ui.readHistory', { name: t(`char.${chosen}.name`) })}
             </button>
-            <ul id="traveler-history" className="history-detail" hidden={!historyOpen}>
-              {CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}
-            </ul>
+            <div id="traveler-history" className="history-detail" hidden={!historyOpen}>
+              {/* The five details: why now, what they can do, what officials may look at, whom they protect, what they want (dap.10). */}
+              <dl className="traveler-details" data-traveler-details={chosen}>
+                {TRAVELER_DETAILS.map(([label, key]) => (
+                  <div key={label} data-detail={label}>
+                    <dt>{t(`ui.traveler.${label}`)}</dt>
+                    <dd>{t(`char.${chosen}.${key}`)}</dd>
+                  </div>
+                ))}
+              </dl>
+              <ul className="history-background">
+                {CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}
+              </ul>
+            </div>
           </section>
         )}
       </div>
@@ -655,13 +675,7 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
   const [beats, setBeats] = useState({ at: '', n: 1 });
   const usedBefore = useUsedBefore(s);
   const readBefore = useReadBefore(s.seed, data.beatsSeen);
-  // First-run explanations this screen triggers (src/game/explain.ts). They stay up while
-  // the screen shows and are marked shown when the player acts on it, so each shows once.
-  const explain = explanationsDue(s, data.explained);
-  const act = (a: Action) => {
-    if (explain.length) setData((d) => ({ ...d, explained: markShown(d.explained, explain) }));
-    dispatch(a);
-  };
+  const explain = useExplanations(s, data.explained, setData);
   // The last officer line still shows before the ending card.
   if (s.ending && !s.reaction) return <Ending s={s} onChoose={onChoose} onRetry={onRetry} onNext={onNext} />;
 
@@ -699,7 +713,7 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
             </div>
             <div className="flicker" aria-hidden />
           </div>
-          <Panel s={s} dispatch={act} reduceWait={data.settings.reduceWait} explain={explain} />
+          <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} explain={explain} />
         </>
       )}
       {/* The tray stays on every run screen, so story, evidence and settings are always one tap away. */}
@@ -737,6 +751,27 @@ function useReadBefore(seed: number, beatsSeen: readonly string[]): ReadonlySet<
     return next.keys;
   }
   return read.keys;
+}
+
+/**
+ * First-run explanations this screen triggers (src/game/explain.ts). They are saved as shown
+ * the moment the screen shows them, so a reload, Retry or New crossing never shows them
+ * again, and they stay up until this screen is left. The screen is the run state object:
+ * every action makes a new one, and a save change that is not an action keeps it.
+ */
+function useExplanations(s: RunState, explained: readonly string[], setData: React.Dispatch<React.SetStateAction<SaveData>>): Explanation[] {
+  const [here, setHere] = useState<{ s: RunState; ids: Explanation[] }>(() => ({ s, ids: explanationsDue(s, explained) }));
+  let now = here;
+  // Adjusting state while rendering, as React allows for values derived from earlier renders.
+  if (here.s !== s) {
+    now = { s, ids: explanationsDue(s, explained) };
+    setHere(now);
+  }
+  const ids = now.ids;
+  useEffect(() => {
+    if (ids.length) setData((d) => ({ ...d, explained: markShown(d.explained, ids) }));
+  }, [ids, setData]);
+  return ids;
 }
 
 /**

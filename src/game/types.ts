@@ -205,6 +205,12 @@ export interface Encounter {
    * (advance() in src/game/engine.ts). The content test checks every one has one.
    */
   issue?: Cond;
+  /**
+   * Interview cards: the facts the officer asks about. The known-facts line names only
+   * one of these (knownLine() in src/game/engine.ts), so "Do you have any other
+   * relatives here?" never reads "Confirmed: your cash, counted" above it.
+   */
+  asks?: FactId[];
   approaches: Approach[];
 }
 
@@ -483,6 +489,19 @@ export interface CarriedClaim {
   context: string;
   /** The document that made it, when you showed it and never said it: quoted as that document, not your words. */
   shown?: EvidenceId;
+  /**
+   * The answer that made it, as it read on screen: a spoken answer is quoted in its own
+   * words, and one that was an act (giving your mother's address) says what you did
+   * (saidPart() in src/game/consequence.ts). Unset in files saved before it existed.
+   */
+  answer?: AnswerLabel;
+}
+
+/** An answer as it read on screen: its approach, its label key and the vars that filled it. */
+export interface AnswerLabel {
+  id: string;
+  key: string;
+  vars?: Record<string, string>;
 }
 
 /**
@@ -643,6 +662,11 @@ export interface RunState {
    * Unset in saves from before it existed.
    */
   shownBy?: Partial<Record<ClaimId, EvidenceId>>;
+  /**
+   * The answer each claim was first said with (CarriedClaim.answer), so the file quotes
+   * the words you chose, not a stock line for the claim. Unset in saves from before it existed.
+   */
+  saidAs?: Partial<Record<ClaimId, AnswerLabel>>;
   /**
    * The document shown on each card, by card id, so the carried file knows what answered
    * a question even when the document made no claim (the deed for where you stay, dap.39).
