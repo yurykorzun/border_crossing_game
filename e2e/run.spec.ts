@@ -519,12 +519,14 @@ for (const c of endingCases) {
     // the run summary with the time left.
     await expect(card.locator('.kept')).toHaveCount(0);
     await expect(card.locator('.later-heading')).toHaveText('The following morning');
-    const order = ['h1', '.arrival .ending-scene', '.epilogue', '.later-heading', '.worst .cost-title', '.worst .cost-line', ...(c.beat ? ['.beat-line', '.beat-reason'] : []), '.run-summary'];
+    const order = ['h1', '.arrival .ending-scene', '.epilogue', '.later-heading', '.worst .cost-title', '.worst .cost-line', ...(c.beat ? ['.beat-when', '.beat-line', '.beat-reason'] : []), '.run-summary'];
     const tops: number[] = [];
     for (const sel of order) tops.push((await card.locator(sel).boundingBox())!.y);
     expect(tops, order.join(' > ')).toEqual([...tops].sort((a, b) => a - b));
     if (c.beat) {
-      await expect(card.locator('.beat-line')).toHaveText(`${en['later.statement.when']}: A letter asks you to come and explain your statement at Customs.`);
+      // Its own time heading, so "The following morning" stands only over the costs (dap.39).
+      await expect(card.locator('.beat-when')).toHaveText(en['later.statement.when']);
+      await expect(card.locator('.beat-line')).toHaveText('A letter asks you to come and explain your statement at Customs.');
       await expect(card.locator('.beat-reason')).toHaveText('Because Customs wrote down "My savings. It\'s under the limit", and a record says otherwise.');
       // The beat is a line after the crossing's result, which it leaves as it was.
       await expect(card.locator('h1')).toHaveText(en[`ending.${run.ending}.title`]);

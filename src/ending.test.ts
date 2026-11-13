@@ -67,7 +67,7 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
     });
     expect(html).not.toContain('class="costs"');
     expect(html).not.toContain(en['ending.later.heading']);
-    expect(html).toContain(`<strong class="beat-when">${en['later.statement.when']}:</strong>`);
+    expect(html).toContain(`<h2 class="mono beat-when">${en['later.statement.when']}</h2><p class="beat-line">`);
     const order = [
       at(html, en['ending.homeInTime.body']),
       at(html, 'class="beat-line"'),
@@ -79,7 +79,10 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
   it('keeps the crossing result and shows the later beat as its own line after it', () => {
     const html = markup('homeInTime', withBoth);
     expect(html).toContain('<h1>Home in time</h1>');
-    expect(html).toContain('<strong class="beat-when">Three days later:</strong> A letter asks you to come and explain your statement at Customs.');
+    // With costs too, the beat still has its own time heading after them, so "The following
+    // morning" stands only over the costs (dap.39).
+    expect(html).toContain('<h2 class="mono beat-when">Three days later</h2><p class="beat-line">A letter asks you to come and explain your statement at Customs.');
+    expect(at(html, 'class="mono beat-when"')).toBeGreaterThan(at(html, 'class="costs"'));
     expect(html).toContain('Because Customs wrote down');
     expect(at(html, 'class="beat-line"')).toBeGreaterThan(at(html, '<h1>'));
     // A clean run has neither the heading nor a beat.

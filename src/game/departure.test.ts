@@ -286,6 +286,9 @@ describe('the desks ask about leaving, from the file (dap.4)', () => {
     const q = (file: CarriedFile) => t(questionKey(at(file), 'enc', 'd_stay'));
     const line = (file: CarriedFile) => text(fileLine(at(file), 'd_stay'));
     expect(q(ticket)).toContain('five days');
+    // The five days are the ticket you showed, so the clerk quotes the ticket, not your words (dap.36).
+    expect(q(ticket)).toContain('return ticket');
+    expect(q(ticket)).not.toMatch(/you said/i);
     expect(q(undated)).not.toContain('five days');
     expect(q(undated)).toContain('no date out');
     expect(q(standalone)).not.toContain('five days');

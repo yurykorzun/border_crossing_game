@@ -113,6 +113,9 @@ function checkEnding(p: Played, file: CarriedFile | undefined, where: string, se
   const headings = html.split('class="mono later-heading"').length - 1;
   expect(headings, `${where}: one heading for the costs, none without them`).toBe(consequences(s).length ? 1 : 0);
   if (headings) expect(html, `${where}: the heading sits over the costs`).toMatch(/class="mono later-heading">[^<]*<\/h2><ul class="costs">/);
+  // A later beat has its own time heading, so the costs' heading never stands over its line.
+  const beat = laterBeat(s);
+  if (beat) expect(html, `${where}: the beat's own heading`).toContain(`<h2 class="mono beat-when">${t(`later.${beat.id}.when`)}</h2><p class="beat-line">`);
 }
 
 /** Departure's "Kept from Arrival" lines, against what the Arrival run put on record. */

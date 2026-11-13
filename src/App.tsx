@@ -1043,10 +1043,12 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
                 </ul>
               </>
             )}
-            {/* Days later, its own line after the crossing's result, which it never changes. */}
+            {/* Days later, after the crossing's result, which it never changes. It has its own
+                time heading, so the costs' "The following morning" never stands over it (dap.39). */}
             {later && (
               <div className={`beat beat-${later.id}`}>
-                <p className="beat-line"><strong className="beat-when">{t(`later.${later.id}.when`)}:</strong> {t(`later.${later.id}`, later.vars)}</p>
+                <h2 className="mono beat-when">{t(`later.${later.id}.when`)}</h2>
+                <p className="beat-line">{t(`later.${later.id}`, later.vars)}</p>
                 <p className="beat-reason">{t(`later.${later.id}.reason`, later.vars)}</p>
               </div>
             )}

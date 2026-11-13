@@ -1044,7 +1044,8 @@ export const en: Record<string, string> = {
   'file.stayed.shown': 'On your entry form: {cardThe}.',
   'file.stayed.none': 'Kept from {crossing}: no place to stay on your entry form.',
   // The stay question in the words of the carried file (questionKey()): the date out it holds, none, or standalone.
-  'enc.d_stay.q': '"You said five days. It has been twelve. Why?"',
+  // Its five days are the return ticket you showed (fileStay()), never words you said (dap.36).
+  'enc.d_stay.q': '"Your return ticket was for five days. It has been twelve. Why?"',
   'enc.d_stay.hotel.q': '"Three nights booked. It has been twelve days. Why?"',
   'enc.d_stay.undated.q': '"Your entry form has no date out. It has been twelve days. Why so long?"',
   'enc.d_stay.standalone.q': '"Your entry form says a short visit. It has been twelve days. Why?"',
