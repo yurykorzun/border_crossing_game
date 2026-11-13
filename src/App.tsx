@@ -712,6 +712,7 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
               <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
             </div>
             <div className="flicker" aria-hidden />
+            <AffordLabel s={s} />
           </div>
           <Panel s={s} dispatch={dispatch} reduceWait={data.settings.reduceWait} explain={explain} />
         </>
@@ -904,7 +905,6 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
   // The list behind "Show a document" keeps only the question over the documents,
   // and a way back to the other answers under them.
   const list = !!s.documentList;
-  const budget = afford(s);
   // At the last desk, the point the supervisor announced she checks before admission.
   const supervisor = supervisorLine(s);
   return (
@@ -912,15 +912,13 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
         {finishing && !list && <p className="priority doomed">{t('ui.doomed')}</p>}
         {desk && !list && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
-        {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         {supervisor && !list && <p className="known supervisor" data-supervisor>{t(supervisor)}</p>}
+        {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
         <Explain ids={explain} />
       </section>
       <div className="controls stack">
-        {/* The time budget, next to the answers: hours left minus the trip after the border. */}
-        {budget && !finishing && <p className="afford" data-afford>{budget.n ? tn(budget.key, budget.n) : t(budget.key)}</p>}
         {options(s).map((o) => (
           <button
             key={o.card ? `${o.approach.id}.${o.card}` : o.approach.id}
@@ -941,6 +939,19 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
       </div>
     </>
   );
+}
+
+/**
+ * The time budget for the answers on screen: hours left minus the trip after the border
+ * (afford()), on the scene's lower edge right over the question, so it takes no height
+ * from a card that needs every pixel to keep its answers on screen. Only while answers
+ * show, and not once the bus is lost (the card says that instead).
+ */
+export function AffordLabel({ s }: { s: RunState }) {
+  const answering = !s.reaction && !s.ending && (s.screen.kind === 'encounter' || s.screen.kind === 'inspection');
+  const budget = answering && !canFinish(s) ? afford(s) : undefined;
+  if (!budget) return null;
+  return <span className="afford-label" data-afford>{budget.n ? tn(budget.key, budget.n) : t(budget.key)}</span>;
 }
 
 /** A blocked option has no card or person to name, so it gets a generic label. */

@@ -400,14 +400,14 @@ function screenLines(s: RunState, p: Page, explained: string[] = [], read: Statu
     // At the last desk, the point the supervisor announced (supervisorLine()).
     const supervisor = list ? undefined : supervisorLine(s);
     if (supervisor) status(p, read, 'supervisor', (extra) => p.add(supervisor, {}, extra));
+    // The time budget over the question and its answers (afford()), until the bus is lost.
+    const budget = finishing ? undefined : afford(s);
+    if (budget) status(p, read, 'afford', (extra) => (budget.n ? p.plural(budget.key, budget.n, extra) : p.add(budget.key, {}, extra)));
     p.add(questionKey(s, prefix, sc.id), questionVars(s, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
     if (caught) p.add(caught.key, caught.vars);
     for (const e of explain) p.add(`explain.${e}`);
-    // The time budget next to the answers (afford()), until the bus is lost.
-    const budget = finishing ? undefined : afford(s);
-    if (budget) status(p, read, 'afford', (extra) => (budget.n ? p.plural(budget.key, budget.n, extra) : p.add(budget.key, {}, extra)));
     for (const o of options(s)) {
       if (o.blocked === 'noCard' || o.documents) p.add('ui.showDocument');
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');

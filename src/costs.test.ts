@@ -7,7 +7,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Panel } from './App';
+import { AffordLabel, Panel } from './App';
 import { BOT_STYLES, playRun, setupFor } from './game/bots';
 import { eventKey } from './game/consequence';
 import { CORE_CARDS, INSPECTION_BY_ID } from './game/content/encounters';
@@ -25,7 +25,8 @@ const text = (markup: string) => decode(markup.replace(/<[^>]*>/g, ' ')).replace
 const panel = (s: RunState) => renderToStaticMarkup(createElement(Panel, { s, dispatch: noop, reduceWait: true, explain: [] }));
 /** The text of each answer button, in the order options() gives them. */
 const buttons = (markup: string) => [...markup.matchAll(/<button class="choice"[^>]*>(.*?)<\/button>/g)].map((m) => text(m[1]));
-const afford = (markup: string) => text(/<p class="afford"[^>]*>(.*?)<\/p>/.exec(markup)?.[1] ?? '');
+/** The time budget over the answers (AffordLabel, on the scene right above the question). */
+const afford = (s: RunState) => text(renderToStaticMarkup(createElement(AffordLabel, { s })));
 
 const SEEDS = 12;
 // Inspections are rarer than answer screens, so their check plays more seeds.
@@ -122,7 +123,7 @@ describe('the time budget next to the answers', () => {
             if (s.reaction || s.ending || (s.screen.kind !== 'encounter' && s.screen.kind !== 'inspection')) continue;
             const n = s.time - travelOf(s);
             expect(spareHours(s)).toBe(n);
-            const line = afford(panel(s));
+            const line = afford(s);
             if (n < 0) expect(line).toBe('');
             else expect(line).toBe(n === 0 ? t('ui.afford.none') : tn('ui.afford', n));
             seen++;
@@ -133,7 +134,7 @@ describe('the time budget next to the answers', () => {
   it('reads "You can afford 1 more hour." with one hour to spare', () => {
     const s: RunState = { ...newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 }), screen: { kind: 'encounter', id: 'p_host' }, seen: ['p_host'], slot: 1 };
     const one: RunState = { ...s, time: travelOf(s) + 1 };
-    expect(afford(panel(one))).toBe('You can afford 1 more hour.');
+    expect(afford(one)).toBe('You can afford 1 more hour.');
   });
 });
 
