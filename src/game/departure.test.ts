@@ -49,7 +49,9 @@ describe('the first card at desk 1 names the claim your file holds', () => {
         expect(cardsSeen(first)[0]).toBe('d_entry');
         const claim = file.said!.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? file.said![0];
         const line = text(fileLine({ ...s, seen: ['d_entry'], screen: { kind: 'encounter', id: 'd_entry' } }, 'd_entry'));
-        expect(line).toContain(`"${t(own(`said.${claim.claim}`, who))}"`);
+        // A claim a shown document made is quoted as the document, never as your words (dap.36).
+        if (claim.shown) expect(line).toContain(t(`ev.${claim.shown}.the`));
+        else expect(line).toContain(`"${t(own(`said.${claim.claim}`, who))}"`);
       }
     } finally {
       setStory(undefined);
@@ -284,6 +286,9 @@ describe('the desks ask about leaving, from the file (dap.4)', () => {
     const q = (file: CarriedFile) => t(questionKey(at(file), 'enc', 'd_stay'));
     const line = (file: CarriedFile) => text(fileLine(at(file), 'd_stay'));
     expect(q(ticket)).toContain('five days');
+    // The five days are the ticket you showed, so the clerk quotes the ticket, not your words (dap.36).
+    expect(q(ticket)).toContain('return ticket');
+    expect(q(ticket)).not.toMatch(/you said/i);
     expect(q(undated)).not.toContain('five days');
     expect(q(undated)).toContain('no date out');
     expect(q(standalone)).not.toContain('five days');

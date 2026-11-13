@@ -7,6 +7,8 @@ import { en } from './en';
 /** Short words like "mark", "mother" or "and" (or "letter", "your mother's letter"), inserted mid-sentence, so they may start lowercase. */
 const isFragment = (key: string) =>
   /^contact\.[^.]+$/.test(key) || /^ev\.[^.]+\.(short|the)$/.test(key) || ['ui.exposed', 'ui.protected', 'ui.used', 'ui.and'].includes(key) ||
+  // Another relative in the contacts line, listed mid-line like a contact: "On file: your mother and another relative."
+  key === 'ending.axis.contacts.relative' ||
   // The question a carried claim answered, quoted mid-line: "Asked why you came".
   /^file\.context(\.|$)/.test(key);
 

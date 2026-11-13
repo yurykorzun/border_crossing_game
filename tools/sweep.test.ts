@@ -6,7 +6,10 @@ import { availableParallelism } from 'node:os';
 import { describe, expect, it } from 'vitest';
 
 // Half the cores at most, so the other test files running beside it keep their time limits.
-const jobs = Math.max(2, Math.min(4, Math.floor(availableParallelism() / 2)));
+// SWEEP_ALONE=1 says nothing runs beside it (the deploy's own sweep job in
+// .github/workflows/pages.yml), so it takes every core.
+const cores = availableParallelism();
+const jobs = process.env.SWEEP_ALONE === '1' ? Math.max(2, cores) : Math.max(2, Math.min(4, Math.floor(cores / 2)));
 const sweep = (args: string[]) => spawnSync('npx', ['tsx', 'tools/sweep.ts', ...args], { encoding: 'utf8' });
 
 describe('npx tsx tools/sweep.ts', () => {

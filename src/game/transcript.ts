@@ -18,7 +18,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
-import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
+import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -130,7 +130,8 @@ function chromeLines(s: RunState, p: Page): void {
 function render(fn: () => string, key: string): { key: string; text: string; problem?: string } {
   try {
     const text = fn();
-    const hole = text.match(/\{\w+\}/);
+    // includes() first, because most lines have no brace and the regex is slower.
+    const hole = text.includes('{') ? text.match(/\{\w+\}/) : null;
     return hole ? { key, text, problem: `unfilled ${hole[0]}` } : { key, text };
   } catch (e) {
     return { key, text: `[${key}]`, problem: (e as Error).message };
@@ -451,6 +452,8 @@ function endingLines(s: RunState, p: Page): void {
       else p.plural(c.key, c.n, CHROME, c.vars);
     }
   }
+  const rest = unlistedHours(s);
+  if (rest) p.plural('ending.decided.rest', rest, CHROME);
   for (const l of axisLines(s)) {
     p.add(`ending.axis.${l.axis}`, {}, CHROME);
     p.add(l.key, l.vars, CHROME);

@@ -56,6 +56,8 @@ export const en: Record<string, string> = {
   'ui.record.said.undated': '"{said}"',
   'ui.record.named': 'Named: {contact}',
   'ui.record.disproved': 'A record did not match "{said}"',
+  'ui.record.shown': '{date}, {desk}: you showed {cardThe}',
+  'ui.record.disproved.shown': 'A record did not match {cardThe}',
   'ui.record.continue': "Continue {traveler}'s crossing",
   // One line on what carrying the file changes: the exit desks ask from it (dap.8).
   'ui.record.carries': 'The exit desks ask about what this file holds.',
@@ -360,6 +362,7 @@ export const en: Record<string, string> = {
   'claim.cashUnderLimit': 'Cash under the limit',
   'claim.stayDays': 'Staying three days',
   'claim.stayWeeks': 'Staying two weeks',
+  'claim.stayUndecided': 'No date out yet',
   'fact.familyAddress': 'Your family address',
   'fact.employer': 'Your employer',
   'fact.fatherCondition': "Your father's condition",
@@ -389,6 +392,7 @@ export const en: Record<string, string> = {
   'claim.cashUnderLimit.recorded': 'Recorded as your cash declaration',
   'claim.stayDays.recorded': "Recorded as how long you're staying",
   'claim.stayWeeks.recorded': "Recorded as how long you're staying",
+  'claim.stayUndecided.recorded': "Recorded as how long you're staying",
   // The same, where this officer does not write the claim down (OFFICERS writesDown).
   'claim.said': 'Said aloud, not written down',
   'fact.familyAddress.reveal': 'Reveals her address',
@@ -869,6 +873,7 @@ export const en: Record<string, string> = {
   'said.cashUnderLimit': "My savings. It's under the limit",
   'said.stayDays': 'Three days',
   'said.stayWeeks': 'Two weeks',
+  'said.stayUndecided': "I don't know yet",
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',
@@ -921,6 +926,9 @@ export const en: Record<string, string> = {
   'ending.cost.scrutiny': 'Scrutiny up by {n}',
   'ending.cost.used': 'Used: {cardLabel}',
   'ending.cost.none': 'Cost nothing',
+  // Under the list (unlistedHours()): the hours the answers left off it cost, so the hours add up.
+  'ending.decided.rest.one': 'Other answers: {n} hour lost',
+  'ending.decided.rest.other': 'Other answers: {n} hours lost',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',
   'ending.axis.arrival.onTime': 'On time. {left} left at the exit, the trip takes {trip}.',
@@ -937,6 +945,8 @@ export const en: Record<string, string> = {
   'ending.axis.contacts': 'Contacts',
   'ending.axis.contacts.none': 'No one on file.',
   'ending.axis.contacts.named': 'On file: {names}.',
+  // A relative a desk put on file without a name (the family register, or your mother naming one).
+  'ending.axis.contacts.relative': 'another relative',
   // What comes back days later (laterBeat()): when, what happens, and the choice that caused it.
   // It states what an office does, never what you feel, and never scores the harm.
   'later.statement.when': 'Three days later',
@@ -987,6 +997,8 @@ export const en: Record<string, string> = {
   'file.disproved': '{crossing}, {date}, {desk}, {context}: "{said}". A record did not match.',
   'file.said.undated': '{crossing}: "{said}".',
   'file.disproved.undated': '{crossing}: a record did not match "{said}".',
+  'file.said.shown': '{crossing}, {date}, {desk}. Asked {context}, you showed {cardThe}.',
+  'file.disproved.shown': '{crossing}, {date}, {desk}, {context}: you showed {cardThe}. A record did not match.',
   'file.declared.under': 'Kept from {crossing}: "Under the limit."',
   'file.declared.counted': 'Kept from {crossing}: your cash, counted.',
   'file.declared.shown': 'Kept from {crossing}: a paper for your cash.',
@@ -1029,9 +1041,11 @@ export const en: Record<string, string> = {
   // Where your entry form said you would stay, in your words (the p_host answer).
   'file.stayed': 'On your entry form: "{said}".',
   'file.stayed.undated': 'On your entry form: "{said}".',
+  'file.stayed.shown': 'On your entry form: {cardThe}.',
   'file.stayed.none': 'Kept from {crossing}: no place to stay on your entry form.',
   // The stay question in the words of the carried file (questionKey()): the date out it holds, none, or standalone.
-  'enc.d_stay.q': '"You said five days. It has been twelve. Why?"',
+  // Its five days are the return ticket you showed (fileStay()), never words you said (dap.36).
+  'enc.d_stay.q': '"Your return ticket was for five days. It has been twelve. Why?"',
   'enc.d_stay.hotel.q': '"Three nights booked. It has been twelve days. Why?"',
   'enc.d_stay.undated.q': '"Your entry form has no date out. It has been twelve days. Why so long?"',
   'enc.d_stay.standalone.q': '"Your entry form says a short visit. It has been twelve days. Why?"',
@@ -1071,6 +1085,7 @@ export const en: Record<string, string> = {
   'enc.d_declared.count.label': 'Let him count your cash',
   'enc.d_declared.count.event': 'Cash count',
   'enc.d_declared.count.reaction': 'He counts it and writes the total next to the old one.',
+  'enc.d_declared.count.file.under.reaction': 'He counts 14,000 and holds it next to "under the limit" on your entry record.',
   'enc.d_declared.under.label': '"My savings. It\'s under the limit."',
   'enc.d_declared.under.event': 'Cash count again',
   'enc.d_declared.under.reaction': 'He writes it down and looks at your file.',

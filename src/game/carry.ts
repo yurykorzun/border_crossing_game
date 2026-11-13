@@ -45,6 +45,7 @@ export function fileOf(s: RunState): CarriedFile {
     crossing: level,
     desk: (s.saidAt?.[claim] ?? s.logged?.[claim]?.[0] ?? deskOf(s)) as Checkpoint,
     context: s.saidOn?.[claim] ?? '',
+    ...(s.shownBy?.[claim] ? { shown: s.shownBy[claim] } : {}),
   }));
   return {
     ...(later ? { later } : {}),
@@ -58,6 +59,7 @@ export function fileOf(s: RunState): CarriedFile {
     named: [...s.exposed],
     kept: s.loadout.filter((e) => !s.used.includes(e)),
     spent: s.loadout.filter((e) => s.used.includes(e)),
+    ...(s.shownOn ? { shownOn: { ...s.shownOn } } : {}),
     medicine: s.medicine,
   };
 }

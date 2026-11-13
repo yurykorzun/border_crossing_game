@@ -25,14 +25,31 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm test
+      # The sweep runs in its own job below, so it gets a whole runner.
+      - run: npx vitest run --exclude tools/sweep.test.ts
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
+  # tools/sweep.test.ts on its own runner with every core (SWEEP_ALONE), because
+  # beside the other test files on 2 of the 4 cores it went past its time limits
+  # (run 43244109250). Same levels, seeds, styles, ceiling and limits.
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tools/sweep.test.ts
+        env:
+          SWEEP_ALONE: '1'
+
   deploy:
-    needs: build
+    needs: [build, sweep]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

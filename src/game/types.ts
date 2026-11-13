@@ -58,7 +58,9 @@ export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 export type ClaimId =
   | 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
   /** How long you stay (p_days, The funeral). */
-  | 'stayDays' | 'stayWeeks';
+  | 'stayDays' | 'stayWeeks'
+  /** No date out yet (p_stay): said aloud, kept on the file you carry, written down nowhere. */
+  | 'stayUndecided';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -367,6 +369,8 @@ export interface EvidenceCard {
   settles?: Topic[];
   /** The card can't back an answer while this holds. */
   blockedBy?: Cond;
+  /** The questions blockedBy applies to; every question when unset. */
+  blockedOn?: Topic[];
   /**
    * Points this document verifies wherever it is shown, besides the question it
    * answers: the hospital note at passport verifies the prescription too, and the
@@ -459,6 +463,8 @@ export interface CarriedFile {
   kept: EvidenceId[];
   /** Documents you showed at a desk, so they are on file and used up. */
   spent: EvidenceId[];
+  /** The document shown on each card, by card id (RunState.shownOn). Unset in files from before it existed. */
+  shownOn?: Partial<Record<string, EvidenceId>>;
   /** Whether the medicine came through. */
   medicine: boolean;
   /** What came back days after you got home (laterBeat() in src/game/consequence.ts), so the next crossing opens with it. */
@@ -475,6 +481,8 @@ export interface CarriedClaim {
   desk: Checkpoint;
   /** The card it was said on: its question is the context the callback quotes. */
   context: string;
+  /** The document that made it, when you showed it and never said it: quoted as that document, not your words. */
+  shown?: EvidenceId;
 }
 
 /**
@@ -629,6 +637,18 @@ export interface RunState {
   saidAt?: Partial<Record<ClaimId, Checkpoint>>;
   /** The card each claim was first said on, for the carried file (CarriedClaim.context). Unset in saves from before it existed. */
   saidOn?: Partial<Record<ClaimId, string>>;
+  /**
+   * The claims only a shown document has made so far, with the document, so the carried
+   * file quotes it as shown, not said (CarriedClaim.shown). Saying one aloud removes it.
+   * Unset in saves from before it existed.
+   */
+  shownBy?: Partial<Record<ClaimId, EvidenceId>>;
+  /**
+   * The document shown on each card, by card id, so the carried file knows what answered
+   * a question even when the document made no claim (the deed for where you stay, dap.39).
+   * Unset in saves from before it existed.
+   */
+  shownOn?: Partial<Record<string, EvidenceId>>;
   /** The file from the crossing before, in a level that reads one (Level.readsFile). */
   file?: CarriedFile;
   /**
