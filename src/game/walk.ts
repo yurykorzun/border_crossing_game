@@ -438,9 +438,12 @@ export function checkMove(s: RunState, n: RunState, action: Action, tally?: Afte
   if (n.inspections - s.inspections > 1) bad.push('one move started two inspections');
   if (n.inspections > s.inspections && n.screen.kind !== 'inspection') bad.push('an inspection was counted but not shown');
   if (n.decisions - s.decisions > 1) bad.push('one move counted as two decisions');
-  // Only staying with family rules out the hotel.
-  if (!s.used.includes('hotel') && n.used.includes('hotel') && s.claims.includes('stayingWithFamily'))
-    bad.push('the hotel was shown after claiming to stay with family');
+  // Only staying with family rules out the hotel, as where you stay. It still answers
+  // how long (its dates), and then no hotel stay goes on file.
+  if (!s.used.includes('hotel') && n.used.includes('hotel') && s.claims.includes('stayingWithFamily')) {
+    if (topicOf(currentCard(s)) !== 'stay') bad.push('the hotel was shown for where you stay after claiming to stay with family');
+    else if (!s.claims.includes('hotelStay') && n.claims.includes('hotelStay')) bad.push('the hotel, shown for its dates while staying with family, put a hotel stay on file');
+  }
   // Every scrutiny gain has a reason officials can point at: a fact on file, or
   // the check whose result this is (or whose result dealt this card).
   const effects = moveEffects(s, action) ?? [];
