@@ -10,9 +10,9 @@ import { fileOf } from './carry';
 import { caughtLine, fileLine, questionKey, questionVars, recordLines } from './consequence';
 import { EVIDENCE } from './content/world';
 import { chooseAction, currentCard, legalActions, newRun, optionFor, options, step } from './engine';
-import type { Action, RunSetup } from './engine';
+import type { RunSetup } from './engine';
 import { scriptedDealer } from './play';
-import type { CarriedFile, CharacterId, ClaimId, EvidenceId, RunState } from './types';
+import type { Action, CarriedFile, CharacterId, ClaimId, EvidenceId, RunState } from './types';
 import { allSetups } from './walk';
 
 const CLAIMS: readonly ClaimId[] = [
