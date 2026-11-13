@@ -758,7 +758,7 @@ export const en: Record<string, string> = {
   'enc.f_host.q': '"Your mother isn\'t answering."',
   'enc.f_host.again.label': 'Wait for another call',
   'enc.f_host.again.event': 'Second call',
-  'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up, says you stay with her, and names the family.',
+  'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up.',
   'enc.f_host.evidence.label': 'Show {cardThe}',
   'enc.f_host.evidence.reaction': 'He accepts it without looking up.',
   'enc.f_host.cousin.label': 'Give {contact}\'s number',

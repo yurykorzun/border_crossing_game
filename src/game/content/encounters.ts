@@ -489,9 +489,8 @@ export const ENCOUNTERS: Encounter[] = [
     // Nobody has confirmed where you stay yet.
     issue: { noFacts: ['hostStatement'] },
     approaches: [
-      // "The phone rings and rings. Then she picks up." She says what she says on a
-      // call she answers the first time (hostCall clear), so the issue closes.
-      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }, ...MOTHER_ANSWERS] },
+      // "The phone rings and rings. Then she picks up."
+      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
       { id: 'cousin', kind: 'contact', contacts: ['cousin'], effects: [] },
     ],

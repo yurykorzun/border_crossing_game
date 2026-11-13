@@ -1,14 +1,13 @@
 // Calls and checks match what the desk knows (border_crossing_game-dap.12, rule 2:
 // how does the officer know this). Customs dials your mother only with a number for
-// her. Her answer on the second call closes the question as her first answer would.
-// The father answers phone the hospital only when his condition is not on file yet,
+// her. The father answers phone the hospital only when his condition is not on file yet,
 // and the brother card does not put on file what dealt it.
 
 import { describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { SAMPLE_FILES } from './carry';
-import { CHECKS, ENCOUNTER_BY_ID, HOST_NUMBER } from './content/encounters';
+import { ENCOUNTER_BY_ID, HOST_NUMBER } from './content/encounters';
 import { answerKey, check, costsOf, knows, newRun, options, step } from './engine';
 import type { Option, RunSetup } from './engine';
 import { allSetups } from './walk';
@@ -88,30 +87,6 @@ describe('customs phones your mother only with a number for her', () => {
     }
     expect(call).toBeGreaterThan(0);
     expect(hotel).toBeGreaterThan(0);
-  });
-});
-
-describe("your mother's answer on the second call closes the question", () => {
-  const clear = CHECKS.hostCall.cases.find((c) => c.result === 'clear')!;
-  const again = ENCOUNTER_BY_ID.get('f_host')!.approaches.find((a) => a.id === 'again')!;
-
-  it('"Then she picks up" puts on file what her first answer would', () => {
-    expect(again.effects).toEqual(expect.arrayContaining(clear.effects!));
-  });
-
-  it('after she picks up, the card has no open issue, her account and the relative she named go to the interview', () => {
-    const s = at({ ...newRun(lena), facts: at$('customs', 'familyAddress') }, 'f_host', 'customs');
-    const issue = ENCOUNTER_BY_ID.get('f_host')!.issue;
-    expect(check(issue, s)).toBe(true);
-    const n = choose(s, 'again');
-    expect(check(issue, n)).toBe(false);
-    for (const f of ['hostStatement', 'relativeNamed', 'familyAddress'] as const) {
-      expect(knows(n, f, 'customs'), f).toBe(true);
-      expect(knows(n, f, 'interview'), f).toBe(true);
-    }
-    expect(t('enc.f_host.again.reaction')).toMatch(/picks up/);
-    expect(t('enc.f_host.again.reaction')).toMatch(/you stay with her/);
-    expect(t('enc.f_host.again.reaction')).toMatch(/names the family/);
   });
 });
 
