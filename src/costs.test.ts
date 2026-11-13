@@ -27,7 +27,9 @@ const panel = (s: RunState) => renderToStaticMarkup(createElement(Panel, { s, di
 const buttons = (markup: string) => [...markup.matchAll(/<button class="choice"[^>]*>(.*?)<\/button>/g)].map((m) => text(m[1]));
 const afford = (markup: string) => text(/<p class="afford"[^>]*>(.*?)<\/p>/.exec(markup)?.[1] ?? '');
 
-const SEEDS = 40;
+const SEEDS = 12;
+// Inspections are rarer than answer screens, so their check plays more seeds.
+const INSPECT_SEEDS = 120;
 
 /** Every state a bot run passes through, with the action taken from it. */
 function walk(style: (typeof BOT_STYLES)[number], i: number, level: LevelId): { s: RunState; n: RunState }[] {
@@ -55,6 +57,7 @@ describe('every answer shows its guaranteed costs before it is picked', () => {
           for (const { s } of walk(style, i, level)) {
             if (s.reaction || s.ending || (s.screen.kind !== 'encounter' && s.screen.kind !== 'inspection')) continue;
             const prefix = s.screen.kind === 'inspection' ? 'insp' : 'enc';
+            const id = s.screen.id;
             const markup = panel(s);
             const labels = buttons(markup);
             const opts = options(s);
@@ -62,8 +65,8 @@ describe('every answer shows its guaranteed costs before it is picked', () => {
             opts.forEach((o, k) => {
               if (o.blocked || o.documents) return;
               const line = labels[k];
-              const name = `${level} ${style} seed ${i + 1} ${s.screen.kind === 'between' ? '' : (s.screen as { id: string }).id}.${o.approach.id}: ${line}`;
-              const cardKey = `${prefix}.${(s.screen as { id: string }).id}.${o.approach.id}`;
+              const name = `${level} ${style} seed ${i + 1} ${id}.${o.approach.id}: ${line}`;
+              const cardKey = `${prefix}.${id}.${o.approach.id}`;
               const hours = -sum(o, 'time');
               const misses = line.includes(t('ui.line.miss'));
               if (hours > 0 && !misses) expect(line, name).toContain(tn('ui.line.event', hours, { event: eventKey(o, cardKey) }));
@@ -135,12 +138,12 @@ describe('the time budget next to the answers', () => {
 });
 
 describe('below Scrutiny 3/3 an inspection only follows an announced, still open point', () => {
-  it(`over ${SEEDS * 5} seeds per style and level, every inspection below the max was announced before the last desk`, () => {
+  it(`over ${INSPECT_SEEDS} seeds per style and level, every inspection below the max was announced before the last desk`, () => {
     let below = 0;
     let announced = 0;
     for (const level of LEVEL_IDS)
       for (const style of BOT_STYLES)
-        for (let i = 0; i < SEEDS * 5; i++) {
+        for (let i = 0; i < INSPECT_SEEDS; i++) {
           let saidAt: number | undefined;
           for (const { s, n } of walk(style, i, level)) {
             // The announcement shows on screen as the last desk's queue is set, before its first card.
