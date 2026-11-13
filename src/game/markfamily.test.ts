@@ -53,6 +53,20 @@ describe("Mark's denial is challenged only by his brother abroad", () => {
     }
   });
 
+  it.each(['i_family', 'd_named'])('on a hosts day at %s, his mother says Tom lives across the border, which puts Tom on file and catches the denial', (id) => {
+    const r = tryStep(at(newRun({ ...mark, bulletin: 'accommodation' }), id), { type: 'choose', approach: 'deny' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.claims).toContain('noFamilyAbroad');
+    expect(knows(r.state, 'brotherAbroad')).toBe(true);
+    // Lena's mother still names a relative here instead.
+    const l = tryStep(at(newRun({ ...lena, bulletin: 'accommodation' }), id), { type: 'choose', approach: 'deny' });
+    expect(l.ok && knows(l.state, 'relativeNamed')).toBe(true);
+    expect(l.ok && knows(l.state, 'brotherAbroad')).toBe(false);
+    // Leaving the interview with that file, the denial is caught.
+    expect(challengeOnLeaving({ claims: r.state.claims, facts: r.state.facts, bulletin: 'accommodation' })).toBe('i_contradiction');
+  });
+
   it('a relative in the contacts or named by his mother does not challenge it, the brother abroad does', () => {
     expect(challengeOnLeaving({ claims: ['noFamilyAbroad'], facts: known('relativeContact') })).toBeUndefined();
     expect(challengeOnLeaving({ claims: ['noFamilyAbroad'], facts: known('relativeNamed') })).toBeUndefined();

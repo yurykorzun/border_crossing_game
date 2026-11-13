@@ -395,7 +395,10 @@ export const ENCOUNTERS: Encounter[] = [
           // The register lists Lena's cousin here, and Mark's brother gone across the border.
           { fact: 'relativeContact', when: { bulletin: 'records', not: { character: 'mark' } } },
           { fact: 'brotherAbroad', when: { bulletin: 'records', character: 'mark' } },
-          { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
+          // On a hosts day his mother is phoned: Lena's names a relative here, Mark's says Tom
+          // lives across the border, which puts Tom on file against his denial.
+          { fact: 'relativeNamed', when: { bulletin: 'accommodation', not: { character: 'mark' } } },
+          { fact: 'brotherAbroad', when: { bulletin: 'accommodation', character: 'mark' } },
         ],
       },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },
@@ -644,7 +647,10 @@ export const ENCOUNTERS: Encounter[] = [
           // The register lists Lena's cousin here, and Mark's brother gone across the border.
           { fact: 'relativeContact', when: { bulletin: 'records', not: { character: 'mark' } } },
           { fact: 'brotherAbroad', when: { bulletin: 'records', character: 'mark' } },
-          { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
+          // On a hosts day his mother is phoned: Lena's names a relative here, Mark's says Tom
+          // lives across the border, which puts Tom on file against his denial.
+          { fact: 'relativeNamed', when: { bulletin: 'accommodation', not: { character: 'mark' } } },
+          { fact: 'brotherAbroad', when: { bulletin: 'accommodation', character: 'mark' } },
         ],
       },
       { id: 'why', kind: 'verify', effects: [{ time: -1 }] },

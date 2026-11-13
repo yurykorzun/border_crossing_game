@@ -677,6 +677,7 @@ export const en: Record<string, string> = {
   'enc.i_family.mark.name.label': '"{contactMine} lives across the border."',
   'enc.i_family.mark.deny.label': '"No family across the border."',
   'enc.i_family.mark.deny.bulletin.records.reaction': 'The old family register lists your brother Tom, across the border.',
+  'enc.i_family.mark.deny.bulletin.accommodation.reaction': 'Hosts are phoned today. Asked about family, your mother says Tom lives across the border.',
 
   'enc.i_water.q': 'The officer pushes a glass of water across the desk. "Take a minute."',
   'enc.i_water.drink.label': 'Drink it',
@@ -1153,6 +1154,7 @@ export const en: Record<string, string> = {
   'enc.d_named.mark.name.label': '"{contactMine} lives across the border."',
   'enc.d_named.mark.deny.label': '"No family across the border."',
   'enc.d_named.mark.deny.bulletin.records.reaction': 'The old family register lists your brother Tom, across the border.',
+  'enc.d_named.mark.deny.bulletin.accommodation.reaction': 'Hosts are phoned today. Asked about family, your mother says Tom lives across the border.',
   // Held at the exit desk (d_hold.leave): turned back, with its own end screen (endingText()).
   'ending.held.title': 'Free to go, for now',
   'ending.held.body': 'They keep your passport for the review. "You are free to go, for now," the officer says. You take the bus back into town. Your father is awake. Your mother makes up the couch again.',
