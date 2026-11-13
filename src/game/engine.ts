@@ -749,7 +749,7 @@ export const doomed = (s: RunState): boolean => !s.ending && !s.withdrew && s.ti
  */
 export const spareHours = (s: Pick<RunState, 'time' | 'travel' | 'level'>): number => s.time - travelOf(s);
 
-/** The time budget line next to the answers ("You can afford 1 more hour here."), or undefined once the bus is lost. */
+/** The time budget line next to the answers ("You can afford 1 hour."), or undefined once the bus is lost. */
 export function afford(s: RunState): { key: string; n: number } | undefined {
   const n = spareHours(s);
   if (n < 0) return undefined;

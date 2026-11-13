@@ -69,8 +69,7 @@ describe('every answer shows its guaranteed costs before it is picked', () => {
               const name = `${level} ${style} seed ${i + 1} ${id}.${o.approach.id}: ${line}`;
               const cardKey = `${prefix}.${id}.${o.approach.id}`;
               const hours = -sum(o, 'time');
-              const misses = line.includes(t('ui.line.miss'));
-              if (hours > 0 && !misses) expect(line, name).toContain(tn('ui.line.event', hours, { event: eventKey(o, cardKey) }));
+              if (hours > 0) expect(line, name).toContain(tn('ui.line.event', hours, { event: eventKey(o, cardKey) }));
               const scrutiny = sum(o, 'scrutiny');
               if (scrutiny) expect(line, name).toContain(t('ui.line.scrutiny', { n: scrutiny }));
               // A document is spent even when no time is: "Uses letter".
@@ -131,10 +130,10 @@ describe('the time budget next to the answers', () => {
     expect(seen).toBeGreaterThan(100);
   });
 
-  it('reads "You can afford 1 more hour." with one hour to spare', () => {
+  it('reads "You can afford 1 hour." with one hour to spare', () => {
     const s: RunState = { ...newRun({ character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7 }), screen: { kind: 'encounter', id: 'p_host' }, seen: ['p_host'], slot: 1 };
     const one: RunState = { ...s, time: travelOf(s) + 1 };
-    expect(afford(one)).toBe('You can afford 1 more hour.');
+    expect(afford(one)).toBe('You can afford 1 hour.');
   });
 });
 

@@ -136,8 +136,9 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   const need = clock ? travelOf(clock) + travel : 0;
   const misses = !!clock && a.kind !== 'withdraw' && (time < 0 || travel > 0) && Math.max(0, clock.time + time) < need;
   if (misses) all.push({ kind: 'miss', key: 'ui.line.miss', tone: 'red' });
-  else {
-    if (time) all.push({ kind: 'time', key: 'ui.line.event', n: Math.abs(time), vars: { event: eventKey(o, cardKey) }, tone: 'plain' });
+  // The hours are a guaranteed cost, so they show even beside "Misses the last bus" (dap.13).
+  if (time) all.push({ kind: 'time', key: 'ui.line.event', n: Math.abs(time), vars: { event: eventKey(o, cardKey) }, tone: 'plain' });
+  if (!misses) {
     // A later connection: the trip to the bus grows, so the run needs more hours left.
     if (travel) all.push(clock
       ? { kind: 'travel', key: 'ui.line.need', n: need, tone: 'amber' }
