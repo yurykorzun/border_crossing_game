@@ -478,6 +478,23 @@ p { margin: 0 0 var(--gap); }
   background: rgba(20, 25, 23, 0.72);
   color: #dfe5e1;
 }
+/* The time budget (AffordLabel): on the scene's lower edge, right over the question. It sits in
+   the scene's flow, so a scene that shrinks for a long card keeps the label whole, and with large
+   text the label wraps to two lines and the scene stays tall enough to show them: the floor is
+   the usual 48px up to 125 percent text and grows with the text from there. */
+.scene:has(.afford-label) { min-height: max(48px, calc(var(--text-small) * 4.05 - 33px)); }
+.afford-label {
+  position: relative;
+  z-index: 1;
+  margin: 4px 4px 4px auto;
+  max-width: calc(100% - 8px);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(20, 25, 23, 0.72);
+  color: #dfe5e1;
+  font-size: var(--text-small);
+  line-height: 1.35;
+}
 /* What just changed at the counter: your document slides under the glass, the pen moves.
    With Reduce motion (the setting or the system) only the end state shows. */
 @media (prefers-reduced-motion: no-preference) {

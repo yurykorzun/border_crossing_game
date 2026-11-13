@@ -160,7 +160,8 @@ describe('the last bus, on the answer line', () => {
     const parts = line(s, 'wait');
     expect(parts.map(text)).toContain('Misses the last bus');
     expect(parts.find((p) => p.kind === 'miss')?.tone).toBe('red');
-    expect(parts.some((p) => p.kind === 'time')).toBe(false);
+    // The hours are a guaranteed cost, so they still show beside it (dap.13).
+    expect(parts.map(text)).toContain('Full search: 3 hours');
   });
 
   it('says how many hours a later connection will need', () => {
@@ -179,7 +180,7 @@ describe('the last bus, on the answer line', () => {
     const s = at('s_bag', 3, 4);
     expect(travelOf(s)).toBe(4);
     expect(line(s, 'wait').map(text)).toContain('Misses the last bus');
-    expect(line(s, 'wait').some((p) => p.kind === 'time')).toBe(false);
+    expect(line(s, 'wait').map(text)).toContain('Full search: 3 hours');
     // An answer with no time or travel cost changes nothing about the bus, so it says nothing about it.
     expect(line(at('s_medicine', 1), 'surrender').some((p) => p.kind === 'miss')).toBe(false);
   });

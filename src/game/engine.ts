@@ -290,6 +290,8 @@ export interface Option {
    * Choosing it opens their list (documentsOf()) and spends nothing yet.
    */
   documents?: EvidenceId[];
+  /** The answer uses a point verified earlier (usesVerified()): it takes its verified effects and opens no check. */
+  usesVerified?: true;
 }
 
 /**
@@ -356,6 +358,7 @@ export function choices(s: RunState): Option[] {
       const o: Option = { approach: a, blocked, card: ev, contact, effects: [...effects, ...flagged.map(officerScrutiny(s))] };
       if (vouches) o.vouches = vouches;
       if (flagged.length) o.flagged = flagged;
+      if (usesVerified(s, a, topic)) o.usesVerified = true;
       out.push(o);
     }
   }
@@ -554,6 +557,18 @@ function asksAbout(s: RunState, id: string): FactId[] | undefined {
   return ENCOUNTER_BY_ID.get(id)?.asks;
 }
 
+/**
+ * On a desk card at the last desk, once the point the supervisor announced
+ * (RunState.supervisor) is settled (pointVerified()), one line says so: she has
+ * nothing left to check. While it is open the announcement just read still
+ * holds, so nothing repeats it. Undefined anywhere else.
+ */
+export function supervisorLine(s: RunState): string | undefined {
+  const issue = s.supervisor;
+  if (!issue || s.inspections || s.screen.kind !== 'encounter' || s.checkpoint !== CHECKPOINTS.length - 1 || !pointVerified(s, issue)) return undefined;
+  return `supervisor.settled.${issue}`;
+}
+
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
 }
@@ -727,6 +742,19 @@ export const travelOf = (s: Pick<RunState, 'travel' | 'level'>): number => s.tra
  * can follow (the walk checks it on every state), and the player may finish quickly.
  */
 export const doomed = (s: RunState): boolean => !s.ending && !s.withdrew && s.time < travelOf(s);
+
+/**
+ * The hours this crossing can still spend and make the bus: hours left minus the
+ * trip after the border. Shown next to the answers as one line (afford()).
+ */
+export const spareHours = (s: Pick<RunState, 'time' | 'travel' | 'level'>): number => s.time - travelOf(s);
+
+/** The time budget line next to the answers ("You can afford 1 hour."), or undefined once the bus is lost. */
+export function afford(s: RunState): { key: string; n: number } | undefined {
+  const n = spareHours(s);
+  if (n < 0) return undefined;
+  return n === 0 ? { key: 'ui.afford.none', n } : { key: 'ui.afford', n };
+}
 
 function say(s: RunState, lines: LogEntry[]): RunState {
   return { ...s, reaction: [...(s.reaction ?? []), ...lines], log: [...s.log, ...lines] };
@@ -920,40 +948,56 @@ function advance(s: RunState, dealer: Dealer, touched: ClaimId[] = []): RunState
     if (challenge) return show(s, challenge);
     const next = s.checkpoint + 1;
     if (next >= CHECKPOINTS.length) return admission(s, dealer);
-    return { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next }, after: { ...s.after, [next]: queueMood(s) } };
+    const moved: RunState = { ...s, checkpoint: next, slot: 0, screen: { kind: 'between', next }, after: { ...s.after, [next]: queueMood(s) } };
+    // On the way to the last desk the supervisor says what she will check before admission.
+    return next === CHECKPOINTS.length - 1 ? announce(moved) : moved;
   }
   return deal(s);
 }
 
 /**
- * Before admission a supervisor reads the file once, on a run with no
- * inspection yet that can still make the bus (a doomed run is waved through,
- * because one more card changes nothing). She sends you to secondary
- * inspection whenever scrutiny is above 0, the scrutiny a character starts
- * with included: Mark's second passport is on file before he says a word,
- * and only while an issue on the file is still open (inspectionsFitting()).
- * A paper on the topic the bulletin warned about, shown on the way, settles
- * her once the point it covers was verified there too: since every packed
- * document is offered (4qd.8), a paper shown for its other question (the deed
- * for where you stay, on a records day) no longer settles her. Nothing here is drawn: the same file always gets the same decision,
- * and inspect() picks the inspection the same way.
+ * On the way to the last desk the supervisor names the one open point she will
+ * check before admission, with what happens if it is still open then (dap.13).
+ * Only a run with no inspection yet gets one, and only while an issue an
+ * inspection could take up is still open (inspectionsFitting()): the one the
+ * bulletin warned about first, else the first in INSPECTIONS order. A paper on
+ * the warned-about topic, shown and verified on the way, settles her (4qd.11).
+ * Nothing here is drawn, so the same file always gets the same point.
+ */
+function announce(s: RunState): RunState {
+  if (s.inspections) return s;
+  // A paper on the topic the bulletin warned about, shown and verified on the way, settles her (4qd.11).
+  if (coversWarning(s.used, s.bulletin) && pointVerified(s, BULLETIN_TOPICS[s.bulletin])) return s;
+  const fits = inspectionsFitting(s);
+  const warned = BULLETIN_TOPICS[s.bulletin];
+  const chosen = fits.find((i) => i.issue === warned) ?? fits[0];
+  if (!chosen) return s;
+  const issue = chosen.issue;
+  return say({ ...s, supervisor: issue }, [{ key: `supervisor.announce.${issue}` }]);
+}
+
+/**
+ * Before admission there is no hidden re-read: below Scrutiny 3/3 the
+ * supervisor inspects only for the point she announced before the last desk
+ * (announce()), only while it is still open, and only with scrutiny above 0,
+ * the scrutiny a character starts with included (Mark's second passport is on
+ * file before he says a word, 2op.9). The announcement says both conditions. A
+ * point settled on the way stays settled unless a new flag reopens it
+ * (pointVerified()). A run already
+ * inspected, or one that can no longer make the bus, is waved through, because
+ * one more card changes nothing. Nothing here is drawn: the same file always
+ * gets the same decision, and inspect() picks the inspection the same way.
  *
- * This is what puts an inspection in a quarter to a third of runs (`npm run
- * autoplay`). Once spot-checks caught lies at the desks, counting only the
- * scrutiny gained on the way left the share under a quarter, so the start
- * value counts too (2op.9). Until 4qd.11 a warned-about paper settled her two
- * times in three, by a draw. Now the file decides: the paper always settles
- * her, and an inspection needs an open issue, so a run whose papers verified
- * its points is not inspected. The pacing rule still holds: after 2
- * escalating cards a routine card left comes first, and the supervisor reads
- * the file again after it.
+ * Eval rule 9 wants an inspection in a quarter to a third of runs (`npm run
+ * autoplay`). The pacing rule still holds: after 2 escalating cards a routine
+ * card left comes first, and the supervisor looks again after it.
  */
 function admission(s: RunState, dealer: Dealer): RunState {
-  if (s.inspections || s.scrutiny <= 0 || doomed(s) || !inspectionsFitting(s).length) return finish(s);
+  const issue = s.supervisor;
+  if (s.inspections || !issue || s.scrutiny <= 0 || pointVerified(s, issue) || doomed(s) || !inspectionsFitting(s).some((i) => i.issue === issue)) return finish(s);
   const rest = (s.streak ?? 0) >= 2 ? restCard(s) : undefined;
   if (rest) return show(s, rest.id);
-  if (coversWarning(s.used, s.bulletin) && s.verified?.[BULLETIN_TOPICS[s.bulletin]]) return finish(s);
-  return inspect(s, dealer);
+  return inspect(s, dealer, issue);
 }
 
 /**
@@ -1125,8 +1169,8 @@ const inspectionsFitting = (s: RunState): Inspection[] =>
  * first in INSPECTIONS order. Nothing here is random, so the same file always
  * gets the same inspection.
  */
-function inspect(s: RunState, dealer: Dealer): RunState {
-  const fits = inspectionsFitting(s);
+function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
+  const fits = inspectionsFitting(s).filter((i) => !issue || i.issue === issue);
   const fresh = fits.filter((i) => !s.seen.includes(i.id));
   const pool = fresh.length ? fresh : fits;
   // Nothing left to ask for: no open issue an inspection could take up. The

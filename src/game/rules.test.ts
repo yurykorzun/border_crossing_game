@@ -879,7 +879,7 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
   });
 });
 
-describe('before admission, scrutiny is a risk', () => {
+describe('before admission, only the announced point is a risk (dap.13)', () => {
   /** The last answer of the interview, with every dealer draw fixed at `pick`. */
   const lastAnswer = (scrutiny: number, pick: number, extra: Partial<RunState> = {}, setup: RunSetup = lena) => {
     const s: RunState = {
@@ -895,51 +895,50 @@ describe('before admission, scrutiny is a risk', () => {
     return { n, draws };
   };
 
-  it('sends you to secondary inspection when scrutiny rose this run', () => {
+  it('sends you to secondary inspection for the announced point while it is open and scrutiny is above 0', () => {
     for (const scrutiny of [1, 2]) {
-      const { n } = lastAnswer(scrutiny, 0);
-      expect(n.screen.kind, `scrutiny ${scrutiny}`).toBe('inspection');
+      const { n } = lastAnswer(scrutiny, 0, { supervisor: 'purpose' });
+      expect(n.screen, `scrutiny ${scrutiny}`).toEqual({ kind: 'inspection', id: 's_supervisor' });
       expect(n.inspections).toBe(1);
     }
+  });
+
+  it('has no hidden re-read: with nothing announced she lets you through at any scrutiny below the max', () => {
+    for (const scrutiny of [1, 2]) expect(lastAnswer(scrutiny, 0).n.ending, `scrutiny ${scrutiny}`).toBe('homeInTime');
   });
 
   it('counts the scrutiny a character starts with (2op.9)', () => {
     const start = CHARACTERS.mark.startScrutiny;
     expect(start).toBeGreaterThan(0);
-    expect(lastAnswer(start, 0, {}, mark).n.screen.kind).toBe('inspection');
-    expect(lastAnswer(start + 1, 0, {}, mark).n.screen.kind).toBe('inspection');
+    expect(lastAnswer(start, 0, { supervisor: 'purpose' }, mark).n.screen.kind).toBe('inspection');
   });
 
-  it('lets a paper on the bulletin topic, shown on the way, settle her, with no draw (4qd.11)', () => {
-    // The records bulletin warns about identity, and the deed shown for who you are covers it.
-    const shown: Partial<RunState> = { loadout: ['deed', 'hotel', 'employerLetter'], used: ['deed'], verified: { identity: { desk: 'passport', flags: 0 } } };
-    for (const pick of [0, 1, 2]) expect(lastAnswer(1, pick, shown)).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
-    // Held but not shown, it settles nothing: what decides is the file.
-    expect(lastAnswer(1, 0, { loadout: ['deed', 'hotel', 'employerLetter'] }).n.screen.kind).toBe('inspection');
-    // Shown only for where you stay (4qd.8), the deed leaves who you are open.
-    expect(lastAnswer(1, 0, { ...shown, verified: { accommodation: { desk: 'passport', flags: 0 } } }).n.screen.kind).toBe('inspection');
+  it('lets a point settled on the way stay settled, with no draw, until a new flag reopens it', () => {
+    const settled: Partial<RunState> = { supervisor: 'purpose', verified: { purpose: { desk: 'interview', flags: 0 } } };
+    for (const pick of [0, 1, 2]) expect(lastAnswer(1, pick, settled)).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
+    expect(lastAnswer(1, 0, { ...settled, flagged: ['phoneRefused'] }).n.screen.kind).toBe('inspection');
   });
 
-  it('inspects on the bulletin topic when an inspection takes such a paper', () => {
+  it('inspects only on the announced point, whatever else is open', () => {
     const day: RunSetup = { ...lena, bulletin: 'accommodation' };
     for (const pick of [0, 1, 2]) {
-      const { n, draws } = lastAnswer(1, pick, {}, day);
+      const { n, draws } = lastAnswer(1, pick, { supervisor: 'accommodation' }, day);
       expect(n.screen, `pick ${pick}`).toEqual({ kind: 'inspection', id: 's_connection' });
       expect(draws).toEqual([]);
     }
   });
 
   it('waves a run through that can no longer make the bus', () => {
-    expect(lastAnswer(2, 0, { time: 2, travel: 3 })).toMatchObject({ draws: [], n: { ending: 'tooLate' } });
+    expect(lastAnswer(2, 0, { time: 2, travel: 3, supervisor: 'purpose' })).toMatchObject({ draws: [], n: { ending: 'tooLate' } });
   });
 
-  it('never looks at Scrutiny 0 or after an inspection this run', () => {
-    expect(lastAnswer(0, 0)).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
-    expect(lastAnswer(1, 0, { inspections: 1 })).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
+  it('never inspects at Scrutiny 0 or after an inspection this run', () => {
+    expect(lastAnswer(0, 0, { supervisor: 'purpose' })).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
+    expect(lastAnswer(1, 0, { inspections: 1, supervisor: 'purpose' })).toMatchObject({ draws: [], n: { ending: 'homeInTime' } });
   });
 
   it('ends the run once the inspection is answered', () => {
-    const { n } = lastAnswer(1, 0);
+    const { n } = lastAnswer(1, 0, { supervisor: 'purpose' });
     const answer = options(n).find((o) => !o.blocked && o.approach.kind !== 'withdraw')!;
     const after = step({ ...n, reaction: null }, { type: 'choose', approach: answer.approach.id });
     expect(after.screen.kind).toBe('ending');

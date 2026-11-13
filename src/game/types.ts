@@ -713,6 +713,12 @@ export interface RunState {
    * src/game/engine.ts), once each before you leave. Unset in saves from before it existed.
    */
   spotChecked?: Checkpoint[];
+  /**
+   * The open point the supervisor said she will check before admission, announced
+   * on the way to the last desk (announce() in src/game/engine.ts). Below Scrutiny
+   * 3/3 she inspects only for this point, and only while it is still open.
+   */
+  supervisor?: Topic;
   /** The desk of each check run so far (a wait screen), in order (relatedCard() in src/game/engine.ts). */
   checkedAt?: Checkpoint[];
   /**

@@ -19,7 +19,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
 import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
-import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
+import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
@@ -320,8 +320,16 @@ function consequenceLine(o: Option, cardKey: string, s: RunState, p: Page): void
   });
 }
 
+/**
+ * The time budget line (afford()) as last read: the key of its sentence. It sits on the
+ * scene beside the top strip it is worked out from, so once its sentence is read only
+ * its number changes, and that number is read at a glance like the hours in the top
+ * strip (chrome). A different sentence ("You cannot afford another hour.") is read again.
+ */
+type StatusRead = { afford?: string };
+
 /** What the panel shows for this state. */
-function screenLines(s: RunState, p: Page, explained: string[] = []): void {
+function screenLines(s: RunState, p: Page, explained: string[] = [], read: StatusRead = {}): void {
   if (s.ending && !s.reaction) return endingLines(s, p);
   // First-run explanations (src/game/explain.ts): a transcript is a first run, so each
   // shows once, at its trigger, and counts as read like any other line.
@@ -380,6 +388,18 @@ function screenLines(s: RunState, p: Page, explained: string[] = []): void {
     if (desk && !list) p.add(`officer.${desk}.priority`);
     // What this officer already knows, on every desk card (knownLine()).
     if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
+    // At the last desk, the point the supervisor announced (supervisorLine()).
+    const supervisor = list ? undefined : supervisorLine(s);
+    // Read on every card it shows, like the known line above it.
+    if (supervisor) p.add(supervisor);
+    // The time budget over the question and its answers (afford()), until the bus is lost.
+    const budget = finishing ? undefined : afford(s);
+    if (budget) {
+      const glance = read.afford === budget.key ? CHROME : {};
+      if (budget.n) p.plural(budget.key, budget.n, glance);
+      else p.add(budget.key, {}, glance);
+      read.afford = budget.key;
+    }
     p.add(questionKey(s, prefix, sc.id), questionVars(s, sc.id));
     // A challenge card: your own words, the desk and the fact that catches them.
     const caught = sc.kind === 'encounter' ? caughtLine(s, sc.id) : undefined;
@@ -500,10 +520,11 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
   const happenings: Happening[] = [];
   let decisions = 1 + setup.loadout.length;
   const explained: string[] = [];
+  const read: StatusRead = {};
   let beatMs = 0;
   run.actions.forEach((action, i) => {
     const page = new Page(i);
-    screenLines(s, page, explained);
+    screenLines(s, page, explained, read);
     const sc = s.screen;
     const pickedKey =
       action.type === 'choose' && (sc.kind === 'encounter' || sc.kind === 'inspection')
@@ -540,7 +561,7 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
     s = n;
   });
   const last = new Page(run.actions.length);
-  screenLines(s, last, explained);
+  screenLines(s, last, explained, read);
   lines.push(...last.lines);
   // The run can end on an officer's last line; the player taps Continue, then reads the ending.
   if (s.ending && s.reaction) {
