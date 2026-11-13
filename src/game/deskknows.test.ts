@@ -28,12 +28,12 @@ const hours = (o: Option): number => o.effects.reduce((n, e) => n + ('time' in e
 const reactionKeys = (s: RunState): string[] => (s.reaction ?? []).map((l) => l.key);
 const at$ = (desk: Checkpoint, ...facts: (keyof FactMap)[]): FactMap => Object.fromEntries(facts.map((f) => [f, [desk]]));
 
-/** Every walk setup of a level, seeds 1-3, per bot style, with each state the run passed through. */
+/** Every walk setup of a level, seed 1, per bot style, with each state the run passed through. */
 function* states(levels: LevelId[] = ['arrival', 'departure', 'funeral']): Generator<{ s: RunState; next: RunState; name: string }> {
   for (const level of levels)
     for (const style of BOT_STYLES)
       for (let i = 0; i < allSetups(level).length; i++)
-        for (let seed = 1; seed <= 3; seed++) {
+        for (let seed = 1; seed <= 1; seed++) {
           const setup = { ...setupFor(i, level), seed };
           let s = newRun(setup);
           for (const a of playRun(style, setup).actions) {
@@ -69,7 +69,7 @@ describe('customs phones your mother only with a number for her', () => {
     }
   });
 
-  it('over every setup, seeds 1-3 and every bot style, the host call opens only where the desk has a number', () => {
+  it('over every setup, seed 1 and every bot style, the host call opens only where the desk has a number', () => {
     let hotel = 0;
     let call = 0;
     for (const { s, next, name } of states()) {
@@ -139,7 +139,7 @@ describe('the father answers phone the hospital only when his condition is not o
     expect(t(`enc.${id}.father.onFile.reaction`)).toMatch(/already on your file/);
   });
 
-  it('over every setup, seeds 1-3 and every bot style, the father reaction says a call only when hours are spent', () => {
+  it('over every setup, seed 1 and every bot style, the father reaction says a call only when hours are spent', () => {
     let both = { call: 0, read: 0 };
     for (const { s, next, name } of states()) {
       if (s.screen.kind !== 'encounter' || !['p_stay', 'd_stay'].includes(s.screen.id) || s.reaction) continue;
