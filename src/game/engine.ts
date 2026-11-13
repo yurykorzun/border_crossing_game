@@ -246,7 +246,8 @@ export const topicOf = (card: Encounter | Inspection | null): Topic | undefined 
 export function cardsFor(s: RunState, topic: Topic): EvidenceId[] {
   return s.loadout.filter((id) => {
     const c = EVIDENCE[id];
-    return !s.used.includes(id) && c.topics.includes(topic) && !(c.blockedBy && check(c.blockedBy, s));
+    const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
+    return !s.used.includes(id) && c.topics.includes(topic) && !blocked;
   });
 }
 
@@ -1009,6 +1010,9 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   if (a && usesVerified(s, a, topicOf(currentCard(s))) && has(verified)) return verified;
   const daily = `${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`;
   if (has(daily)) return daily;
+  // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count compared with it.
+  const filed = s.file?.declared && `${prefix}.${id}.${approach}.file.${s.file.declared}.${part}`;
+  if (filed && has(filed)) return filed;
   return own(`${prefix}.${id}.${approach}.${part}`, s.character);
 }
 

@@ -135,9 +135,9 @@ Each document answers named questions, so a decision is which problem to solve, 
 
 | Card | Answers the question | Puts on file |
 |---|---|---|
-| Hotel booking (`hotel`) | Where you stay (`accommodation`), how long you stay (`stay`) | You claim a hotel stay, can't back a family stay |
+| Hotel booking (`hotel`) | Where you stay (`accommodation`), how long you stay (`stay`): shown for where you stay, its dates answer how long too, so the clerk does not ask it | You claim a hotel stay, can't back a family stay. Once you say you stay with family it no longer answers where you stay, but it still answers how long, and then only its dates go on the form |
 | Letter from mother (`motherLetter`) | Why you came (`purpose`), where you stay (`accommodation`) | The family address |
-| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`), not how much: only a count shows that, so the exit desk's "How much cash are you taking out?" takes no document | Your employer |
+| Employer letter (`employerLetter`) | What you do (`work`), where the cash is from (`money`), not how much: only a count shows that, so the exit desk's "How much cash are you taking out?" takes no document. Counted there with "under the limit" on the entry record, the total is held against that record: +1 scrutiny, an interpretation, not a disproof | Your employer |
 | Hospital note (`hospitalNote`) | What the medicine is (`medicine`), why you came (`purpose`) | Your father's condition |
 | Return ticket (`returnTicket`) | How long you stay (`stay`), not the cash: a ticket says when you leave, not what you carry | A fixed departure date |
 | Apartment deed (`deed`) | Who you are (`identity`, its registered address, not the photo), where you stay (`accommodation`) | Your property inside |

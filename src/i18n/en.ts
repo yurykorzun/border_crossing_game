@@ -1071,6 +1071,7 @@ export const en: Record<string, string> = {
   'enc.d_declared.count.label': 'Let him count your cash',
   'enc.d_declared.count.event': 'Cash count',
   'enc.d_declared.count.reaction': 'He counts it and writes the total next to the old one.',
+  'enc.d_declared.count.file.under.reaction': 'He counts 14,000 and holds it next to "under the limit" on your entry record.',
   'enc.d_declared.under.label': '"My savings. It\'s under the limit."',
   'enc.d_declared.under.event': 'Cash count again',
   'enc.d_declared.under.reaction': 'He writes it down and looks at your file.',

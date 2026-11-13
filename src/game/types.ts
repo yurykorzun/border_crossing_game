@@ -367,6 +367,8 @@ export interface EvidenceCard {
   settles?: Topic[];
   /** The card can't back an answer while this holds. */
   blockedBy?: Cond;
+  /** The questions blockedBy applies to; every question when unset. */
+  blockedOn?: Topic[];
   /**
    * Points this document verifies wherever it is shown, besides the question it
    * answers: the hospital note at passport verifies the prescription too, and the

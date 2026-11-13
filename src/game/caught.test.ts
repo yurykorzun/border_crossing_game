@@ -71,7 +71,7 @@ describe('a caught claim quotes your own words next to the fact', () => {
           }
         }
     // A hotel stay is claimed by showing the booking, so its words say that.
-    expect(EVIDENCE.hotel.onUse).toContainEqual({ claim: 'hotelStay' });
+    expect(EVIDENCE.hotel.onUse).toContainEqual(expect.objectContaining({ claim: 'hotelStay' }));
     expect(t('said.hotelStay')).toMatch(/hotel booking/);
   });
 

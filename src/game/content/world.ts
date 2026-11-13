@@ -147,9 +147,12 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
   hotel: {
     id: 'hotel',
     topics: ['accommodation', 'stay'],
-    onUse: [{ claim: 'hotelStay' }],
-    // Only staying with family rules out a hotel; visiting family does not.
+    // With family as where you stay, the booking only gives its dates: no hotel stay on file.
+    onUse: [{ claim: 'hotelStay', when: { noClaims: ['stayingWithFamily'] } }],
+    // Only staying with family rules out a hotel; visiting family does not. It rules
+    // out the hotel as where you stay, not the three nights as how long (p_stay).
     blockedBy: { claims: ['stayingWithFamily'] },
+    blockedOn: ['accommodation'],
   },
   motherLetter: {
     id: 'motherLetter',

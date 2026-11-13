@@ -198,11 +198,12 @@ export const ENCOUNTERS: Encounter[] = [
   {
     // The clerk checks every date: how long you stay. A return ticket settles it.
     id: 'p_stay', checkpoint: 'passport', kind: 'related', priority: 1, topic: 'stay',
-    // A reason for the trip is on the form with no date out. A return ticket
-    // closes it: it is the only paper with a date out on it.
+    // A reason for the trip is on the form with no date out. A return ticket or
+    // the hotel booking closes it: both have a date out on them, so a booking
+    // shown for where you stay has already answered how long.
     issue: {
       any: [{ claims: ['familyVisit'] }, { claims: ['shortTrip'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }],
-      not: { used: ['returnTicket'] },
+      not: { any: [{ used: ['returnTicket'] }, { used: ['hotel'] }] },
     },
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
@@ -578,7 +579,12 @@ export const ENCOUNTERS: Encounter[] = [
     // Asked the amount, as on the way in (c_cash): a salary line is not a total, so no document answers it.
     id: 'd_declared', checkpoint: 'customs', kind: 'routine', topic: 'money',
     approaches: [
-      { id: 'count', kind: 'verify', effects: [{ time: -1 }, { fact: 'cashCount' }] },
+      // With "under the limit" on the entry record, the count is compared with it: 14,000
+      // against a word, read as a question about the entry record, never proof of a lie.
+      {
+        id: 'count', kind: 'verify', reacts: 'suspicion',
+        effects: [{ time: -1 }, { fact: 'cashCount' }, { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileDeclared: ['under'] } }],
+      },
       {
         id: 'under', kind: 'say',
         effects: [
