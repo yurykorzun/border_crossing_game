@@ -498,13 +498,10 @@ describe('contacts confirm only what they know', () => {
       }
   });
 
-  it('Tom can confirm a job offer: he shows on the work question', () => {
-    const s = at({ ...newRun(mark), facts: known('employer') }, 'i_employer');
-    const o = options(s).find((x) => x.approach.id === 'brother');
-    expect(o?.contact).toBe('brother');
-    expect(o?.vouches).toBe('work');
-    // Lena has no brother, so the answer is hidden for her.
-    expect(options(at(newRun(lena), 'i_employer')).map((x) => x.approach.id)).not.toContain('brother');
+  it('the work question offers no contact: it is asked only with an employer abroad, and Lena has no brother', () => {
+    // Mark has no employer abroad, so he is never asked (markfamily.test.ts), and Tom has no work question to answer.
+    expect(ENCOUNTERS.find((e) => e.id === 'i_employer')!.approaches.filter((a) => a.kind === 'contact')).toEqual([]);
+    expect(options(at(newRun(lena), 'i_employer')).map((x) => x.approach.kind)).not.toContain('contact');
   });
 
   it('every contact answer names only someone who can confirm the card topic', () => {
