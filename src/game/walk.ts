@@ -181,6 +181,7 @@ const key = (state: RunState) => {
     // Fixed for the whole setup (the memo is per setup), or only read into the next file.
     file: 0,
     saidOn: 0,
+    shownBy: 0,
     // The answers so far are only read by the ending (decisive()), never by the rules.
     answers: 0,
     reaction: s.reaction ? 1 : 0,

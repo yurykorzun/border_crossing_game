@@ -501,7 +501,9 @@ function quoteLine(s: RunState, key: string, c: FileQuote): { key: string; vars:
   const vars = { crossing: t(`level.${c.crossing}.title`), said: own(`said.${c.claim}`, s.character).slice('said.'.length) };
   if (!('date' in c)) return { key: `${key}.undated`, vars };
   const context = has(`file.context.${c.context}`) ? `file.context.${c.context}` : 'file.context';
-  return { key, vars: { ...vars, date: fileDate(c.date), desk: c.desk, context: t(context) } };
+  const dated = { ...vars, date: fileDate(c.date), desk: c.desk, context: t(context) };
+  // A claim a document made is quoted as the document you showed, never as words you said.
+  return c.shown ? { key: `${key}.shown`, vars: { ...dated, cardThe: c.shown } } : { key, vars: dated };
 }
 
 /**
@@ -544,19 +546,26 @@ export function fileStay(file: CarriedFile): 'ticket' | 'hotel' | 'undated' | 's
 
 /**
  * The recap a level that reads a file opens with (RecordStep in src/App.tsx): each
- * claim with its date, desk and your words, who you named, which claim a record did
+ * claim with its date, desk and your words, or the document you showed when a
+ * document made it (CarriedClaim.shown), who you named, which claim a record did
  * not match.
  */
 export function recordLines(file: CarriedFile): { key: string; vars?: Record<string, string> }[] {
   const said = (c: ClaimId) => own(`said.${c}`, file.character).slice('said.'.length);
   const lines: { key: string; vars?: Record<string, string> }[] = [{ key: 'ui.record.title' }];
   const claims = fileSaid(file);
+  const shownDoc = (c: ClaimId) => claims.flatMap((x) => (x.claim === c && 'shown' in x && x.shown ? [x.shown] : []))[0];
   for (const c of claims) {
-    lines.push('date' in c ? { key: 'ui.record.said', vars: { date: fileDate(c.date), desk: c.desk, said: said(c.claim) } } : { key: 'ui.record.said.undated', vars: { said: said(c.claim) } });
+    if (!('date' in c)) lines.push({ key: 'ui.record.said.undated', vars: { said: said(c.claim) } });
+    else if (c.shown) lines.push({ key: 'ui.record.shown', vars: { date: fileDate(c.date), desk: c.desk, cardThe: c.shown } });
+    else lines.push({ key: 'ui.record.said', vars: { date: fileDate(c.date), desk: c.desk, said: said(c.claim) } });
   }
   if (!claims.length) lines.push({ key: 'ui.record.none' });
   for (const c of file.named) lines.push({ key: 'ui.record.named', vars: { contact: c } });
-  for (const c of file.disproved ?? []) lines.push({ key: 'ui.record.disproved', vars: { said: said(c) } });
+  for (const c of file.disproved ?? []) {
+    const doc = shownDoc(c);
+    lines.push(doc ? { key: 'ui.record.disproved.shown', vars: { cardThe: doc } } : { key: 'ui.record.disproved', vars: { said: said(c) } });
+  }
   return lines;
 }
 

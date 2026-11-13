@@ -5,6 +5,7 @@
 import type { CarriedClaim, CarriedFile, Declaration, EndingId, LevelId, RunState } from './types';
 import { CHECKPOINTS, LATER_IDS } from './types';
 import { DEFAULT_LEVEL, isLevelId } from './content/levels';
+import { EVIDENCE_IDS } from './content/world';
 
 export interface Settings {
   reduceWait: boolean;
@@ -75,7 +76,8 @@ function loadFile(x: unknown): CarriedFile | null {
   const laterOk = !!later && LATER_IDS.includes(later.id) && !!later.vars && typeof later.vars === 'object'
     && Object.values(later.vars).every((v) => typeof v === 'string');
   const claimOk = (c: Partial<CarriedClaim>) => !!c && typeof c.claim === 'string' && typeof c.date === 'string'
-    && /^\d{4}-\d{2}-\d{2}$/.test(c.date) && isLevelId(c.crossing) && CHECKPOINTS.includes(c.desk as never) && typeof c.context === 'string';
+    && /^\d{4}-\d{2}-\d{2}$/.test(c.date) && isLevelId(c.crossing) && CHECKPOINTS.includes(c.desk as never) && typeof c.context === 'string'
+    && (c.shown === undefined || EVIDENCE_IDS.includes(c.shown));
   return {
     ...rest,
     ...(laterOk ? { later } : {}),

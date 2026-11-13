@@ -54,9 +54,12 @@ export type FileQuote = CarriedClaim | Pick<CarriedClaim, 'claim' | 'crossing'>;
 export const fileSaid = (file: CarriedFile | undefined): FileQuote[] =>
   !file ? [] : file.said ?? file.claims.map((claim) => ({ claim, crossing: file.level }));
 
-/** The claim a carried file is quoted on: why you came if it says, else the first thing it has you saying. */
+/**
+ * The claim a carried file is quoted on: why you came if it says, else the first thing it
+ * has you saying. Never an open stay: "I don't know yet" does not say why you came.
+ */
 export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined {
-  const said = fileSaid(file);
+  const said = fileSaid(file).filter((c) => c.claim !== 'stayUndecided');
   return said.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? said[0];
 }
 
@@ -1211,6 +1214,29 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
 
 // ── Choosing
 
+/**
+ * `n` after answer `opt`, with each claim it made marked by where it came from: a claim
+ * a shown document made for the first time is on file as that document (RunState.shownBy),
+ * and one you then say aloud is yours, from the card and desk you said it at. So the
+ * carried file never quotes a document's claim as your words.
+ */
+function shownOrSpoken(s: RunState, n: RunState, opt: Option, topic: Topic | undefined): RunState {
+  const claimsIn = (effects: Effect[]) => effects.flatMap((e) => ('claim' in e ? [e.claim] : []));
+  const fromDoc = opt.card ? claimsIn(documentEffects(opt.card, topic)) : [];
+  const card = s.screen.kind === 'encounter' || s.screen.kind === 'inspection' ? s.screen.id : undefined;
+  let out = n;
+  for (const c of claimsIn(opt.effects)) {
+    if (fromDoc.includes(c)) {
+      if (!s.claims.includes(c) && opt.card) out = { ...out, shownBy: { ...out.shownBy, [c]: opt.card } };
+    } else if (out.shownBy?.[c]) {
+      const rest = { ...out.shownBy };
+      delete rest[c];
+      out = { ...out, shownBy: rest, saidAt: { ...out.saidAt, [c]: deskOf(s) }, ...(card ? { saidOn: { ...out.saidOn, [c]: card } } : {}) };
+    }
+  }
+  return out;
+}
+
 function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: EvidenceId): RunState {
   const card = currentCard(s);
   const opt = optionFor(s, { approach: approachId, card: cardId });
@@ -1229,7 +1255,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
   if ((opt.contact === 'mother' && !opt.approach.namesOnly) || opt.approach.phonesMother) n = phoned(n);
   if (opt.approach.kind === 'perk') n = { ...n, perkUsed: true };
-  n = apply(n, opt.effects);
+  n = shownOrSpoken(s, apply(n, opt.effects), opt, topic);
   // A document shown or a contact who confirmed the point at a desk settles it for the later
   // desks. At an inspection the point settled is the open issue it is about (Inspection.issue),
   // and a check there that confirms it (the lab handing the medicine back) settles it too.

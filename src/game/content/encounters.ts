@@ -214,7 +214,8 @@ export const ENCOUNTERS: Encounter[] = [
         effects: [{ claim: 'familyVisit' }, { fact: 'fatherCondition' }, { time: -2, when: { noFacts: ['fatherCondition'] } }],
       },
       // No date to give: she enters an open stay and checks your residence registration.
-      { id: 'unsure', kind: 'verify', effects: [{ time: -1 }] },
+      // The answer is yours, so the file you carry out quotes it (CarriedFile.said).
+      { id: 'unsure', kind: 'verify', effects: [{ claim: 'stayUndecided' }, { time: -1 }] },
     ],
   },
   {

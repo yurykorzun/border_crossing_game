@@ -45,6 +45,7 @@ export function fileOf(s: RunState): CarriedFile {
     crossing: level,
     desk: (s.saidAt?.[claim] ?? s.logged?.[claim]?.[0] ?? deskOf(s)) as Checkpoint,
     context: s.saidOn?.[claim] ?? '',
+    ...(s.shownBy?.[claim] ? { shown: s.shownBy[claim] } : {}),
   }));
   return {
     ...(later ? { later } : {}),

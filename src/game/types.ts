@@ -58,7 +58,9 @@ export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 export type ClaimId =
   | 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
   /** How long you stay (p_days, The funeral). */
-  | 'stayDays' | 'stayWeeks';
+  | 'stayDays' | 'stayWeeks'
+  /** No date out yet (p_stay): said aloud, kept on the file you carry, written down nowhere. */
+  | 'stayUndecided';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
@@ -477,6 +479,8 @@ export interface CarriedClaim {
   desk: Checkpoint;
   /** The card it was said on: its question is the context the callback quotes. */
   context: string;
+  /** The document that made it, when you showed it and never said it: quoted as that document, not your words. */
+  shown?: EvidenceId;
 }
 
 /**
@@ -631,6 +635,12 @@ export interface RunState {
   saidAt?: Partial<Record<ClaimId, Checkpoint>>;
   /** The card each claim was first said on, for the carried file (CarriedClaim.context). Unset in saves from before it existed. */
   saidOn?: Partial<Record<ClaimId, string>>;
+  /**
+   * The claims only a shown document has made so far, with the document, so the carried
+   * file quotes it as shown, not said (CarriedClaim.shown). Saying one aloud removes it.
+   * Unset in saves from before it existed.
+   */
+  shownBy?: Partial<Record<ClaimId, EvidenceId>>;
   /** The file from the crossing before, in a level that reads one (Level.readsFile). */
   file?: CarriedFile;
   /**
