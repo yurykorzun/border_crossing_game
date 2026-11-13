@@ -16,7 +16,7 @@ import type { Action, CarriedFile, CharacterId, ClaimId, EvidenceId, RunState } 
 import { allSetups } from './walk';
 
 const CLAIMS: readonly ClaimId[] = [
-  'familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit',
+  'familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'noFamilyAbroad', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit',
   'stayDays', 'stayWeeks', 'stayUndecided',
 ];
 

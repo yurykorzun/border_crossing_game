@@ -21,9 +21,9 @@ export const BOT_STYLES: readonly BotStyle[] = ['honest', 'liar', 'cautious', 'r
 export const isBotStyle = (x: unknown): x is BotStyle => BOT_STYLES.includes(x as BotStyle);
 
 /** Claims that are not true for anyone in this mission. */
-const LIES: readonly ClaimId[] = ['shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'cashUnderLimit'];
+const LIES: readonly ClaimId[] = ['shortTrip', 'hotelStay', 'noOtherFamily', 'noFamilyAbroad', 'neverDonated', 'cashUnderLimit'];
 /** Lies that hide the family visit, the liar's whole story. */
-const HIDES_FAMILY: readonly ClaimId[] = ['shortTrip', 'hotelStay', 'noOtherFamily'];
+const HIDES_FAMILY: readonly ClaimId[] = ['shortTrip', 'hotelStay', 'noOtherFamily', 'noFamilyAbroad'];
 /** Say-approaches that are untrue without adding a claim (deny the photo). */
 const LYING_SAYS = new Set(['deny']);
 
@@ -110,7 +110,7 @@ export function stateValue(s: RunState): number {
   const ahead = (f: FactId) => (s.facts[f] ?? []).some((d) => CHECKPOINTS.indexOf(d) >= s.checkpoint);
   const familyOnFile = ahead('familyAddress') || ahead('fatherCondition');
   if (s.claims.includes('shortTrip') && familyOnFile) v -= 20;
-  if (s.claims.includes('noOtherFamily') && ahead('brotherAbroad')) v -= 20;
+  if (s.claims.includes('noFamilyAbroad') && ahead('brotherAbroad')) v -= 20;
   if (s.claims.includes('cashUnderLimit') && ahead('cashCount')) v -= 20;
   for (const x of STATEMENTS) if (s.claims.includes(x.disproves) && ahead(x.fact)) v -= 20;
   if (s.screen.kind === 'encounter' && s.screen.id.startsWith('f_')) v -= 8;

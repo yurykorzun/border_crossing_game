@@ -92,8 +92,9 @@ describe('relatives question (i_family)', () => {
     const r = tryStep(s, { type: 'choose', approach: 'deny' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.claims).toContain('noOtherFamily');
-    expect(t(own('claim.noOtherFamily', 'mark'))).toBe('No family across the border');
+    // His own claim, about the border: only his brother abroad disproves it (markfamily.test.ts).
+    expect(r.state.claims).toEqual(['noFamilyAbroad']);
+    expect(t('claim.noFamilyAbroad')).toBe('No family across the border');
     expect(t(own('claim.noOtherFamily', 'lena'))).toBe('No other relatives');
   });
 
@@ -172,11 +173,11 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
     }
   });
 
-  it('a disproof (no other relatives + brother abroad, under the limit + a count) deals the expensive card', () => {
+  it('a disproof (no family across the border + brother abroad, under the limit + a count) deals the expensive card', () => {
     const cases: Partial<RunState>[] = [
-      { claims: ['noOtherFamily'], facts: known('brotherAbroad') },
+      { claims: ['noFamilyAbroad'], facts: known('brotherAbroad') },
       { claims: ['cashUnderLimit'], facts: known('cashCount') },
-      { claims: ['noOtherFamily', 'cashUnderLimit', 'shortTrip'], facts: known('brotherAbroad', 'cashCount', 'familyAddress') },
+      { claims: ['noFamilyAbroad', 'cashUnderLimit', 'shortTrip'], facts: known('brotherAbroad', 'cashCount', 'familyAddress') },
     ];
     for (const extra of cases) {
       const s = interview(extra, mark);
@@ -191,7 +192,7 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
 
   it('the disproof costs more than the inconsistency on every axis it charges', () => {
     const clarify = interview({ claims: ['shortTrip'], facts: known('familyAddress') });
-    const disproof = interview({ claims: ['noOtherFamily'], facts: known('brotherAbroad') }, mark);
+    const disproof = interview({ claims: ['noFamilyAbroad'], facts: known('brotherAbroad') }, mark);
     expect(cost(disproof, 'apologise').scrutiny).toBeGreaterThan(cost(clarify, 'accept').scrutiny);
     expect(cost(disproof, 'review').time).toBeGreaterThan(cost(clarify, 'clarify').time);
   });
@@ -213,7 +214,7 @@ describe('claim-versus-fact pairs from real procedure', () => {
     ["a hotel stay against the host's account", 'hotelStay', 'hostStatement', 'i_contradiction', lena],
     ['"I never donated" against the bank notice on the phone', 'neverDonated', 'bankNotice', 'i_contradiction', lena],
     ['no other relatives against Ilya in the contacts', 'noOtherFamily', 'relativeContact', 'i_contradiction', lena],
-    ['no other relatives against Tom in the contacts', 'noOtherFamily', 'relativeContact', 'i_contradiction', mark],
+    ['no family across the border against Tom on file', 'noFamilyAbroad', 'brotherAbroad', 'i_contradiction', mark],
   ];
 
   it.each(pairs)('%s: the claim and the fact deal the card, the claim alone does not', (_, claim, fact, card, setup) => {

@@ -11,7 +11,7 @@ import type { Dealer } from './rng';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import type { Action, Checkpoint, ClaimId, FactId, FactMap, RunState } from './types';
 
-const CLAIMS: ClaimId[] = ['familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit'];
+const CLAIMS: ClaimId[] = ['familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'noFamilyAbroad', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit'];
 const PAIRS = [...INCONSISTENCIES, ...CONTRADICTIONS];
 
 /** Every fact that no challenge pairs against `c`: a file that fits the claim, as full as it can be. */
@@ -163,8 +163,8 @@ describe('spot-checks', () => {
     },
   );
 
-  // 2op.9: the line names the claim in the traveler's own words, so Mark's denial
-  // reads claim.noOtherFamily.mark ("No family across the border"), not Lena's.
+  // 2op.9: the line names the claim in the traveler's own words. Mark's denial is
+  // his own claim (claim.noFamilyAbroad, "No family across the border"), not Lena's.
   it.each((['lena', 'mark'] as const).flatMap((who) => CLAIMS.map((c) => [who, c] as const)))(
     'for %s, a spot-check of "%s" shows that traveler\'s own claim wording',
     (who, c) => {
@@ -180,12 +180,12 @@ describe('spot-checks', () => {
 
   it('Mark hears his own denial, not Lena\'s', () => {
     // His denial caught by the brother abroad on file, so the line shows under any answer.
-    const s = { ...leaving('customs', ['noOtherFamily'], ['brotherAbroad']), character: 'mark' as const };
+    const s = { ...leaving('customs', ['noFamilyAbroad'], ['brotherAbroad']), character: 'mark' as const };
     const line = step(s, choose('customs'), picks(0)).reaction?.find((l) => l.key.startsWith('spot.'));
     expect(line?.key).toBe('spot.flaw');
-    expect(line?.vars?.claim).toBe('noOtherFamily.mark');
+    expect(line?.vars?.claim).toBe('noFamilyAbroad');
     const text = t(line!.key, line!.vars);
-    expect(text).toContain(t('claim.noOtherFamily.mark'));
+    expect(text).toContain(t('claim.noFamilyAbroad'));
     expect(text).not.toContain(t('claim.noOtherFamily'));
   });
 

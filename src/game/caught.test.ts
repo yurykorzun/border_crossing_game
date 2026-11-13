@@ -53,9 +53,10 @@ describe('a caught claim quotes your own words next to the fact', () => {
   });
 
   it('Mark denies family across the border, Lena relatives here', () => {
-    const vars = (who: CharacterId) => caughtLine(facing('i_contradiction', 'noOtherFamily', 'brotherAbroad', 'interview', who), 'i_contradiction')!;
-    expect(t(vars('mark').key, vars('mark').vars)).toContain('"No family across the border"');
-    expect(t(vars('lena').key, vars('lena').vars)).toContain('"I have no other relatives here"');
+    const mark = caughtLine(facing('i_contradiction', 'noFamilyAbroad', 'brotherAbroad', 'interview', 'mark'), 'i_contradiction')!;
+    const lena = caughtLine(facing('i_contradiction', 'noOtherFamily', 'relativeContact', 'interview', 'lena'), 'i_contradiction')!;
+    expect(t(mark.key, mark.vars)).toContain('"No family across the border"');
+    expect(t(lena.key, lena.vars)).toContain('"I have no other relatives here"');
   });
 
   it('the quoted words are the answer that made the claim', () => {
@@ -65,7 +66,9 @@ describe('a caught claim quotes your own words next to the fact', () => {
           if (!('claim' in eff)) continue;
           const claim = eff.claim;
           if (!CARDS.some((c) => CHALLENGE_PAIRS[c].some(([x]) => x === claim))) continue;
-          for (const who of TRAVELERS) {
+          // A claim one traveler makes (Mark's noFamilyAbroad, Lena's noOtherFamily) is checked for that traveler only.
+          const makes = (who: string) => eff.when?.character === undefined ? eff.when?.not?.character !== who : eff.when.character === who;
+          for (const who of TRAVELERS.filter(makes)) {
             const label = own(`enc.${e.id}.${a.id}.label`, who);
             expect(t(own(`said.${claim}`, who)), `${e.id}.${a.id} for ${who}`).toBe(unquoted(t(label)));
           }

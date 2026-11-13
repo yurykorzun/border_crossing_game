@@ -50,7 +50,9 @@ const STATEMENT_PAIRS: readonly [ClaimId, FactId][] = STATEMENTS.map((x) => [x.d
 export const CLARIFIED_BY: ClaimId = 'familyVisit';
 /** In this order, which also picks the one an apology is charged for (firstCaught). */
 export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
-  ['noOtherFamily', 'brotherAbroad'],
+  // Mark's "No family across the border": only his brother abroad on file says otherwise.
+  // A relative in the contacts or the register says nothing about the border.
+  ['noFamilyAbroad', 'brotherAbroad'],
   ['cashUnderLimit', 'cashCount'],
   // The host call: your mother says you stay with her.
   ['hotelStay', 'hostStatement'],
@@ -84,6 +86,9 @@ export const TRAVEL_HISTORY_CARDS: readonly string[] = ['p_secondPassport'];
  * always dealt before its checkpoint ends, so a lie disproved by the last
  * answer still has to be answered.
  */
+/** Naming Tom puts his record on file, at every desk that offers him (i_family, d_named). */
+const NAMED_TOM: Effect = { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } };
+
 /** What "any other relatives?" asks about: a relative on file, by any route (Encounter.asks). */
 const RELATIVE_FACTS: FactId[] = ['brotherAbroad', 'relativeContact', 'relativeNamed'];
 
@@ -375,7 +380,8 @@ export const ENCOUNTERS: Encounter[] = [
       // Only the denial records noOtherFamily, because leaving someone out is not a lie.
       {
         id: 'name', kind: 'contact', contacts: ['cousin', 'brother'], namesOnly: true,
-        effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
+        // Mark's answer says Tom lives across the border, not why he came back: no familyVisit.
+        effects: [{ claim: 'familyVisit', when: { not: { character: 'mark' } } }, NAMED_TOM],
       },
       // The day decides whether a denial holds: the old register lists relatives on a
       // records day, which disproves it, and your mother is phoned on a hosts day, whose
@@ -383,8 +389,12 @@ export const ENCOUNTERS: Encounter[] = [
       {
         id: 'deny', kind: 'say',
         effects: [
-          { claim: 'noOtherFamily' },
-          { fact: 'relativeContact', when: { bulletin: 'records' } },
+          // Lena denies relatives here, Mark family across the border (claim.noFamilyAbroad).
+          { claim: 'noOtherFamily', when: { not: { character: 'mark' } } },
+          { claim: 'noFamilyAbroad', when: { character: 'mark' } },
+          // The register lists Lena's cousin here, and Mark's brother gone across the border.
+          { fact: 'relativeContact', when: { bulletin: 'records', not: { character: 'mark' } } },
+          { fact: 'brotherAbroad', when: { bulletin: 'records', character: 'mark' } },
           { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
         ],
       },
@@ -429,6 +439,9 @@ export const ENCOUNTERS: Encounter[] = [
     // so both travelers are asked. Lena's plain answer settles it for free; the
     // employer letter answers it too, and puts the employer on file.
     id: 'i_employer', checkpoint: 'interview', kind: 'routine', topic: 'work',
+    // It asks about an employer registered abroad, so only a traveler with one is asked (Mark is not).
+    // Nobody with an employer abroad has Tom, so the card no longer offers him.
+    when: { background: 'foreignEmployer' },
     asks: ['employer'],
     approaches: [
       { id: 'perk', kind: 'perk', effects: [] },
@@ -436,7 +449,6 @@ export const ENCOUNTERS: Encounter[] = [
       // The contract confirms the employer, and only that (Officer.readings).
       // With who pays you verified earlier, the officer reads that entry instead.
       { id: 'contract', kind: 'verify', effects: [{ time: -1 }, { fact: 'employer' }], ifVerified: [] },
-      { id: 'brother', kind: 'contact', contacts: ['brother'], effects: [] },
     ],
   },
   {
@@ -620,13 +632,18 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       {
         id: 'name', kind: 'contact', contacts: ['cousin', 'brother'], namesOnly: true,
-        effects: [{ claim: 'familyVisit' }, { fact: 'brotherAbroad', when: { background: 'brotherAtWar' } }],
+        // Mark's answer says Tom lives across the border, not why he came back: no familyVisit.
+        effects: [{ claim: 'familyVisit', when: { not: { character: 'mark' } } }, NAMED_TOM],
       },
       {
         id: 'deny', kind: 'say',
         effects: [
-          { claim: 'noOtherFamily' },
-          { fact: 'relativeContact', when: { bulletin: 'records' } },
+          // Lena denies relatives here, Mark family across the border (claim.noFamilyAbroad).
+          { claim: 'noOtherFamily', when: { not: { character: 'mark' } } },
+          { claim: 'noFamilyAbroad', when: { character: 'mark' } },
+          // The register lists Lena's cousin here, and Mark's brother gone across the border.
+          { fact: 'relativeContact', when: { bulletin: 'records', not: { character: 'mark' } } },
+          { fact: 'brotherAbroad', when: { bulletin: 'records', character: 'mark' } },
           { fact: 'relativeNamed', when: { bulletin: 'accommodation' } },
         ],
       },

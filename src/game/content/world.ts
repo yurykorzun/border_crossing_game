@@ -94,7 +94,7 @@ export const OFFICERS: Record<Checkpoint, Officer> = {
   customs: { desk: 'customs', priority: 'goods', reactions: [], writesDown: ['cashUnderLimit'], readings: [] },
   interview: {
     desk: 'interview', priority: 'politics', reactions: [{ reveals: [...POLITICAL_FACTS], scrutiny: 1 }],
-    writesDown: ['noOtherFamily', 'neverDonated', 'stayingWithFamily'],
+    writesDown: ['noOtherFamily', 'noFamilyAbroad', 'neverDonated', 'stayingWithFamily'],
     readings: ['employer'],
   },
 };

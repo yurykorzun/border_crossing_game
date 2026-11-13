@@ -57,6 +57,8 @@ export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 /** What the player has said. Can be contradicted by facts. */
 export type ClaimId =
   | 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
+  /** Mark's denial (i_family, d_named): no family across the border, which only his brother abroad on file disproves. */
+  | 'noFamilyAbroad'
   /** How long you stay (p_days, The funeral). */
   | 'stayDays' | 'stayWeeks'
   /** No date out yet (p_stay): said aloud, kept on the file you carry, written down nowhere. */
