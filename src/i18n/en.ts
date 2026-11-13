@@ -69,6 +69,12 @@ export const en: Record<string, string> = {
   'ui.continueAs': 'Continue as {name}',
   // The history link under the cards: a disclosure, closed until opened.
   'ui.readHistory': "Read {name}'s history",
+  // The labels on the five traveler details (TravelerStep).
+  'ui.traveler.why': 'Why now',
+  'ui.traveler.can': 'Can',
+  'ui.traveler.asked': 'Officials may look at',
+  'ui.traveler.protects': 'Protects',
+  'ui.traveler.wants': 'Wants',
   'ui.back': 'Back',
   // Setup 2: packing. The stage label, the title and a live count; the rules wait for the run.
   'ui.preparation': 'Preparation',
@@ -241,6 +247,8 @@ export const en: Record<string, string> = {
   // The funeral's own wording of shared keys (setStory() in src/i18n/index.ts):
   // you are going to a funeral, not to the hospital.
   'funeral:ui.goal': 'Reach the funeral',
+  'funeral:char.lena.why': 'Back after six years for an old friend\'s funeral.',
+  'funeral:char.mark.why': 'Lives abroad. An old friend\'s funeral is here.',
   'funeral:ui.premise': "You're going home. An old friend has died.",
   'funeral:ev.hotel.desc': 'Three nights near the hall. Answers accommodation and length of stay. Does not prove a family stay.',
   'funeral:scene.bus': 'A night bus, the town through the rain',
@@ -259,15 +267,28 @@ export const en: Record<string, string> = {
   'char.lena.blurb': 'Software tester for a foreign company. Left six years ago.',
   'char.lena.role': 'Software tester',
   'char.lena.advantage': 'Resolve one work question without a document.',
-  'char.lena.complication': 'Employer checks take one extra hour.',
-  // The one line on the traveler card.
-  'char.lena.card': 'Resolve one work question without a document.',
+  // The thread players remember, so it is on her card and her Before you cross screen
+  // before any desk can raise it. The extra hour on employer checks is in char.lena.can.
+  'char.lena.complication': 'An old donation to a fund now on a government list.',
+  // The one line on the traveler card: her strength and her complication.
+  'char.lena.card': 'Settles one work question · An old donation',
+  // The five details behind "Read Lena's history" (TravelerStep): why now, what she can do,
+  // what officials might look at (char.lena.complication), whom she protects, what she wants.
+  'char.lena.why': 'Back after six years to help her father.',
+  'char.lena.can': 'Settles one work question from what she knows. Checks on her employer take an extra hour.',
+  'char.lena.protects': 'Her cousin Ilya, questioned once about the fundraiser.',
+  'char.lena.wants': 'To keep her life abroad her own, and say no more than she must.',
   'char.mark.name': 'Mark',
   'char.mark.blurb': 'Holds a second passport. Left four years ago.',
   'char.mark.role': 'Dual citizen',
   'char.mark.advantage': 'Pack 4 documents instead of 3.',
-  'char.mark.complication': 'Start with Scrutiny 1/3.',
+  // Situational: only a card about travel history asks about it (TRAVEL_HISTORY_CARDS).
+  'char.mark.complication': 'Two passports. A desk that reads his travel history checks both.',
   'char.mark.card': 'Pack 4 documents · Start at Scrutiny 1/3',
+  'char.mark.why': 'Lives abroad. His father is in the hospital here.',
+  'char.mark.can': 'Packs 4 documents instead of 3.',
+  'char.mark.protects': 'His brother Tom, across the border.',
+  'char.mark.wants': 'To let his papers settle every question.',
 
   // History: a short name for the traveler card, the full line for the detail under the cards.
   'bg.foreignEmployer.short': 'Foreign employer',
@@ -1112,6 +1133,9 @@ export const en: Record<string, string> = {
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
   'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
   // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
+  // Why now, when you leave: Dad stays in care (char.<id>.why).
+  'departure:char.lena.why': 'Flying back to work, with her father in care.',
+  'departure:char.mark.why': 'Going back to his life abroad, with his father in care.',
   'departure:ui.premise': 'Your flight leaves from the airport in the next country. You cross the border by land to reach it.',
   'departure:msg.prep': "Flying back this week? The client meeting is still on for Monday.",
   'departure:mission.title': 'Your father needs another week of care.',

@@ -72,6 +72,14 @@ export const CONTRADICTIONS: readonly [ClaimId, FactId][] = [
 export const TESTIMONY: readonly FactId[] = ['hostStatement', 'relativeNamed', ...STATEMENTS.map((x) => x.fact)];
 
 /**
+ * The cards that ask about travel history: which passport you left on and when.
+ * Mark's second passport costs something only on these (char.mark.complication):
+ * on the exit record from the start (Character.onFile), it adds verification
+ * where a desk reads that record, and nowhere else, so it is not a cost on every crossing.
+ */
+export const TRAVEL_HISTORY_CARDS: readonly string[] = ['p_secondPassport'];
+
+/**
  * The cards that challenge a claim, most expensive first. One that applies is
  * always dealt before its checkpoint ends, so a lie disproved by the last
  * answer still has to be answered.

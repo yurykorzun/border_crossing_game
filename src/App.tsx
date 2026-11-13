@@ -533,6 +533,8 @@ export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeD
         </section>
         <section className="packed-list begin-traveler">
           <p className="begin-who">{t(`char.${traveler}.name`)}{SEPARATOR}{t(`char.${traveler}.role`)}</p>
+          {/* On the first run this is the only traveler card, so Lena's donation shows here before any desk (dap.10). */}
+          <p className="begin-complication">{t(`char.${traveler}.complication`)}</p>
           <p className="begin-packed">{t('ui.packedList', { list: packedList(picked) })}</p>
         </section>
       </div>
@@ -548,6 +550,15 @@ export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeD
     </main>
   );
 }
+
+/**
+ * Each traveler's five details on the traveler screen, as [label, char.<id>.<key>]:
+ * why now, the capability, what ordinary officials may look at (the complication),
+ * whom they protect and what they want.
+ */
+export const TRAVELER_DETAILS = [
+  ['why', 'why'], ['can', 'can'], ['asked', 'complication'], ['protects', 'protects'], ['wants', 'wants'],
+] as const;
 
 /**
  * Setup 2. The premise is the heading; the cards are a radio group, so a tap
@@ -620,9 +631,20 @@ export function TravelerStep({ initial, count, onBack, onContinue }: { initial: 
             >
               {t('ui.readHistory', { name: t(`char.${chosen}.name`) })}
             </button>
-            <ul id="traveler-history" className="history-detail" hidden={!historyOpen}>
-              {CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}
-            </ul>
+            <div id="traveler-history" className="history-detail" hidden={!historyOpen}>
+              {/* The five details: why now, what they can do, what officials may look at, whom they protect, what they want (dap.10). */}
+              <dl className="traveler-details" data-traveler-details={chosen}>
+                {TRAVELER_DETAILS.map(([label, key]) => (
+                  <div key={label} data-detail={label}>
+                    <dt>{t(`ui.traveler.${label}`)}</dt>
+                    <dd>{t(`char.${chosen}.${key}`)}</dd>
+                  </div>
+                ))}
+              </dl>
+              <ul className="history-background">
+                {CHARACTERS[chosen].background.map((b) => <li key={b}>{t(`bg.${b}`)}</li>)}
+              </ul>
+            </div>
           </section>
         )}
       </div>
