@@ -59,16 +59,17 @@ describe('the ending in order (rwf.10, ending review 2026-11-10)', () => {
     expect(en['ending.later.heading']).toBe('The following morning');
   });
 
-  it('puts a later beat under "The following morning" when the crossing had no cost', () => {
+  it('puts a later beat with no cost under its own time, not under "The following morning" (dap.39)', () => {
     // Medicine kept, nobody exposed, only a claim disproved: the beat is all that follows.
     const html = markup('homeInTime', {
       time: 5, claims: ['cashUnderLimit'], logged: { cashUnderLimit: ['customs'] },
       facts: { cashCount: ['customs'] }, disproved: ['cashUnderLimit'],
     });
     expect(html).not.toContain('class="costs"');
+    expect(html).not.toContain(en['ending.later.heading']);
+    expect(html).toContain(`<strong class="beat-when">${en['later.statement.when']}:</strong>`);
     const order = [
       at(html, en['ending.homeInTime.body']),
-      at(html, `>${en['ending.later.heading']}<`),
       at(html, 'class="beat-line"'),
       at(html, 'class="run-summary"'),
     ];

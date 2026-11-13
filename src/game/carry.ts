@@ -59,6 +59,7 @@ export function fileOf(s: RunState): CarriedFile {
     named: [...s.exposed],
     kept: s.loadout.filter((e) => !s.used.includes(e)),
     spent: s.loadout.filter((e) => s.used.includes(e)),
+    ...(s.shownOn ? { shownOn: { ...s.shownOn } } : {}),
     medicine: s.medicine,
   };
 }

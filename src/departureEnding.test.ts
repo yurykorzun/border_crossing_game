@@ -83,6 +83,15 @@ describe('the Departure ending (dap.32)', () => {
     expect(plain(render(s))).toContain(`${t('ending.axis.contacts')}: ${t('ending.axis.contacts.none')}`);
   });
 
+  it('another relative a desk noted from the family register is on file (dap.39)', () => {
+    setStory('departure');
+    const base = newRun(lenaDeparture);
+    const s = ended(lenaDeparture, 'homeInTime', { time: 5, exposed: [], facts: { ...base.facts, relativeContact: ['interview'] } });
+    const shown = plain(render(s));
+    expect(shown).toContain(`${t('ending.axis.contacts')}: On file: another relative.`);
+    expect(shown).not.toContain(t('ending.axis.contacts.none'));
+  });
+
   it('played Departure runs, every bot style: the flight summary, and the body matches the medicine', () => {
     let seen = 0;
     for (const setup of [markDeparture, lenaDeparture])

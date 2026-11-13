@@ -22,7 +22,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, axisLines, caughtLine, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './game/consequence';
+import { SEPARATOR, axisLines, caughtLine, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -980,8 +980,9 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
 /**
  * The ending (Yury's ending review, 2026-11-10), in this order: the outcome and the
  * ending's name, a short arrival scene (the picture and one paragraph), then what
- * happened after, under one time heading ("The following morning"): each cost worst
- * first, and the later beat (laterBeat()) as its own line with the choice that caused it.
+ * happened after: each cost worst first under its time heading ("The following morning"),
+ * and the later beat (laterBeat()) as its own line, led by its own time ("Three days
+ * later"), with the choice that caused it. With no cost there is no heading (dap.39).
  * Then the run summary, where the medicine and the protected contact show (and only
  * there), and the buttons, each a next step that says where it goes (dap.8): "See border
  * records", which opens the records alone, "Retry Arrival" (the same setup, onRetry),
@@ -1003,6 +1004,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
   const cost = consequences(s);
   const later = laterBeat(s);
   const decided = decisive(s);
+  const rest = unlistedHours(s);
   return (
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
@@ -1024,10 +1026,10 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
         </div>
         {(cost.length > 0 || later) && (
           <section className="later">
-            {/* One time heading over whatever follows, a cost or only the later beat. */}
-            <h2 className="mono later-heading">{t('ending.later.heading')}</h2>
             {cost.length > 0 && (
               <>
+                {/* The time heading is the costs' own: the later beat names its own time (dap.39). */}
+                <h2 className="mono later-heading">{t('ending.later.heading')}</h2>
                 {/* Worst first, a heading and one line each, no severity tag (pfi.13 notes). */}
                 <ul className="costs">
                   {cost.map((l, i) => (
@@ -1079,6 +1081,8 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
               ))}
             </ol>
           )}
+          {/* The hours the answers left off the list cost, so the hours add up (unlistedHours()). */}
+          {rest > 0 && <p className="decided-rest">{tn('ending.decided.rest', rest)}</p>}
           <ul className="axes">
             {axisLines(s).map((l) => (
               <li key={l.axis} className={`axis axis-${l.axis}`}><strong>{t(`ending.axis.${l.axis}`)}:</strong> {t(l.key, l.vars)}</li>

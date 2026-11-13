@@ -463,6 +463,8 @@ export interface CarriedFile {
   kept: EvidenceId[];
   /** Documents you showed at a desk, so they are on file and used up. */
   spent: EvidenceId[];
+  /** The document shown on each card, by card id (RunState.shownOn). Unset in files from before it existed. */
+  shownOn?: Partial<Record<string, EvidenceId>>;
   /** Whether the medicine came through. */
   medicine: boolean;
   /** What came back days after you got home (laterBeat() in src/game/consequence.ts), so the next crossing opens with it. */
@@ -641,6 +643,12 @@ export interface RunState {
    * Unset in saves from before it existed.
    */
   shownBy?: Partial<Record<ClaimId, EvidenceId>>;
+  /**
+   * The document shown on each card, by card id, so the carried file knows what answered
+   * a question even when the document made no claim (the deed for where you stay, dap.39).
+   * Unset in saves from before it existed.
+   */
+  shownOn?: Partial<Record<string, EvidenceId>>;
   /** The file from the crossing before, in a level that reads one (Level.readsFile). */
   file?: CarriedFile;
   /**

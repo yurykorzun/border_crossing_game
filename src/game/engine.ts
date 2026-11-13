@@ -1250,7 +1250,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   const readings = officerReadings(s, opt.effects);
   const decided = s.screen.kind === 'encounter' && isCalm(s.screen.id) ? 0 : 1;
   let n: RunState = { ...s, documentList: undefined, reaction: null, decisions: s.decisions + decided, calledIn: (s.calledIn ?? []).filter((c) => !due.includes(c)) };
-  if (opt.card) n = { ...n, used: [...n.used, opt.card] };
+  if (opt.card) n = { ...n, used: [...n.used, opt.card], ...(card ? { shownOn: { ...n.shownOn, [card.id]: opt.card } } : {}) };
   if (opt.contact) n = { ...n, exposed: [...n.exposed, opt.contact], calledIn: callIn(n, opt.contact) };
   // Named to vouch for you, your mother gets the officer's call; named only for a lift, she doesn't.
   if ((opt.contact === 'mother' && !opt.approach.namesOnly) || opt.approach.phonesMother) n = phoned(n);

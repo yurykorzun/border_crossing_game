@@ -926,6 +926,9 @@ export const en: Record<string, string> = {
   'ending.cost.scrutiny': 'Scrutiny up by {n}',
   'ending.cost.used': 'Used: {cardLabel}',
   'ending.cost.none': 'Cost nothing',
+  // Under the list (unlistedHours()): the hours the answers left off it cost, so the hours add up.
+  'ending.decided.rest.one': 'Other answers: {n} hour lost',
+  'ending.decided.rest.other': 'Other answers: {n} hours lost',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',
   'ending.axis.arrival.onTime': 'On time. {left} left at the exit, the trip takes {trip}.',
@@ -942,6 +945,8 @@ export const en: Record<string, string> = {
   'ending.axis.contacts': 'Contacts',
   'ending.axis.contacts.none': 'No one on file.',
   'ending.axis.contacts.named': 'On file: {names}.',
+  // A relative a desk put on file without a name (the family register, or your mother naming one).
+  'ending.axis.contacts.relative': 'another relative',
   // What comes back days later (laterBeat()): when, what happens, and the choice that caused it.
   // It states what an office does, never what you feel, and never scores the harm.
   'later.statement.when': 'Three days later',

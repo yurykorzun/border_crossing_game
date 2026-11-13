@@ -379,12 +379,28 @@ function costsOf(s: RunState, a: Answered, protectedContact: ContactId): Decisiv
  */
 export function decisive(s: RunState): DecisiveAnswer[] {
   const protectedContact = CHARACTERS[s.character].protectedContact;
+  return picked(s).map(({ a }) => ({ desk: a.desk, key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
+}
+
+/** The answers decisive() lists, with their place in RunState.answers, in the order they were given. */
+function picked(s: RunState): { a: Answered; i: number }[] {
+  const protectedContact = CHARACTERS[s.character].protectedContact;
   const all = (s.answers ?? []).map((a, i) => ({ a, i, w: weight(a, protectedContact) }));
   const moved = all.filter((x) => x.w > 0).sort((x, y) => y.w - x.w || x.i - y.i).slice(0, MAX_DECISIVE);
   const filler = all.filter((x) => x.w === 0).slice(0, Math.max(0, MIN_DECISIVE - moved.length));
-  return [...moved, ...filler]
-    .sort((x, y) => x.i - y.i)
-    .map(({ a }) => ({ desk: a.desk, key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
+  return [...moved, ...filler].sort((x, y) => x.i - y.i);
+}
+
+/**
+ * The hours the answers decisive() leaves out cost, together (dap.39). With more than
+ * three answers that cost time, the list alone added up to fewer hours than the run
+ * spent (2 + 1 + 1 listed, the supervisor's hour left out). The ending shows them as one
+ * line under the list (`ending.decided.rest`), so the hours listed and the hours left at
+ * the exit add up to the hours the level starts with. 0 when every hour is listed.
+ */
+export function unlistedHours(s: RunState): number {
+  const listed = new Set(picked(s).map((x) => x.i));
+  return (s.answers ?? []).reduce((h, a, i) => h + (listed.has(i) ? 0 : a.hours), 0);
 }
 
 export type Axis = 'arrival' | 'flight' | 'medicine' | 'contacts';
@@ -403,7 +419,7 @@ export const onFile = (s: RunState): ContactId[] => [...new Set([...(s.file?.nam
  * lost) and contacts. Departure (dap.32): the flight in the place of arrival and no
  * medicine line, since you only carry his empty box out (a box taken at customs has
  * its own consequence line). Contacts reads onFile(), so a name from the Arrival file
- * counts. The label is at `ending.axis.<axis>`. Ending in src/App.tsx shows them under
+ * counts, and another relative a desk put on file this run (relativeContact or relativeNamed). The label is at `ending.axis.<axis>`. Ending in src/App.tsx shows them under
  * the decisive answers.
  */
 export function axisLines(s: RunState): { axis: Axis; key: string; vars?: Record<string, string> }[] {
@@ -411,12 +427,15 @@ export function axisLines(s: RunState): { axis: Axis; key: string; vars?: Record
   const hours = { left: tn('ui.hours', s.time), trip: tn('ui.hours', travelOf(s)) };
   const leg: Axis = s.level === 'departure' ? 'flight' : 'arrival';
   const when = ending === 'turnedBack' ? 'none' : s.time >= travelOf(s) ? 'onTime' : 'late';
-  const names = onFile(s);
+  // Another relative a desk put on file (the family register, or your mother naming one) is on file too (dap.39).
+  const facts = factIds(s);
+  const relative = facts.includes('relativeContact') || facts.includes('relativeNamed');
+  const names = [...onFile(s).map((c) => t(`contact.${c}`)), ...(relative ? [t('ending.axis.contacts.relative')] : [])];
   return [
     { axis: leg, key: `ending.axis.${leg}.${when}`, ...(ending === 'turnedBack' ? {} : { vars: hours }) },
     ...(leg === 'flight' ? [] : [{ axis: 'medicine' as const, key: s.medicine ? 'ending.axis.medicine.kept' : 'ending.axis.medicine.lost' }]),
     names.length
-      ? { axis: 'contacts', key: 'ending.axis.contacts.named', vars: { names: andList(names.map((c) => t(`contact.${c}`))) } }
+      ? { axis: 'contacts', key: 'ending.axis.contacts.named', vars: { names: andList(names) } }
       : { axis: 'contacts', key: 'ending.axis.contacts.none' },
   ];
 }
@@ -524,7 +543,11 @@ export function fileLine(s: RunState, card: string): { key: string; vars: Record
   const crossing = { crossing: t(`level.${file.level}.title`) };
   if (card === 'd_stayed') {
     const c = fileSaid(file).find((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay');
-    return c ? quoteLine(s, 'file.stayed', c) : { key: 'file.stayed.none', vars: crossing };
+    if (c) return quoteLine(s, 'file.stayed', c);
+    // A document shown for where you would stay (the deed, your mother's letter) makes no
+    // stay claim, but it is the entry form's answer all the same (CarriedFile.shownOn, dap.39).
+    const doc = file.shownOn?.p_host;
+    return doc ? { key: 'file.stayed.shown', vars: { cardThe: doc } } : { key: 'file.stayed.none', vars: crossing };
   }
   if (card === 'd_stay') return { key: `file.stay.${fileStay(file)}`, vars: crossing };
   if (card === 'd_declared') return { key: `file.declared.${file.declared ?? 'none'}`, vars: crossing };

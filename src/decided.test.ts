@@ -73,8 +73,11 @@ describe('the ending names the choices that decided it', () => {
       expect(lines[0].key).toBe(text === 'homeInTime' || text === 'homeAtCost' ? 'ending.axis.arrival.onTime' : 'ending.axis.arrival.late');
       expect(lines[1].key).toBe(s.medicine ? 'ending.axis.medicine.kept' : 'ending.axis.medicine.lost');
       const contacts = t(lines[2].key, lines[2].vars);
-      if (s.exposed.length) for (const c of s.exposed) expect(contacts).toContain(t(`contact.${c}`));
-      else expect(lines[2].key).toBe('ending.axis.contacts.none');
+      // Another relative a desk noted is on file too (dap.39).
+      const relative = !!(s.facts.relativeContact?.length || s.facts.relativeNamed?.length);
+      for (const c of s.exposed) expect(contacts).toContain(t(`contact.${c}`));
+      if (relative) expect(contacts).toContain(t('ending.axis.contacts.relative'));
+      if (!s.exposed.length && !relative) expect(lines[2].key).toBe('ending.axis.contacts.none');
       expect(html.split('class="axis ').length - 1).toBe(3);
       for (const l of lines) expect(shown).toContain(`${t(`ending.axis.${l.axis}`)}: ${t(l.key, l.vars)}`);
     });
