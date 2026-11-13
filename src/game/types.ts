@@ -163,6 +163,12 @@ export interface Approach {
    */
   ifVerified?: Effect[];
   /**
+   * With every one of these facts already known at the desk, the officer reads them off
+   * the file instead of checking (the answer's hours say so with their own `when`): the
+   * answer reads `<key>.onFile.label`/`.reaction` where that text exists.
+   */
+  onFile?: FactId[];
+  /**
    * A record check that confirms the card's point at the desk (the employer register):
    * like a document shown, it verifies the point for the later desks (RunState.verified).
    * At an inspection it verifies the open issue the inspection is about (the lab

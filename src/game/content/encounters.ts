@@ -92,6 +92,20 @@ const NAMED_TOM: Effect = { fact: 'brotherAbroad', when: { background: 'brotherA
 /** What "any other relatives?" asks about: a relative on file, by any route (Encounter.asks). */
 const RELATIVE_FACTS: FactId[] = ['brotherAbroad', 'relativeContact', 'relativeNamed'];
 
+/**
+ * Customs has a number for your mother: her registered address is on file at the desk,
+ * or the entry form says you stay with her (you named her at passport). With a hotel
+ * claimed and neither, nobody gave the desk her number, so it phones the hotel instead.
+ */
+export const HOST_NUMBER: Cond = { any: [{ facts: ['familyAddress'] }, { claims: ['stayingWithFamily'] }] };
+
+/** What your mother tells the officer when she answers: you stay with her, and who else is family here. */
+const MOTHER_ANSWERS: Effect[] = [
+  { fact: 'hostStatement' },
+  { fact: 'relativeNamed' },
+  { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeNamed'] },
+];
+
 export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
 
 /** The claim and fact pairs each challenge card puts to you. */
@@ -224,9 +238,10 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
       // The honest answer gives the reason, and your father's condition goes on file. She
-      // phones the hospital to confirm it, unless his condition is already on her file.
+      // phones the hospital to confirm it, unless his condition is already on her file:
+      // then she reads it there (Approach.onFile).
       {
-        id: 'father', kind: 'verify',
+        id: 'father', kind: 'verify', onFile: ['fatherCondition'],
         effects: [{ claim: 'familyVisit' }, { fact: 'fatherCondition' }, { time: -2, when: { noFacts: ['fatherCondition'] } }],
       },
       // No date to give: she enters an open stay and checks your residence registration.
@@ -343,7 +358,10 @@ export const ENCOUNTERS: Encounter[] = [
     issue: { any: [{ facts: ['familyAddress'] }, { claims: ['stayingWithFamily'] }, { claims: ['hotelStay'] }] },
     approaches: [
       // With the address verified earlier, he reads it off the file: no call, no wait.
-      { id: 'call', kind: 'verify', effects: [{ time: -1 }], check: 'hostCall', ifVerified: [] },
+      // Only with a number to dial (HOST_NUMBER): the call reaches your mother.
+      { id: 'call', kind: 'verify', requires: HOST_NUMBER, effects: [{ time: -1 }], check: 'hostCall', ifVerified: [] },
+      // With no number for her, he phones the hotel about the booking: no call to your mother.
+      { id: 'hotel', kind: 'verify', requires: { not: HOST_NUMBER }, effects: [{ time: -1 }], ifVerified: [] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
       { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [] },
     ],
@@ -471,8 +489,9 @@ export const ENCOUNTERS: Encounter[] = [
     // Nobody has confirmed where you stay yet.
     issue: { noFacts: ['hostStatement'] },
     approaches: [
-      // "The phone rings and rings. Then she picks up."
-      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }] },
+      // "The phone rings and rings. Then she picks up." She says what she says on a
+      // call she answers the first time (hostCall clear), so the issue closes.
+      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }, ...MOTHER_ANSWERS] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
       { id: 'cousin', kind: 'contact', contacts: ['cousin'], effects: [] },
     ],
@@ -569,8 +588,9 @@ export const ENCOUNTERS: Encounter[] = [
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
       // Explaining the changed plans says more about your family: his condition goes on file.
+      // With it already on file she reads it there and phones nobody (Approach.onFile).
       {
-        id: 'father', kind: 'verify',
+        id: 'father', kind: 'verify', onFile: ['fatherCondition'],
         effects: [{ claim: 'familyVisit' }, { fact: 'fatherCondition' }, { time: -1, when: { noFacts: ['fatherCondition'] } }],
       },
       // Letting the difference stand is no proof of anything, so she checks it herself: the longer wait.
@@ -670,14 +690,7 @@ export const CHECKS: Record<CheckId, Check> = {
       // The call note goes with your file to the interview, address and all.
       { when: { bulletin: 'accommodation' }, followUp: 'f_host', result: 'noAnswer', effects: [{ send: 'printout', facts: ['familyAddress'] }] },
       // When she answers, her account goes with it: you stay with her, and who else is family here.
-      {
-        result: 'clear',
-        effects: [
-          { fact: 'hostStatement' },
-          { fact: 'relativeNamed' },
-          { send: 'printout', facts: ['familyAddress', 'hostStatement', 'relativeNamed'] },
-        ],
-      },
+      { result: 'clear', effects: MOTHER_ANSWERS },
     ],
   },
   medicineLab: {

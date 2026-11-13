@@ -1035,6 +1035,9 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   const a = currentCard(s)?.approaches.find((x) => x.id === approach);
   const verified = `${prefix}.${id}.${approach}.verified.${part}`;
   if (a && usesVerified(s, a, topicOf(currentCard(s))) && has(verified)) return verified;
+  // An answer whose point is already on file here reads it off the file (Approach.onFile).
+  const onFile = `${prefix}.${id}.${approach}.onFile.${part}`;
+  if (a?.onFile && a.onFile.every((f) => knows(s, f)) && has(onFile)) return onFile;
   const daily = own(`${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`, s.character);
   if (has(daily)) return daily;
   // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count compared with it.

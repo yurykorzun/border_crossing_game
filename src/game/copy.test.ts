@@ -141,6 +141,8 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.c_cash.count': { always: 1, most: 1 },
     'enc.c_shortTrip.admit': { always: 1, most: 1 },
     'enc.c_host.call': { always: 1, most: 1 },
+    // The hotel call where customs has no number for your mother (dap.12): the host call's hour, new.
+    'enc.c_host.hotel': { always: 1, most: 1 },
     'enc.c_phone.unlock': { always: 1, most: 1 },
     'enc.c_phone.refuse': { always: 1, most: 1 },
     'enc.i_family.why': { always: 1, most: 1 },

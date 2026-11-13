@@ -568,6 +568,8 @@ export const en: Record<string, string> = {
   'enc.p_stay.father.label': '"Until my father is out of hospital."',
   'enc.p_stay.father.event': 'Call to the hospital',
   'enc.p_stay.father.reaction': 'She checks the reason with the hospital, then types it into your entry card.',
+  // His condition already on her file (Approach.onFile): no call, no wait.
+  'enc.p_stay.father.onFile.reaction': 'She finds his condition already on your file and types the reason into your entry card.',
   'enc.p_stay.unsure.label': '"I don\'t know yet."',
   'enc.p_stay.unsure.event': 'Residence register check',
   'enc.p_stay.unsure.reaction': 'She enters an open stay and checks the address register.',
@@ -636,6 +638,12 @@ export const en: Record<string, string> = {
   'enc.c_host.call.reaction': "He dials your mother's number and waits.",
   'enc.c_host.call.verified.label': 'Point to the address already confirmed',
   'enc.c_host.call.verified.reaction': 'He finds the address already confirmed at passport and lets it go.',
+  // No number for your mother at the desk (HOST_NUMBER): he phones the hotel you named.
+  'enc.c_host.hotel.label': 'Wait while they call the hotel',
+  'enc.c_host.hotel.event': 'Call to the hotel',
+  'enc.c_host.hotel.reaction': 'He phones the hotel and asks about your booking.',
+  'enc.c_host.hotel.verified.label': 'Point to where you stay, already confirmed',
+  'enc.c_host.hotel.verified.reaction': 'He finds where you stay already confirmed at passport and lets it go.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
@@ -740,7 +748,8 @@ export const en: Record<string, string> = {
 
   'enc.i_brother.q': '"Your brother lives across the border. When did you last speak?"',
   'enc.i_brother.honest.label': '"Last Sunday. He\'s fine."',
-  'enc.i_brother.honest.reaction': 'Your brother across the border goes on file, and the officer flags it.',
+  // Tom is already on file here (the card is dealt for it), so the answer adds only the call.
+  'enc.i_brother.honest.reaction': 'The officer writes down when you last spoke, next to your brother\'s entry, and flags it.',
   'enc.i_brother.calls.label': 'Let them check your call history',
   'enc.i_brother.calls.event': 'Call history search',
   'enc.i_brother.calls.reaction': 'They go through your calls in the gray box.',
@@ -749,7 +758,7 @@ export const en: Record<string, string> = {
   'enc.f_host.q': '"Your mother isn\'t answering."',
   'enc.f_host.again.label': 'Wait for another call',
   'enc.f_host.again.event': 'Second call',
-  'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up.',
+  'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up, says you stay with her, and names the family.',
   'enc.f_host.evidence.label': 'Show {cardThe}',
   'enc.f_host.evidence.reaction': 'He accepts it without looking up.',
   'enc.f_host.cousin.label': 'Give {contact}\'s number',
@@ -1105,6 +1114,8 @@ export const en: Record<string, string> = {
   'enc.d_stay.father.label': '"My father needs another week of care."',
   'enc.d_stay.father.event': 'Call to the hospital',
   'enc.d_stay.father.reaction': 'She phones the hospital, then types the reason into your entry record.',
+  // His condition already on her file (Approach.onFile): no call, no wait.
+  'enc.d_stay.father.onFile.reaction': 'She finds his condition already on your file and types the reason into your entry record.',
   'enc.d_stay.stand.label': '"Plans changed."',
   'enc.d_stay.stand.event': 'Record check',
   'enc.d_stay.stand.reaction': "She writes today's date next to your entry record and checks it.",
