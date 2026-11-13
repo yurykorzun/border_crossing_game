@@ -440,7 +440,8 @@ export const ENCOUNTERS: Encounter[] = [
     // Nobody has confirmed where you stay yet.
     issue: { noFacts: ['hostStatement'] },
     approaches: [
-      { id: 'again', kind: 'verify', effects: [{ time: -1 }] },
+      // "The phone rings and rings. Then she picks up."
+      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
       { id: 'cousin', kind: 'contact', contacts: ['cousin'], effects: [] },
     ],
@@ -565,7 +566,7 @@ export const ENCOUNTERS: Encounter[] = [
     // verifies the point, as c_medicine did). Opening the bag settles it in an hour.
     // Saying what is in it is free, except on a day medicines need paperwork, when
     // he goes through the bag anyway and it takes longer.
-    id: 'd_out', checkpoint: 'customs', kind: 'routine', topic: 'medicine',
+    id: 'd_out', checkpoint: 'customs', kind: 'routine', topic: 'medicine', noCallIns: true,
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'medicine', effects: [] },
       { id: 'open', kind: 'verify', effects: [{ time: -1 }] },

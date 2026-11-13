@@ -18,7 +18,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
-import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
+import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './consequence';
 import { answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -413,7 +413,7 @@ function endingLines(s: RunState, p: Page): void {
     : ending === 'tooLate' ? (s.medicine ? 'scene.bus' : 'scene.busEmpty')
     : 'scene.ward';
   p.add(scene, {}, CHROME);
-  p.add(`ending.${text}.body`, {}, CHROME);
+  p.add(endingBody(s, text), {}, CHROME);
   // consequences(), worst first, under the time heading: the worst is read, as a heading and
   // a line; the rest, like the epilogue, are counted as chrome, as the card's longer text always was.
   const cost = consequences(s);
@@ -434,10 +434,13 @@ function endingLines(s: RunState, p: Page): void {
   p.add('ui.runSummary', {}, CHROME);
   p.add('ui.timeLeftRow');
   p.plural('ui.hours', s.time);
-  p.add('ui.medicineRow');
-  p.add(s.medicine ? 'ui.kept' : 'ui.lost');
+  if (s.level !== 'departure') {
+    p.add('ui.medicineRow');
+    p.add(s.medicine ? 'ui.kept' : 'ui.lost');
+  }
   p.add(`contact.${ch.protectedContact}`);
-  p.add(protectedRow(s).key);
+  const row = protectedRow(s);
+  p.add(row.key, row.vars);
   // What decided it, decisive() and axisLines(): chrome, like the summary they sit under.
   p.add('ending.decided.heading', {}, CHROME);
   for (const d of decisive(s)) {

@@ -217,6 +217,8 @@ export const en: Record<string, string> = {
   'ui.kept': 'Kept',
   'ui.lost': 'Lost',
   'ui.notNamed': 'Not named',
+  // Named only on the file you carried in (protectedRow()): which crossing put them there.
+  'ui.namedOnFile': 'On file since {crossing}',
   'ui.seeOnFile': 'See border records',
   'ui.borderRecords': 'Border records',
   // The ending's next steps (dap.8): the same setup again, the next level as this traveler
@@ -245,6 +247,7 @@ export const en: Record<string, string> = {
   'funeral:msg.0.0': "Dad slept well. I'm with him, go.",
   'funeral:ending.homeInTime.body': 'You reach the hall before the service ends. Your old classmates make room on the bench. Her sister nods at you from the front. Afterwards you stand outside with the others, and nobody says much.',
   'funeral:ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Her sister asks how the trip was. You tell her it was fine. Later you read your messages twice and think about who you can still call.',
+  'funeral:ending.homeAtCost.kept.body': 'You make it in time. A name you gave stays on file at the border. Her sister asks how the trip was. You tell her it was fine. Later you read your messages twice and think about who you can still call.',
   'funeral:ending.tooLate.body': 'By the time you get there, the service is over. The chairs are stacked by the wall. Her sister gives you the program and a cup of tea. You read the name on it until they turn off the lights.',
   'funeral:ending.missedBus.lost': 'You reach her family in the morning, not tonight.',
   'funeral:ending.missedBus.body': 'You step past the barrier. The last bus leaves the station before you can get there. The next one leaves at six. You send her sister the time and sit on a bench under the light. She writes that they will wait. You read it until the screen goes dark.',
@@ -464,6 +467,8 @@ export const en: Record<string, string> = {
   // On the packing screen, before you choose what to carry (PREPARATION_MESSAGE).
   'msg.prep': 'Hope your dad\'s OK. Back for Monday\'s client meeting?',
   'msg.0.0': 'The doctor says Dad can hear me. Come straight here.',
+  // Departure's in its place (QueueBeat.levels): you leave Dad in her care.
+  'msg.0.0.departure': 'Dad asked if you have your passport. Call from the gate.',
   'msg.0.1.lena': 'Don\'t mention Ilya. He was questioned once about the fundraiser. Another mention could get him called in.',
   'msg.0.1.mark': 'Don\'t mention Tom. Please.',
   // The funeral: what her sister told the border (QueueBeat.fact).
@@ -473,6 +478,9 @@ export const en: Record<string, string> = {
   // The relative's own ordinary line (PERSONAL_LINES). Ilya plays things down so you don't worry.
   'msg.0.personal.lena': 'The spare key is under the ugly flowerpot. Don\'t tell Mom.',
   'msg.0.personal.mark': 'Bad signal here. Kiss Dad for me.',
+  // Departure's in their place: you are leaving, so no key and no kiss.
+  'msg.0.personal.lena.departure': 'Safe flight. I will sit with your dad on Sunday.',
+  'msg.0.personal.mark.departure': 'Bad signal here. Tell me how Dad is.',
   'msg.0.2': 'The passenger ahead says: "Just be polite."',
   'msg.0.3': 'The booth light changes. "Next."',
   'queue.0.go': 'Approach the booth',
@@ -480,6 +488,8 @@ export const en: Record<string, string> = {
   'queue.0.turnBack': 'Leave the queue and go back',
   'turnBack.reaction': 'You step out of the line. Nobody stops you. The passport stays in your coat.',
   // Your mother's message after a desk follows how it went (QueueMood): a call, a delay, or a smooth desk.
+  // After a call she names your relative only when you named him at that desk (callRelative).
+  'msg.1.after.call': 'Passport control just called me about you.',
   'msg.1.after.call.lena': 'Passport control just called me. They asked about Ilya.',
   'msg.1.after.call.mark': 'Passport control just called me. They asked about Tom.',
   'msg.1.after.delay': 'Are you through yet? It has been hours.',
@@ -489,10 +499,12 @@ export const en: Record<string, string> = {
   'msg.1.cash': 'Declare cash over 10,000, the sign says. You carry 14,000.',
   'msg.1.5': 'The inspector taps the table. "Bags here."',
   'queue.1.go': 'Put your bag on the table',
+  'msg.2.after.call': 'Customs just called me about you.',
   'msg.2.after.call.lena': 'Customs called me. They asked about Ilya.',
   'msg.2.after.call.mark': 'Customs called me. They asked about Tom.',
   'msg.2.after.delay': 'Still nothing? Text me when you are through.',
   'msg.2.after.smooth': 'The hospital café closes at six. I saved you a sandwich.',
+  'msg.2.after.smooth.departure': 'Dad says he will wave at the planes.',
   'msg.2.1': 'Your phone dies. The man beside you lends his charger.',
   'msg.2.3': '"They ask everything three ways," he says. "Answer the same."',
   'msg.2.5': '"This way, please," an officer calls.',
@@ -883,6 +895,8 @@ export const en: Record<string, string> = {
   'ending.homeInTime.body': 'Your father squeezes your hand. Your mother laughs and cries at once. Tonight you sleep on two chairs beside his bed, your passport still in your coat.',
   'ending.homeAtCost.title': 'Home at a cost',
   'ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Your father is awake and asks how the trip was. You tell him it was fine. Later, in the corridor, you read your messages twice and think about who you can still call.',
+  // Home at a cost with the medicine kept (endingBody()): the cost was a name you gave, not something you carried.
+  'ending.homeAtCost.kept.body': 'You make it in time, with his medicine. A name you gave stays on file at the border. Your father is awake and asks how the trip was. You tell him it was fine. Later, in the corridor, you read your messages twice and think about who you can still call.',
   'ending.tooLate.title': 'Too late',
   'ending.tooLate.body': 'By the time you reach the hospital, visiting hours are over. Your mother is asleep in the corridor. You sit down next to her and do not wake her. A nurse says you can see your father at eight. You watch the door until it gets light.',
   'ending.missedBus.title': 'Missed the bus',
@@ -912,6 +926,11 @@ export const en: Record<string, string> = {
   'ending.axis.arrival.onTime': 'On time. {left} left at the exit, the trip takes {trip}.',
   'ending.axis.arrival.late': 'Late. {left} left at the exit, the trip takes {trip}.',
   'ending.axis.arrival.none': 'You did not cross.',
+  // Departure's first axis: the flight, in the place of arrival.
+  'ending.axis.flight': 'Flight',
+  'ending.axis.flight.onTime': 'Made it. {left} left at the exit, the airport is {trip} away.',
+  'ending.axis.flight.late': 'Missed. {left} left at the exit, the airport is {trip} away.',
+  'ending.axis.flight.none': 'You did not leave.',
   'ending.axis.medicine': 'Medicine',
   'ending.axis.medicine.kept': 'Kept.',
   'ending.axis.medicine.lost': 'Taken at the border.',
@@ -1089,11 +1108,10 @@ export const en: Record<string, string> = {
   'departure:ui.allowTravel.one': 'Allow {n} hour to reach the airport after the border.',
   'departure:ui.allowTravel.other': 'Allow {n} hours to reach the airport after the border.',
   'departure:msg.1.cash': 'The sign says to declare cash over 10,000. You are taking out 14,000.',
-  'departure:msg.0.0': 'Dad asked if you have your passport. Call from the gate.',
   'departure:msg.1.after.smooth': 'Dad ate some soup. The nurse says that is good.',
-  'departure:msg.2.after.smooth': 'Dad says he will wave at the planes.',
   'departure:ending.homeInTime.body': 'The plane lifts over the river. Your mother sends a photo: your father in the chair by the window. You keep it open until the screen goes dark.',
   'departure:ending.homeAtCost.body': 'You make the flight. Not everything you carried comes with you. Your mother writes that your father asked if you got through. You write back that it was fine.',
+  'departure:ending.homeAtCost.kept.body': 'You make the flight. A name you gave stays on file at the border. Your mother writes that your father asked if you got through. You write back that it was fine.',
   'departure:ending.tooLate.body': 'The gate is closed when you reach it. The next flight with a seat leaves in two days. You send your mother the time. She writes that your father is asking for you.',
   'departure:ending.missedBus.lost': 'Tonight\'s flight leaves without you. The next one costs you another day.',
   'departure:ending.missedBus.body': 'You step past the barrier. The last bus to the airport has gone. You book the next flight on your phone, on a bench under the light. Your mother writes that your father is asleep.',

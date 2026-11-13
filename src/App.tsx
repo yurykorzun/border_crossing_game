@@ -22,7 +22,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, axisLines, caughtLine, consequences, decisive, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './game/consequence';
+import { SEPARATOR, axisLines, caughtLine, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -1020,7 +1020,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
               : s.level === 'departure' ? <PlaneWindow />
               : <Ward character={s.character} />}
           </div>
-          <p className="epilogue">{t(`ending.${text}.body`)}</p>
+          <p className="epilogue">{t(endingBody(s, text))}</p>
         </div>
         {(cost.length > 0 || later) && (
           <section className="later">
@@ -1106,7 +1106,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
   );
 }
 
-/** The run summary under the story: hours left, the medicine, the contact the traveler was asked to protect. */
+/** The run summary under the story: hours left, the medicine (not on Departure), the contact the traveler was asked to protect. */
 function resultRows(s: RunState): { label: string; value: string; tone: 'plain' | 'red' }[] {
   const ch = CHARACTERS[s.character];
   // The exact result ("Added to watch list"), from the same consequence heading.
@@ -1115,10 +1115,11 @@ function resultRows(s: RunState): { label: string; value: string; tone: 'plain' 
     // The label is Yury's (ending review, 2026-11-10); the value reads in hours, as every clock in the game.
     { label: t('ui.timeLeftRow'), value: tn('ui.hours', s.time), tone: 'plain' },
     // Red only for a confirmed serious consequence (docs/plan.md "UI rules").
-    { label: t('ui.medicineRow'), value: t(s.medicine ? 'ui.kept' : 'ui.lost'), tone: s.medicine ? 'plain' : 'red' },
+    // Departure carries only his empty box out, so its summary has no medicine row (dap.32).
+    ...(s.level === 'departure' ? [] : [{ label: t('ui.medicineRow'), value: t(s.medicine ? 'ui.kept' : 'ui.lost'), tone: s.medicine ? 'plain' as const : 'red' as const }]),
     {
       label: capitalize(t(`contact.${ch.protectedContact}`)),
-      value: t(contact.key),
+      value: t(contact.key, contact.vars),
       tone: contact.tone,
     },
   ];

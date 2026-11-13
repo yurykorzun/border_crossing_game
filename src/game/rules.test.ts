@@ -1109,8 +1109,13 @@ describe('exposure needs a stated reason, and each reaction says which of three 
       expect(factIds(r.state).filter((f) => !factIds(s).includes(f)), card).toEqual(['employer']);
       expect(factTier(r.state, 'employer'), card).toBe('confirmed');
       expect(r.state.flagged ?? [], card).not.toContain('employer');
-      // What the officer reads into it is a line of its own, tagged suspicion.
-      expect(r.state.reaction, card).toContainEqual({ key: `reading.employer.${desk}`, kind: 'suspicion' });
+      // What the officer reads into it is a line of its own, tagged suspicion. The register
+      // lookup also settles the job (Approach.confirms), and a doubt next to "Job settled."
+      // would say two opposite things, so only the contract check shows it (dap.31).
+      if (card === 'p_employer') {
+        expect(r.state.reaction?.map((l) => l.key), card).not.toContain(`reading.employer.${desk}`);
+        expect(changeLines(r.events, 'cousin').map((l) => l.key), card).toContain('resolve.work');
+      } else expect(r.state.reaction, card).toContainEqual({ key: `reading.employer.${desk}`, kind: 'suspicion' });
       expect(t(`reading.employer.${desk}`)).toMatch(/questions your employer's connection/);
       // "Employer verified" sits apart, under the reaction, as an on-file line.
       const changes = changeLines(r.events, 'cousin').map((l) => l.key);

@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { CHECKS, TESTIMONY, catchKind } from './content/encounters';
-import { PERSONAL_LINES, PREPARATION_MESSAGE, QUEUES, messagesSoFar, queueBeats } from './content/queues';
+import { PERSONAL_LINES, PREPARATION_MESSAGE, QUEUES, messagesSoFar, personalLine, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS } from './content/world';
 import { LEVELS } from './content/levels';
 import { BOT_STYLES, playRun, setupFor } from './bots';
@@ -59,18 +59,20 @@ describe("your mother's message between desks follows what happened", () => {
     }
     expect(new Set(lines.map((b) => b.key)).size).toBe(3);
     expect(new Set(lines.map((b) => t(b.key))).size).toBe(3);
-    // After the call she says the officer asked about this traveler's own relative.
-    expect(t(first(call).key)).toContain('Ilya');
-    expect(t(queueBeats(1, { character: 'mark', after: { 1: 'call' } })[0].key)).toContain('Tom');
-    // The queue after customs has its own three.
-    const customs = (['smooth', 'call', 'delay'] as const).map((m) => queueBeats(2, { character: 'lena', after: { 2: m } })[0].key);
-    expect(new Set(customs).size).toBe(3);
+    // Nobody named Ilya at that desk, so she does not say they asked about him (dap.33).
+    expect(t(first(call).key)).toBe('Passport control just called me about you.');
+    // Only a desk where you named your relative too has her say the officer asked about him.
+    expect(t(queueBeats(1, { character: 'lena', after: { 1: 'callRelative' } })[0].key)).toContain('Ilya');
+    expect(t(queueBeats(1, { character: 'mark', after: { 1: 'callRelative' } })[0].key)).toContain('Tom');
+    // The queue after customs has its own four.
+    const customs = (['smooth', 'call', 'callRelative', 'delay'] as const).map((m) => queueBeats(2, { character: 'lena', after: { 2: m } })[0].key);
+    expect(new Set(customs).size).toBe(4);
   });
 
-  it('each queue shows exactly one of the three, and only the message changes', () => {
+  it('each queue shows exactly one of the four, and only the message changes', () => {
     for (const character of CHARACTER_IDS)
       for (const q of [1, 2])
-        for (const mood of ['smooth', 'call', 'delay'] as const) {
+        for (const mood of ['smooth', 'call', 'callRelative', 'delay'] as const) {
           const beats = queueBeats(q, { character, after: { [q]: mood } });
           expect(beats.filter((b) => b.after)).toHaveLength(1);
           expect(beats.filter((b) => !b.after).map((b) => b.key)).toEqual(queueBeats(q, { character }).filter((b) => !b.after).map((b) => b.key));
@@ -94,17 +96,19 @@ describe("your mother's message between desks follows what happened", () => {
 
 describe('each contact speaks before any card offers them', () => {
   it('every contact of each traveler has an ordinary line of their own in the passport queue', () => {
-    for (const id of CHARACTER_IDS) {
-      const first = queueBeats(0, { character: id }).map((b) => b.key);
-      for (const c of CHARACTERS[id].contacts) {
-        const key = PERSONAL_LINES[id][c];
-        expect(key, `${id} ${c}`).toBeDefined();
-        expect(first, `${id} ${c}`).toContain(key);
-        const beat = QUEUES[0].find((b) => b.key === key)!;
-        expect(beat.from).toBe(c);
-        expect(t(key!)).not.toMatch(/—/);
+    for (const level of ['arrival', 'departure'] as const)
+      for (const id of CHARACTER_IDS) {
+        const first = queueBeats(0, { character: id, level }).map((b) => b.key);
+        for (const c of CHARACTERS[id].contacts) {
+          const key = personalLine(id, c, level);
+          expect(key, `${level} ${id} ${c}`).toBeDefined();
+          expect(first, `${level} ${id} ${c}`).toContain(key);
+          if (level === 'arrival') expect(key).toBe(PERSONAL_LINES[id][c]);
+          const beat = QUEUES[0].find((b) => b.key === key)!;
+          expect(beat.from).toBe(c);
+          expect(t(key!)).not.toMatch(/—/);
+        }
       }
-    }
   });
 
   it('in bot runs of every style, a contact offered on a card or in a waiting room has already spoken', () => {
@@ -119,7 +123,7 @@ describe('each contact speaks before any card offers them', () => {
           const heard = messagesSoFar(s).map((b) => b.key);
           for (const c of offered) {
             offers++;
-            expect(heard, `${style} ${i} ${c}`).toContain(PERSONAL_LINES[s.character][c]);
+            expect(heard, `${style} ${i} ${c}`).toContain(personalLine(s.character, c, s.level));
           }
         };
         for (const a of run.actions as Action[]) {

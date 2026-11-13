@@ -14,19 +14,20 @@
 // What it does not: balance (bots) or whether the game feels right (people).
 
 import {
-  callInsDue, check, checkEffects, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
+  DELAY_HOURS, callInsDue, check, checkEffects, claimsTouched, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
   choices, optionFor, options, routinesLeft, topicOf, travelOf,
 } from './engine';
 import { consequences } from './consequence';
 import { SAMPLE_FILES, defaultFile } from './carry';
 import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, RunState } from './types';
+import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, LogEntry, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
   BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
 } from './content/world';
-import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
+import { CHECKS, CONTRADICTIONS, ENCOUNTERS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTIONS, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
+import { queueBeats } from './content/queues';
 import { DEFAULT_LEVEL, levelOf } from './content/levels';
 import { t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
@@ -135,6 +136,16 @@ export interface WalkReport {
   setups: SetupResult[];
   /** (state, action) pairs where the dealer had more than one card to deal. */
   chanceNodes: number;
+  /** Moves afterAnswerLines() looked at: a "Checks out" shown, a question settled, a bag search answered. */
+  afterAnswer: AfterAnswerTally;
+  /** Your mother's after-desk messages queuePremises() looked at, by kind. */
+  queues: QueueTally;
+}
+
+export interface AfterAnswerTally {
+  checksOut: number;
+  settles: number;
+  bagSearches: number;
 }
 
 /**
@@ -301,8 +312,94 @@ export function checkState(s: RunState): string[] {
   return bad;
 }
 
+/** The topics a move settled for the desks ahead: verified now, freshly or again. */
+const settledBy = (s: RunState, n: RunState): string[] =>
+  Object.keys(n.verified ?? {}).filter((t) => n.verified?.[t as keyof RunState['verified']] !== s.verified?.[t as keyof RunState['verified']]);
+
+/**
+ * The after-answer lines say what this answer did (border_crossing_game-dap.31): a
+ * spot-check's "Checks out" names only a claim the move's own effects touch
+ * (claimsTouched()), a move that settles a question shows no officer's doubt or
+ * challenge next to it, and a bag search (Encounter.noCallIns) names no contact.
+ */
+export function afterAnswerLines(s: RunState, n: RunState, action: Action, tally?: AfterAnswerTally): string[] {
+  const bad: string[] = [];
+  const said = n.log.slice(s.log.length);
+  const where = s.screen.kind === 'encounter' || s.screen.kind === 'inspection' ? `${s.screen.id}.${'approach' in action ? action.approach : action.type}` : `${s.screen.kind} ${JSON.stringify(action)}`;
+  const touched = claimsTouched(moveEffects(s, action) ?? []);
+  for (const l of said)
+    if (l.key === 'spot.clear' && tally) tally.checksOut++;
+  for (const l of said)
+    if (l.key === 'spot.clear' && !touched.includes(String(l.vars?.claim).split('.')[0] as ClaimId))
+      bad.push(`"Checks out: ${l.vars?.claim}" under ${where}, which touches [${touched}]`);
+  const settled = settledBy(s, n);
+  if (settled.length && tally) tally.settles++;
+  const doubts = said.filter((l) => l.key.startsWith('reading.') || /^officer\.\w+\.flags$/.test(l.key));
+  if (settled.length && doubts.length) bad.push(`${where} settles [${settled}] and says ${doubts.map((l) => l.key)}`);
+  const card = s.screen.kind === 'encounter' ? ENCOUNTER_BY_ID.get(s.screen.id) : undefined;
+  if (card?.noCallIns && action.type === 'choose' && (s.calledIn ?? []).length && tally) tally.bagSearches++;
+  if (card?.noCallIns && said.some((l) => l.key === 'calledIn.reaction')) bad.push(`the bag search ${where} names a contact`);
+  return bad;
+}
+
+/** Arrival's queue lines that only fit coming home to Dad: the hospital, the spare key, a kiss for him. Departure never shows them. */
+export const COMING_HOME_LINES = ['msg.0.0', 'msg.0.personal.lena', 'msg.0.personal.mark', 'msg.2.after.smooth'];
+
+/** Log lines that say your mother picked up an officer's call: the host call, the second call, a waiting-room assist. */
+const motherAnswers = (l: LogEntry): boolean => l.key === 'check.hostCall.clear' || l.key === 'enc.f_host.again.reaction'
+  || (l.key === 'wait.assist.reaction' && l.vars?.contact === 'mother');
+
+/** The approaches that name your mother to vouch for you (not only for a lift), as their reaction keys start. */
+const MOTHER_VOUCHES = [...ENCOUNTERS, ...INSPECTIONS].flatMap((c) => c.approaches
+  .filter((a) => a.kind === 'contact' && a.contacts?.includes('mother') && !a.namesOnly)
+  .map((a) => `${'checkpoint' in c ? 'enc' : 'insp'}.${c.id}.${a.id}.`));
+
+export interface QueueTally {
+  call: number;
+  callRelative: number;
+  delay: number;
+  smooth: number;
+}
+
+/**
+ * Your mother's message in the queue after a desk holds its premise there
+ * (border_crossing_game-dap.33), read from what that desk said and did, not from
+ * queueMood(): "X called me" only after she picked up at that desk, "they asked
+ * about Ilya" only when you named him there too, "Still nothing?" only after a
+ * desk of DELAY_HOURS or more with no call, and the ordinary line only after
+ * neither. Departure shows none of COMING_HOME_LINES and Arrival none of Departure's.
+ * `s` is the last state at the desk and `n` the queue after it.
+ */
+export function queuePremises(s: RunState, n: RunState, tally?: QueueTally): string[] {
+  if (n.screen.kind !== 'between' || s.screen.kind === 'between' || !s.deskStart) return [];
+  const start = s.deskStart;
+  const said = n.log.slice(start.log);
+  const called = said.some(motherAnswers) || said.some((l) => MOTHER_VOUCHES.some((p) => l.key.startsWith(p)));
+  const relative = n.exposed.slice(start.exposed ?? n.exposed.length).some((c) => c !== 'mother');
+  const slow = start.time - n.time >= DELAY_HOURS;
+  const beats = queueBeats(n.screen.next, n);
+  const mother = beats.filter((b) => b.from === 'mother' && b.after);
+  const bad: string[] = [];
+  const where = `queue ${n.screen.next} (${n.level})`;
+  if (mother.length !== 1) return [`${where} shows ${mother.length} after-desk messages from your mother`];
+  const key = mother[0].key;
+  const kind = /\.after\.call\.(lena|mark)$/.test(key) ? 'callRelative' : /\.after\.call$/.test(key) ? 'call' : /\.after\.delay$/.test(key) ? 'delay' : 'smooth';
+  if (tally) tally[kind]++;
+  const holds = kind === 'callRelative' ? called && relative : kind === 'call' ? called && !relative : kind === 'delay' ? !called && slow : !called && !slow;
+  if (!holds) bad.push(`${where} says ${key} after a desk where she was ${called ? '' : 'not '}phoned, ${relative ? 'a relative was' : 'no relative was'} named, ${start.time - n.time}h passed`);
+  return bad;
+}
+
+/** The queue beats a level shows fit it: Departure none of COMING_HOME_LINES, the others none of Departure's own. */
+export function queueLevelLines(s: RunState): string[] {
+  if (s.screen.kind !== 'between') return [];
+  const keys = queueBeats(s.screen.next, s).map((b) => b.key);
+  const wrong = s.level === 'departure' ? keys.filter((k) => COMING_HOME_LINES.includes(k)) : keys.filter((k) => k.endsWith('.departure'));
+  return wrong.map((k) => `queue ${s.screen.kind === 'between' ? s.screen.next : ''} in ${s.level} shows ${k}`);
+}
+
 /** The rules every move must keep, comparing the state before and after. */
-export function checkMove(s: RunState, n: RunState, action: Action): string[] {
+export function checkMove(s: RunState, n: RunState, action: Action, tally?: AfterAnswerTally, queueTally?: QueueTally): string[] {
   const bad: string[] = [];
   if (!keeps(s.used, n.used)) bad.push('a spent document came back');
   if (!keeps(s.exposed, n.exposed)) bad.push('a contact exposure disappeared');
@@ -407,6 +504,9 @@ export function checkMove(s: RunState, n: RunState, action: Action): string[] {
     const lost = checkFindings(s, s.screen.check, s.screen.resolved).flatMap((e) => ('fact' in e && !knows(n, e.fact, deskOf(s)) ? [e.fact] : []));
     if (lost.length) bad.push(`${lost} found by ${s.screen.check} is not on file after a contact vouched`);
   }
+  bad.push(...afterAnswerLines(s, n, action, tally));
+  bad.push(...queuePremises(s, n, queueTally));
+  bad.push(...queueLevelLines(n));
   // A double tap, or resolving the same check twice, must be refused.
   if ((action.type === 'choose' || action.type === 'waitAction') && tryStep(n, action).ok)
     bad.push(`${JSON.stringify(action)} could be played twice in a row`);
@@ -477,6 +577,8 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     offered: new Map(),
     setups: [],
     chanceNodes: 0,
+    afterAnswer: { checksOut: 0, settles: 0, bagSearches: 0 },
+    queues: { call: 0, callRelative: 0, delay: 0, smooth: 0 },
   };
 
   // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
@@ -553,7 +655,7 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
               problem('every action moves', `${JSON.stringify(a)} changed nothing on ${JSON.stringify(s.screen)}`, move);
               continue;
             }
-            for (const d of checkMove(s, o.state, a)) problem('move rules', d, move);
+            for (const d of checkMove(s, o.state, a, report.afterAnswer, report.queues)) problem('move rules', d, move);
             path.push(move);
             const [g, b, c] = visit(o.state);
             path.pop();

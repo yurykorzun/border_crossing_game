@@ -387,26 +387,47 @@ export function decisive(s: RunState): DecisiveAnswer[] {
     .map(({ a }) => ({ desk: a.desk, key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
 }
 
-export type Axis = 'arrival' | 'medicine' | 'contacts';
-export const AXES: readonly Axis[] = ['arrival', 'medicine', 'contacts'];
+export type Axis = 'arrival' | 'flight' | 'medicine' | 'contacts';
+export const AXES: readonly Axis[] = ['arrival', 'flight', 'medicine', 'contacts'];
 
 /**
- * The ending read on its three axes, one line each (Branching Rules, 2026-11-11):
+ * Everyone on file at the end of the run: the names your carried file brought in
+ * (CarriedFile.named, what a Departure desk reads back as "Your file names...") and
+ * the ones you gave on this crossing, file first, each once.
+ */
+export const onFile = (s: RunState): ContactId[] => [...new Set([...(s.file?.named ?? []), ...s.exposed])];
+
+/**
+ * The ending read on its axes, one line each (Branching Rules, 2026-11-11). Arrival:
  * arrival (on time or late, the hours left against the trip), the medicine (kept or
- * lost) and contacts (who is on file, or no one). The label is at `ending.axis.<axis>`.
- * Ending in src/App.tsx shows them under the decisive answers.
+ * lost) and contacts. Departure (dap.32): the flight in the place of arrival and no
+ * medicine line, since you only carry his empty box out (a box taken at customs has
+ * its own consequence line). Contacts reads onFile(), so a name from the Arrival file
+ * counts. The label is at `ending.axis.<axis>`. Ending in src/App.tsx shows them under
+ * the decisive answers.
  */
 export function axisLines(s: RunState): { axis: Axis; key: string; vars?: Record<string, string> }[] {
   const ending = s.ending ?? endingFor(s);
   const hours = { left: tn('ui.hours', s.time), trip: tn('ui.hours', travelOf(s)) };
-  const arrival = ending === 'turnedBack' ? 'ending.axis.arrival.none' : s.time >= travelOf(s) ? 'ending.axis.arrival.onTime' : 'ending.axis.arrival.late';
+  const leg: Axis = s.level === 'departure' ? 'flight' : 'arrival';
+  const when = ending === 'turnedBack' ? 'none' : s.time >= travelOf(s) ? 'onTime' : 'late';
+  const names = onFile(s);
   return [
-    { axis: 'arrival', key: arrival, ...(ending === 'turnedBack' ? {} : { vars: hours }) },
-    { axis: 'medicine', key: s.medicine ? 'ending.axis.medicine.kept' : 'ending.axis.medicine.lost' },
-    s.exposed.length
-      ? { axis: 'contacts', key: 'ending.axis.contacts.named', vars: { names: andList(s.exposed.map((c) => t(`contact.${c}`))) } }
+    { axis: leg, key: `ending.axis.${leg}.${when}`, ...(ending === 'turnedBack' ? {} : { vars: hours }) },
+    ...(leg === 'flight' ? [] : [{ axis: 'medicine' as const, key: s.medicine ? 'ending.axis.medicine.kept' : 'ending.axis.medicine.lost' }]),
+    names.length
+      ? { axis: 'contacts', key: 'ending.axis.contacts.named', vars: { names: andList(names.map((c) => t(`contact.${c}`))) } }
       : { axis: 'contacts', key: 'ending.axis.contacts.none' },
   ];
+}
+
+/**
+ * The ending's body text: `ending.<endingText>.body`, except Home at a cost with the
+ * medicine kept, where the cost was a name and not something you carried (dap.32), so
+ * it reads `ending.homeAtCost.kept.body`.
+ */
+export function endingBody(s: RunState, text: string): string {
+  return text === 'homeAtCost' && s.medicine ? 'ending.homeAtCost.kept.body' : `ending.${text}.body`;
 }
 
 /**
@@ -441,12 +462,16 @@ export function laterBeat(s: RunState): LaterBeat | undefined {
  * The protected contact's row on the ending card: "Not named", or the exact result of
  * naming them, read from the consequence consequences() lists for them
  * (exposure.brother.protected gives exposure.brother.protected.row, "Added to watch
- * list"). One source, so the row and the line cannot disagree.
+ * list"). One source, so the row and the line cannot disagree. Named only on the
+ * carried file (a Departure desk read it back), the row says which crossing put them
+ * there (dap.32).
  */
-export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red' } {
+export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red'; vars?: Record<string, string> } {
   const c = CHARACTERS[s.character].protectedContact;
   const line = consequences(s).find((l) => l.kind === 'contact' && l.vars?.contact === c);
-  return line ? { key: `${line.key}.row`, tone: 'red' } : { key: 'ui.notNamed', tone: 'plain' };
+  if (line) return { key: `${line.key}.row`, tone: 'red' };
+  if (s.file?.named.includes(c)) return { key: 'ui.namedOnFile', tone: 'plain', vars: { crossing: t(`level.${s.file.level}.title`) } };
+  return { key: 'ui.notNamed', tone: 'plain' };
 }
 
 /**
