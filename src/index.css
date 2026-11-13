@@ -512,6 +512,7 @@ p { margin: 0 0 var(--gap); }
 /* What this officer already knows, from the file: one small line above every desk question. */
 .known { margin: 0 0 6px; font-size: var(--text-small); line-height: 1.35; color: #c5cec9; }
 .ask-card .known { color: var(--muted); }
+.afford { margin: 0; font-size: var(--text-small); line-height: 1.35; color: var(--muted); }
 .ask-short.inspection { padding-inline-start: 10px; }
 /* A caught claim: your own words and the fact that catches them, under the question. */
 .caught { margin: 8px 0 0; font-size: 1rem; line-height: 1.35; }

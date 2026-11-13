@@ -26,7 +26,15 @@ export const en: Record<string, string> = {
   'ui.scrutinyCount': 'Scrutiny {n}/{max}',
   'ui.scrutinyHelp.what': 'Scrutiny is how closely the officers are watching you.',
   'ui.scrutinyHelp.rise': 'Some answers add scrutiny. Their cards show it, for example "+1 scrutiny".',
-  'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, a supervisor takes you to secondary inspection before you can go on, even at the last desk. Before admission she reads your file once more: if your scrutiny rose on the way, or an officer caught you out, she can still send you there. A paper on what the bulletin warned about can settle her. After an inspection, scrutiny drops back to {after}.',
+  'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, a supervisor takes you to secondary inspection before you can go on, even at the last desk. Below that, she inspects only for the one open point she names on your way to the last desk, and only if it is still open when that desk is done and your scrutiny is above 0. A point settled on the way stays settled unless a new flag reopens it. After an inspection, scrutiny drops back to {after}.',
+  // On the way to the last desk (announce() in src/game/engine.ts): the one point the supervisor checks, and what follows.
+  'supervisor.announce.medicine': 'A supervisor will check the prescription. Still open after the last desk, with any scrutiny, means secondary inspection.',
+  'supervisor.announce.accommodation': 'A supervisor will check your address here. Still open after the last desk, with any scrutiny, means secondary inspection.',
+  'supervisor.announce.purpose': 'A supervisor will check why you came back. Still open after the last desk, with any scrutiny, means secondary inspection.',
+  // On a last-desk card once that point is settled (supervisorLine()): she has nothing left to check.
+  'supervisor.settled.medicine': 'Supervisor: the prescription is verified now.',
+  'supervisor.settled.accommodation': 'Supervisor: your address here is verified now.',
+  'supervisor.settled.purpose': 'Supervisor: why you came back is verified now.',
   'ui.progressCount': '{n} / {total}',
   'ui.progress': '{count} · {name}',
   'ui.settings': 'Settings',
@@ -201,6 +209,10 @@ export const en: Record<string, string> = {
   'ui.proceed.ending': 'See how it ends',
   // Once the bus is out of reach (doomed() in src/game/engine.ts), the card offers to finish quickly.
   'ui.doomed': 'You will not make the bus now.',
+  // Next to the answers (afford() in src/game/engine.ts): hours left minus the trip after the border.
+  'ui.afford.one': 'You can afford {n} more hour.',
+  'ui.afford.other': 'You can afford {n} more hours.',
+  'ui.afford.none': 'You cannot afford another hour.',
   // First-run explanations (src/game/explain.ts): shown once, the first time each matters.
   'explain.time': 'Lost hours come off your time to the bus.',
   'explain.scrutiny': 'At Scrutiny 3/3, a supervisor takes you to inspection.',

@@ -35,8 +35,11 @@ export const SEPARATOR = ' · ';
 
 /** Most serious first. Picks the icon and decides what goes when there are more than 3 parts. */
 const SEVERITY: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'vouch', 'withdraw', 'scrutiny', 'check', 'time', 'card', 'fact', 'claim', 'perk', 'free', 'blocked'];
-/** Never dropped from the line. */
-const KEEP: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'scrutiny', 'time'];
+/**
+ * The guaranteed costs, never dropped from the line: hours, the bus, the medicine,
+ * scrutiny, a person named and a document spent, even when no time is spent (dap.13).
+ */
+const KEEP: PartKind[] = ['medicine', 'miss', 'travel', 'contact', 'scrutiny', 'time', 'card'];
 /**
  * Reading order on the line: the cost most likely to change the decision first (the
  * bus, time, the medicine, scrutiny, a check), then what goes on file and what it may
@@ -73,8 +76,12 @@ export function eventKey(o: Option, cardKey: string): string {
   return has(own) && o.approach.effects.some((e) => 'time' in e) ? own : 'ui.event.calledIn';
 }
 
-/** The run's clock as consequence() needs it: hours left and the trip they must cover. */
-export type Clock = Pick<RunState, 'time' | 'travel'>;
+/**
+ * The run's clock as consequence() needs it: hours left and the trip they must cover.
+ * With the file (`facts`), a fact this desk already has is not named again, because
+ * the line names only what this answer adds.
+ */
+export type Clock = Pick<RunState, 'time' | 'travel'> & Partial<Pick<RunState, 'facts'>>;
 
 /**
  * The parts for one answer. `cardKey` is the answer's key without `.label`
@@ -113,11 +120,15 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
     else if ('scrutiny' in e) scrutiny += e.scrutiny;
     else if ('travel' in e) travel += Math.max(0, e.travel);
     else if ('loseMedicine' in e) all.push({ kind: 'medicine', key: 'ui.line.medicine', tone: 'red' });
-    else if ('fact' in e) all.push({ kind: 'fact', key: `fact.${e.fact}.reveal`, tone: 'plain' });
+    else if ('fact' in e) {
+      // A fact this desk already has adds nothing, so "Reveals her address" goes once it is on file here.
+      if (!(desk && clock?.facts?.[e.fact]?.includes(desk))) all.push({ kind: 'fact', key: `fact.${e.fact}.reveal`, tone: 'plain' });
+    }
     else if ('claim' in e) claims.push(e.claim);
   }
   const checkKey = `${cardKey}.check`;
-  if (a.check || has(checkKey)) all.push({ kind: 'check', key: has(checkKey) ? checkKey : 'ui.line.check', tone: 'amber' });
+  // An answer that uses a point verified earlier opens no check (usesVerified()), so it does not say it starts one.
+  if (!o.usesVerified && (a.check || has(checkKey))) all.push({ kind: 'check', key: has(checkKey) ? checkKey : 'ui.line.check', tone: 'amber' });
   // Against the last bus, the way the engine applies it (apply() and doomed() in
   // src/game/engine.ts): time floors at 0 and the trip only grows. Only an answer that
   // costs time or adds travel says it misses the bus, so on a run already short of the
@@ -142,7 +153,10 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
   if (!all.length) all.push({ kind: 'free', key: 'ui.line.free', tone: 'plain' });
 
   const rank = (p: Part) => (KEEP.includes(p.kind) ? -1 : 0) * 100 + SEVERITY.indexOf(p.kind);
-  const kept = [...all].sort((x, y) => rank(x) - rank(y)).slice(0, MAX_PARTS);
+  // Every guaranteed cost stays, and the rest fill the line up to MAX_PARTS.
+  const sorted = [...all].sort((x, y) => rank(x) - rank(y));
+  const guaranteed = sorted.filter((p) => KEEP.includes(p.kind));
+  const kept = [...guaranteed, ...sorted.filter((p) => !KEEP.includes(p.kind)).slice(0, Math.max(0, MAX_PARTS - guaranteed.length))];
   const icon = ICON[[...kept].sort((x, y) => SEVERITY.indexOf(x.kind) - SEVERITY.indexOf(y.kind))[0].kind];
   return { icon, parts: kept.sort((x, y) => ORDER.indexOf(x.kind) - ORDER.indexOf(y.kind)) };
 }

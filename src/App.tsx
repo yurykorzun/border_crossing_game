@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, setStory, t, tn } from './i18n';
-import { answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, waitActions, waitKey } from './game/engine';
+import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { explanationsDue, markShown } from './game/explain';
 import type { Explanation } from './game/explain';
@@ -878,7 +878,7 @@ function Explain({ ids }: { ids: readonly Explanation[] }) {
   return <div className="explain" data-explain>{ids.map((e) => <p key={e} data-explain-id={e}>{t(`explain.${e}`)}</p>)}</div>;
 }
 
-function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean; explain: readonly Explanation[] }) {
+export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispatch: (a: Action) => void; reduceWait: boolean; explain: readonly Explanation[] }) {
   if (s.reaction) return <Reaction s={s} dispatch={dispatch} explain={explain} />;
   const sc = s.screen;
 
@@ -904,17 +904,23 @@ function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispatch: (a
   // The list behind "Show a document" keeps only the question over the documents,
   // and a way back to the other answers under them.
   const list = !!s.documentList;
+  const budget = afford(s);
+  // At the last desk, the point the supervisor announced she checks before admission.
+  const supervisor = supervisorLine(s);
   return (
     <>
       <section className={`panel ask ${short ? 'ask-short' : 'paper ask-card'} ${sc.kind === 'inspection' ? 'inspection' : ''}`} aria-live="polite">
         {finishing && !list && <p className="priority doomed">{t('ui.doomed')}</p>}
         {desk && !list && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
+        {supervisor && !list && <p className="known supervisor" data-supervisor>{t(supervisor)}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
         <Explain ids={explain} />
       </section>
       <div className="controls stack">
+        {/* The time budget, next to the answers: hours left minus the trip after the border. */}
+        {budget && !finishing && <p className="afford" data-afford>{budget.n ? tn(budget.key, budget.n) : t(budget.key)}</p>}
         {options(s).map((o) => (
           <button
             key={o.card ? `${o.approach.id}.${o.card}` : o.approach.id}
