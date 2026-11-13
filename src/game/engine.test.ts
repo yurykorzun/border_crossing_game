@@ -320,7 +320,8 @@ describe('contact results', () => {
   });
 
   it('a vouch in the waiting room clears the check and reports the same rows', () => {
-    let s = playStep(at(newRun(lena), 'c_host', { checkpoint: 1 }), { type: 'choose', approach: 'call' });
+    // The entry form says you stay with her, so customs has a number to call (HOST_NUMBER).
+    let s = playStep(at(newRun(lena), 'c_host', { checkpoint: 1, claims: ['stayingWithFamily'] }), { type: 'choose', approach: 'call' });
     s = playStep(s, { type: 'ack' });
     while (s.screen.kind === 'wait' && s.screen.shown < s.screen.beats.length) s = playStep(s, { type: 'beat' });
     const n = playStep(s, { type: 'waitAction', action: 'assist' });

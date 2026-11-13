@@ -201,7 +201,10 @@ function exposedEvent(s: RunState, n: RunState, action: Action, id: ContactId): 
   const o = action.type === 'choose' ? optionFor(s, action) : undefined;
   const shares = o?.approach.namesOnly ? 'name' : 'number';
   if (!o?.vouches) return { type: 'contactExposed', id, desk, shares };
-  const passed = n.screen.kind !== 'wait' || n.screen.resolved.result === 'clear';
+  // On the day the bulletin orders that point checked, the name settles nothing yet (choose()
+  // in src/game/engine.ts), so it did not pass: "Address verified." would be untrue, and an
+  // inspection after it still says "Not verified yet: your address here." (dap.43).
+  const passed = (n.screen.kind !== 'wait' || n.screen.resolved.result === 'clear') && pointVerified(n, o.vouches);
   return { type: 'contactExposed', id, desk, shares, vouch: { topic: o.vouches, passed } };
 }
 

@@ -57,6 +57,8 @@ export type ReactionKind = 'suspicion' | 'testimony' | 'disproof';
 /** What the player has said. Can be contradicted by facts. */
 export type ClaimId =
   | 'familyVisit' | 'shortTrip' | 'hotelStay' | 'noOtherFamily' | 'neverDonated' | 'stayingWithFamily' | 'cashUnderLimit'
+  /** Mark's denial (i_family, d_named): no family across the border, which only his brother abroad on file disproves. */
+  | 'noFamilyAbroad'
   /** How long you stay (p_days, The funeral). */
   | 'stayDays' | 'stayWeeks'
   /** No date out yet (p_stay): said aloud, kept on the file you carry, written down nowhere. */
@@ -160,6 +162,12 @@ export interface Approach {
    * file instead of asking again. The answer reads `<key>.verified.label`/`.reaction`.
    */
   ifVerified?: Effect[];
+  /**
+   * With every one of these facts already known at the desk, the officer reads them off
+   * the file instead of checking (the answer's hours say so with their own `when`): the
+   * answer reads `<key>.onFile.label`/`.reaction` where that text exists.
+   */
+  onFile?: FactId[];
   /**
    * A record check that confirms the card's point at the desk (the employer register):
    * like a document shown, it verifies the point for the later desks (RunState.verified).

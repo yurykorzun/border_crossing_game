@@ -111,7 +111,7 @@ describe('autoplay bots', () => {
   });
 
   it('counts each lie once: a deny that adds a claim is one lie, the photo deny is one', () => {
-    const lieClaims = ['shortTrip', 'hotelStay', 'noOtherFamily', 'neverDonated', 'cashUnderLimit'];
+    const lieClaims = ['shortTrip', 'hotelStay', 'noOtherFamily', 'noFamilyAbroad', 'neverDonated', 'cashUnderLimit'];
     let denies = 0;
     for (let i = 0; i < SETUP_COUNT; i++) {
       const r = playRun('liar', setupFor(i));

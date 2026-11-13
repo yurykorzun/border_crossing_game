@@ -766,10 +766,14 @@ function eligible(s: RunState, e: Encounter): boolean {
 /** Whether the open issue a follow-up or related card is about is still on the file (Encounter.issue). */
 export const issueOpen = (s: RunState, id: string): boolean => check(ENCOUNTER_BY_ID.get(id)?.issue, s);
 
-/** This desk's two core cards in this level: its own (Level.core), else CORE_CARDS. */
+/**
+ * This desk's core cards in this level: its own (Level.core), else CORE_CARDS,
+ * without one whose condition does not hold for this traveler (Encounter.when):
+ * the employer abroad is asked only of a traveler who has one.
+ */
 export const coreCards = (s: RunState): readonly string[] => {
   const desk = deskOf(s) as keyof typeof CORE_CARDS;
-  return levelOf(s).core?.[desk] ?? CORE_CARDS[desk];
+  return (levelOf(s).core?.[desk] ?? CORE_CARDS[desk]).filter((id) => check(ENCOUNTER_BY_ID.get(id)?.when, s));
 };
 
 /** The next of this desk's two core cards still to be asked, in coreCards() order. */
@@ -1031,7 +1035,10 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   const a = currentCard(s)?.approaches.find((x) => x.id === approach);
   const verified = `${prefix}.${id}.${approach}.verified.${part}`;
   if (a && usesVerified(s, a, topicOf(currentCard(s))) && has(verified)) return verified;
-  const daily = `${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`;
+  // An answer whose point is already on file here reads it off the file (Approach.onFile).
+  const onFile = `${prefix}.${id}.${approach}.onFile.${part}`;
+  if (a?.onFile && a.onFile.every((f) => knows(s, f)) && has(onFile)) return onFile;
+  const daily = own(`${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`, s.character);
   if (has(daily)) return daily;
   // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count compared with it.
   const filed = s.file?.declared && `${prefix}.${id}.${approach}.file.${s.file.declared}.${part}`;
