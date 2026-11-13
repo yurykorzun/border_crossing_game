@@ -87,32 +87,41 @@ describe('turning back is offered only at the early point', () => {
     expect(r.ok && r.state.medicine).toBe(true);
   });
 
-  it('holds in every bot run over every setup: the queue first, then only the allowed inspections', () => {
-    const bad: string[] = [];
+  // One test per level and bot style, so each stays well inside vitest's time limit (dap.38).
+  // As one test it took about 5.5s in a full run. The counts add up across every level and
+  // style and are checked once at the end, as they were when this was one test.
+  describe('holds in every bot run over every setup: the queue first, then only the allowed inspections', () => {
     let queues = 0;
     let returns = 0;
-    for (const level of LEVEL_IDS)
-      for (const setup of allSetups(level))
-        for (const style of BOT_STYLES) {
-          const run = playRun(style, setup);
-          for (const s of statesOf(setup, run.actions)) {
-            const sc = s.screen;
-            const where = `${level} ${style} ${setup.character} ${setup.loadout} ${setup.bulletin} ${sc.kind}`;
-            if (offersTurnBack(s)) {
-              queues++;
-              if (!(sc.kind === 'between' && sc.next === TURN_BACK_QUEUE && s.decisions === 0)) bad.push(`turn back offered at ${where}`);
-            }
-            if (s.reaction) continue;
-            if (sc.kind === 'encounter' && offersWithdraw(s) && !HELD.includes(sc.id)) bad.push(`withdraw on desk card ${sc.id} (${where})`);
-            if (sc.kind === 'inspection') {
-              if (offersWithdraw(s)) returns++;
-              if (offersWithdraw(s) !== RETURN_ALLOWED.includes(sc.id)) bad.push(`inspection ${sc.id} withdraw ${offersWithdraw(s)} (${where})`);
-            }
+    const cases = LEVEL_IDS.flatMap((level) => BOT_STYLES.map((style) => [level, style] as const));
+
+    it.each(cases)('%s %s', (level, style) => {
+      const bad: string[] = [];
+      for (const setup of allSetups(level)) {
+        const run = playRun(style, setup);
+        for (const s of statesOf(setup, run.actions)) {
+          const sc = s.screen;
+          const where = `${level} ${style} ${setup.character} ${setup.loadout} ${setup.bulletin} ${sc.kind}`;
+          if (offersTurnBack(s)) {
+            queues++;
+            if (!(sc.kind === 'between' && sc.next === TURN_BACK_QUEUE && s.decisions === 0)) bad.push(`turn back offered at ${where}`);
+          }
+          if (s.reaction) continue;
+          if (sc.kind === 'encounter' && offersWithdraw(s) && !HELD.includes(sc.id)) bad.push(`withdraw on desk card ${sc.id} (${where})`);
+          if (sc.kind === 'inspection') {
+            if (offersWithdraw(s)) returns++;
+            if (offersWithdraw(s) !== RETURN_ALLOWED.includes(sc.id)) bad.push(`inspection ${sc.id} withdraw ${offersWithdraw(s)} (${where})`);
           }
         }
-    expect(bad).toEqual([]);
+      }
+      expect(bad).toEqual([]);
+    });
+
     // Every run starts in the passport queue, and some reach an inspection that allows a return.
-    expect(queues).toBeGreaterThan(0);
-    expect(returns).toBeGreaterThan(0);
+    // It reads the counts the tests above left, so it comes after them: vitest runs a file's tests in order.
+    it('counted the passport queue and at least one allowed return', () => {
+      expect(queues).toBeGreaterThan(0);
+      expect(returns).toBeGreaterThan(0);
+    });
   });
 });
