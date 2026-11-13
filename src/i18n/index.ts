@@ -8,7 +8,7 @@ export type Locale = 'en';
 const LOCALES: Record<Locale, Record<string, string>> = { en };
 let locale: Locale = 'en';
 
-export const setLocale = (l: Locale) => { locale = l; };
+export const setLocale = (l: Locale) => { locale = l; scope = undefined; };
 export const getLocale = () => locale;
 
 /**
@@ -18,7 +18,7 @@ export const getLocale = () => locale;
  * unset shows Arrival's.
  */
 let story: string | undefined;
-export const setStory = (level: string | undefined) => { story = level; };
+export const setStory = (level: string | undefined) => { story = level; scope = undefined; };
 export const getStory = () => story;
 
 const ID_VARS: Record<string, (id: string) => string> = {
@@ -68,11 +68,39 @@ export function andList(items: readonly string[]): string {
   return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ${t('ui.and')} ${items[items.length - 1]}`;
 }
 
-export function t(key: string, vars: Record<string, string | number> = {}): string {
+/**
+ * The text a key resolves to, per locale and story, because the bots' sweep calls
+ * t() millions of times and two lookups per call were most of its time. `filled`
+ * says whether the text has a {var} to fill, so plain text skips the regex.
+ * The tables are constants, so a found text never goes stale.
+ */
+type Found = { text: string; filled: boolean };
+const found = new Map<string, Map<string, Found>>();
+/** found's table for the current locale and story, dropped by setLocale() and setStory(). */
+let scope: Map<string, Found> | undefined;
+
+function lookup(key: string): Found | undefined {
+  if (!scope) {
+    const name = `${locale}|${story ?? ''}`;
+    scope = found.get(name);
+    if (!scope) found.set(name, (scope = new Map()));
+  }
+  const byKey = scope;
+  const hit = byKey.get(key);
+  if (hit) return hit;
   const told = story ? `${story}:${key}` : undefined;
   const s = (told && (LOCALES[locale][told] ?? en[told])) || (LOCALES[locale][key] ?? en[key]);
-  if (s === undefined) throw new Error(`missing text: ${key}`);
-  return s.replace(/\{(\w+)\}/g, (_, name: string) => {
+  if (s === undefined) return undefined;
+  const f = { text: s, filled: /\{\w+\}/.test(s) };
+  byKey.set(key, f);
+  return f;
+}
+
+export function t(key: string, vars: Record<string, string | number> = {}): string {
+  const f = lookup(key);
+  if (f === undefined) throw new Error(`missing text: ${key}`);
+  if (!f.filled) return f.text;
+  return f.text.replace(/\{(\w+)\}/g, (_, name: string) => {
     const v = vars[name];
     if (v === undefined) return `{${name}}`;
     const idKey = ID_VARS[name];

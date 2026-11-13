@@ -130,7 +130,8 @@ function chromeLines(s: RunState, p: Page): void {
 function render(fn: () => string, key: string): { key: string; text: string; problem?: string } {
   try {
     const text = fn();
-    const hole = text.match(/\{\w+\}/);
+    // includes() first, because most lines have no brace and the regex is slower.
+    const hole = text.includes('{') ? text.match(/\{\w+\}/) : null;
     return hole ? { key, text, problem: `unfilled ${hole[0]}` } : { key, text };
   } catch (e) {
     return { key, text: `[${key}]`, problem: (e as Error).message };
