@@ -2,7 +2,7 @@
 // and returns the next state. The UI only renders state and sends actions.
 
 import type {
-  Action, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
+  Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
   CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
@@ -514,16 +514,27 @@ export interface KnownPart {
  * What the officer at this desk already knows, as one line on every desk card,
  * built from the file: the newest fact this desk knows, named by how it sits on
  * file (factTier()), and the newest claim any desk wrote down. With neither,
- * the line says the file is empty so far. On an inspection the line names the
- * open issue it is about instead (Inspection.issue): the supervisor has read
- * the whole file, and this is the point on it still open.
+ * the line says the file is empty so far. A card that asks about some facts
+ * (Encounter.asks, or the pair a challenge card caught) names only one of those,
+ * or says nothing on file is about it. On an inspection the line names the
+ * issue it is about instead (Inspection.issue): the supervisor has read the
+ * whole file, and the line says whether that point is still open, already checked, or
+ * checked at a desk and open again because a flag came after (pointVerified()).
  */
 export function knownLine(s: RunState): KnownPart[] {
   if (s.screen.kind === 'inspection') {
     const issue = inspectionIssue(s);
-    return issue ? [{ key: `insp.issue.${issue}` }] : [];
+    if (!issue) return [];
+    if (!s.verified?.[issue]) return [{ key: `insp.issue.${issue}` }];
+    if (pointVerified(s, issue)) return [{ key: `insp.issue.${issue}.verified` }];
+    return [{ key: `insp.issue.${issue}.reopened` }];
   }
   if (s.screen.kind !== 'encounter') return [];
+  const asks = asksAbout(s, s.screen.id);
+  if (asks) {
+    const fact = knownAt(s).filter((f) => asks.includes(f)).at(-1);
+    return [fact ? { key: `known.fact.${factTier(s, fact)}`, vars: { fact } } : { key: 'known.asked.none' }];
+  }
   // A fact on file outranks a claim, because its tier is what the officer acts on.
   const fact = knownAt(s).at(-1);
   if (fact) return [{ key: `known.fact.${factTier(s, fact)}`, vars: { fact } }];
@@ -534,6 +545,15 @@ export function knownLine(s: RunState): KnownPart[] {
 }
 
 /** The open issue the inspection on screen is about (Inspection.issue), or undefined off one. */
+/** The facts card `id` asks about: its own list (Encounter.asks), or on a challenge card the fact it caught. */
+function asksAbout(s: RunState, id: string): FactId[] | undefined {
+  if ((CHALLENGES as readonly string[]).includes(id)) {
+    const c = caught(s, id);
+    return c ? [c.fact] : undefined;
+  }
+  return ENCOUNTER_BY_ID.get(id)?.asks;
+}
+
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
 }
@@ -1033,6 +1053,9 @@ export function spotLine(s: RunState, claimed: ClaimId, found: SpotResult): LogE
     // so `said` is the claim id (spotcheck.test.ts checks that).
     const [, fact] = CHALLENGE_PAIRS.i_clarify.find(([c, f]) => c === claimed && knows(s, f))!;
     Object.assign(vars, { said: claimed, desk: saidDesk(s, claimed), fact });
+    // A claim only a document made (the hotel booking) is that document, not words you said.
+    const doc = s.shownBy?.[claimed];
+    if (doc) return { key: 'spot.explained.shown', vars: { ...vars, cardThe: doc } };
   }
   return { key: `spot.${found.result}`, vars };
 }
@@ -1217,15 +1240,23 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
 /**
  * `n` after answer `opt`, with each claim it made marked by where it came from: a claim
  * a shown document made for the first time is on file as that document (RunState.shownBy),
- * and one you then say aloud is yours, from the card and desk you said it at. So the
- * carried file never quotes a document's claim as your words.
+ * and one you then say aloud is yours, from the card and desk you said it at, with the
+ * answer you said it with (RunState.saidAs). So the carried file never quotes a document's
+ * claim as your words, and quotes your words as the answer you chose.
  */
 function shownOrSpoken(s: RunState, n: RunState, opt: Option, topic: Topic | undefined): RunState {
   const claimsIn = (effects: Effect[]) => effects.flatMap((e) => ('claim' in e ? [e.claim] : []));
   const fromDoc = opt.card ? claimsIn(documentEffects(opt.card, topic)) : [];
   const card = s.screen.kind === 'encounter' || s.screen.kind === 'inspection' ? s.screen.id : undefined;
   let out = n;
+  const vars: Record<string, string> = {};
+  if (opt.card) vars.card = vars.cardThe = opt.card;
+  if (opt.contact) vars.contact = vars.contactMine = opt.contact;
+  const answer: AnswerLabel = { id: opt.approach.id, key: answerKey(s, opt.approach.id, 'label'), ...(opt.card || opt.contact ? { vars } : {}) };
   for (const c of claimsIn(opt.effects)) {
+    // Said here for the first time, or said aloud after only a document had made it.
+    if (!fromDoc.includes(c) && out.claims.includes(c) && (!s.claims.includes(c) || s.shownBy?.[c]))
+      out = { ...out, saidAs: { ...out.saidAs, [c]: answer } };
     if (fromDoc.includes(c)) {
       if (!s.claims.includes(c) && opt.card) out = { ...out, shownBy: { ...out.shownBy, [c]: opt.card } };
     } else if (out.shownBy?.[c]) {

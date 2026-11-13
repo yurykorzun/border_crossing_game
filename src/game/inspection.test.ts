@@ -46,8 +46,13 @@ describe('an inspection names the open issue it is about', () => {
           screens++;
           const issue = inspectionIssue(next);
           expect(issue, where).toBeDefined();
-          // The line on screen names that issue.
-          expect(knownLine(next), where).toEqual([{ key: `insp.issue.${issue}` }]);
+          // The line on screen names that issue: open, already checked, or checked at a desk and
+          // open again after a later flag (dap.42), never "Not verified yet" for a point that was checked.
+          const checked = next.verified?.[issue!];
+          const want = !checked ? { key: `insp.issue.${issue}` }
+            : pointVerified(next, issue!) ? { key: `insp.issue.${issue}.verified` }
+            : { key: `insp.issue.${issue}.reopened` };
+          expect(knownLine(next), where).toEqual([want]);
           // Dealt just now: the issue was open on the file the moment it started.
           if (s.screen.kind !== 'inspection' || s.screen.id !== next.screen.id || s.reaction) {
             started++;

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { own, setStory, t } from '../i18n';
 import { BOT_STYLES, playRun } from './bots';
 import { fileOf } from './carry';
-import { caughtLine, fileLine, questionKey, questionVars, recordLines } from './consequence';
+import { caughtLine, fileLine, questionKey, questionVars, recordLines, saidPart } from './consequence';
 import { EVIDENCE } from './content/world';
 import { chooseAction, currentCard, legalActions, newRun, optionFor, options, step } from './engine';
 import type { RunSetup } from './engine';
@@ -108,7 +108,11 @@ describe('Departure quotes only what you said at Arrival', () => {
         // "Your file": your words for what you said, the document for what you showed.
         const record = render(recordLines(file));
         for (const c of CLAIMS) {
-          if (spoken.has(c)) expect(record, `${where}: Your file`).toContain(quoted(c, who));
+          if (spoken.has(c)) {
+            // In the words of the answer that said it, or what you did (dap.42).
+            const part = saidPart(file.said!.find((x) => x.claim === c)!, who);
+            expect(record, `${where}: Your file`).toContain('words' in part ? `"${part.words}"` : part.did);
+          }
           else expect(record, `${where}: Your file quotes ${c}, never said`).not.toContain(quoted(c, who));
         }
         for (const [, doc] of shown) expect(record, `${where}: Your file`).toContain(t(`ev.${doc}.the`));

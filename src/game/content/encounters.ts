@@ -84,6 +84,9 @@ export const TRAVEL_HISTORY_CARDS: readonly string[] = ['p_secondPassport'];
  * always dealt before its checkpoint ends, so a lie disproved by the last
  * answer still has to be answered.
  */
+/** What "any other relatives?" asks about: a relative on file, by any route (Encounter.asks). */
+const RELATIVE_FACTS: FactId[] = ['brotherAbroad', 'relativeContact', 'relativeNamed'];
+
 export const CHALLENGES = ['i_contradiction', 'i_clarify'] as const;
 
 /** The claim and fact pairs each challenge card puts to you. */
@@ -366,6 +369,7 @@ export const ENCOUNTERS: Encounter[] = [
   // ── Security interview: history and relationships (the officer asks about people)
   {
     id: 'i_family', checkpoint: 'interview', kind: 'routine', topic: 'history',
+    asks: RELATIVE_FACTS,
     approaches: [
       // Each answer says what it is: name the relative, deny them, or ask why.
       // Only the denial records noOtherFamily, because leaving someone out is not a lie.
@@ -425,6 +429,7 @@ export const ENCOUNTERS: Encounter[] = [
     // so both travelers are asked. Lena's plain answer settles it for free; the
     // employer letter answers it too, and puts the employer on file.
     id: 'i_employer', checkpoint: 'interview', kind: 'routine', topic: 'work',
+    asks: ['employer'],
     approaches: [
       { id: 'perk', kind: 'perk', effects: [] },
       { id: 'evidence', kind: 'evidence', topic: 'work', effects: [] },
@@ -438,6 +443,7 @@ export const ENCOUNTERS: Encounter[] = [
     id: 'i_brother', checkpoint: 'interview', kind: 'related', priority: 2, topic: 'history',
     when: { facts: ['brotherAbroad'] },
     issue: { facts: ['brotherAbroad'] },
+    asks: ['brotherAbroad'],
     approaches: [
       { id: 'honest', kind: 'say', reacts: 'suspicion', effects: [{ fact: 'brotherAbroad' }, { scrutiny: 1, reason: 'brotherAbroad' }] },
       { id: 'calls', kind: 'verify', effects: [{ time: -2 }, { fact: 'brotherAbroad' }] },
@@ -610,6 +616,7 @@ export const ENCOUNTERS: Encounter[] = [
   {
     // Who you know: with a contact named on your file, the officer asks about them first.
     id: 'd_named', checkpoint: 'interview', kind: 'routine', topic: 'history',
+    asks: RELATIVE_FACTS,
     approaches: [
       {
         id: 'name', kind: 'contact', contacts: ['cousin', 'brother'], namesOnly: true,

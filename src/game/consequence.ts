@@ -7,7 +7,7 @@ import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
 import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
-import type { Answered, CarriedFile, ChangeLine, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import type { Answered, CarriedFile, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 
@@ -503,8 +503,12 @@ export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red';
 export function caughtLine(s: RunState, card: string): { key: string; vars: Record<string, string> } | undefined {
   const c = caught(s, card);
   if (!c) return fileLine(s, card);
+  const key = `caught.line.${factTier(s, c.fact)}`;
+  // A claim only a document made (the hotel booking for where you stay) is the document, not your words.
+  const doc = s.shownBy?.[c.claim];
+  if (doc) return { key: `${key}.shown`, vars: { cardThe: doc, desk: c.desk, fact: c.fact } };
   const said = own(`said.${c.claim}`, s.character).slice('said.'.length);
-  return { key: `caught.line.${factTier(s, c.fact)}`, vars: { said, desk: c.desk, fact: c.fact } };
+  return { key, vars: { said, desk: c.desk, fact: c.fact } };
 }
 
 /** A date on a carried file, as the line reads it: "9 March". */
@@ -512,17 +516,44 @@ export const fileDate = (date: string): string =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 
 /**
+ * How a file line gives a claim: in the words of the answer that made it (CarriedClaim.answer,
+ * its quotes and closing stop taken off), or, for an answer that was an act and not words
+ * (giving your mother's address), what you did (`did.<card>.<answer>`). A file saved before
+ * it kept the answer falls back to the claim's stock wording (`said.<claim>`).
+ */
+export function saidPart(c: FileQuote, character: CharacterId): { words: string } | { did: string } {
+  const a = 'answer' in c ? c.answer : undefined;
+  if (a && has(a.key)) {
+    const text = t(a.key, a.vars ?? {});
+    const spoken = /^"(.*?)[.?!]?"$/s.exec(text);
+    if (spoken) return { words: spoken[1] };
+    const did = `did.${'context' in c ? c.context : ''}.${a.id}`;
+    if (has(did)) return { did: t(did, a.vars ?? {}) };
+  }
+  return { words: t(own(`said.${c.claim}`, character)) };
+}
+
+/** The claim's words alone, for a line that has no room for an act: a record that did not match. */
+const wordsOf = (c: FileQuote, character: CharacterId): string => {
+  const part = saidPart(c, character);
+  return 'words' in part ? part.words : t(own(`said.${c.claim}`, character));
+};
+
+/**
  * A file line quoting a claim: `key` with the crossing, the date, the desk, the question
- * it answered and your words, or `key`.undated with the crossing and your words when the
- * file was saved before it kept the rest (fileSaid() in src/game/engine.ts).
+ * it answered and your words, `key`.did with what you did, or `key`.undated with the
+ * crossing and your words when the file was saved before it kept the rest (fileSaid() in
+ * src/game/engine.ts).
  */
 function quoteLine(s: RunState, key: string, c: FileQuote): { key: string; vars: Record<string, string> } {
-  const vars = { crossing: t(`level.${c.crossing}.title`), said: own(`said.${c.claim}`, s.character).slice('said.'.length) };
-  if (!('date' in c)) return { key: `${key}.undated`, vars };
+  const crossing = t(`level.${c.crossing}.title`);
+  if (!('date' in c)) return { key: `${key}.undated`, vars: { crossing, words: wordsOf(c, s.character) } };
   const context = has(`file.context.${c.context}`) ? `file.context.${c.context}` : 'file.context';
-  const dated = { ...vars, date: fileDate(c.date), desk: c.desk, context: t(context) };
+  const dated = { crossing, date: fileDate(c.date), desk: c.desk, context: t(context) };
   // A claim a document made is quoted as the document you showed, never as words you said.
-  return c.shown ? { key: `${key}.shown`, vars: { ...dated, cardThe: c.shown } } : { key, vars: dated };
+  if (c.shown) return { key: `${key}.shown`, vars: { ...dated, cardThe: c.shown } };
+  const part = key === 'file.disproved' ? { words: wordsOf(c, s.character) } : saidPart(c, s.character);
+  return 'did' in part ? { key: `${key}.did`, vars: { ...dated, did: part.did } } : { key, vars: { ...dated, words: part.words } };
 }
 
 /**
@@ -574,20 +605,24 @@ export function fileStay(file: CarriedFile): 'ticket' | 'hotel' | 'undated' | 's
  * not match.
  */
 export function recordLines(file: CarriedFile): { key: string; vars?: Record<string, string> }[] {
-  const said = (c: ClaimId) => own(`said.${c}`, file.character).slice('said.'.length);
   const lines: { key: string; vars?: Record<string, string> }[] = [{ key: 'ui.record.title' }];
   const claims = fileSaid(file);
+  const quoteOf = (c: ClaimId): FileQuote => claims.find((x) => x.claim === c) ?? { claim: c, crossing: file.level };
   const shownDoc = (c: ClaimId) => claims.flatMap((x) => (x.claim === c && 'shown' in x && x.shown ? [x.shown] : []))[0];
   for (const c of claims) {
-    if (!('date' in c)) lines.push({ key: 'ui.record.said.undated', vars: { said: said(c.claim) } });
+    if (!('date' in c)) lines.push({ key: 'ui.record.said.undated', vars: { words: wordsOf(c, file.character) } });
     else if (c.shown) lines.push({ key: 'ui.record.shown', vars: { date: fileDate(c.date), desk: c.desk, cardThe: c.shown } });
-    else lines.push({ key: 'ui.record.said', vars: { date: fileDate(c.date), desk: c.desk, said: said(c.claim) } });
+    else {
+      const part = saidPart(c, file.character);
+      const dated = { date: fileDate(c.date), desk: c.desk };
+      lines.push('did' in part ? { key: 'ui.record.did', vars: { ...dated, did: part.did } } : { key: 'ui.record.said', vars: { ...dated, words: part.words } });
+    }
   }
   if (!claims.length) lines.push({ key: 'ui.record.none' });
   for (const c of file.named) lines.push({ key: 'ui.record.named', vars: { contact: c } });
   for (const c of file.disproved ?? []) {
     const doc = shownDoc(c);
-    lines.push(doc ? { key: 'ui.record.disproved.shown', vars: { cardThe: doc } } : { key: 'ui.record.disproved', vars: { said: said(c) } });
+    lines.push(doc ? { key: 'ui.record.disproved.shown', vars: { cardThe: doc } } : { key: 'ui.record.disproved', vars: { words: wordsOf(quoteOf(c), file.character) } });
   }
   return lines;
 }

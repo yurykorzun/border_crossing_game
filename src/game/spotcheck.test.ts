@@ -172,7 +172,9 @@ describe('spot-checks', () => {
       const line = spotLine(s, c, spotCheckOf(s, c));
       expect(line.key).toBe('spot.clear');
       const text = t(line.key, line.vars);
-      expect(text).toContain(`"${t(own(`claim.${c}`, who))}"`);
+      // By its label, never in quotes: the label is the file's entry, not words you said (dap.42).
+      expect(text).toContain(t(own(`claim.${c}`, who)));
+      expect(text).not.toContain(`"${t(own(`claim.${c}`, who))}"`);
     },
   );
 
@@ -183,7 +185,7 @@ describe('spot-checks', () => {
     expect(line?.key).toBe('spot.flaw');
     expect(line?.vars?.claim).toBe('noOtherFamily.mark');
     const text = t(line!.key, line!.vars);
-    expect(text).toContain(`"${t('claim.noOtherFamily.mark')}"`);
+    expect(text).toContain(t('claim.noOtherFamily.mark'));
     expect(text).not.toContain(t('claim.noOtherFamily'));
   });
 

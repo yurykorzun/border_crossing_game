@@ -2,7 +2,7 @@
 // Pure helpers take a Store so tests use a Map (pattern from
 // alexis_adventure_game/src/core/save.ts). A broken or old save falls back to fresh.
 
-import type { CarriedClaim, CarriedFile, Declaration, EndingId, LevelId, RunState } from './types';
+import type { AnswerLabel, CarriedClaim, CarriedFile, Declaration, EndingId, LevelId, RunState } from './types';
 import { CHECKPOINTS, LATER_IDS } from './types';
 import { DEFAULT_LEVEL, isLevelId } from './content/levels';
 import { EVIDENCE_IDS } from './content/world';
@@ -64,6 +64,13 @@ export const startOver = (d: SaveData): SaveData => ({ ...d, run: null });
 
 const isList = (x: unknown): x is string[] => Array.isArray(x) && x.every((v) => typeof v === 'string');
 
+/** An answer kept on a saved claim (CarriedClaim.answer): its id, label key and string vars. */
+const answerOk = (a: unknown): boolean => {
+  const x = a as Partial<AnswerLabel> | null;
+  return !!x && typeof x === 'object' && typeof x.id === 'string' && typeof x.key === 'string'
+    && (x.vars === undefined || (!!x.vars && typeof x.vars === 'object' && Object.values(x.vars).every((v) => typeof v === 'string')));
+};
+
 /** A saved file, or null when it is missing or broken, so a bad file never costs the rest of the save. */
 function loadFile(x: unknown): CarriedFile | null {
   if (!x || typeof x !== 'object') return null;
@@ -77,7 +84,7 @@ function loadFile(x: unknown): CarriedFile | null {
     && Object.values(later.vars).every((v) => typeof v === 'string');
   const claimOk = (c: Partial<CarriedClaim>) => !!c && typeof c.claim === 'string' && typeof c.date === 'string'
     && /^\d{4}-\d{2}-\d{2}$/.test(c.date) && isLevelId(c.crossing) && CHECKPOINTS.includes(c.desk as never) && typeof c.context === 'string'
-    && (c.shown === undefined || EVIDENCE_IDS.includes(c.shown));
+    && (c.shown === undefined || EVIDENCE_IDS.includes(c.shown)) && (c.answer === undefined || answerOk(c.answer));
   return {
     ...rest,
     ...(laterOk ? { later } : {}),
