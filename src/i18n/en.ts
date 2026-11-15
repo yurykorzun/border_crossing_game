@@ -31,6 +31,14 @@ export const en: Record<string, string> = {
   'supervisor.announce.medicine': 'A supervisor checks the prescription before you go. Still open, with any scrutiny: secondary inspection.',
   'supervisor.announce.accommodation': 'A supervisor checks your address here before you go. Still open, with any scrutiny: secondary inspection.',
   'supervisor.announce.purpose': 'A supervisor checks why you came back before you go. Still open, with any scrutiny: secondary inspection.',
+  // At Scrutiny 3/3 after her point was settled or has nothing left to ask: the point she takes up instead (inspect()).
+  'supervisor.instead.medicine': 'Scrutiny 3/3: she checks the prescription instead.',
+  'supervisor.instead.accommodation': 'Scrutiny 3/3: she checks your address here instead.',
+  'supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you came back instead.',
+  // The same point, settled at a desk and reopened by a flag since (pointVerified()): the line names that flag.
+  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
   // On a last-desk card once that point is settled (supervisorLine()): she has nothing left to check.
   'supervisor.settled.medicine': 'Supervisor: prescription verified.',
   'supervisor.settled.accommodation': 'Supervisor: address verified.',
@@ -747,7 +755,7 @@ export const en: Record<string, string> = {
   'enc.i_contradiction.stayDays.sisterSaysWeeks.review.label': 'Explain the difference',
   'enc.i_contradiction.stayDays.sisterSaysWeeks.review.reaction': 'You explain. Both accounts go to a formal review.',
 
-  'enc.i_employer.q': '"Your employer is registered abroad. What exactly do you do for them?"',
+  'enc.i_employer.q': '"You work abroad. Who for, and what do you do there?"',
   'enc.i_employer.evidence.label': 'Show {cardThe}',
   'enc.i_employer.evidence.reaction': 'The officer copies the company name.',
   'enc.i_employer.perk.label': 'Explain your job plainly',
@@ -815,10 +823,10 @@ export const en: Record<string, string> = {
   'insp.issue.accommodation.verified': 'Already checked: your address here.',
   'insp.issue.purpose.verified': 'Already checked: why you came back.',
   // Checked at a desk, then a new flag on the file opened it again (pointVerified()).
-  'insp.issue.medicine.reopened': 'Reopened by a new flag: the prescription.',
-  'insp.issue.accommodation.reopened': 'Reopened by a new flag: your address here.',
-  'insp.issue.purpose.reopened': 'Reopened by a new flag: why you came back.',
-  'insp.s_bag.q': 'Secondary room. They empty your suitcase.',
+  'insp.issue.medicine.reopened': 'Reopened: the prescription. New flag: {fact}.',
+  'insp.issue.accommodation.reopened': 'Reopened: your address here. New flag: {fact}.',
+  'insp.issue.purpose.reopened': 'Reopened: why you came back. New flag: {fact}.',
+  'insp.s_bag.q': 'Secondary room. They search for the medicine.',
   'insp.s_bag.wait.label': 'Wait while they search',
   'insp.s_bag.wait.event': 'Full search',
   'insp.s_bag.wait.reaction': 'They count your cash and search every pocket.',
@@ -839,7 +847,7 @@ export const en: Record<string, string> = {
   'insp.s_medicine.withdraw.label': 'Ask to return with the medicine',
   'insp.s_medicine.withdraw.reaction': 'The cool bag comes back to you, and so does your passport. An officer walks you to departures.',
 
-  'insp.s_connection.q': 'Your shuttle has left. The next is in an hour.',
+  'insp.s_connection.q': 'Your shuttle has left. "Where are you staying?"',
   'insp.s_connection.later.label': 'Take the later shuttle',
   'insp.s_connection.later.reaction': 'The supervisor rings ahead to confirm where you stay.',
   'insp.s_connection.drive.label': 'Ask {contact} to drive out for you',
@@ -1193,6 +1201,7 @@ export const en: Record<string, string> = {
   'departure:mission.body': 'Your flight leaves tonight.',
   'departure:ui.goal': 'Catch your flight',
   'departure:ui.travelReserve': '{hours} to the airport',
+  'departure:insp.s_connection.q': 'Your shuttle has left. "Where did you stay here?"',
   // The way out is the shuttle to the airport (s_connection), so no line on the way names a bus or a station (dap.43).
   'departure:ui.untilLastBus': '{hours} until the last shuttle',
   'departure:ui.lastBus.one': 'Last shuttle to the airport leaves in {n} hour.',
