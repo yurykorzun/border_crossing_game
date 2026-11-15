@@ -1200,6 +1200,8 @@ export const en: Record<string, string> = {
   'departure:mission.title': 'Your father needs another week of care.',
   'departure:mission.body': 'Your flight leaves tonight.',
   'departure:ui.goal': 'Catch your flight',
+  // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
+  'departure:topic.purpose.helps': 'Why you stayed',
   'departure:ui.travelReserve': '{hours} to the airport',
   'departure:insp.s_connection.q': 'Your shuttle has left. "Where did you stay here?"',
   // The way out is the shuttle to the airport (s_connection), so no line on the way names a bus or a station (dap.43).
