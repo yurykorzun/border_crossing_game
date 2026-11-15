@@ -24,12 +24,14 @@ import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspecti
  * conflicting testimony when a person does (TESTIMONY, catchKind()).
  */
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
-  // "No reason, a short trip" answers "Why now?" with no reason, so a
-  // fact on file that gives one (the family here, your father's condition) looks odd.
-  ['shortTrip', 'familyAddress'],
+  // "No reason, a short trip" answers "Why now?" with no reason, so your
+  // father's condition on file, which gives one, looks odd. A family address on
+  // its own does not: people visit family for a few days all the time.
   ['shortTrip', 'fatherCondition'],
   // A short trip home with nowhere booked (p_host).
   ['shortTrip', 'noBooking'],
+  // A short trip against a stay written down in weeks (The funeral, STATEMENTS).
+  ['shortTrip', 'sisterSaysWeeks'],
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
 ];

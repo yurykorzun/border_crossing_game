@@ -184,9 +184,15 @@ describe('scenarios', () => {
     return step(step(s, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
   };
 
-  it('a shortTrip claim plus the family address on file deals the clarify card', () => {
-    const s = leavingInterview({ claims: ['shortTrip'], facts: known('familyAddress') });
+  it('a shortTrip claim plus no booking on file deals the clarify card', () => {
+    const s = leavingInterview({ claims: ['shortTrip'], facts: known('noBooking') });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
+  });
+
+  it('a shortTrip claim with only the family address on file deals neither (dap.16)', () => {
+    const s = leavingInterview({ claims: ['shortTrip'], facts: known('familyAddress') });
+    expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_contradiction' });
+    expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
   it('a family-visit claim with the same address deals neither', () => {

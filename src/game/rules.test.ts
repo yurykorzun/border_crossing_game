@@ -161,8 +161,8 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
     expect(r.ok && r.state.scrutiny).toBe(0);
   });
 
-  it('an inconsistency (shortTrip + family address) deals the cheaper clarify card, with no free answer', () => {
-    for (const fact of ['familyAddress', 'fatherCondition'] as const) {
+  it('an inconsistency (shortTrip + no booking or father\'s condition) deals the cheaper clarify card, with no free answer', () => {
+    for (const fact of ['noBooking', 'fatherCondition'] as const) {
       const s = interview({ claims: ['shortTrip'], facts: known(fact) });
       expect(s.screen, fact).toEqual({ kind: 'encounter', id: 'i_clarify' });
       // clarify: the new story is checked, 1 hour; evidence; or accept +1 scrutiny
@@ -191,7 +191,7 @@ describe('claims: unchallenged, inconsistency, disproof', () => {
   });
 
   it('the disproof costs more than the inconsistency on every axis it charges', () => {
-    const clarify = interview({ claims: ['shortTrip'], facts: known('familyAddress') });
+    const clarify = interview({ claims: ['shortTrip'], facts: known('noBooking') });
     const disproof = interview({ claims: ['noFamilyAbroad'], facts: known('brotherAbroad') }, mark);
     expect(cost(disproof, 'apologise').scrutiny).toBeGreaterThan(cost(clarify, 'accept').scrutiny);
     expect(cost(disproof, 'review').time).toBeGreaterThan(cost(clarify, 'clarify').time);
@@ -563,10 +563,10 @@ describe('what each official knows: facts travel between desks only through a ch
   /** Shows the mother's letter at passport control: her address comes out at that desk. */
   const letterAtPassport = (bulletin: RunSetup['bulletin']) =>
     play({ ...lenaWith(bulletin), checkpoint: 0, slot: 1, screen: { kind: 'encounter', id: 'p_purpose' }, seen: ['p_purpose'] }, { type: 'choose', approach: 'evidence' });
-  /** Walks to the end of the interview with "shortTrip" said (the employer letter on its last core card), and lets the desk deal what follows. */
+  /** Walks to the end of the interview with "hotelStay" said (the employer letter on its last core card), and lets the desk deal what follows. */
   const toInterview = (s: RunState): RunState => {
     const last: RunState = {
-      ...s, reaction: null, pending: [], claims: [...s.claims, 'shortTrip'], checkpoint: 2, slot: FOLLOW_UP_SLOT + 1,
+      ...s, reaction: null, pending: [], claims: [...s.claims, 'hotelStay'], checkpoint: 2, slot: FOLLOW_UP_SLOT + 1,
       screen: { kind: 'encounter', id: 'i_employer' }, seen: [...s.seen, ...CORE_CARDS.interview],
     };
     return step(step(last, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
@@ -580,7 +580,7 @@ describe('what each official knows: facts travel between desks only through a ch
 
   it('a passport-desk fact does not deal the interview clarify card without a channel', () => {
     const s = toInterview(letterAtPassport('customs'));
-    expect(s.claims).toContain('shortTrip');
+    expect(s.claims).toContain('hotelStay');
     expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
     expect(knows(s, 'familyAddress')).toBe(false);
   });

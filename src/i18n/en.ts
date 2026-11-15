@@ -752,6 +752,7 @@ export const en: Record<string, string> = {
   'enc.i_clarify.accept.reaction': '"No reason, with your family\'s address on file?" The officer marks it as unexplained.',
   // The accept answer stands by the claim the file caught, so it is worded per pair (answerKey()).
   'enc.i_clarify.shortTrip.fatherCondition.accept.reaction': '"No reason, with your father\'s condition on file?" The officer marks it as unexplained.',
+  'enc.i_clarify.shortTrip.sisterSaysWeeks.accept.reaction': '"A short trip, when her sister says two weeks?" The officer marks it as unexplained.',
   'enc.i_clarify.shortTrip.noBooking.accept.reaction': '"A short trip with no booking?" The officer marks it as unexplained.',
   'enc.i_clarify.hotelStay.familyAddress.accept.label': '"I booked a hotel."',
   'enc.i_clarify.hotelStay.familyAddress.accept.reaction': '"With your family\'s address on file?" The officer marks it as unexplained.',
