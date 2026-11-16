@@ -273,7 +273,9 @@ describe('the desks ask about leaving, from the file (dap.4)', () => {
     expect(hoursSpent(withStay('hotelStay'), 'mother')).toBe(1);
     expect(hoursSpent(withStay('stayingWithFamily'), 'mother')).toBe(0);
     expect(hoursSpent(withStay('stayingWithFamily'), 'friends')).toBe(1);
-    expect(hoursSpent(withStay('hotelStay'), 'friends')).toBe(1);
+    // With a hotel on the form, the clerk offers that hotel in place of friends (dap.46).
+    expect(options(at(withStay('hotelStay'))).some((o) => o.approach.id === 'friends')).toBe(false);
+    expect(hoursSpent(withStay('hotelStay'), 'hotel')).toBe(0);
     expect(hoursSpent(SAMPLE_FILES.mark, 'friends')).toBe(0);
   });
 
