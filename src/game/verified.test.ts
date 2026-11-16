@@ -97,7 +97,7 @@ describe('a point verified at passport is not charged again later', () => {
     const s: RunState = { ...newRun(lena), reaction: null, checkpoint: 0, slot: 1, screen: { kind: 'inspection', id: 's_supervisor' } };
     const after = choose(s, 'evidence');
     expect(after.used).toEqual(['hospitalNote']);
-    expect(after.verified?.purpose).toEqual({ desk: 'passport', flags: 0 });
+    expect(after.verified?.purpose).toEqual({ desk: 'passport', flags: 0, by: 'hospitalNote' });
   });
 });
 

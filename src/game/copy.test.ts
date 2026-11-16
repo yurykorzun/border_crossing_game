@@ -176,9 +176,9 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.d_declared.count': { always: 1, most: 1 },
     'enc.d_declared.under': { always: 0, most: 1 },
     'enc.d_named.why': { always: 1, most: 1 },
-    // Departure's where you stayed and customs opener (dap.4), new, so they have no earlier price.
-    'enc.d_stayed.mother': { always: 0, most: 1 },
-    'enc.d_stayed.friends': { always: 0, most: 1 },
+    // Departure's customs opener (dap.4), new, so it has no earlier price. Where you stayed
+    // (d_stayed) costs its hour from the engine now, for a place that differs from the entry
+    // form (formDiffers(), dap.46), so no answer there carries a written hour.
     'enc.d_out.open': { always: 1, most: 1 },
     'enc.d_out.say': { always: 0, most: 2 },
   };

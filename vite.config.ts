@@ -52,5 +52,7 @@ export default defineConfig(({ command }) => ({
   plugins: [react(), serviceWorker()],
   // e2e/ holds Playwright specs, run by `npm run e2e`, not by vitest.
   // tools/ tests run the npm scripts themselves (tools/eval.test.ts).
-  test: { include: ['src/**/*.test.ts', 'tools/**/*.test.ts'] },
+  // 20 s, not vitest's 5 s, because the seed sweeps take 1.7-3.4 s idle and passed 5 s
+  // only when other sessions' Playwright runs loaded the machine (dap.56).
+  test: { include: ['src/**/*.test.ts', 'tools/**/*.test.ts'], testTimeout: 20000 },
 }))

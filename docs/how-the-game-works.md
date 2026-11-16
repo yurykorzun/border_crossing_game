@@ -31,7 +31,7 @@ Each checkpoint (passport, customs, interview) has its own deck and its own job.
 1. The desk's two core cards, asked on every run in a fixed order (`CORE_CARDS` in `src/game/content/encounters.ts`). Passport: why you came, then where you will stay. Customs: the medicine, then the cash. The interview: your family, then your employer, which only a traveler with an employer abroad is asked (Lena, not Mark).
 2. At most one follow-up: the highest-priority related card whose condition matches what you have done so far and whose open issue is still on the file (`Encounter.issue`). A run gets 0-3 of them, not counting a clarify or contradiction card, which comes whenever a claim is caught. If nothing is open, the desk asks nothing more, so a smooth run finishes sooner.
 
-Every desk card shows one line of what that officer already knows, built from the file: the newest fact this desk knows, named by how it sits on file (old records, confirmed, flagged), or else the newest claim written down (`knownLine()` in `src/game/engine.ts`).
+Every desk card shows one line of what that officer already knows, built from the file: the newest fact this desk knows that the card before at this desk did not already show (its line named it, or its answer put it on file and the reaction said so), named by how it sits on file (old records, confirmed, flagged), or else the newest claim written down (`knownLine()` in `src/game/engine.ts`). Old records means on file before you said a word (`startFacts()`): an old-records fact a desk turned up on this crossing, like the family address, reads On record.
 
 Two more rules give the run some relief, so escalation lands harder:
 

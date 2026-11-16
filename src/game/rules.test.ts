@@ -651,7 +651,8 @@ describe('every exposure has a consequence (fsx.3)', () => {
     // Once checked, the next card about her costs nothing extra, and she cannot help again.
     const later = at(r.state, 'c_host');
     expect(cost(later, 'evidence').time).toBe(0);
-    expect(options(later).find((o) => o.approach.id === 'mother')?.blocked).toBe('noContact');
+    // Ilya is still unnamed, so it is not "Nobody left to name" (dap.46).
+    expect(options(later).find((o) => o.approach.id === 'mother')?.blocked).toBe('noOther');
   });
 
   it('a card she cannot speak to does not take the hour', () => {
@@ -916,7 +917,7 @@ describe('before admission, only the announced point is a risk (dap.13)', () => 
   it('sends you to secondary inspection for the announced point while it is open and scrutiny is above 0', () => {
     for (const scrutiny of [1, 2]) {
       const { n } = lastAnswer(scrutiny, 0, { supervisor: 'purpose' });
-      expect(n.screen, `scrutiny ${scrutiny}`).toEqual({ kind: 'inspection', id: 's_supervisor' });
+      expect(n.screen, `scrutiny ${scrutiny}`).toEqual({ kind: 'inspection', id: 's_supervisor', reason: 'announced' });
       expect(n.inspections).toBe(1);
     }
   });
@@ -941,7 +942,7 @@ describe('before admission, only the announced point is a risk (dap.13)', () => 
     const day: RunSetup = { ...lena, bulletin: 'accommodation' };
     for (const pick of [0, 1, 2]) {
       const { n, draws } = lastAnswer(1, pick, { supervisor: 'accommodation' }, day);
-      expect(n.screen, `pick ${pick}`).toEqual({ kind: 'inspection', id: 's_connection' });
+      expect(n.screen, `pick ${pick}`).toEqual({ kind: 'inspection', id: 's_connection', reason: 'announced' });
       expect(draws).toEqual([]);
     }
   });

@@ -12,7 +12,9 @@ const isFragment = (key: string) =>
   // The question a carried claim answered, quoted mid-line: "Asked why you came".
   /^file\.context(\.|$)/.test(key) ||
   // What an answer that was an act did, mid-line: "Asked where you would stay, you gave your mother's address."
-  /^did\./.test(key);
+  /^did\./.test(key) ||
+  // A desk named mid-sentence: "already confirmed at passport control" (the deskAt var).
+  /^checkpoint\.[^.]+\.at$/.test(key);
 
 /** The names, from the contacts table (contact.* values) plus the one place name. */
 const NAMES: string[] = [

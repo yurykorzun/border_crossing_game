@@ -3,7 +3,7 @@
 
 import type {
   Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -61,6 +61,18 @@ export const fileSaid = (file: CarriedFile | undefined): FileQuote[] =>
 export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined {
   const said = fileSaid(file).filter((c) => c.claim !== 'stayUndecided');
   return said.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? said[0];
+}
+
+/**
+ * Where the entry form on a carried file says you would stay (d_stayed): the place its
+ * claim names (hotelStay, stayingWithFamily), else the place the document shown for "Who
+ * will you stay with?" names (EvidenceCard.stayed), else none. fileLine() quotes the same.
+ */
+export function fileStayed(file: CarriedFile | undefined): Stayed {
+  const c = fileSaid(file).find((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay');
+  if (c) return c.claim === 'hotelStay' ? 'hotel' : 'family';
+  const doc = file?.shownOn?.p_host;
+  return (doc && EVIDENCE[doc].stayed) || 'none';
 }
 
 /** The contact a carried file names that a desk asks about: a relative before your mother. */
@@ -156,6 +168,25 @@ export const knows = (s: RunState, f: FactId, desk: Checkpoint = deskOf(s)): boo
 export const factTier = (s: Pick<RunState, 'flagged'>, f: FactId): OnFileTier =>
   s.flagged?.includes(f) ? 'flagged' : FACT_TIERS[f];
 
+/**
+ * The facts on file before this crossing began: the traveler's old records (Character.onFile),
+ * the entry record of a level that reads a file, and a contact statement given before you came.
+ */
+export function oldRecords(s: RunState): FactId[] {
+  const level = levelOf(s);
+  return [...(CHARACTERS[s.character].onFile ?? []), ...(level.readsFile ? ['entryRecord' as const] : []), ...(level.statements ?? []).filter((f) => s.facts[f])];
+}
+
+/**
+ * The tier a card line names a fact by (knownLine(), caughtLine()): factTier(), except that
+ * a recorded fact put on file on this crossing (your mother's address, given at a desk) is
+ * not "Old records": it reads as confirmed, because the line would say it was there before.
+ */
+export function lineTier(s: RunState, f: FactId): OnFileTier {
+  const tier = factTier(s, f);
+  return tier === 'recorded' && !oldRecords(s).includes(f) ? 'confirmed' : tier;
+}
+
 /** What the official at `desk` knows, in the order it came out. */
 export const knownAt = (s: RunState, desk: Checkpoint = deskOf(s)): FactId[] => factIds(s).filter((f) => knows(s, f, desk));
 
@@ -222,6 +253,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.fileDisproved !== undefined && !!s.file?.disproved?.length !== cond.fileDisproved) return false;
   if (cond.fileDeclared && !(s.file?.declared && cond.fileDeclared.includes(s.file.declared))) return false;
   if (cond.fileClaims && !cond.fileClaims.some((c) => s.file?.claims.includes(c))) return false;
+  if (cond.fileStayed && !(s.file && cond.fileStayed.includes(fileStayed(s.file)))) return false;
   return true;
 }
 
@@ -237,6 +269,18 @@ export function shownCheckpoint(s: RunState): number {
   return Math.min(s.checkpoint, CHECKPOINTS.length - 1);
 }
 
+/**
+ * Who speaks on screen, for the label over the officer: while a reaction shows, whoever
+ * gave it (the supervisor's answers to an inspection are `insp.` lines, and they stay hers
+ * after the inspection card is gone, dap.46); else the supervisor on an inspection card,
+ * and the desk's officer anywhere else.
+ */
+export function speakerOf(s: RunState): Checkpoint | 'inspection' {
+  const first = s.reaction?.[0]?.key;
+  if (first ? first.startsWith('insp.') : s.screen.kind === 'inspection') return 'inspection';
+  return CHECKPOINTS[shownCheckpoint(s)];
+}
+
 export function currentCard(s: RunState): Encounter | Inspection | null {
   if (s.screen.kind === 'encounter') return ENCOUNTER_BY_ID.get(s.screen.id) ?? null;
   if (s.screen.kind === 'inspection') return INSPECTION_BY_ID.get(s.screen.id) ?? null;
@@ -245,13 +289,29 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
 
 export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
-/** Every packed, unspent document that answers `topic`, in packing order. */
-export function cardsFor(s: RunState, topic: Topic): EvidenceId[] {
-  return s.loadout.filter((id) => {
-    const c = EVIDENCE[id];
-    const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
-    return !s.used.includes(id) && c.topics.includes(topic) && !blocked;
-  });
+/** Whether document `id` answers `topic` now, spent or not; on card `card` when named (EvidenceCard.notFor). */
+function answers(s: RunState, id: EvidenceId, topic: Topic, card?: string): boolean {
+  const c = EVIDENCE[id];
+  const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
+  return c.topics.includes(topic) && !blocked && !(card && c.notFor?.includes(card));
+}
+
+/** Every packed, unspent document that answers `topic`, in packing order; on card `card` when named. */
+export function cardsFor(s: RunState, topic: Topic, card?: string): EvidenceId[] {
+  return s.loadout.filter((id) => !s.used.includes(id) && answers(s, id, topic, card));
+}
+
+/**
+ * Why an evidence answer on card `card` has no document, when a packed one names
+ * its topic (dap.41): 'shown' when that document would answer but was spent on an
+ * earlier question, 'notFor' when it does not answer this card (EvidenceCard.notFor).
+ * Undefined when nothing packed names the topic: then it is "No matching document".
+ */
+export function emptyReason(s: RunState, topic: Topic, card: string): { blocked: 'shown' | 'notFor'; doc: EvidenceId } | undefined {
+  const shown = s.loadout.find((id) => s.used.includes(id) && answers(s, id, topic, card));
+  if (shown) return { blocked: 'shown', doc: shown };
+  const other = s.loadout.find((id) => EVIDENCE[id].topics.includes(topic) && EVIDENCE[id].notFor?.includes(card));
+  return other ? { blocked: 'notFor', doc: other } : undefined;
 }
 
 /** The first of cardsFor(). */
@@ -271,7 +331,13 @@ export function freeContact(s: RunState, wanted: ContactId[] | undefined, topic?
   return contactsFor(s, wanted, topic).find((c) => !s.exposed.includes(c));
 }
 
-export type Unavailable = 'noCard' | 'noContact' | null;
+/**
+ * noCard: nothing packed answers. shown: a packed document would, but it was shown
+ * for an earlier question. notFor: a packed document names the topic but does not
+ * answer this card. noContact: nobody left to name, every contact is named.
+ * noOther: someone is still unnamed, but not anyone this answer can name.
+ */
+export type Unavailable = 'noCard' | 'shown' | 'notFor' | 'noContact' | 'noOther' | null;
 
 export interface Option {
   approach: Approach;
@@ -292,6 +358,8 @@ export interface Option {
   documents?: EvidenceId[];
   /** The answer uses a point verified earlier (usesVerified()): it takes its verified effects and opens no check. */
   usesVerified?: true;
+  /** A 'shown' or 'notFor' row: the packed document it names (emptyReason()). */
+  blockedDoc?: EvidenceId;
 }
 
 /**
@@ -343,20 +411,24 @@ export function choices(s: RunState): Option[] {
     if (a.kind === 'contact' && !contactsFor(s, a.contacts, vouches).length) continue;
     if (a.kind === 'perk' && s.perkUsed) continue;
     // Every packed document that answers the question is its own answer, with its own cost.
-    const cards: (EvidenceId | undefined)[] = a.kind === 'evidence' ? cardsFor(s, a.topic!) : [undefined];
+    const cards: (EvidenceId | undefined)[] = a.kind === 'evidence' ? cardsFor(s, a.topic!, card.id) : [undefined];
     if (!cards.length) cards.push(undefined);
     for (const ev of cards) {
       let blocked: Unavailable = null;
       let contact: ContactId | undefined;
-      if (a.kind === 'evidence' && !ev) blocked = 'noCard';
+      // A packed document that names the question says why it is not offered (dap.41).
+      const empty = a.kind === 'evidence' && !ev ? emptyReason(s, a.topic!, card.id) : undefined;
+      if (a.kind === 'evidence' && !ev) blocked = empty?.blocked ?? 'noCard';
       if (a.kind === 'contact') {
         contact = freeContact(s, a.contacts, vouches);
-        if (!contact) blocked = 'noContact';
+        // "Nobody left to name" only when every contact is named (dap.46).
+        if (!contact) blocked = ch.contacts.every((c) => s.exposed.includes(c)) ? 'noContact' : 'noOther';
       }
       const effects = resolvedEffects(s, a, topic, ev);
       const flagged = officerFlags(s, effects);
       const o: Option = { approach: a, blocked, card: ev, contact, effects: [...effects, ...flagged.map(officerScrutiny(s))] };
       if (vouches) o.vouches = vouches;
+      if (empty) o.blockedDoc = empty.doc;
       if (flagged.length) o.flagged = flagged;
       if (usesVerified(s, a, topic)) o.usesVerified = true;
       out.push(o);
@@ -433,8 +505,23 @@ function resolvedEffects(s: RunState, a: Approach, topic: Topic | undefined, ev:
   if (a.kind === 'verify' && weak && !usesVerified(s, a, topic)) list.push({ time: -1 });
   // Checking a statement from someone called in earlier takes an hour each.
   for (let i = callInsDue(s, a, topic).length; i > 0; i--) list.push({ time: -1 });
+  // A place that differs from the entry form is checked against it: an hour (formDiffers()).
+  if (formDiffers(s, a, ev)) list.push({ time: -1 });
   const card = s.screen.kind === 'encounter' ? s.screen.id : undefined;
   return activeEffects(s, list.filter((e) => check(e.when, s)), { card });
+}
+
+/**
+ * On a card whose answers say where you stayed (Approach.stayed, d_stayed): the place the
+ * entry form on your carried file names (fileStayed()) when answer `a`, with document `ev`,
+ * says another one. Undefined when they match, the form names no place, or the card does
+ * not ask where you stayed. A difference is no proof of anything: the clerk checks it.
+ */
+export function formDiffers(s: RunState, a: Approach, ev: EvidenceId | undefined): Stayed | undefined {
+  if (!s.file || s.screen.kind !== 'encounter' || !ENCOUNTER_BY_ID.get(s.screen.id)?.approaches.some((x) => x.stayed)) return undefined;
+  const said = ev ? EVIDENCE[ev].stayed : a.stayed;
+  const form = fileStayed(s.file);
+  return said && form !== 'none' && said !== form ? form : undefined;
 }
 
 // ── The officer at the desk
@@ -535,17 +622,78 @@ export function knownLine(s: RunState): KnownPart[] {
   }
   if (s.screen.kind !== 'encounter') return [];
   const asks = asksAbout(s, s.screen.id);
+  const fresh = lineFact(s, asks);
   if (asks) {
-    const fact = knownAt(s).filter((f) => asks.includes(f)).at(-1);
-    return [fact ? { key: `known.fact.${factTier(s, fact)}`, vars: { fact } } : { key: 'known.asked.none' }];
+    // The card asks about it, so a fact the card before named is named again before "nothing on file".
+    const fact = fresh ?? knownAt(s).filter((f) => asks.includes(f)).at(-1);
+    if (fact) return [factPart(s, fact)];
+    // What your last crossing put on file is on the record you carry (CarriedFile.facts), never "Nothing on file".
+    const kept = s.file?.facts?.filter((f) => asks.includes(f)).at(-1);
+    return [kept ? { key: 'known.file', vars: { fact: kept } } : { key: 'known.asked.none' }];
   }
   // A fact on file outranks a claim, because its tier is what the officer acts on.
-  const fact = knownAt(s).at(-1);
-  if (fact) return [{ key: `known.fact.${factTier(s, fact)}`, vars: { fact } }];
+  if (fresh) return [factPart(s, fresh)];
   const written = s.claims.filter((c) => loggedAt(s, c).length).at(-1);
   // The claim in this traveler's own wording, as the spot-check names it.
   if (written) return [{ key: 'known.claim', vars: { claim: own(`claim.${written}`, s.character).slice('claim.'.length) } }];
-  return [{ key: 'known.none' }];
+  // Saying the fact again beats saying the file is empty.
+  const again = knownAt(s).at(-1);
+  return [again ? factPart(s, again) : { key: 'known.none' }];
+}
+
+/**
+ * The fact the known-facts line names on the card on screen, if one is new to it:
+ * the newest fact this desk knows (among `asks` when the card asks about some),
+ * leaving out what the card before it at this desk already showed (RunState.knownShown).
+ */
+function lineFact(s: RunState, asks?: FactId[]): FactId | undefined {
+  const shown = s.knownShown;
+  const skip = shown && s.screen.kind === 'encounter' && shown.card === s.screen.id ? shown.skip : [];
+  return knownAt(s).filter((f) => (!asks || asks.includes(f)) && !skip.includes(f)).at(-1);
+}
+
+/**
+ * The facts on file before the traveler said a word: the old records the passport
+ * desk has (Character.onFile), the entry record a level that reads a file opens
+ * with, and a contact statement given before you came. Any other fact was put on
+ * file on this crossing.
+ */
+export function startFacts(s: RunState): FactId[] {
+  const statement = statementIn(s);
+  return [
+    ...(CHARACTERS[s.character].onFile ?? []),
+    ...(levelOf(s).readsFile && s.file ? (['entryRecord'] as FactId[]) : []),
+    ...(statement ? [statement] : []),
+  ];
+}
+
+/**
+ * One fact on the known-facts line, named by its tier. A fact the old records hold
+ * that a desk turned up on this crossing reads "On record", never "Old records",
+ * because the player just saw it go on file (startFacts()).
+ */
+function factPart(s: RunState, fact: FactId): KnownPart {
+  const tier = factTier(s, fact);
+  const key = tier === 'recorded' && !startFacts(s).includes(fact) ? 'found' : tier;
+  return { key: `known.fact.${key}`, vars: { fact } };
+}
+
+/**
+ * What the card before this one at the same desk showed, so the known-facts line
+ * on `id` names something else: the fact its line named, and the facts its answer
+ * put on file, which the reaction above `id` says. Empty on a desk's first card.
+ */
+function knownShown(s: RunState, id: string): NonNullable<RunState['knownShown']> {
+  const desk = deskOf(s);
+  const known = knownAt(s);
+  const prev = s.knownShown?.desk === desk ? s.knownShown : undefined;
+  const skip = prev ? [...new Set([...(prev.named ? [prev.named] : []), ...known.filter((f) => !prev.known.includes(f))])] : [];
+  // The fact knownLine() names on `id`, worked out the same way without building its text.
+  const asks = asksAbout(s, id);
+  const fresh = known.filter((f) => (!asks || asks.includes(f)) && !skip.includes(f)).at(-1);
+  const named = asks ? fresh ?? known.filter((f) => asks.includes(f)).at(-1)
+    : fresh ?? (s.claims.some((c) => loggedAt(s, c).length) ? undefined : known.at(-1));
+  return { card: id, desk, known, skip, ...(named ? { named } : {}) };
 }
 
 /** The open issue the inspection on screen is about (Inspection.issue), or undefined off one. */
@@ -574,9 +722,23 @@ export function supervisorLine(s: RunState): string | undefined {
  * Whether the inspection card itself is on screen: the "Secondary inspection"
  * header shows only then, not on the reaction to the answer that led to it
  * (dap.49). progressName() in src/ui/parts.tsx and chromeLines() in
- * src/game/transcript.ts both use it.
+ * src/game/transcript.ts both use it, through inspectionReason().
  */
 export const onInspectionCard = (s: RunState): boolean => s.screen.kind === 'inspection' && !s.reaction;
+
+/**
+ * Why the inspection card on screen was dealt: Scrutiny 3/3, or the point the
+ * supervisor announced. Undefined off the inspection card (onInspectionCard()),
+ * because on the reaction to its answer choose() has already dropped scrutiny to
+ * SCRUTINY_AFTER_INSPECTION. A save from before Screen.reason existed
+ * reads as announced when the card is about her point and scrutiny is below the
+ * maximum, else as scrutiny.
+ */
+export function inspectionReason(s: RunState): InspectionReason | undefined {
+  if (!onInspectionCard(s)) return undefined;
+  if (s.screen.kind === 'inspection' && s.screen.reason) return s.screen.reason;
+  return s.supervisor && inspectionIssue(s) === s.supervisor && s.scrutiny < MAX_SCRUTINY ? 'announced' : 'scrutiny';
+}
 
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
@@ -653,11 +815,11 @@ export const usesVerified = (s: RunState, a: Approach, topic: Topic | undefined)
 const answerEffects = (s: RunState, a: Approach, topic: Topic | undefined): Effect[] =>
   usesVerified(s, a, topic) ? a.ifVerified! : a.effects;
 
-/** Marks `points` verified at this desk, as of the facts flagged now. */
-function verifyPoints(s: RunState, points: Topic[]): RunState {
+/** Marks `points` verified at this desk, as of the facts flagged now, by document `by` when one settled them. */
+function verifyPoints(s: RunState, points: Topic[], by?: EvidenceId): RunState {
   if (!points.length) return s;
   const verified = { ...s.verified };
-  for (const t of points) verified[t] = { desk: deskOf(s), flags: (s.flagged ?? []).length };
+  for (const t of points) verified[t] = { desk: deskOf(s), flags: (s.flagged ?? []).length, ...(by ? { by } : {}) };
   return { ...s, verified };
 }
 
@@ -841,7 +1003,7 @@ export const isCalm = (id: string): boolean => !!ENCOUNTER_BY_ID.get(id)?.calm;
 export const escalates = (id: string): boolean => ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
 
 function show(s: RunState, id: string): RunState {
-  return { ...s, seen: [...s.seen, id], streak: escalates(id) ? (s.streak ?? 0) + 1 : 0, screen: { kind: 'encounter', id } };
+  return { ...s, seen: [...s.seen, id], streak: escalates(id) ? (s.streak ?? 0) + 1 : 0, screen: { kind: 'encounter', id }, knownShown: knownShown(s, id) };
 }
 
 /** The routine cards still to be asked at this desk. */
@@ -1095,21 +1257,33 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   const pair = sc.kind === 'encounter' ? caught(s, id) : undefined;
   const paired = pair && `${prefix}.${id}.${pair.claim}.${pair.fact}.${approach}.${part}`;
   if (paired && has(paired)) return paired;
-  // An answer that uses a point verified earlier says so (Approach.ifVerified).
+  // A challenge about words said at this desk checks them here, with no call to it; said at
+  // another desk, the call names that desk (`enc.i_clarify.clarify.at.customs`, dap.46).
+  const said = pair && (pair.desk === deskOf(s) ? `${prefix}.${id}.${approach}.here.${part}` : `${prefix}.${id}.${approach}.at.${pair.desk}.${part}`);
+  if (said && has(said)) return said;
+  // An answer that uses a point verified earlier says so (Approach.ifVerified), naming the
+  // document that verified it when there is wording for it (the hotel booking, not "the address").
   const a = currentCard(s)?.approaches.find((x) => x.id === approach);
+  const topic = topicOf(currentCard(s));
   const verified = `${prefix}.${id}.${approach}.verified.${part}`;
-  if (a && usesVerified(s, a, topicOf(currentCard(s))) && has(verified)) return verified;
+  if (a && topic && usesVerified(s, a, topic)) {
+    const by = s.verified?.[topic]?.by;
+    const named = by && `${prefix}.${id}.${approach}.verified.${by}.${part}`;
+    if (named && has(named)) return named;
+    if (has(verified)) return verified;
+  }
   // An answer whose point is already on file here reads it off the file (Approach.onFile).
   const onFile = `${prefix}.${id}.${approach}.onFile.${part}`;
   if (a?.onFile && a.onFile.every((f) => knows(s, f)) && has(onFile)) return onFile;
   // An answer worded for what the desk already has (Approach.worded).
   const worded = a?.worded && check(a.worded.when, s) ? `${prefix}.${id}.${approach}.${a.worded.key}.${part}` : '';
   if (worded && has(worded)) return worded;
-  const daily = own(`${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`, s.character);
-  if (has(daily)) return daily;
-  // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count compared with it.
+  // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count
+  // compared with it. Before the day's wording, because the entry record is why it is asked again.
   const filed = s.file?.declared && `${prefix}.${id}.${approach}.file.${s.file.declared}.${part}`;
   if (filed && has(filed)) return filed;
+  const daily = own(`${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`, s.character);
+  if (has(daily)) return daily;
   return own(`${prefix}.${id}.${approach}.${part}`, s.character);
 }
 
@@ -1221,7 +1395,8 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
-    screen: { kind: 'inspection', id },
+    // The announced point is the only reason inspect() gets an issue (admission()).
+    screen: { kind: 'inspection', id, reason: issue ? 'announced' : 'scrutiny' },
   };
 }
 
@@ -1387,17 +1562,23 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
     const points = pointsResolved(opt.card, vouched, topic);
     // A record check that confirmed the point (Approach.confirms) settles it like a document.
     if (opt.approach.confirms && topic && !points.includes(topic)) points.push(topic);
-    n = verifyPoints(n, points);
+    n = verifyPoints(n, points, opt.card);
     settles = points.length > 0;
   } else if (opt.card || vouched || opt.approach.confirms) {
     const issue = inspectionIssue(s);
-    if (issue) n = verifyPoints(n, [issue]);
+    if (issue) n = verifyPoints(n, [issue], opt.card);
   }
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = opt.card;
   if (opt.contact) vars.contact = opt.contact;
+  // An answer that uses a point verified earlier names the desk that verified it (dap.46).
+  const earlier = topic && usesVerified(s, opt.approach, topic) ? s.verified?.[topic] : undefined;
+  if (earlier) vars.deskAt = earlier.desk;
   // A reaction against you says which of three it is, and only a disproof records the claim as disproved.
   n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars, ...(reacted ? { kind: reacted.kind } : {}) }]);
+  // A place that differs from the entry form: the clerk says she checks it against the form.
+  const differs = formDiffers(s, opt.approach, opt.card);
+  if (differs) n = say(n, [{ key: `form.differs.${differs}` }]);
   if (reacted?.kind === 'disproof' && reacted.claim && !(n.disproved ?? []).includes(reacted.claim))
     n = { ...n, disproved: [...(n.disproved ?? []), reacted.claim] };
   // The officer's priority is the reason for the scrutiny, so the reaction says it.

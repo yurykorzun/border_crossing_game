@@ -98,7 +98,15 @@ export interface Cond {
   fileDeclared?: Declaration[];
   /** The carried file holds one of these claims, quoted or not (Departure's where you stayed, d_stayed). Never holds with no file. */
   fileClaims?: ClaimId[];
+  /** Where the carried file's entry form says you stayed (fileStayed() in src/game/engine.ts) is one of these. Never holds with no file. */
+  fileStayed?: Stayed[];
 }
+
+/**
+ * Where an entry form says you would stay, as the exit desk reads it (d_stayed): a hotel,
+ * with family, or no place. `friends` is only ever said at the exit, never on a form.
+ */
+export type Stayed = 'hotel' | 'family' | 'friends' | 'none';
 
 /**
  * Why scrutiny goes up, so the player can see it: a fact on file, or the check
@@ -187,6 +195,13 @@ export interface Approach {
    * (reactionOf() in src/game/engine.ts). Challenge cards say it for every answer (catchKind()).
    */
   reacts?: ReactionKind;
+  /**
+   * Where you stayed, as this answer says it (d_stayed). An answer that differs from the
+   * entry form on your carried file (fileStayed()) is checked against it: an hour, and a
+   * line that says so (formDiffers() in src/game/engine.ts). A document says it with
+   * EvidenceCard.stayed.
+   */
+  stayed?: Stayed;
 }
 
 export interface Encounter {
@@ -259,6 +274,13 @@ export interface Check {
    */
   explain?: Effect[];
 }
+
+/**
+ * Why a secondary inspection was dealt: scrutiny reached its maximum, or the
+ * supervisor came for the point she announced before the last desk (admission()
+ * in src/game/engine.ts). A save from before the field existed has none.
+ */
+export type InspectionReason = 'scrutiny' | 'announced';
 
 /**
  * What a secondary inspection does to the problem. search: the bag is searched
@@ -392,11 +414,19 @@ export interface EvidenceCard {
   /** The questions blockedBy applies to; every question when unset. */
   blockedOn?: Topic[];
   /**
+   * Cards (by id) where the document does not answer, though it names their topic:
+   * the question asks something the document cannot show. Its row there reads
+   * "Not answered by ..." (Option.blockedDoc), never "No matching document".
+   */
+  notFor?: string[];
+  /**
    * Points this document verifies wherever it is shown, besides the question it
    * answers: the hospital note at passport verifies the prescription too, and the
    * clerk forwards its details, so customs uses them instead of asking again.
    */
   forwards?: Topic[];
+  /** Where you stayed, as the document says it when shown for that (Approach.stayed). */
+  stayed?: Stayed;
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
@@ -487,6 +517,12 @@ export interface CarriedFile {
   shownOn?: Partial<Record<string, EvidenceId>>;
   /** Whether the medicine came through. */
   medicine: boolean;
+  /**
+   * The facts that came out on that crossing, so a later desk that asks about one reads it
+   * from the file instead of "Nothing on file" (knownLine() in src/game/engine.ts). Unset
+   * in files from before it existed.
+   */
+  facts?: FactId[];
   /** What came back days after you got home (laterBeat() in src/game/consequence.ts), so the next crossing opens with it. */
   later?: LaterBeat;
   /** Set when no crossing was saved and the file was built from a seed (defaultFile()). */
@@ -543,7 +579,7 @@ export type WaitAction = 'wait' | 'ask' | 'assist' | 'explain';
 
 export type Screen =
   | { kind: 'encounter'; id: string }
-  | { kind: 'inspection'; id: string }
+  | { kind: 'inspection'; id: string; reason?: InspectionReason }
   | { kind: 'wait'; check: CheckId; beats: number[]; shown: number; resolved: CheckCase; asked: boolean }
   | { kind: 'between'; next: number }
   | { kind: 'ending' };
@@ -628,6 +664,8 @@ export type FactMap = Partial<Record<FactId, Checkpoint[]>>;
 export interface VerifiedPoint {
   desk: Checkpoint;
   flags: number;
+  /** The document that settled it, when one did: a later desk names it, not "the address" (answerKey()). */
+  by?: EvidenceId;
 }
 
 export interface RunState {
@@ -743,6 +781,14 @@ export interface RunState {
   deskStart?: { time: number; log: number; phoned?: boolean; exposed?: number };
   /** How each desk went, by the index of the queue after it (QueueMood). Unset in saves from before it existed. */
   after?: Partial<Record<number, QueueMood>>;
+  /**
+   * The card on screen's known-facts line (knownLine() in src/game/engine.ts), set
+   * when it is dealt: its desk, the facts that desk knew then, the fact the line
+   * names, and the facts it may not name because the card before it at this desk
+   * already showed them (that card's line named one, or its answer put one on file).
+   * Unset in saves from before it existed.
+   */
+  knownShown?: { card: string; desk: Checkpoint; known: FactId[]; named?: FactId; skip: FactId[] };
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;

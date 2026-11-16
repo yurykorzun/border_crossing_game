@@ -36,9 +36,9 @@ export const en: Record<string, string> = {
   'supervisor.instead.accommodation': 'Scrutiny 3/3: she checks your address here instead.',
   'supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you came back instead.',
   // The same point, settled at a desk and reopened by a flag since (pointVerified()): the line names that flag.
-  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
   // On a last-desk card once that point is settled (supervisorLine()): she has nothing left to check.
   'supervisor.settled.medicine': 'Supervisor: prescription verified.',
   'supervisor.settled.accommodation': 'Supervisor: address verified.',
@@ -134,12 +134,16 @@ export const en: Record<string, string> = {
   // The known-facts line on every desk card (knownLine() in src/game/engine.ts):
   // the newest fact this officer knows, by its tier, and the newest claim written down.
   'known.fact.recorded': 'Old records: {fact}.',
+  // An old-records fact a desk turned up on this crossing, so never "Old records".
+  'known.fact.found': 'On record: {fact}.',
   'known.fact.confirmed': 'Confirmed: {fact}.',
   'known.fact.flagged': 'Flagged: {fact}.',
   'known.claim': 'Written down: {claim}.',
   'known.none': 'Nothing on your file yet.',
   // On a card that asks about some facts (Encounter.asks) when none of them is on file here.
   'known.asked.none': 'Nothing on file about this yet.',
+  // The same card when your last crossing put the fact on file (CarriedFile.facts, dap.46).
+  'known.file': 'From your last crossing: {fact}.',
   'ui.and': 'and',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
@@ -228,7 +232,12 @@ export const en: Record<string, string> = {
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
   'ui.blocked.noCard': 'No matching document',
+  // A packed document that names the question but is not offered (dap.41): shown for an earlier one, or no answer here.
+  'ui.blocked.shown': 'Already shown: {cardShort}',
+  'ui.blocked.notFor': 'Not answered by {cardShort}',
   'ui.blocked.noContact': 'Nobody left to name',
+  // Someone is still unnamed, but not anyone this answer can name (dap.46).
+  'ui.blocked.noOther': 'Nobody else can answer this',
   'ui.showDocument': 'Show a document',
   'ui.backToAnswers': 'Back to answers',
   'ui.nameSomeone': 'Name someone',
@@ -476,6 +485,10 @@ export const en: Record<string, string> = {
   'checkpoint.passport': 'Passport control',
   'checkpoint.customs': 'Customs',
   'checkpoint.interview': 'Security interview',
+  // A desk inside a sentence ("already confirmed at passport control"), the deskAt var.
+  'checkpoint.passport.at': 'passport control',
+  'checkpoint.customs.at': 'customs',
+  'checkpoint.interview.at': 'the security interview',
   'desk.passport': 'Passport',
   'desk.customs': 'Customs',
   'desk.interview': 'Interview',
@@ -483,7 +496,10 @@ export const en: Record<string, string> = {
   'officer.customs': 'Inspector',
   'officer.interview': 'Officer',
   'officer.followup': 'Officer',
+  // The supervisor on an inspection card, with why she came (officerLabel() in src/ui/parts.tsx). {point} is a topic.<topic>.helps name.
   'officer.inspection': 'Supervisor',
+  'officer.inspection.scrutiny': 'Supervisor · Scrutiny {max}/{max}',
+  'officer.inspection.announced': 'Supervisor · Announced: {point}',
   // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
   'officer.passport.priority': 'The clerk checks every stamp and date.',
   'officer.customs.priority': 'The inspector cares what you carry and declare.',
@@ -656,13 +672,16 @@ export const en: Record<string, string> = {
   'enc.c_host.call.event': 'Call to your host',
   'enc.c_host.call.reaction': "He dials your mother's number and waits.",
   'enc.c_host.call.verified.label': 'Point to the address already confirmed',
-  'enc.c_host.call.verified.reaction': 'He finds the address already confirmed at passport and lets it go.',
+  'enc.c_host.call.verified.reaction': 'He finds the address already confirmed at {deskAt} and lets it go.',
+  // The point was settled by the hotel booking, not by her address (VerifiedPoint.by, dap.46).
+  'enc.c_host.call.verified.hotel.label': 'Point to the hotel booking already checked',
+  'enc.c_host.call.verified.hotel.reaction': 'He finds your hotel booking already checked at {deskAt} and lets it go.',
   // No number for your mother at the desk (HOST_NUMBER): he phones the hotel you named.
   'enc.c_host.hotel.label': 'Wait while they call the hotel',
   'enc.c_host.hotel.event': 'Call to the hotel',
   'enc.c_host.hotel.reaction': 'He phones the hotel and asks about your booking.',
   'enc.c_host.hotel.verified.label': 'Point to where you stay, already confirmed',
-  'enc.c_host.hotel.verified.reaction': 'He finds where you stay already confirmed at passport and lets it go.',
+  'enc.c_host.hotel.verified.reaction': 'He finds where you stay already confirmed at {deskAt} and lets it go.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
@@ -720,6 +739,13 @@ export const en: Record<string, string> = {
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
   'enc.i_clarify.clarify.event': 'Call to passport control',
   'enc.i_clarify.clarify.reaction': 'The officer phones the passport desk to check it.',
+  // Said at this desk: checked here, no call (answerKey(), dap.46). Said at customs: the call goes there.
+  'enc.i_clarify.clarify.here.label': '"I\'m also here to see my father."',
+  'enc.i_clarify.clarify.here.event': 'Statement check',
+  'enc.i_clarify.clarify.here.reaction': 'The officer checks it against what you said at this desk.',
+  'enc.i_clarify.clarify.at.customs.label': '"I\'m also here to see my father."',
+  'enc.i_clarify.clarify.at.customs.event': 'Call to customs',
+  'enc.i_clarify.clarify.at.customs.reaction': 'The officer phones customs to check it.',
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
   'enc.i_clarify.accept.label': '"It\'s just a short trip."',
@@ -1103,6 +1129,10 @@ export const en: Record<string, string> = {
   // Where you stayed, with the entry form's answer quoted under it (fileLine()).
   'enc.d_stayed.q': '"Where did you stay?"',
   'enc.d_stayed.evidence.label': 'Show {cardThe}',
+  'enc.d_stayed.hotel.label': '"At the hotel on my entry form."',
+  'enc.d_stayed.hotel.reaction': 'She finds the booking on your entry form and moves on.',
+  'form.differs.hotel': 'Your entry form says a hotel. She checks your entry record.',
+  'form.differs.family': "Your entry form says your mother's address. She checks your entry record.",
   'enc.d_stayed.evidence.reaction': 'She checks it against your entry form.',
   'enc.d_stayed.mother.label': "Give {contact}'s address",
   'enc.d_stayed.mother.event': 'Record check',
@@ -1168,6 +1198,7 @@ export const en: Record<string, string> = {
   'enc.d_declared.under.label': '"My savings. It\'s under the limit."',
   'enc.d_declared.under.event': 'Cash count again',
   'enc.d_declared.under.reaction': 'He writes it down and looks at your file.',
+  'enc.d_declared.under.file.counted.reaction': 'He holds "under the limit" next to the total counted on your entry record, and counts it again.',
   'enc.d_declared.under.bulletin.customs.reaction': 'Cash is checked today. He counts it anyway.',
   'enc.d_named.q': '"Your file names {contact}. Any other relatives here?"',
   'enc.d_named.unsaid.q': '"Any other relatives here?"',
@@ -1192,6 +1223,8 @@ export const en: Record<string, string> = {
   'ending.held.body': 'They keep your passport for the review. "You are free to go, for now," the officer says. You take the bus back into town. Your father is awake. Your mother makes up the couch again.',
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
   'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
+  // The title follows the saved run, because a Departure save opens there under its stamp.
+  'departure:ui.tagline': "You're leaving again. You don't know if they'll let you go.",
   // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
   // Why now, when you leave: Dad stays in care (char.<id>.why).
   'departure:char.lena.why': 'Flying back to work, with her father in care.',
@@ -1238,4 +1271,18 @@ export const en: Record<string, string> = {
   'departure:scene.busEmpty': 'Your empty hand on a night bus, the airport tower through the rain',
   'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
+  // On the way out the purpose point is why you stayed this long, not why you came back (dap.51).
+  'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
+  'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
+  'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
+  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long before you go. Still open, with any scrutiny: secondary inspection.',
+  // The two purpose lines #59 added (dap.49), on the way out (dap.53).
+  'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you stayed instead.',
+  'departure:supervisor.settled.purpose': 'Supervisor: reason for your stay verified.',
+  // The line under a purpose claim, also on Departure's file line for what you said at Arrival.
+  'departure:claim.familyVisit.recorded': 'Recorded as your reason for the trip',
+  'departure:claim.shortTrip.recorded': 'Recorded as your reason for the trip',
+  // Customs on the way out asks the same, so the admission is about staying, not coming.
+  'departure:enc.c_shortTrip.admit.label': '"I stayed for my father."',
 };

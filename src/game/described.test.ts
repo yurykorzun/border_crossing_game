@@ -63,7 +63,7 @@ describe('every document answers the questions its description names', () => {
     expect(missing).toEqual([]);
   });
 
-  it('is offered at every card on a question it names while packed and unspent, unless its block names that question', () => {
+  it('is offered at every card on a question it names while packed and unspent, unless its block names that question or card', () => {
     const refused = new Set<string>();
     for (const [level, states] of RUNS) for (const s of states) {
       const card = currentCard(s)!;
@@ -72,7 +72,7 @@ describe('every document answers the questions its description names', () => {
       for (const id of s.loadout) {
         const ev = EVIDENCE[id];
         if (s.used.includes(id) || !named(id).includes(topic)) continue;
-        if (ev.blockedOn?.includes(topic)) continue;
+        if (ev.blockedOn?.includes(topic) || ev.notFor?.includes(card.id)) continue;
         if (!choices(s).some((o) => o.card === id)) refused.add(`${level} ${card.id} ${id}`);
       }
     }

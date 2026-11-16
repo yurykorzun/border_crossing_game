@@ -87,7 +87,8 @@ describe('customs phones your mother only with a number for her', () => {
     }
     expect(call).toBeGreaterThan(0);
     expect(hotel).toBeGreaterThan(0);
-  });
+    // About 1.5 s alone, so the 5 s default fails while the Departure sweep runs beside it.
+  }, 30_000);
 });
 
 describe('the mother number at customs is a second one only when the desk had one', () => {

@@ -563,19 +563,18 @@ export const ENCOUNTERS: Encounter[] = [
     // Where you stayed, against where your entry form said you would. Departure's
     // second card at the passport desk, in the place of "Who will you stay with?"
     // (p_host), which only makes sense on the way in. The file line quotes the
-    // entry form's answer (fileLine()). A place that differs from it is no proof of
-    // anything, so the clerk checks it against the entry record: an hour, not a mark.
+    // entry form's answer (fileLine()). A place that differs from it (Approach.stayed,
+    // EvidenceCard.stayed) is no proof of anything, so the clerk checks it against the
+    // entry record: an hour, not a mark, and a line that says so (formDiffers()).
     id: 'd_stayed', checkpoint: 'passport', kind: 'routine', topic: 'accommodation',
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
-      // The truth names her: her address goes on file. It differs from a hotel on the entry form.
-      {
-        id: 'mother', kind: 'contact', contacts: ['mother'],
-        effects: [{ claim: 'stayingWithFamily' }, { fact: 'familyAddress' }, { time: -1, when: { fileClaims: ['hotelStay'] } }],
-      },
-      // Keeping her address out of it. Free when the entry form names no place, else
-      // the place it names differs from "with friends".
-      { id: 'friends', kind: 'say', effects: [{ time: -1, when: { fileClaims: ['stayingWithFamily', 'hotelStay'] } }] },
+      // The hotel the entry form names, said back to her: it matches, so it is free.
+      { id: 'hotel', kind: 'say', requires: { fileStayed: ['hotel'] }, stayed: 'hotel', effects: [] },
+      // The truth names her: her address goes on file.
+      { id: 'mother', kind: 'contact', contacts: ['mother'], stayed: 'family', effects: [{ claim: 'stayingWithFamily' }, { fact: 'familyAddress' }] },
+      // Keeping her address out of it. Free when the entry form names no place.
+      { id: 'friends', kind: 'say', requires: { fileStayed: ['family', 'none'] }, stayed: 'friends', effects: [] },
     ],
   },
   {

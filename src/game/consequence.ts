@@ -6,7 +6,7 @@
 import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, travelOf } from './engine';
+import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, lineTier, travelOf } from './engine';
 import type { Answered, CarriedFile, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
@@ -81,7 +81,7 @@ export function eventKey(o: Option, cardKey: string): string {
  * With the file (`facts`), a fact this desk already has is not named again, because
  * the line names only what this answer adds.
  */
-export type Clock = Pick<RunState, 'time' | 'travel'> & Partial<Pick<RunState, 'facts'>>;
+export type Clock = Pick<RunState, 'time' | 'travel'> & Partial<Pick<RunState, 'facts' | 'scrutiny'>>;
 
 /**
  * The parts for one answer. `cardKey` is the answer's key without `.label`
@@ -94,7 +94,10 @@ export type Clock = Pick<RunState, 'time' | 'travel'> & Partial<Pick<RunState, '
  */
 export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint, clock?: Clock): Consequence {
   const a = o.approach;
-  if (o.blocked) return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, tone: 'plain' }] };
+  if (o.blocked) {
+    const vars = o.blockedDoc ? { vars: { cardShort: o.blockedDoc, cardThe: o.blockedDoc } } : {};
+    return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, ...vars, tone: 'plain' }] };
+  }
   // "Show a document" costs nothing yet: each document in its list has its own line.
   if (o.documents) return { icon: 'document', parts: [{ kind: 'card', key: 'ui.line.documents', n: o.documents.length, tone: 'plain' }] };
 
@@ -145,6 +148,9 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
       ? { kind: 'travel', key: 'ui.line.need', n: need, tone: 'amber' }
       : { kind: 'travel', key: 'ui.line.travel', n: travel, tone: 'amber' });
   }
+  // Scrutiny stops at MAX_SCRUTINY, so with the run's meter the line says what it will really
+  // rise by: "+1" at 2/3, never a "+2" the ending then counts as 1 (dap.46).
+  if (clock?.scrutiny !== undefined && scrutiny > 0) scrutiny = Math.min(scrutiny, Math.max(0, MAX_SCRUTINY - clock.scrutiny));
   if (scrutiny) all.push({ kind: 'scrutiny', key: 'ui.line.scrutiny', vars: { n: scrutiny }, tone: 'amber' });
   if (a.kind === 'withdraw') all.push({ kind: 'withdraw', key: 'ui.line.withdraw', tone: 'plain' });
   // A claim only shows when nothing else does: "Recorded as your reason for visiting",
@@ -519,7 +525,7 @@ export function protectedRow(s: RunState): { key: string; tone: 'plain' | 'red';
 export function caughtLine(s: RunState, card: string): { key: string; vars: Record<string, string> } | undefined {
   const c = caught(s, card);
   if (!c) return fileLine(s, card);
-  const key = `caught.line.${factTier(s, c.fact)}`;
+  const key = `caught.line.${lineTier(s, c.fact)}`;
   // A claim only a document made (the hotel booking for where you stay) is the document, not your words.
   const doc = s.shownBy?.[c.claim];
   if (doc) return { key: `${key}.shown`, vars: { cardThe: doc, desk: c.desk, fact: c.fact } };

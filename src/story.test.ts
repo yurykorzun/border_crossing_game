@@ -5,11 +5,11 @@
 import { createElement } from 'react';
 import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it } from 'vitest';
-import { BeginStep, DocumentsStep, Ending, Title, TravelerStep } from './App';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import App, { BeginStep, DocumentsStep, Ending, Title, TravelerStep } from './App';
 import { SAMPLE_FILES } from './game/carry';
 import { newRun } from './game/engine';
-import { freshSave } from './game/save';
+import { SAVE_KEY, freshSave } from './game/save';
 import type { EndingId, LevelId, RunState } from './game/types';
 import { setStory } from './i18n';
 import { en } from './i18n/en';
@@ -165,5 +165,33 @@ describe('The funeral keeps its own mission', () => {
     expect(f.mission).toContain(en['funeral:mission.title']);
     expect(f.mission).toContain(decode(en['funeral:mission.body']));
     expect(f.mission).not.toContain(en['mission.title']);
+  });
+});
+
+// The title a save opens on follows the saved run (dap.15): a Departure save shows
+// Departure's tagline under its DEPARTURES stamp, and no save or an Arrival save shows Arrival's.
+describe('The title tagline follows the saved run', () => {
+  /** The tagline on the title screen App opens on, with this run saved (or none). */
+  function titleTagline(level?: LevelId): string {
+    const file = level === 'departure' ? SAMPLE_FILES.lena : undefined;
+    const run = level ? newRun({ level, character: 'lena', loadout: ['motherLetter', 'hotel', 'returnTicket'], bulletin: 'records', seed: 7, file }) : null;
+    const saved = JSON.stringify({ ...freshSave(), run });
+    vi.stubGlobal('window', { location: { search: '' } });
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === SAVE_KEY ? saved : null), setItem: noop });
+    try {
+      return part(renderToStaticMarkup(createElement(App)), /<p class="title-premise">(.*?)<\/p>/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }
+
+  it('a saved Departure run shows the Departure tagline', () => {
+    expect(titleTagline('departure')).toBe(decode(en['departure:ui.tagline']));
+    expect(en['departure:ui.tagline']).not.toBe(en['ui.tagline']);
+  });
+
+  it('no save or an Arrival save shows ui.tagline', () => {
+    expect(titleTagline()).toBe(decode(en['ui.tagline']));
+    expect(titleTagline('arrival')).toBe(decode(en['ui.tagline']));
   });
 });

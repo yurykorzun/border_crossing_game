@@ -6,7 +6,7 @@ import { answerKey, chooseAction, deskOf, factIds, factTier, legalActions, newRu
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
-import { CHARACTERS } from './content/world';
+import { CHARACTERS, MAX_SCRUTINY } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
@@ -16,7 +16,7 @@ import type { Action, Answered, CheckId, Checkpoint, ClaimId, ContactId, EndingI
  * Bump when rules or content change in a way that changes how a run plays, so
  * a saved replay from an older build is flagged instead of silently diverging.
  */
-export const CONTENT_VERSION = 17;
+export const CONTENT_VERSION = 18;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
@@ -123,7 +123,12 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
     const vars: Record<string, string> = {};
     if (o.card) vars.card = vars.cardThe = o.card;
     if (o.contact) vars.contact = vars.contactMine = o.contact;
-    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved });
+    // The rise the answer's line showed (consequence(), capped at the max). The net change
+    // can hide it: when the answer takes scrutiny to 3/3 and nothing is left to inspect, the supervisor drops it on the
+    // same step (insp.none), and the ending would say up by 0 after the line said +2 (dap.54).
+    const showed = o.effects.reduce((x, e) => x + ('scrutiny' in e ? e.scrutiny : 0), 0);
+    const rose = Math.min(Math.max(0, showed), MAX_SCRUTINY - s.scrutiny);
+    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose) });
   }
   if (action.type !== 'waitAction' || sc.kind !== 'wait' || action.action === 'ask') return n;
   const last = answers[answers.length - 1];
