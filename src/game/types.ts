@@ -737,6 +737,14 @@ export interface RunState {
   deskStart?: { time: number; log: number; phoned?: boolean; exposed?: number };
   /** How each desk went, by the index of the queue after it (QueueMood). Unset in saves from before it existed. */
   after?: Partial<Record<number, QueueMood>>;
+  /**
+   * The card on screen's known-facts line (knownLine() in src/game/engine.ts), set
+   * when it is dealt: its desk, the facts that desk knew then, the fact the line
+   * names, and the facts it may not name because the card before it at this desk
+   * already showed them (that card's line named one, or its answer put one on file).
+   * Unset in saves from before it existed.
+   */
+  knownShown?: { card: string; desk: Checkpoint; known: FactId[]; named?: FactId; skip: FactId[] };
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;

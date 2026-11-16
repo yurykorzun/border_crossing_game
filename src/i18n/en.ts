@@ -126,6 +126,8 @@ export const en: Record<string, string> = {
   // The known-facts line on every desk card (knownLine() in src/game/engine.ts):
   // the newest fact this officer knows, by its tier, and the newest claim written down.
   'known.fact.recorded': 'Old records: {fact}.',
+  // An old-records fact a desk turned up on this crossing, so never "Old records".
+  'known.fact.found': 'On record: {fact}.',
   'known.fact.confirmed': 'Confirmed: {fact}.',
   'known.fact.flagged': 'Flagged: {fact}.',
   'known.claim': 'Written down: {claim}.',
