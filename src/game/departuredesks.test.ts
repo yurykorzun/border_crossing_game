@@ -233,7 +233,7 @@ describe('the cases found on the live site', () => {
       const mother = options(s).find((o) => o.approach.id === 'mother')!;
       const n = playStep(s, chooseAction(mother), dealer);
       expect(s.time - n.time).toBe(1);
-      expect(n.reaction!.map((l) => t(l.key, l.vars))).toContain('Your entry form says a hotel, so she checks the difference against your entry record.');
+      expect(n.reaction!.map((l) => t(l.key, l.vars))).toContain('Your entry form says a hotel. She checks your entry record.');
     } finally {
       setStory(undefined);
     }

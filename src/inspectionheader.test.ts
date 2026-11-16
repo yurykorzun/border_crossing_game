@@ -103,7 +103,9 @@ describe('the secondary inspection header (dap.48)', () => {
       expect(s.scrutiny).toBe(SCRUTINY_AFTER_INSPECTION);
       expect(inspectionReason(s)).toBeUndefined();
       expect(progress(s)).not.toContain(SECONDARY);
-      expect(officerLabel(s)).not.toMatch(/^Supervisor/);
+      // Her reaction is hers, so the chip says Supervisor (speakerOf(), dap.46), but
+      // without the inspection's reason, because the inspection is over.
+      expect(officerLabel(s)).not.toMatch(/^Supervisor ·/);
     }
   });
 

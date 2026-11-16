@@ -1131,8 +1131,8 @@ export const en: Record<string, string> = {
   'enc.d_stayed.evidence.label': 'Show {cardThe}',
   'enc.d_stayed.hotel.label': '"At the hotel on my entry form."',
   'enc.d_stayed.hotel.reaction': 'She finds the booking on your entry form and moves on.',
-  'form.differs.hotel': 'Your entry form says a hotel, so she checks the difference against your entry record.',
-  'form.differs.family': "Your entry form says your mother's address, so she checks the difference against your entry record.",
+  'form.differs.hotel': 'Your entry form says a hotel. She checks your entry record.',
+  'form.differs.family': "Your entry form says your mother's address. She checks your entry record.",
   'enc.d_stayed.evidence.reaction': 'She checks it against your entry form.',
   'enc.d_stayed.mother.label': "Give {contact}'s address",
   'enc.d_stayed.mother.event': 'Record check',
@@ -1276,6 +1276,9 @@ export const en: Record<string, string> = {
   'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
   'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long before you go. Still open, with any scrutiny: secondary inspection.',
+  // The two purpose lines #59 added (dap.49), on the way out (dap.53).
+  'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you stayed instead.',
   'departure:supervisor.settled.purpose': 'Supervisor: reason for your stay verified.',
   // The line under a purpose claim, also on Departure's file line for what you said at Arrival.
   'departure:claim.familyVisit.recorded': 'Recorded as your reason for the trip',
