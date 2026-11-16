@@ -3,7 +3,7 @@
 
 import type {
   Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -622,20 +622,78 @@ export function knownLine(s: RunState): KnownPart[] {
   }
   if (s.screen.kind !== 'encounter') return [];
   const asks = asksAbout(s, s.screen.id);
+  const fresh = lineFact(s, asks);
   if (asks) {
-    const fact = knownAt(s).filter((f) => asks.includes(f)).at(-1);
-    if (fact) return [{ key: `known.fact.${lineTier(s, fact)}`, vars: { fact } }];
+    // The card asks about it, so a fact the card before named is named again before "nothing on file".
+    const fact = fresh ?? knownAt(s).filter((f) => asks.includes(f)).at(-1);
+    if (fact) return [factPart(s, fact)];
     // What your last crossing put on file is on the record you carry (CarriedFile.facts), never "Nothing on file".
     const kept = s.file?.facts?.filter((f) => asks.includes(f)).at(-1);
     return [kept ? { key: 'known.file', vars: { fact: kept } } : { key: 'known.asked.none' }];
   }
   // A fact on file outranks a claim, because its tier is what the officer acts on.
-  const fact = knownAt(s).at(-1);
-  if (fact) return [{ key: `known.fact.${lineTier(s, fact)}`, vars: { fact } }];
+  if (fresh) return [factPart(s, fresh)];
   const written = s.claims.filter((c) => loggedAt(s, c).length).at(-1);
   // The claim in this traveler's own wording, as the spot-check names it.
   if (written) return [{ key: 'known.claim', vars: { claim: own(`claim.${written}`, s.character).slice('claim.'.length) } }];
-  return [{ key: 'known.none' }];
+  // Saying the fact again beats saying the file is empty.
+  const again = knownAt(s).at(-1);
+  return [again ? factPart(s, again) : { key: 'known.none' }];
+}
+
+/**
+ * The fact the known-facts line names on the card on screen, if one is new to it:
+ * the newest fact this desk knows (among `asks` when the card asks about some),
+ * leaving out what the card before it at this desk already showed (RunState.knownShown).
+ */
+function lineFact(s: RunState, asks?: FactId[]): FactId | undefined {
+  const shown = s.knownShown;
+  const skip = shown && s.screen.kind === 'encounter' && shown.card === s.screen.id ? shown.skip : [];
+  return knownAt(s).filter((f) => (!asks || asks.includes(f)) && !skip.includes(f)).at(-1);
+}
+
+/**
+ * The facts on file before the traveler said a word: the old records the passport
+ * desk has (Character.onFile), the entry record a level that reads a file opens
+ * with, and a contact statement given before you came. Any other fact was put on
+ * file on this crossing.
+ */
+export function startFacts(s: RunState): FactId[] {
+  const statement = statementIn(s);
+  return [
+    ...(CHARACTERS[s.character].onFile ?? []),
+    ...(levelOf(s).readsFile && s.file ? (['entryRecord'] as FactId[]) : []),
+    ...(statement ? [statement] : []),
+  ];
+}
+
+/**
+ * One fact on the known-facts line, named by its tier. A fact the old records hold
+ * that a desk turned up on this crossing reads "On record", never "Old records",
+ * because the player just saw it go on file (startFacts()).
+ */
+function factPart(s: RunState, fact: FactId): KnownPart {
+  const tier = factTier(s, fact);
+  const key = tier === 'recorded' && !startFacts(s).includes(fact) ? 'found' : tier;
+  return { key: `known.fact.${key}`, vars: { fact } };
+}
+
+/**
+ * What the card before this one at the same desk showed, so the known-facts line
+ * on `id` names something else: the fact its line named, and the facts its answer
+ * put on file, which the reaction above `id` says. Empty on a desk's first card.
+ */
+function knownShown(s: RunState, id: string): NonNullable<RunState['knownShown']> {
+  const desk = deskOf(s);
+  const known = knownAt(s);
+  const prev = s.knownShown?.desk === desk ? s.knownShown : undefined;
+  const skip = prev ? [...new Set([...(prev.named ? [prev.named] : []), ...known.filter((f) => !prev.known.includes(f))])] : [];
+  // The fact knownLine() names on `id`, worked out the same way without building its text.
+  const asks = asksAbout(s, id);
+  const fresh = known.filter((f) => (!asks || asks.includes(f)) && !skip.includes(f)).at(-1);
+  const named = asks ? fresh ?? known.filter((f) => asks.includes(f)).at(-1)
+    : fresh ?? (s.claims.some((c) => loggedAt(s, c).length) ? undefined : known.at(-1));
+  return { card: id, desk, known, skip, ...(named ? { named } : {}) };
 }
 
 /** The open issue the inspection on screen is about (Inspection.issue), or undefined off one. */
@@ -664,9 +722,23 @@ export function supervisorLine(s: RunState): string | undefined {
  * Whether the inspection card itself is on screen: the "Secondary inspection"
  * header shows only then, not on the reaction to the answer that led to it
  * (dap.49). progressName() in src/ui/parts.tsx and chromeLines() in
- * src/game/transcript.ts both use it.
+ * src/game/transcript.ts both use it, through inspectionReason().
  */
 export const onInspectionCard = (s: RunState): boolean => s.screen.kind === 'inspection' && !s.reaction;
+
+/**
+ * Why the inspection card on screen was dealt: Scrutiny 3/3, or the point the
+ * supervisor announced. Undefined off the inspection card (onInspectionCard()),
+ * because on the reaction to its answer choose() has already dropped scrutiny to
+ * SCRUTINY_AFTER_INSPECTION. A save from before Screen.reason existed
+ * reads as announced when the card is about her point and scrutiny is below the
+ * maximum, else as scrutiny.
+ */
+export function inspectionReason(s: RunState): InspectionReason | undefined {
+  if (!onInspectionCard(s)) return undefined;
+  if (s.screen.kind === 'inspection' && s.screen.reason) return s.screen.reason;
+  return s.supervisor && inspectionIssue(s) === s.supervisor && s.scrutiny < MAX_SCRUTINY ? 'announced' : 'scrutiny';
+}
 
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
@@ -931,7 +1003,7 @@ export const isCalm = (id: string): boolean => !!ENCOUNTER_BY_ID.get(id)?.calm;
 export const escalates = (id: string): boolean => ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
 
 function show(s: RunState, id: string): RunState {
-  return { ...s, seen: [...s.seen, id], streak: escalates(id) ? (s.streak ?? 0) + 1 : 0, screen: { kind: 'encounter', id } };
+  return { ...s, seen: [...s.seen, id], streak: escalates(id) ? (s.streak ?? 0) + 1 : 0, screen: { kind: 'encounter', id }, knownShown: knownShown(s, id) };
 }
 
 /** The routine cards still to be asked at this desk. */
@@ -1323,7 +1395,8 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
-    screen: { kind: 'inspection', id },
+    // The announced point is the only reason inspect() gets an issue (admission()).
+    screen: { kind: 'inspection', id, reason: issue ? 'announced' : 'scrutiny' },
   };
 }
 

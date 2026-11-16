@@ -19,7 +19,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
 import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
-import { afford, answerKey, speakerOf, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, supervisorLine, travelOf, waitActions, waitKey, onInspectionCard } from './engine';
+import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
@@ -99,7 +99,9 @@ function chromeLines(s: RunState, p: Page): void {
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
   const cpName = t(`checkpoint.${CHECKPOINTS[now]}`);
   let name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : cpName;
-  if (onInspectionCard(s)) {
+  // Only on the inspection card itself: its reaction comes at Scrutiny 1/3 and names the desk alone.
+  const reason = inspectionReason(s);
+  if (reason) {
     p.add('ui.inInspection', { name: cpName }, CHROME);
     name = t('ui.inInspection', { name: cpName });
   }
@@ -110,8 +112,15 @@ function chromeLines(s: RunState, p: Page): void {
   if (!(s.screen.kind === 'between' && !s.reaction)) {
     p.add(`scene.${CHECKPOINTS[now]}`, {}, CHROME);
   }
-  // The officer's label stays up with the last reaction, before the queue.
-  if (!(s.screen.kind === 'between' && !s.reaction))
+  // The officer's label stays up with the last reaction, before the queue. On an
+  // inspection card it says why she came (officerLabel() in src/ui/parts.tsx);
+  // a reaction is labelled by who said it (speakerOf()).
+  const issue = inspectionIssue(s);
+  if (reason === 'announced' && issue) {
+    p.add(`topic.${issue}.helps`, {}, CHROME);
+    p.add('officer.inspection.announced', { point: t(`topic.${issue}.helps`) }, CHROME);
+  } else if (reason) p.add('officer.inspection.scrutiny', { max: MAX_SCRUTINY }, CHROME);
+  else if (!(s.screen.kind === 'between' && !s.reaction))
     p.add(`officer.${speakerOf(s)}`, {}, CHROME);
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.evidence', {}, CHROME);

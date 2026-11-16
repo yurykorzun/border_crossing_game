@@ -917,7 +917,7 @@ describe('before admission, only the announced point is a risk (dap.13)', () => 
   it('sends you to secondary inspection for the announced point while it is open and scrutiny is above 0', () => {
     for (const scrutiny of [1, 2]) {
       const { n } = lastAnswer(scrutiny, 0, { supervisor: 'purpose' });
-      expect(n.screen, `scrutiny ${scrutiny}`).toEqual({ kind: 'inspection', id: 's_supervisor' });
+      expect(n.screen, `scrutiny ${scrutiny}`).toEqual({ kind: 'inspection', id: 's_supervisor', reason: 'announced' });
       expect(n.inspections).toBe(1);
     }
   });
@@ -942,7 +942,7 @@ describe('before admission, only the announced point is a risk (dap.13)', () => 
     const day: RunSetup = { ...lena, bulletin: 'accommodation' };
     for (const pick of [0, 1, 2]) {
       const { n, draws } = lastAnswer(1, pick, { supervisor: 'accommodation' }, day);
-      expect(n.screen, `pick ${pick}`).toEqual({ kind: 'inspection', id: 's_connection' });
+      expect(n.screen, `pick ${pick}`).toEqual({ kind: 'inspection', id: 's_connection', reason: 'announced' });
       expect(draws).toEqual([]);
     }
   });

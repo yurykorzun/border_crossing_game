@@ -276,6 +276,13 @@ export interface Check {
 }
 
 /**
+ * Why a secondary inspection was dealt: scrutiny reached its maximum, or the
+ * supervisor came for the point she announced before the last desk (admission()
+ * in src/game/engine.ts). A save from before the field existed has none.
+ */
+export type InspectionReason = 'scrutiny' | 'announced';
+
+/**
  * What a secondary inspection does to the problem. search: the bag is searched
  * and the cash counted. The other three change something besides time, so a
  * setback is a new decision, not only lost hours: confiscation holds the
@@ -572,7 +579,7 @@ export type WaitAction = 'wait' | 'ask' | 'assist' | 'explain';
 
 export type Screen =
   | { kind: 'encounter'; id: string }
-  | { kind: 'inspection'; id: string }
+  | { kind: 'inspection'; id: string; reason?: InspectionReason }
   | { kind: 'wait'; check: CheckId; beats: number[]; shown: number; resolved: CheckCase; asked: boolean }
   | { kind: 'between'; next: number }
   | { kind: 'ending' };
@@ -774,6 +781,14 @@ export interface RunState {
   deskStart?: { time: number; log: number; phoned?: boolean; exposed?: number };
   /** How each desk went, by the index of the queue after it (QueueMood). Unset in saves from before it existed. */
   after?: Partial<Record<number, QueueMood>>;
+  /**
+   * The card on screen's known-facts line (knownLine() in src/game/engine.ts), set
+   * when it is dealt: its desk, the facts that desk knew then, the fact the line
+   * names, and the facts it may not name because the card before it at this desk
+   * already showed them (that card's line named one, or its answer put one on file).
+   * Unset in saves from before it existed.
+   */
+  knownShown?: { card: string; desk: Checkpoint; known: FactId[]; named?: FactId; skip: FactId[] };
   /** Follow-ups waiting to be dealt before the next slot. */
   pending: string[];
   screen: Screen;

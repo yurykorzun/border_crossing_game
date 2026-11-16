@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, setStory, t, tn } from './i18n';
-import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, speakerOf, supervisorLine, waitActions, waitKey } from './game/engine';
+import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, inspectionReason, knownLine, newRun, observation, options, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { explanationsDue, markShown } from './game/explain';
 import type { Explanation } from './game/explain';
@@ -21,7 +21,7 @@ import { defaultFile, ownFile, recordRun } from './game/carry';
 import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
-import { ChangeLines, ConsequenceLine, EvidenceContent, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
+import { ChangeLines, ConsequenceLine, EvidenceContent, officerLabel, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
 import { SEPARATOR, axisLines, caughtLine, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
@@ -681,7 +681,6 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
-  const officerKey = speakerOf(s);
   const close = () => setSheet(null);
   const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
   // How many beats of this queue are up. It lives here so My story lists the messages seen
@@ -693,7 +692,8 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
     writing: !!s.reaction && (s.changes ?? []).some((c) => c.key.startsWith('change.onFile.')),
     away: s.screen.kind === 'wait',
     medicine: s.medicine,
-    inspection: s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.kind ?? null : null,
+    // The supervisor comes in with the inspection card, not with the desk's reaction before it.
+    inspection: s.screen.kind === 'inspection' && inspectionReason(s) ? INSPECTION_BY_ID.get(s.screen.id)?.kind ?? null : null,
   };
   return (
     <main className="run">
@@ -709,7 +709,7 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
           <div className={`scene scene-${CHECKPOINTS[sceneAt]} ${data.settings.reduceMotion ? 'still' : ''}`}>
             <div className="officer">
               <CheckpointScene checkpoint={CHECKPOINTS[sceneAt]} character={s.character} state={sceneState} />
-              <span className="mono officer-label" aria-hidden>{t(`officer.${officerKey}`)}</span>
+              <span className="mono officer-label" aria-hidden>{officerLabel(s)}</span>
             </div>
             <div className="flicker" aria-hidden />
             <AffordLabel s={s} />

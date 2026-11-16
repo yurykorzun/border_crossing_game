@@ -134,6 +134,8 @@ export const en: Record<string, string> = {
   // The known-facts line on every desk card (knownLine() in src/game/engine.ts):
   // the newest fact this officer knows, by its tier, and the newest claim written down.
   'known.fact.recorded': 'Old records: {fact}.',
+  // An old-records fact a desk turned up on this crossing, so never "Old records".
+  'known.fact.found': 'On record: {fact}.',
   'known.fact.confirmed': 'Confirmed: {fact}.',
   'known.fact.flagged': 'Flagged: {fact}.',
   'known.claim': 'Written down: {claim}.',
@@ -494,7 +496,10 @@ export const en: Record<string, string> = {
   'officer.customs': 'Inspector',
   'officer.interview': 'Officer',
   'officer.followup': 'Officer',
+  // The supervisor on an inspection card, with why she came (officerLabel() in src/ui/parts.tsx). {point} is a topic.<topic>.helps name.
   'officer.inspection': 'Supervisor',
+  'officer.inspection.scrutiny': 'Supervisor · Scrutiny {max}/{max}',
+  'officer.inspection.announced': 'Supervisor · Announced: {point}',
   // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
   'officer.passport.priority': 'The clerk checks every stamp and date.',
   'officer.customs.priority': 'The inspector cares what you carry and declare.',
@@ -1218,6 +1223,8 @@ export const en: Record<string, string> = {
   'ending.held.body': 'They keep your passport for the review. "You are free to go, for now," the officer says. You take the bus back into town. Your father is awake. Your mother makes up the couch again.',
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
   'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
+  // The title follows the saved run, because a Departure save opens there under its stamp.
+  'departure:ui.tagline': "You're leaving again. You don't know if they'll let you go.",
   // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
   // Why now, when you leave: Dad stays in care (char.<id>.why).
   'departure:char.lena.why': 'Flying back to work, with her father in care.',
@@ -1264,4 +1271,15 @@ export const en: Record<string, string> = {
   'departure:scene.busEmpty': 'Your empty hand on a night bus, the airport tower through the rain',
   'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
+  // On the way out the purpose point is why you stayed this long, not why you came back (dap.51).
+  'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
+  'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
+  'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
+  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long before you go. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.settled.purpose': 'Supervisor: reason for your stay verified.',
+  // The line under a purpose claim, also on Departure's file line for what you said at Arrival.
+  'departure:claim.familyVisit.recorded': 'Recorded as your reason for the trip',
+  'departure:claim.shortTrip.recorded': 'Recorded as your reason for the trip',
+  // Customs on the way out asks the same, so the admission is about staying, not coming.
+  'departure:enc.c_shortTrip.admit.label': '"I stayed for my father."',
 };
