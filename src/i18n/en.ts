@@ -36,9 +36,9 @@ export const en: Record<string, string> = {
   'supervisor.instead.accommodation': 'Scrutiny 3/3: she checks your address here instead.',
   'supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you came back instead.',
   // The same point, settled at a desk and reopened by a flag since (pointVerified()): the line names that flag.
-  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
   // On a last-desk card once that point is settled (supervisorLine()): she has nothing left to check.
   'supervisor.settled.medicine': 'Supervisor: prescription verified.',
   'supervisor.settled.accommodation': 'Supervisor: address verified.',
@@ -1277,7 +1277,7 @@ export const en: Record<string, string> = {
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
   'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long before you go. Still open, with any scrutiny: secondary inspection.',
   // The two purpose lines #59 added (dap.49), on the way out (dap.53).
-  'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long before you go. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
   'departure:supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you stayed instead.',
   'departure:supervisor.settled.purpose': 'Supervisor: reason for your stay verified.',
   // The line under a purpose claim, also on Departure's file line for what you said at Arrival.

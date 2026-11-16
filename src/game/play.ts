@@ -124,7 +124,7 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
     if (o.card) vars.card = vars.cardThe = o.card;
     if (o.contact) vars.contact = vars.contactMine = o.contact;
     // The rise the answer's line showed (consequence(), capped at the max). The net change
-    // can hide it: at 3/3 with nothing left to inspect, the supervisor drops scrutiny on the
+    // can hide it: when the answer takes scrutiny to 3/3 and nothing is left to inspect, the supervisor drops it on the
     // same step (insp.none), and the ending would say up by 0 after the line said +2 (dap.54).
     const showed = o.effects.reduce((x, e) => x + ('scrutiny' in e ? e.scrutiny : 0), 0);
     const rose = Math.min(Math.max(0, showed), MAX_SCRUTINY - s.scrutiny);
