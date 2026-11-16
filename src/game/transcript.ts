@@ -19,7 +19,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
 import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
-import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, supervisorLine, travelOf, waitActions, waitKey } from './engine';
+import { afford, answerKey, speakerOf, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
@@ -112,7 +112,7 @@ function chromeLines(s: RunState, p: Page): void {
   }
   // The officer's label stays up with the last reaction, before the queue.
   if (!(s.screen.kind === 'between' && !s.reaction))
-    p.add(`officer.${s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[now]}`, {}, CHROME);
+    p.add(`officer.${speakerOf(s)}`, {}, CHROME);
   p.add('ui.myStory', {}, CHROME);
   p.add('ui.evidence', {}, CHROME);
   p.add('ui.settings', {}, CHROME);
@@ -407,7 +407,7 @@ function screenLines(s: RunState, p: Page, explained: string[] = [], read: Statu
     for (const e of explain) p.add(`explain.${e}`);
     for (const o of options(s)) {
       if (o.blocked === 'noCard' || o.blocked === 'shown' || o.blocked === 'notFor' || o.documents) p.add('ui.showDocument');
-      else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
+      else if (o.blocked === 'noContact' || o.blocked === 'noOther') p.add('ui.nameSomeone');
       else {
         const vars: Record<string, string> = {};
         if (o.card) vars.card = vars.cardThe = o.card;

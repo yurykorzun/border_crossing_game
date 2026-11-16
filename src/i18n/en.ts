@@ -132,6 +132,8 @@ export const en: Record<string, string> = {
   'known.none': 'Nothing on your file yet.',
   // On a card that asks about some facts (Encounter.asks) when none of them is on file here.
   'known.asked.none': 'Nothing on file about this yet.',
+  // The same card when your last crossing put the fact on file (CarriedFile.facts, dap.46).
+  'known.file': 'From your last crossing: {fact}.',
   'ui.and': 'and',
   'ui.nothingYet': 'Nothing yet.',
   'ui.used': 'used',
@@ -224,6 +226,8 @@ export const en: Record<string, string> = {
   'ui.blocked.shown': 'Already shown: {cardShort}',
   'ui.blocked.notFor': 'Not answered by {cardShort}',
   'ui.blocked.noContact': 'Nobody left to name',
+  // Someone is still unnamed, but not anyone this answer can name (dap.46).
+  'ui.blocked.noOther': 'Nobody else can answer this',
   'ui.showDocument': 'Show a document',
   'ui.backToAnswers': 'Back to answers',
   'ui.nameSomeone': 'Name someone',
@@ -472,6 +476,10 @@ export const en: Record<string, string> = {
   'checkpoint.passport': 'Passport control',
   'checkpoint.customs': 'Customs',
   'checkpoint.interview': 'Security interview',
+  // A desk inside a sentence ("already confirmed at passport control"), the deskAt var.
+  'checkpoint.passport.at': 'passport control',
+  'checkpoint.customs.at': 'customs',
+  'checkpoint.interview.at': 'the security interview',
   'desk.passport': 'Passport',
   'desk.customs': 'Customs',
   'desk.interview': 'Interview',
@@ -652,13 +660,16 @@ export const en: Record<string, string> = {
   'enc.c_host.call.event': 'Call to your host',
   'enc.c_host.call.reaction': "He dials your mother's number and waits.",
   'enc.c_host.call.verified.label': 'Point to the address already confirmed',
-  'enc.c_host.call.verified.reaction': 'He finds the address already confirmed at passport and lets it go.',
+  'enc.c_host.call.verified.reaction': 'He finds the address already confirmed at {deskAt} and lets it go.',
+  // The point was settled by the hotel booking, not by her address (VerifiedPoint.by, dap.46).
+  'enc.c_host.call.verified.hotel.label': 'Point to the hotel booking already checked',
+  'enc.c_host.call.verified.hotel.reaction': 'He finds your hotel booking already checked at {deskAt} and lets it go.',
   // No number for your mother at the desk (HOST_NUMBER): he phones the hotel you named.
   'enc.c_host.hotel.label': 'Wait while they call the hotel',
   'enc.c_host.hotel.event': 'Call to the hotel',
   'enc.c_host.hotel.reaction': 'He phones the hotel and asks about your booking.',
   'enc.c_host.hotel.verified.label': 'Point to where you stay, already confirmed',
-  'enc.c_host.hotel.verified.reaction': 'He finds where you stay already confirmed at passport and lets it go.',
+  'enc.c_host.hotel.verified.reaction': 'He finds where you stay already confirmed at {deskAt} and lets it go.',
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
@@ -714,6 +725,13 @@ export const en: Record<string, string> = {
   'enc.i_clarify.clarify.label': '"I\'m also here to see my father."',
   'enc.i_clarify.clarify.event': 'Call to passport control',
   'enc.i_clarify.clarify.reaction': 'The officer phones the passport desk to check it.',
+  // Said at this desk: checked here, no call (answerKey(), dap.46). Said at customs: the call goes there.
+  'enc.i_clarify.clarify.here.label': '"I\'m also here to see my father."',
+  'enc.i_clarify.clarify.here.event': 'Statement check',
+  'enc.i_clarify.clarify.here.reaction': 'The officer checks it against what you said at this desk.',
+  'enc.i_clarify.clarify.at.customs.label': '"I\'m also here to see my father."',
+  'enc.i_clarify.clarify.at.customs.event': 'Call to customs',
+  'enc.i_clarify.clarify.at.customs.reaction': 'The officer phones customs to check it.',
   'enc.i_clarify.evidence.label': 'Show {cardThe}',
   'enc.i_clarify.evidence.reaction': 'The officer reads it and crosses out the question.',
   'enc.i_clarify.accept.label': '"It\'s just a short trip."',
@@ -1098,6 +1116,11 @@ export const en: Record<string, string> = {
   'enc.d_stayed.q': '"Where did you stay?"',
   'enc.d_stayed.evidence.label': 'Show {cardThe}',
   'enc.d_stayed.evidence.reaction': 'She reads the address against your entry form.',
+  'enc.d_stayed.hotel.label': '"At the hotel on my entry form."',
+  'enc.d_stayed.hotel.reaction': 'She finds the booking on your entry form and moves on.',
+  // A place that differs from the entry form (formDiffers(), dap.46): checked against it.
+  'form.differs.hotel': 'Your entry form says a hotel, so she checks the difference against your entry record.',
+  'form.differs.family': "Your entry form says your mother's address, so she checks the difference against your entry record.",
   'enc.d_stayed.mother.label': "Give {contact}'s address",
   'enc.d_stayed.mother.event': 'Record check',
   'enc.d_stayed.mother.reaction': 'She types the address next to your entry form.',
@@ -1162,6 +1185,8 @@ export const en: Record<string, string> = {
   'enc.d_declared.under.label': '"My savings. It\'s under the limit."',
   'enc.d_declared.under.event': 'Cash count again',
   'enc.d_declared.under.reaction': 'He writes it down and looks at your file.',
+  // The entry record holds the total counted on the way in, and "under the limit" is not a total.
+  'enc.d_declared.under.file.counted.reaction': 'He holds "under the limit" next to the total counted on your entry record, and counts it again.',
   'enc.d_declared.under.bulletin.customs.reaction': 'Cash is checked today. He counts yours anyway and clips the total to your file.',
   'enc.d_named.q': '"Your file names {contact}. Any other relatives here?"',
   'enc.d_named.unsaid.q': '"Do you have any other relatives here?"',

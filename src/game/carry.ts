@@ -6,7 +6,7 @@
 import { DEFAULT_LEVEL } from './content/levels';
 import { playRun } from './bots';
 import { laterBeat } from './consequence';
-import { deskOf } from './engine';
+import { deskOf, factIds } from './engine';
 import type { SaveData } from './save';
 import type { CarriedClaim, CarriedFile, CharacterId, Checkpoint, Declaration, RunState } from './types';
 import { allSetups } from './walk';
@@ -61,6 +61,7 @@ export function fileOf(s: RunState): CarriedFile {
     spent: s.loadout.filter((e) => s.used.includes(e)),
     ...(s.shownOn ? { shownOn: { ...s.shownOn } } : {}),
     medicine: s.medicine,
+    facts: factIds(s),
   };
 }
 

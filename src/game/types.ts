@@ -98,7 +98,15 @@ export interface Cond {
   fileDeclared?: Declaration[];
   /** The carried file holds one of these claims, quoted or not (Departure's where you stayed, d_stayed). Never holds with no file. */
   fileClaims?: ClaimId[];
+  /** Where the carried file's entry form says you stayed (fileStayed() in src/game/engine.ts) is one of these. Never holds with no file. */
+  fileStayed?: Stayed[];
 }
+
+/**
+ * Where an entry form says you would stay, as the exit desk reads it (d_stayed): a hotel,
+ * with family, or no place. `friends` is only ever said at the exit, never on a form.
+ */
+export type Stayed = 'hotel' | 'family' | 'friends' | 'none';
 
 /**
  * Why scrutiny goes up, so the player can see it: a fact on file, or the check
@@ -181,6 +189,13 @@ export interface Approach {
    * (reactionOf() in src/game/engine.ts). Challenge cards say it for every answer (catchKind()).
    */
   reacts?: ReactionKind;
+  /**
+   * Where you stayed, as this answer says it (d_stayed). An answer that differs from the
+   * entry form on your carried file (fileStayed()) is checked against it: an hour, and a
+   * line that says so (formDiffers() in src/game/engine.ts). A document says it with
+   * EvidenceCard.stayed.
+   */
+  stayed?: Stayed;
 }
 
 export interface Encounter {
@@ -397,6 +412,8 @@ export interface EvidenceCard {
    * clerk forwards its details, so customs uses them instead of asking again.
    */
   forwards?: Topic[];
+  /** Where you stayed, as the document says it when shown for that (Approach.stayed). */
+  stayed?: Stayed;
 }
 
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
@@ -487,6 +504,12 @@ export interface CarriedFile {
   shownOn?: Partial<Record<string, EvidenceId>>;
   /** Whether the medicine came through. */
   medicine: boolean;
+  /**
+   * The facts that came out on that crossing, so a later desk that asks about one reads it
+   * from the file instead of "Nothing on file" (knownLine() in src/game/engine.ts). Unset
+   * in files from before it existed.
+   */
+  facts?: FactId[];
   /** What came back days after you got home (laterBeat() in src/game/consequence.ts), so the next crossing opens with it. */
   later?: LaterBeat;
   /** Set when no crossing was saved and the file was built from a seed (defaultFile()). */
@@ -628,6 +651,8 @@ export type FactMap = Partial<Record<FactId, Checkpoint[]>>;
 export interface VerifiedPoint {
   desk: Checkpoint;
   flags: number;
+  /** The document that settled it, when one did: a later desk names it, not "the address" (answerKey()). */
+  by?: EvidenceId;
 }
 
 export interface RunState {

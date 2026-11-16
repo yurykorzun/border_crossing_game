@@ -7,7 +7,7 @@ import { t, tn } from '../i18n';
 import { en } from '../i18n/en';
 import { caughtLine, questionKey } from './consequence';
 import { FACT_TIERS } from './content/world';
-import { factTier, newRun } from './engine';
+import { factTier, lineTier, newRun } from './engine';
 import type { RunSetup } from './engine';
 import { playStep } from './play';
 import type { ChangeLine, ClaimId, FactId, OnFileTier, RunState } from './types';
@@ -69,8 +69,12 @@ describe('a fact is on file as recorded, confirmed or flagged, and the card says
       const line = caughtLine(s, card)!;
       return t(line.key, line.vars);
     };
+    // Her address came out at the interview on this crossing, so it is not an old record (dap.46).
     expect(facing('i_clarify', 'shortTrip', 'familyAddress'))
-      .toBe('You said: "No reason, a short trip" (Passport control). In the old records: Your family address.');
+      .toBe('You said: "No reason, a short trip" (Passport control). Confirmed: Your family address.');
+    // Mark's second passport was on file before he came, so it stays one.
+    const mark = { ...newRun({ ...lena, character: 'mark', loadout: [...lena.loadout, 'returnTicket'] }), facts: { secondPassport: ['passport' as const] } } as RunState;
+    expect(lineTier(mark, 'secondPassport')).toBe('recorded');
     expect(facing('i_contradiction', 'noOtherFamily', 'relativeContact'))
       .toBe('You said: "I have no other relatives here" (Passport control). Confirmed: Another relative.');
     expect(facing('i_clarify', 'shortTrip', 'familyAddress', { flagged: ['familyAddress'] }))

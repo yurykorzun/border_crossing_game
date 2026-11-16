@@ -64,7 +64,7 @@ const factsIn = (c: Cond | undefined): FactId[] => c?.facts ?? [];
  */
 const spends = (a: Approach) => (a.kind === 'say' || a.kind === 'verify' ? 'nothing' : a.kind);
 const signature = (a: Approach) =>
-  canonical({ spends: spends(a), topic: a.topic, contacts: a.contacts, namesOnly: a.namesOnly, check: a.check, effects: a.effects });
+  canonical({ spends: spends(a), topic: a.topic, contacts: a.contacts, namesOnly: a.namesOnly, check: a.check, stayed: a.stayed, effects: a.effects });
 
 /**
  * One string per value, whatever order its keys were written in, so two effects

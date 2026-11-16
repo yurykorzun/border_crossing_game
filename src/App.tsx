@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, setStory, t, tn } from './i18n';
-import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
+import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, knownLine, newRun, observation, options, setupOf, shownCheckpoint, speakerOf, supervisorLine, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { explanationsDue, markShown } from './game/explain';
 import type { Explanation } from './game/explain';
@@ -681,7 +681,7 @@ function Run({ s, dispatch, data, setData, onChoose, onRetry, onNext, onStartOve
 
   // The last reaction at a checkpoint shows with the next queue already set; its officer is the one just left.
   const sceneAt = shownCheckpoint(s);
-  const officerKey = s.screen.kind === 'inspection' ? 'inspection' : CHECKPOINTS[sceneAt];
+  const officerKey = speakerOf(s);
   const close = () => setSheet(null);
   const queue = s.screen.kind === 'between' && !s.reaction ? s.screen.next : null;
   // How many beats of this queue are up. It lives here so My story lists the messages seen
@@ -957,7 +957,7 @@ export function AffordLabel({ s }: { s: RunState }) {
 /** A blocked option has no card or person to name, so it gets a generic label. */
 function optionLabel(s: RunState, o: Option): string {
   if (o.blocked === 'noCard' || o.blocked === 'shown' || o.blocked === 'notFor' || o.documents) return t('ui.showDocument');
-  if (o.blocked === 'noContact') return t('ui.nameSomeone');
+  if (o.blocked === 'noContact' || o.blocked === 'noOther') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;
   if (o.contact) vars.contact = vars.contactMine = o.contact;

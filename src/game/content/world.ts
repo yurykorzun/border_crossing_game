@@ -156,11 +156,13 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     // The exit desk's stay question quotes its three nights and asks why you stayed
     // twelve days: the booking holds no later date to answer with (dap.41).
     notFor: ['d_stay'],
+    stayed: 'hotel',
   },
   motherLetter: {
     id: 'motherLetter',
     topics: ['purpose', 'accommodation'],
     onUse: [{ fact: 'familyAddress' }, { claim: 'familyVisit' }],
+    stayed: 'family',
   },
   employerLetter: {
     id: 'employerLetter',
@@ -192,6 +194,7 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     settles: ['identity', 'accommodation'],
     // Shown for where you stay, it confirms who you are too: the registered owner's name and ID number.
     forwards: ['identity'],
+    stayed: 'family',
   },
 };
 
