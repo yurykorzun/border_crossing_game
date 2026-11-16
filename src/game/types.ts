@@ -386,6 +386,12 @@ export interface EvidenceCard {
   /** The questions blockedBy applies to; every question when unset. */
   blockedOn?: Topic[];
   /**
+   * Cards (by id) where the document does not answer, though it names their topic:
+   * the question asks something the document cannot show. Its row there reads
+   * "Not answered by ..." (Option.blockedDoc), never "No matching document".
+   */
+  notFor?: string[];
+  /**
    * Points this document verifies wherever it is shown, besides the question it
    * answers: the hospital note at passport verifies the prescription too, and the
    * clerk forwards its details, so customs uses them instead of asking again.

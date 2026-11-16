@@ -406,7 +406,7 @@ function screenLines(s: RunState, p: Page, explained: string[] = [], read: Statu
     if (caught) p.add(caught.key, caught.vars);
     for (const e of explain) p.add(`explain.${e}`);
     for (const o of options(s)) {
-      if (o.blocked === 'noCard' || o.documents) p.add('ui.showDocument');
+      if (o.blocked === 'noCard' || o.blocked === 'shown' || o.blocked === 'notFor' || o.documents) p.add('ui.showDocument');
       else if (o.blocked === 'noContact') p.add('ui.nameSomeone');
       else {
         const vars: Record<string, string> = {};

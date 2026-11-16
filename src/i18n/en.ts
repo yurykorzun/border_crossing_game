@@ -220,6 +220,9 @@ export const en: Record<string, string> = {
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
   'ui.blocked.noCard': 'No matching document',
+  // A packed document that names the question but is not offered (dap.41): shown for an earlier one, or no answer here.
+  'ui.blocked.shown': 'Already shown: {cardShort}',
+  'ui.blocked.notFor': 'Not answered by {cardThe}',
   'ui.blocked.noContact': 'Nobody left to name',
   'ui.showDocument': 'Show a document',
   'ui.backToAnswers': 'Back to answers',

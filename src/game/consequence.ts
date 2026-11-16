@@ -94,7 +94,10 @@ export type Clock = Pick<RunState, 'time' | 'travel'> & Partial<Pick<RunState, '
  */
 export function consequence(o: Option, cardKey: string, protectedContact: ContactId, desk?: Checkpoint, clock?: Clock): Consequence {
   const a = o.approach;
-  if (o.blocked) return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, tone: 'plain' }] };
+  if (o.blocked) {
+    const vars = o.blockedDoc ? { vars: { cardShort: o.blockedDoc, cardThe: o.blockedDoc } } : {};
+    return { icon: 'document', parts: [{ kind: 'blocked', key: `ui.blocked.${o.blocked}`, ...vars, tone: 'plain' }] };
+  }
   // "Show a document" costs nothing yet: each document in its list has its own line.
   if (o.documents) return { icon: 'document', parts: [{ kind: 'card', key: 'ui.line.documents', n: o.documents.length, tone: 'plain' }] };
 

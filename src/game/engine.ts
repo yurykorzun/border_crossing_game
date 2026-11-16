@@ -245,13 +245,29 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
 
 export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
-/** Every packed, unspent document that answers `topic`, in packing order. */
-export function cardsFor(s: RunState, topic: Topic): EvidenceId[] {
-  return s.loadout.filter((id) => {
-    const c = EVIDENCE[id];
-    const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
-    return !s.used.includes(id) && c.topics.includes(topic) && !blocked;
-  });
+/** Whether document `id` answers `topic` now, spent or not; on card `card` when named (EvidenceCard.notFor). */
+function answers(s: RunState, id: EvidenceId, topic: Topic, card?: string): boolean {
+  const c = EVIDENCE[id];
+  const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
+  return c.topics.includes(topic) && !blocked && !(card && c.notFor?.includes(card));
+}
+
+/** Every packed, unspent document that answers `topic`, in packing order; on card `card` when named. */
+export function cardsFor(s: RunState, topic: Topic, card?: string): EvidenceId[] {
+  return s.loadout.filter((id) => !s.used.includes(id) && answers(s, id, topic, card));
+}
+
+/**
+ * Why an evidence answer on card `card` has no document, when a packed one names
+ * its topic (dap.41): 'shown' when that document would answer but was spent on an
+ * earlier question, 'notFor' when it does not answer this card (EvidenceCard.notFor).
+ * Undefined when nothing packed names the topic: then it is "No matching document".
+ */
+export function emptyReason(s: RunState, topic: Topic, card: string): { blocked: 'shown' | 'notFor'; doc: EvidenceId } | undefined {
+  const shown = s.loadout.find((id) => s.used.includes(id) && answers(s, id, topic, card));
+  if (shown) return { blocked: 'shown', doc: shown };
+  const other = s.loadout.find((id) => EVIDENCE[id].topics.includes(topic) && EVIDENCE[id].notFor?.includes(card));
+  return other ? { blocked: 'notFor', doc: other } : undefined;
 }
 
 /** The first of cardsFor(). */
@@ -271,7 +287,12 @@ export function freeContact(s: RunState, wanted: ContactId[] | undefined, topic?
   return contactsFor(s, wanted, topic).find((c) => !s.exposed.includes(c));
 }
 
-export type Unavailable = 'noCard' | 'noContact' | null;
+/**
+ * noCard: nothing packed answers. shown: a packed document would, but it was shown
+ * for an earlier question. notFor: a packed document names the topic but does not
+ * answer this card. noContact: nobody left to name.
+ */
+export type Unavailable = 'noCard' | 'shown' | 'notFor' | 'noContact' | null;
 
 export interface Option {
   approach: Approach;
@@ -292,6 +313,8 @@ export interface Option {
   documents?: EvidenceId[];
   /** The answer uses a point verified earlier (usesVerified()): it takes its verified effects and opens no check. */
   usesVerified?: true;
+  /** A 'shown' or 'notFor' row: the packed document it names (emptyReason()). */
+  blockedDoc?: EvidenceId;
 }
 
 /**
@@ -343,12 +366,14 @@ export function choices(s: RunState): Option[] {
     if (a.kind === 'contact' && !contactsFor(s, a.contacts, vouches).length) continue;
     if (a.kind === 'perk' && s.perkUsed) continue;
     // Every packed document that answers the question is its own answer, with its own cost.
-    const cards: (EvidenceId | undefined)[] = a.kind === 'evidence' ? cardsFor(s, a.topic!) : [undefined];
+    const cards: (EvidenceId | undefined)[] = a.kind === 'evidence' ? cardsFor(s, a.topic!, card.id) : [undefined];
     if (!cards.length) cards.push(undefined);
     for (const ev of cards) {
       let blocked: Unavailable = null;
       let contact: ContactId | undefined;
-      if (a.kind === 'evidence' && !ev) blocked = 'noCard';
+      // A packed document that names the question says why it is not offered (dap.41).
+      const empty = a.kind === 'evidence' && !ev ? emptyReason(s, a.topic!, card.id) : undefined;
+      if (a.kind === 'evidence' && !ev) blocked = empty?.blocked ?? 'noCard';
       if (a.kind === 'contact') {
         contact = freeContact(s, a.contacts, vouches);
         if (!contact) blocked = 'noContact';
@@ -357,6 +382,7 @@ export function choices(s: RunState): Option[] {
       const flagged = officerFlags(s, effects);
       const o: Option = { approach: a, blocked, card: ev, contact, effects: [...effects, ...flagged.map(officerScrutiny(s))] };
       if (vouches) o.vouches = vouches;
+      if (empty) o.blockedDoc = empty.doc;
       if (flagged.length) o.flagged = flagged;
       if (usesVerified(s, a, topic)) o.usesVerified = true;
       out.push(o);

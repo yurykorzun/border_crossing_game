@@ -956,7 +956,7 @@ export function AffordLabel({ s }: { s: RunState }) {
 
 /** A blocked option has no card or person to name, so it gets a generic label. */
 function optionLabel(s: RunState, o: Option): string {
-  if (o.blocked === 'noCard' || o.documents) return t('ui.showDocument');
+  if (o.blocked === 'noCard' || o.blocked === 'shown' || o.blocked === 'notFor' || o.documents) return t('ui.showDocument');
   if (o.blocked === 'noContact') return t('ui.nameSomeone');
   const vars: Record<string, string> = {};
   if (o.card) vars.card = vars.cardThe = o.card;
