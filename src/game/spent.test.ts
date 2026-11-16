@@ -74,7 +74,7 @@ describe('Departure: the hotel booking and "It has been twelve days. Why?"', () 
     const row = evidenceRow(s);
     expect(row.blocked).toBe('notFor');
     expect(row.blockedDoc).toBe('hotel');
-    expect(line(row)).toBe('Not answered by your hotel booking');
+    expect(line(row)).toBe(`Not answered by ${t('ev.hotel.short')}`);
     expect(line(row)).not.toContain(t('ui.blocked.noCard'));
   });
 
