@@ -478,7 +478,9 @@ export const en: Record<string, string> = {
   'officer.customs': 'Inspector',
   'officer.interview': 'Officer',
   'officer.followup': 'Officer',
-  'officer.inspection': 'Supervisor',
+  // The supervisor on an inspection card, with why she came (officerLabel() in src/ui/parts.tsx). {point} is a topic.<topic>.helps name.
+  'officer.inspection.scrutiny': 'Supervisor · Scrutiny {max}/{max}',
+  'officer.inspection.announced': 'Supervisor · Announced: {point}',
   // One line on reaching the desk: what this officer cares about (OFFICERS in src/game/content/world.ts).
   'officer.passport.priority': 'The clerk checks every stamp and date.',
   'officer.customs.priority': 'The inspector cares what you carry and declare.',

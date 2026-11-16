@@ -3,7 +3,7 @@
 
 import type {
   Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -627,6 +627,20 @@ export function supervisorLine(s: RunState): string | undefined {
   return `supervisor.settled.${issue}`;
 }
 
+/**
+ * Why the inspection card on screen was dealt: Scrutiny 3/3, or the point the
+ * supervisor announced. Undefined off an inspection card and on the reaction to
+ * its answer, because choose() has already dropped scrutiny to
+ * SCRUTINY_AFTER_INSPECTION by then. A save from before Screen.reason existed
+ * reads as announced when the card is about her point and scrutiny is below the
+ * maximum, else as scrutiny.
+ */
+export function inspectionReason(s: RunState): InspectionReason | undefined {
+  if (s.screen.kind !== 'inspection' || s.reaction) return undefined;
+  if (s.screen.reason) return s.screen.reason;
+  return s.supervisor && inspectionIssue(s) === s.supervisor && s.scrutiny < MAX_SCRUTINY ? 'announced' : 'scrutiny';
+}
+
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
 }
@@ -1241,7 +1255,8 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
-    screen: { kind: 'inspection', id },
+    // The announced point is the only reason inspect() gets an issue (admission()).
+    screen: { kind: 'inspection', id, reason: issue ? 'announced' : 'scrutiny' },
   };
 }
 

@@ -4,7 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { andList, own, t, tn } from '../i18n';
-import { deskOf, factIds, factTier, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
+import { deskOf, factIds, factTier, inspectionIssue, inspectionReason, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, changeText, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -71,11 +71,32 @@ function pickOut(text: string, part: string): ReactNode {
   return <>{text.slice(0, at)}<span className="amber">{part}</span>{text.slice(at + part.length)}</>;
 }
 
-/** The name after "1 / 3 ·" in the strip. chromeLines() in src/game/transcript.ts mirrors it. */
+/**
+ * The name after "1 / 3 ·" in the strip. chromeLines() in src/game/transcript.ts mirrors it.
+ * It names the inspection only on the inspection card (inspectionReason()). A
+ * reaction on screen is the desk's answer to the card before, so the strip names
+ * the desk alone: an announced inspection is dealt below Scrutiny 3/3, and there
+ * "Secondary inspection" over Scrutiny 1/3 read as an inspection with no reason.
+ */
 function progressName(s: RunState): string {
   if (s.screen.kind === 'between' && !s.reaction) return t('ui.inQueue');
   const name = t(`checkpoint.${CHECKPOINTS[shownCheckpoint(s)]}`);
-  return s.screen.kind === 'inspection' ? t('ui.inInspection', { name }) : name;
+  return inspectionReason(s) ? t('ui.inInspection', { name }) : name;
+}
+
+/**
+ * Who you face, on the scene's corner chip. On an inspection card it also says
+ * why she came (inspectionReason()): Scrutiny 3/3, or the point she announced
+ * before the last desk, because the strip has no room for that on one line at
+ * 390 px. A reaction is the desk officer's, so it keeps the desk's label.
+ * chromeLines() in src/game/transcript.ts mirrors it.
+ */
+export function officerLabel(s: RunState): string {
+  const reason = inspectionReason(s);
+  const issue = inspectionIssue(s);
+  if (reason === 'announced' && issue) return t('officer.inspection.announced', { point: t(`topic.${issue}.helps`) });
+  if (reason) return t('officer.inspection.scrutiny', { max: MAX_SCRUTINY });
+  return t(`officer.${CHECKPOINTS[shownCheckpoint(s)]}`);
 }
 
 export function ScrutinyContent({ s }: { s: RunState }) {

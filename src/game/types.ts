@@ -255,6 +255,13 @@ export interface Check {
 }
 
 /**
+ * Why a secondary inspection was dealt: scrutiny reached its maximum, or the
+ * supervisor came for the point she announced before the last desk (admission()
+ * in src/game/engine.ts). A save from before the field existed has none.
+ */
+export type InspectionReason = 'scrutiny' | 'announced';
+
+/**
  * What a secondary inspection does to the problem. search: the bag is searched
  * and the cash counted. The other three change something besides time, so a
  * setback is a new decision, not only lost hours: confiscation holds the
@@ -537,7 +544,7 @@ export type WaitAction = 'wait' | 'ask' | 'assist' | 'explain';
 
 export type Screen =
   | { kind: 'encounter'; id: string }
-  | { kind: 'inspection'; id: string }
+  | { kind: 'inspection'; id: string; reason?: InspectionReason }
   | { kind: 'wait'; check: CheckId; beats: number[]; shown: number; resolved: CheckCase; asked: boolean }
   | { kind: 'between'; next: number }
   | { kind: 'ending' };
