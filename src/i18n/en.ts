@@ -339,12 +339,11 @@ export const en: Record<string, string> = {
   // and the possible gain on an answer that names them, after the guaranteed cost.
   'contact.mother.can': 'Can confirm: address, why you came, prescription',
   'contact.cousin.can': 'Can confirm: a place to stay',
-  'contact.brother.can': 'Can confirm: a job offer abroad',
+  'contact.brother.can': 'Can confirm: nothing the desks ask about',
   'contact.mother.can.accommodation': 'May verify your address',
   'contact.mother.can.purpose': 'May confirm why you came',
   'contact.mother.can.medicine': 'May verify the prescription',
   'contact.cousin.can.accommodation': 'May verify he can host you',
-  'contact.brother.can.work': 'May verify the job offer',
   // What calling a contact hands over, on an answer that names them: "Shares her number".
   'contact.mother.shares': 'Shares her number',
   'contact.cousin.shares': "Shares Ilya's number",
@@ -667,7 +666,9 @@ export const en: Record<string, string> = {
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
-  'enc.c_host.mother.reaction': 'He writes down a second number.',
+  // No number for her at the desk (HOST_NUMBER false): hers is the first one he has.
+  'enc.c_host.mother.reaction': 'He writes down her number, the first one he has for her.',
+  'enc.c_host.mother.hostNumber.reaction': 'He writes down a second number.',
 
   'enc.c_phone.q': '"Unlock your phone, please."',
   'enc.c_phone.unlock.label': 'Unlock it',

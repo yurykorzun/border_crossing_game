@@ -169,6 +169,12 @@ export interface Approach {
    */
   onFile?: FactId[];
   /**
+   * While `when` holds, the answer reads `<key>.<worded.key>.label`/`.reaction` where that
+   * text exists: wording for what the desk already has (c_host's mother answer says
+   * "a second number" only when customs had a number for her, HOST_NUMBER).
+   */
+  worded?: { when: Cond; key: string };
+  /**
    * A record check that confirms the card's point at the desk (the employer register):
    * like a document shown, it verifies the point for the later desks (RunState.verified).
    * At an inspection it verifies the open issue the inspection is about (the lab

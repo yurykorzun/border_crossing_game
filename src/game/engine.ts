@@ -1102,6 +1102,9 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   // An answer whose point is already on file here reads it off the file (Approach.onFile).
   const onFile = `${prefix}.${id}.${approach}.onFile.${part}`;
   if (a?.onFile && a.onFile.every((f) => knows(s, f)) && has(onFile)) return onFile;
+  // An answer worded for what the desk already has (Approach.worded).
+  const worded = a?.worded && check(a.worded.when, s) ? `${prefix}.${id}.${approach}.${a.worded.key}.${part}` : '';
+  if (worded && has(worded)) return worded;
   const daily = own(`${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`, s.character);
   if (has(daily)) return daily;
   // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count compared with it.
