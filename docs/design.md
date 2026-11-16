@@ -239,6 +239,8 @@ Kept, because a person picks them even though the bots don't:
 - `i_brother.calls` - in Departure, the two-hour call check about Mark's brother. Only the honest bot took it there, on a records day. Departure's customs desk now opens with what you take out (dap.4), which starts no lab check, so on those runs customs deals the host call instead and the interview never gets to the brother question. It stays because in Arrival the same answer gets picked.
 - `s_connection.drive` - in The funeral, asking your mother or cousin to drive out to the station for you. The bots take it only in the last hours, when the supervisor can no longer ring ahead, and The funeral's passport desk asks how long you stay (free) where Arrival asks the slower stay and employer checks, so they reach the transfer with hours left. It stays because in Arrival the same answer gets picked.
 
+- `s_connection.transfer` - in Departure, the border transfer that puts your family address on file. Since dap.49 it also stands beside the paper and the lift in the last hours, so the missed-shuttle card never asks with one answer. The bots spend the paper or name someone for the lift instead. It stays for the player who keeps both the paper and the people out of it.
+
 ## Screen rules
 
 From Yury's design guidelines (2026-11-09). Every screen tells the player where they are, what they can do and what each choice could cost. The uncertainty comes from the people and the situation, not from a screen that hides its rules. Every new screen, and every change to an old one, must pass all eight:

@@ -13,7 +13,7 @@ import { eventKey } from './game/consequence';
 import { CORE_CARDS, INSPECTION_BY_ID } from './game/content/encounters';
 import { LEVEL_IDS } from './game/content/levels';
 import { MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION } from './game/content/world';
-import { chooseAction, deskOf, newRun, options, pointVerified, spareHours, step, travelOf } from './game/engine';
+import { chooseAction, deskOf, newRun, options, pointVerified, reopenedBy, spareHours, step, travelOf } from './game/engine';
 import type { Option, RunSetup } from './game/engine';
 import { CHECKPOINTS } from './game/types';
 import type { LevelId, RunState } from './game/types';
@@ -152,7 +152,9 @@ describe('below Scrutiny 3/3 an inspection only follows an announced, still open
               announced++;
               expect(n.screen.kind).toBe('between');
               expect(n.checkpoint).toBe(CHECKPOINTS.length - 1);
-              expect(n.reaction).toContainEqual({ key: `supervisor.announce.${n.supervisor}` });
+              // A point a desk settled and a flag reopened names that flag (dap.49).
+              const by = reopenedBy(n, n.supervisor!);
+              expect(n.reaction).toContainEqual(by ? { key: `supervisor.announce.${n.supervisor}.reopened`, vars: { fact: by } } : { key: `supervisor.announce.${n.supervisor}` });
             }
             const started = n.screen.kind === 'inspection' && n.inspections > s.inspections;
             if (!started || s.scrutiny >= MAX_SCRUTINY || n.scrutiny >= MAX_SCRUTINY) continue;

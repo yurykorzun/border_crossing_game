@@ -872,10 +872,12 @@ describe('inspections change the problem, and doomed runs end quickly', () => {
     expect(tryStep(fine, { type: 'finish' }).ok).toBe(false);
   });
 
-  it('a later shuttle that would miss the bus is not offered: the inspection asks for a sacrifice instead', () => {
+  it('a later shuttle that would miss the bus is not offered: the inspection asks for a sacrifice instead, with two to pick from', () => {
     const ids = (s: RunState) => options(s).map((o) => o.approach.id);
     expect(ids(inspection('s_connection', { time: 3 }))).toContain('later');
-    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['evidence']);
+    // The paper, a lift or the transfer: never one answer (dap.49).
+    expect(ids(inspection('s_connection', { time: LAST_HOURS }))).toEqual(['evidence', 'drive', 'transfer']);
+    expect(ids(inspection('s_bag', { time: LAST_HOURS }))).toEqual(['contact', 'declare']);
   });
 });
 

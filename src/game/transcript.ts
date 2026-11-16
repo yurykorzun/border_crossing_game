@@ -19,7 +19,7 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
 import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
-import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, optionFor, options, observation, routinesLeft, shownCheckpoint, supervisorLine, travelOf, waitActions, waitKey } from './engine';
+import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, isCalm, knownAt, knownLine, loggedAt, newRun, onInspectionCard, optionFor, options, observation, routinesLeft, shownCheckpoint, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
 import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
@@ -99,7 +99,7 @@ function chromeLines(s: RunState, p: Page): void {
   // progressName() in src/ui/parts.tsx: the queue is not named after its checkpoint.
   const cpName = t(`checkpoint.${CHECKPOINTS[now]}`);
   let name = s.screen.kind === 'between' && !s.reaction ? t('ui.inQueue') : cpName;
-  if (s.screen.kind === 'inspection') {
+  if (onInspectionCard(s)) {
     p.add('ui.inInspection', { name: cpName }, CHROME);
     name = t('ui.inInspection', { name: cpName });
   }

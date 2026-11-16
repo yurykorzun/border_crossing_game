@@ -84,6 +84,41 @@ describe('Departure has its own setup text', () => {
   });
 });
 
+/** The packing screen under a level, as the app shows it. */
+function packingScreen(level: LevelId | undefined): string {
+  setStory(level);
+  return html(DocumentsStep, { count: '2 / 3', character: 'lena', bulletin: 'records', picked: [], setPicked: noop, onBack: noop, onContinue: noop });
+}
+
+/** The packing screen's document rows, one string per row: the label, what it helps with, what it reveals. */
+function packingRows(level: LevelId | undefined): string[] {
+  return [...packingScreen(level).matchAll(/<span class="doc-text">(.*?)<\/span><\/button>/g)]
+    .map((m) => decode(m[1].replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim());
+}
+
+describe('Departure packing screen says what each document helps with on the way out', () => {
+  it('has no "came back" wording anywhere on the screen', () => {
+    expect(decode(packingScreen('departure')).toLowerCase()).not.toMatch(/came back|come back|coming back/);
+  });
+
+  it("names a purpose document's help with departure:topic.purpose.helps", () => {
+    const rows = packingRows('departure');
+    for (const label of ['ev.motherLetter.label', 'ev.hospitalNote.label']) {
+      const row = rows.find((r) => r.startsWith(en[label]));
+      expect(row, label).toContain(en['departure:topic.purpose.helps']);
+      expect(row, label).not.toContain(en['topic.purpose.helps']);
+    }
+  });
+
+  it('Arrival keeps topic.purpose.helps', () => {
+    for (const level of [undefined, 'arrival'] as const) {
+      const row = packingRows(level).find((r) => r.startsWith(en['ev.motherLetter.label']));
+      expect(row, String(level)).toContain(en['topic.purpose.helps']);
+      expect(row, String(level)).not.toContain(en['departure:topic.purpose.helps']);
+    }
+  });
+});
+
 describe('Departure has its own endings', () => {
   it.each(ENDINGS)('%s: title and scene alt text borrow nothing from Arrival', (name, ending, patch) => {
     const { title, alt } = endingScreen('departure', ending, patch);
