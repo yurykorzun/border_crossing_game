@@ -658,7 +658,9 @@ export const en: Record<string, string> = {
   'enc.c_host.evidence.label': 'Show {cardThe}',
   'enc.c_host.evidence.reaction': 'He checks the address and lets it go.',
   'enc.c_host.mother.label': "Give {contact}'s number",
-  'enc.c_host.mother.reaction': 'He writes down a second number.',
+  // No number for her at the desk (HOST_NUMBER false): hers is the first one he has.
+  'enc.c_host.mother.reaction': 'He writes down her number, the first one he has for her.',
+  'enc.c_host.mother.hostNumber.reaction': 'He writes down a second number.',
 
   'enc.c_phone.q': '"Unlock your phone, please."',
   'enc.c_phone.unlock.label': 'Unlock it',

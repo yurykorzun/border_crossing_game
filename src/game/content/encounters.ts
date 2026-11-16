@@ -363,7 +363,8 @@ export const ENCOUNTERS: Encounter[] = [
       // With no number for her, he phones the hotel about the booking: no call to your mother.
       { id: 'hotel', kind: 'verify', requires: { not: HOST_NUMBER }, effects: [{ time: -1 }], ifVerified: [] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [] },
+      // Her number is a second one only when the desk already had one (HOST_NUMBER).
+      { id: 'mother', kind: 'contact', contacts: ['mother'], worded: { when: HOST_NUMBER, key: 'hostNumber' }, effects: [] },
     ],
   },
   {

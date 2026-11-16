@@ -90,6 +90,47 @@ describe('customs phones your mother only with a number for her', () => {
   });
 });
 
+describe('the mother number at customs is a second one only when the desk had one', () => {
+  it('with no number for her at the desk, hers is the first; with one, it is a second', () => {
+    const none = at({ ...newRun(lena), claims: ['hotelStay'] }, 'c_host', 'customs');
+    expect(check(HOST_NUMBER, none)).toBe(false);
+    expect(answerKey(none, 'mother', 'reaction')).toBe('enc.c_host.mother.reaction');
+    const had = at({ ...newRun(lena), claims: ['stayingWithFamily'] }, 'c_host', 'customs');
+    expect(answerKey(had, 'mother', 'reaction')).toBe('enc.c_host.mother.hostNumber.reaction');
+    expect(t('enc.c_host.mother.reaction')).not.toMatch(/second/i);
+    expect(t('enc.c_host.mother.reaction')).toMatch(/first/i);
+    expect(t('enc.c_host.mother.hostNumber.reaction')).toMatch(/second number/);
+  });
+
+  it('over hosts-day Arrival setups, seeds 1-10 and every bot style, "a second number" only with a number on file', () => {
+    const seen = { second: 0, first: 0 };
+    const setups = allSetups('arrival').filter((x) => x.bulletin === 'accommodation');
+    for (const style of BOT_STYLES)
+      for (const base of setups)
+        for (let seed = 1; seed <= 10; seed++) {
+          const setup = { ...base, seed };
+          const name = `${style} ${base.character} ${base.loadout.join('+')} seed ${seed}`;
+          let s = newRun(setup);
+          for (const a of playRun(style, setup).actions) {
+            // At every c_host card where her number is an answer, take it and read the reaction.
+            const her = s.screen.kind === 'encounter' && s.screen.id === 'c_host' && !s.reaction && !s.documentList && option(s, 'mother');
+            if (her && !her.blocked) {
+              const keys = reactionKeys(choose(s, 'mother'));
+              const text = keys.map((k) => t(k)).join(' ');
+              const number = check(HOST_NUMBER, s);
+              expect(keys, name).toContain(number ? 'enc.c_host.mother.hostNumber.reaction' : 'enc.c_host.mother.reaction');
+              expect(/second number/.test(text), name).toBe(number);
+              if (!number) expect(text, name).toMatch(/first one he has/);
+              seen[number ? 'second' : 'first']++;
+            }
+            s = step(s, a);
+          }
+        }
+    expect(seen.second).toBeGreaterThan(0);
+    expect(seen.first).toBeGreaterThan(0);
+  });
+});
+
 describe('the father answers phone the hospital only when his condition is not on file', () => {
   const cases = [
     { id: 'p_stay', desk: 'passport' as Checkpoint, setup: { ...lena, bulletin: 'records' as const } },
