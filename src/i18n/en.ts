@@ -1230,4 +1230,16 @@ export const en: Record<string, string> = {
   'departure:scene.busEmpty': 'Your empty hand on a night bus, the airport tower through the rain',
   'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
+  // On the way out the purpose point is why you stayed this long, not why you came back (dap.51).
+  'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
+  'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
+  'departure:insp.issue.purpose.reopened': 'Reopened by a new flag: why you stayed this long.',
+  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long before you go. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.settled.purpose': 'Supervisor: reason for your stay verified.',
+  'departure:topic.purpose.helps': 'Why you stayed',
+  // The line under a purpose claim, also on Departure's file line for what you said at Arrival.
+  'departure:claim.familyVisit.recorded': 'Recorded as your reason for the trip',
+  'departure:claim.shortTrip.recorded': 'Recorded as your reason for the trip',
+  // Customs on the way out asks the same, so the admission is about staying, not coming.
+  'departure:enc.c_shortTrip.admit.label': '"I stayed for my father."',
 };
