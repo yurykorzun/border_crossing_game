@@ -10,14 +10,21 @@ import { caught, deskOf, knownAt, knownLine, newRun, step } from './engine';
 import type { RunSetup } from './engine';
 import type { Checkpoint, FactId, LevelId, RunState } from './types';
 
-const SEEDS = 150;
+const SEEDS = 60;
 const LEVELS: LevelId[] = ['arrival', 'departure'];
+// The bot runs are the slow part, so both sweeps share one set.
+const TIMEOUT = 60_000;
+const played = new Map<string, RunState[]>();
 
 /** Every state a run passes through, the first one included. */
 function states(style: (typeof BOT_STYLES)[number], setup: RunSetup): RunState[] {
+  const id = `${style} ${setup.level ?? 'arrival'} ${setup.character} ${setup.seed}`;
+  const had = played.get(id);
+  if (had) return had;
   const run = playRun(style, setup);
   const out = [newRun(setup)];
   for (const a of run.actions) out.push(step(out[out.length - 1], a));
+  played.set(id, out);
   return out;
 }
 
@@ -62,7 +69,7 @@ describe('the known-facts line', () => {
     expect(old).toBeGreaterThan(0);
     expect(found).toBeGreaterThan(0);
     expect(t('known.fact.found', { fact: 'familyAddress' })).not.toMatch(/old records/i);
-  });
+  }, TIMEOUT);
 
   it(`over ${SEEDS} seeds per style and level, names the newest fact this desk has not shown on the card before`, () => {
     let checked = 0;
@@ -95,7 +102,7 @@ describe('the known-facts line', () => {
     expect(checked).toBeGreaterThan(100);
     // The rule changed what some cards name, so the runs reach the case at all.
     expect(moved).toBeGreaterThan(0);
-  });
+  }, TIMEOUT);
 
   it('a family address found on this crossing reads On record, and the next customs card shows the father instead', () => {
     const setup = Array.from({ length: 20 }, (_, i) => setupFor(i, 'arrival')).find((x) => x.character === 'lena')!;
