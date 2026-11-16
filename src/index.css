@@ -520,7 +520,9 @@ p { margin: 0 0 var(--gap); }
 .question { font-size: 1.25rem; line-height: 1.3; font-weight: 600; margin: 0; }
 /* On a card the question sits right on top of the answers, the biggest text on screen. */
 .ask { flex: none; }
-.ask-short { padding: 2px 2px 0; }
+/* The panel scrolls, and on a phone or a Mac its scrollbar overlays the right edge instead of
+   taking its own room, so the text keeps 12px clear of it (dap.27: it touched "papers."). */
+.ask-short { padding: 2px 12px 0 2px; }
 .ask-short .question { font-size: var(--heading); line-height: 1.25; }
 .ask-card { padding: 12px var(--card-pad); }
 /* What the officer at this desk cares about, once, above the first question there. */

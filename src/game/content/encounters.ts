@@ -363,7 +363,8 @@ export const ENCOUNTERS: Encounter[] = [
       // With no number for her, he phones the hotel about the booking: no call to your mother.
       { id: 'hotel', kind: 'verify', requires: { not: HOST_NUMBER }, effects: [{ time: -1 }], ifVerified: [] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
-      { id: 'mother', kind: 'contact', contacts: ['mother'], effects: [] },
+      // Her number is a second one only when the desk already had one (HOST_NUMBER).
+      { id: 'mother', kind: 'contact', contacts: ['mother'], worded: { when: HOST_NUMBER, key: 'hostNumber' }, effects: [] },
     ],
   },
   {
@@ -737,15 +738,17 @@ export const CHECKS: Record<CheckId, Check> = {
  * than two ways to pay, the conditions pick which two you see. Apart from the
  * bag search, each changes the problem instead of only costing hours
  * (InspectionKind, checked in checkState). With LAST_HOURS left or fewer any
- * wait misses the bus, so the waits are not offered and the card asks for one
- * sacrifice instead. A card is only dealt when its `when` holds, which keeps a
- * second answer there (noFreeExits() in src/game/walk.ts), and while the open
- * issue it is about (Inspection.issue) is still open.
+ * wait misses the bus, so the waits are not offered and the card asks for a
+ * sacrifice instead, with at least two to pick from (dap.49). A card is only
+ * dealt when its `when` holds and it would show two answers (offersTwo() in
+ * src/game/engine.ts), and while the open issue it is about (Inspection.issue)
+ * is still open. Each card's question names that issue.
  *
  * The order is the supervisor's (inspect() in src/game/engine.ts): the issue
  * the bulletin warned about first, then why you came back, the medicine, and
- * the missed shuttle last. Nothing is drawn, so the same file always gets the
- * same inspection.
+ * the missed shuttle last. When that is another point than the one she named
+ * before the last desk, she says so first. Nothing is drawn, so the same file
+ * always gets the same inspection.
  */
 export const INSPECTIONS: Inspection[] = [
   {
@@ -791,9 +794,10 @@ export const INSPECTIONS: Inspection[] = [
       },
       { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
       // The cash total and who the prescription is for go on file, and the search stops.
+      // With no hours left to wait it stands beside her call, so two answers remain (dap.49).
       {
         id: 'declare', kind: 'say',
-        requires: { not: { contactFree: ['mother'] }, any: [{ noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
+        requires: { any: [{ not: { contactFree: ['mother'] } }, { lastHours: true }], not: { facts: ['cashCount', 'fatherCondition'] } },
         effects: [{ fact: 'cashCount' }, { fact: 'fatherCondition' }, { send: 'printout', facts: ['cashCount', 'fatherCondition'] }],
       },
     ],
@@ -811,13 +815,15 @@ export const INSPECTIONS: Inspection[] = [
       // The supervisor rings ahead to say you will be late, which confirms where you stay (Approach.confirms).
       { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }], confirms: true },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', requires: { holds: 'accommodation' }, effects: [] },
+      // With no hours left for the later shuttle, the lift and the transfer stand beside
+      // the paper, so two answers remain (dap.49).
       {
         id: 'drive', kind: 'contact', contacts: ['mother', 'cousin'], namesOnly: true,
-        requires: { not: { holds: 'accommodation' }, contactFree: ['mother', 'cousin'] }, effects: [],
+        requires: { any: [{ not: { holds: 'accommodation' } }, { lastHours: true }], contactFree: ['mother', 'cousin'] }, effects: [],
       },
       {
         id: 'transfer', kind: 'say',
-        requires: { not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] }, noFacts: ['familyAddress'] },
+        requires: { any: [{ not: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }] } }, { lastHours: true }], noFacts: ['familyAddress'] },
         effects: [{ fact: 'familyAddress' }],
       },
     ],

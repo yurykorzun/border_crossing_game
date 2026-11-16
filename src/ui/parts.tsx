@@ -4,7 +4,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { andList, own, t, tn } from '../i18n';
-import { deskOf, factIds, factTier, loggedAt, shownCheckpoint, travelOf } from '../game/engine';
+import { deskOf, factIds, factTier, loggedAt, onInspectionCard, shownCheckpoint, travelOf } from '../game/engine';
 import type { Option } from '../game/engine';
 import { SEPARATOR, changeText, consequence } from '../game/consequence';
 import type { Part } from '../game/consequence';
@@ -75,7 +75,7 @@ function pickOut(text: string, part: string): ReactNode {
 function progressName(s: RunState): string {
   if (s.screen.kind === 'between' && !s.reaction) return t('ui.inQueue');
   const name = t(`checkpoint.${CHECKPOINTS[shownCheckpoint(s)]}`);
-  return s.screen.kind === 'inspection' ? t('ui.inInspection', { name }) : name;
+  return onInspectionCard(s) ? t('ui.inInspection', { name }) : name;
 }
 
 export function ScrutinyContent({ s }: { s: RunState }) {

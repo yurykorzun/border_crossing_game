@@ -11,6 +11,8 @@ function contentKeys(): string[] {
   for (const e of ENCOUNTERS) {
     keys.push(`enc.${e.id}.q`);
     for (const a of e.approaches) keys.push(`enc.${e.id}.${a.id}.label`, `enc.${e.id}.${a.id}.reaction`);
+    // A worded answer has its own reaction (Approach.worded).
+    for (const a of e.approaches) if (a.worded) keys.push(`enc.${e.id}.${a.id}.${a.worded.key}.reaction`);
   }
   for (const i of INSPECTIONS) {
     keys.push(`insp.${i.id}.q`);

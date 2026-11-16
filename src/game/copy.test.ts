@@ -59,7 +59,8 @@ describe('the realism review lines in src/i18n/en.ts', () => {
     'You sign the receipt. They keep the medicine.',
     'who else lives there',
     'Tom is contacted for questioning',
-    'Your employer is registered abroad. What exactly do you do for them?',
+    // dap.49: the question no longer states the employer, because the contract answer reveals it.
+    'You work abroad. Who for, and what do you do there?',
     'You said you never donated. This payment carries your name.',
     'Your brother lives across the border. When did you last speak?',
     'The officer does not answer. He calls a supervisor.',

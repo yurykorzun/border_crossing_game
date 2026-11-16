@@ -617,7 +617,8 @@ export function knownLine(s: RunState): KnownPart[] {
     if (!issue) return [];
     if (!s.verified?.[issue]) return [{ key: `insp.issue.${issue}` }];
     if (pointVerified(s, issue)) return [{ key: `insp.issue.${issue}.verified` }];
-    return [{ key: `insp.issue.${issue}.reopened` }];
+    // Reopened: the line names the flag that reopened it (dap.49).
+    return [{ key: `insp.issue.${issue}.reopened`, vars: { fact: reopenedBy(s, issue)! } }];
   }
   if (s.screen.kind !== 'encounter') return [];
   const asks = asksAbout(s, s.screen.id);
@@ -659,6 +660,14 @@ export function supervisorLine(s: RunState): string | undefined {
   return `supervisor.settled.${issue}`;
 }
 
+/**
+ * Whether the inspection card itself is on screen: the "Secondary inspection"
+ * header shows only then, not on the reaction to the answer that led to it
+ * (dap.49). progressName() in src/ui/parts.tsx and chromeLines() in
+ * src/game/transcript.ts both use it.
+ */
+export const onInspectionCard = (s: RunState): boolean => s.screen.kind === 'inspection' && !s.reaction;
+
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
 }
@@ -686,6 +695,15 @@ export function callInsDue(s: RunState, a: Approach, topic: Topic | undefined): 
   // A bag search is the officer looking for himself (Encounter.noCallIns), so nobody's statement is checked on it.
   if (s.screen.kind === 'encounter' && ENCOUNTER_BY_ID.get(s.screen.id)?.noCallIns) return [];
   return (s.calledIn ?? []).filter((c) => canConfirm(c, topic));
+}
+
+/**
+ * The newest fact flagged since `topic` was verified at a desk: the new reason
+ * that reopened it. Undefined while the point was never verified or still stands.
+ */
+export function reopenedBy(s: Pick<RunState, 'verified' | 'flagged'>, topic: Topic): FactId | undefined {
+  const v = s.verified?.[topic];
+  return v ? (s.flagged ?? []).slice(v.flags).at(-1) : undefined;
 }
 
 /**
@@ -1063,7 +1081,9 @@ function announce(s: RunState): RunState {
   const chosen = fits.find((i) => i.issue === warned) ?? fits[0];
   if (!chosen) return s;
   const issue = chosen.issue;
-  return say({ ...s, supervisor: issue }, [{ key: `supervisor.announce.${issue}` }]);
+  // A point a desk settled and a later flag reopened says which flag (dap.49).
+  const by = reopenedBy(s, issue);
+  return say({ ...s, supervisor: issue }, [by ? { key: `supervisor.announce.${issue}.reopened`, vars: { fact: by } } : { key: `supervisor.announce.${issue}` }]);
 }
 
 /**
@@ -1183,6 +1203,9 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   // An answer whose point is already on file here reads it off the file (Approach.onFile).
   const onFile = `${prefix}.${id}.${approach}.onFile.${part}`;
   if (a?.onFile && a.onFile.every((f) => knows(s, f)) && has(onFile)) return onFile;
+  // An answer worded for what the desk already has (Approach.worded).
+  const worded = a?.worded && check(a.worded.when, s) ? `${prefix}.${id}.${approach}.${a.worded.key}.${part}` : '';
+  if (worded && has(worded)) return worded;
   // The carried file's cash declaration (`enc.d_declared.count.file.under.reaction`): the count
   // compared with it. Before the day's wording, because the entry record is why it is asked again.
   const filed = s.file?.declared && `${prefix}.${id}.${approach}.file.${s.file.declared}.${part}`;
@@ -1263,7 +1286,17 @@ function deal(s: RunState): RunState {
  * needs the medicine.
  */
 const inspectionsFitting = (s: RunState): Inspection[] =>
-  INSPECTIONS.filter((i) => !pointVerified(s, i.issue) && dealsCard(s, i.id) && check(i.when, s) && (i.kind !== 'confiscation' || s.medicine));
+  INSPECTIONS.filter((i) => !pointVerified(s, i.issue) && dealsCard(s, i.id) && check(i.when, s) && (i.kind !== 'confiscation' || s.medicine) && offersTwo(s, i.id));
+
+/**
+ * Whether inspection `id`, dealt now, would show at least two answers you can
+ * pick (dap.49): one answer is no choice, so a card that would show only one is
+ * not dealt. Its `when` keeps that rare; this is the rule that holds whatever the file.
+ */
+function offersTwo(s: RunState, id: string): boolean {
+  const at: RunState = { ...s, screen: { kind: 'inspection', id }, reaction: null, documentList: undefined };
+  return options(at).filter((o) => !o.blocked).length >= 2;
+}
 
 /**
  * Deal an inspection, decided by the file alone: one not asked yet before one
@@ -1279,7 +1312,12 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
   // supervisor reads the file and sends you back, and scrutiny drops as after an inspection.
   if (!pool.length) return advance(say({ ...s, scrutiny: SCRUTINY_AFTER_INSPECTION }, [{ key: 'insp.none' }]), dealer);
   const warned = BULLETIN_TOPICS[s.bulletin];
-  const id = (pool.find((i) => i.issue === warned) ?? pool[0]).id;
+  const chosen = pool.find((i) => i.issue === warned) ?? pool[0];
+  const id = chosen.id;
+  // At Scrutiny 3/3 she may take up another point than the one she named before the last
+  // desk (announce()): she says which before she asks, so the card never asks about a
+  // point she did not name (dap.49).
+  if (s.supervisor && chosen.issue !== s.supervisor) s = say({ ...s, supervisor: chosen.issue }, [{ key: `supervisor.instead.${chosen.issue}` }]);
   return {
     ...s,
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],

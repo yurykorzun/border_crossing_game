@@ -8,7 +8,7 @@ import { t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { INSPECTIONS } from './content/encounters';
 import { CHECKPOINTS } from './types';
-import { chooseAction, choices, inspectionIssue, knownLine, newRun, pointVerified, step } from './engine';
+import { chooseAction, choices, inspectionIssue, knownLine, newRun, pointVerified, reopenedBy, step } from './engine';
 import type { Action, RunState } from './types';
 
 const SEEDS = 200;
@@ -51,7 +51,7 @@ describe('an inspection names the open issue it is about', () => {
           const checked = next.verified?.[issue!];
           const want = !checked ? { key: `insp.issue.${issue}` }
             : pointVerified(next, issue!) ? { key: `insp.issue.${issue}.verified` }
-            : { key: `insp.issue.${issue}.reopened` };
+            : { key: `insp.issue.${issue}.reopened`, vars: { fact: reopenedBy(next, issue!) } };
           expect(knownLine(next), where).toEqual([want]);
           // Dealt just now: the issue was open on the file the moment it started.
           if (s.screen.kind !== 'inspection' || s.screen.id !== next.screen.id || s.reaction) {

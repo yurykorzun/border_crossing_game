@@ -124,8 +124,9 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
     else if ('travel' in e) travel += Math.max(0, e.travel);
     else if ('loseMedicine' in e) all.push({ kind: 'medicine', key: 'ui.line.medicine', tone: 'red' });
     else if ('fact' in e) {
-      // A fact this desk already has adds nothing, so "Reveals her address" goes once it is on file here.
-      if (!(desk && clock?.facts?.[e.fact]?.includes(desk))) all.push({ kind: 'fact', key: `fact.${e.fact}.reveal`, tone: 'plain' });
+      // A fact already on file, at this desk or an earlier one, adds nothing new to the player, so
+      // "Reveals her address" goes once any desk has it (dap.49: passport noted it, customs still said it).
+      if (!(desk && clock?.facts?.[e.fact]?.length)) all.push({ kind: 'fact', key: `fact.${e.fact}.reveal`, tone: 'plain' });
     }
     else if ('claim' in e) claims.push(e.claim);
   }

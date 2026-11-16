@@ -63,8 +63,10 @@ export const CONTACTS: Record<ContactId, Contact> = {
   },
   // He can host.
   cousin: { id: 'cousin', abilities: ['accommodation'] },
-  // A job offer abroad. With his record on file and flagged, naming him lists him, not only questions him.
-  brother: { id: 'brother', abilities: ['work'], record: 'brotherAbroad' },
+  // Nothing: only a traveler with an employer abroad is asked about work, and that is
+  // never Mark, so no card lets Tom confirm anything.
+  // With his record on file and flagged, naming him lists him, not only questions him.
+  brother: { id: 'brother', abilities: [], record: 'brotherAbroad' },
 };
 
 /** Facts that are a political risk: a second citizenship, a brother across the border, an old donation. */
