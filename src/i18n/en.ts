@@ -331,12 +331,11 @@ export const en: Record<string, string> = {
   // and the possible gain on an answer that names them, after the guaranteed cost.
   'contact.mother.can': 'Can confirm: address, why you came, prescription',
   'contact.cousin.can': 'Can confirm: a place to stay',
-  'contact.brother.can': 'Can confirm: a job offer abroad',
+  'contact.brother.can': 'Can confirm: nothing the desks ask about',
   'contact.mother.can.accommodation': 'May verify your address',
   'contact.mother.can.purpose': 'May confirm why you came',
   'contact.mother.can.medicine': 'May verify the prescription',
   'contact.cousin.can.accommodation': 'May verify he can host you',
-  'contact.brother.can.work': 'May verify the job offer',
   // What calling a contact hands over, on an answer that names them: "Shares her number".
   'contact.mother.shares': 'Shares her number',
   'contact.cousin.shares': "Shares Ilya's number",

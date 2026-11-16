@@ -417,10 +417,26 @@ describe('contacts confirm only what they know', () => {
   });
   const assist = (s: RunState) => waitActions(s).find((w) => w.action === 'assist');
 
-  it('the abilities table: mother the address, visit and prescription, Ilya hosting, Tom work', () => {
+  it('the abilities table: mother the address, visit and prescription, Ilya hosting, Tom nothing', () => {
     expect(CONTACTS.mother.abilities).toEqual(['accommodation', 'purpose', 'medicine']);
     expect(CONTACTS.cousin.abilities).toEqual(['accommodation']);
-    expect(CONTACTS.brother.abilities).toEqual(['work']);
+    expect(CONTACTS.brother.abilities).toEqual([]);
+    // My story says so, and names no job offer he could never be asked to confirm.
+    expect(t('contact.brother.can')).toBe('Can confirm: nothing the desks ask about');
+  });
+
+  // An ability no card offers is a promise My story makes and the crossing never keeps.
+  // A card offers it with a contact answer that can name them on a card of that topic
+  // (one that only names, namesOnly, confirms nothing), or with a waiting-room check of
+  // that topic, where any free contact who can confirm it may vouch.
+  it('every contact ability is offered by at least one card', () => {
+    const cards = [...ENCOUNTERS, ...INSPECTIONS];
+    const offers = (c: ContactId, topic: string) =>
+      Object.values(CHARACTERS).some((ch) => ch.contacts.includes(c)) &&
+      (cards.some((card) => card.topic === topic && card.approaches.some((a) => a.kind === 'contact' && !a.namesOnly && (a.contacts ?? allContacts).includes(c))) ||
+        Object.values(CHECKS).some((k) => k.topic === topic));
+    const unoffered = Object.values(CONTACTS).flatMap((c) => c.abilities.filter((topic) => !offers(c.id, topic)).map((topic) => `${c.id}.${topic}`));
+    expect(unoffered).toEqual([]);
   });
 
   it('a phoneSearch wait room offers no assist action', () => {
