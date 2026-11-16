@@ -1187,6 +1187,8 @@ export const en: Record<string, string> = {
   'ending.held.body': 'They keep your passport for the review. "You are free to go, for now," the officer says. You take the bus back into town. Your father is awake. Your mother makes up the couch again.',
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
   'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
+  // The title follows the saved run, because a Departure save opens there under its stamp.
+  'departure:ui.tagline': "You're leaving again. You don't know if they'll let you go.",
   // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
   // Why now, when you leave: Dad stays in care (char.<id>.why).
   'departure:char.lena.why': 'Flying back to work, with her father in care.',
