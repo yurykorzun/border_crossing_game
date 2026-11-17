@@ -5,6 +5,12 @@ import { defineConfig, devices } from '@playwright/test';
 // as command 'serve', so vite.config.ts gives it base '/'; --base puts it back.
 const PORT = 4173;
 const BASE = '/border_crossing_game/';
+// scripts/verify sets E2E_PREBUILT=1 because its build step has just built dist/, so the
+// gate builds once. Run on its own (npm run e2e), the webServer builds first so it never
+// serves an old dist/.
+const BUILD = process.env.E2E_PREBUILT === '1'
+  ? `test -f dist/index.html || { echo 'E2E_PREBUILT=1 but dist/index.html is missing: run npm run build first'; exit 1; }`
+  : 'npx vite build';
 
 export default defineConfig({
   testDir: 'e2e',
@@ -25,7 +31,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx vite build && npx vite preview --base ${BASE} --port ${PORT} --strictPort`,
+    command: `${BUILD} && npx vite preview --base ${BASE} --port ${PORT} --strictPort`,
+    // Server output goes to the log, so it shows whether this run built or served the gate's build.
+    stdout: 'pipe',
     url: `http://localhost:${PORT}${BASE}`,
     // Never reuse whatever already listens on the port: it may be an old build.
     reuseExistingServer: false,
