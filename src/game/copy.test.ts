@@ -169,6 +169,9 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.p_stay.father': { always: 0, most: 2 },
     // Departure's cards (rwf.3), new, so they have no earlier price.
     'enc.d_entry.family': { always: 0, most: 1 },
+    // A short trip costs 2 hours from a file that says family (dap.50), 1 from one with a
+    // claim shown false (dap.16); hoursOf() adds the two, though only one can hold.
+    'enc.d_entry.shortTrip': { always: 0, most: 3 },
     'enc.d_stay.father': { always: 0, most: 1 },
     'enc.d_stay.stand': { always: 2, most: 2 },
     'enc.d_hold.review': { always: 3, most: 3 },

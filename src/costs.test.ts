@@ -70,7 +70,8 @@ describe('every answer shows its guaranteed costs before it is picked', () => {
               const cardKey = `${prefix}.${id}.${o.approach.id}`;
               const hours = -sum(o, 'time');
               if (hours > 0) expect(line, name).toContain(tn('ui.line.event', hours, { event: eventKey(o, cardKey) }));
-              const scrutiny = sum(o, 'scrutiny');
+              // The line names what the meter will really show: it stops at MAX_SCRUTINY (consequence()).
+              const scrutiny = Math.min(sum(o, 'scrutiny'), Math.max(0, MAX_SCRUTINY - s.scrutiny));
               if (scrutiny) expect(line, name).toContain(t('ui.line.scrutiny', { n: scrutiny }));
               // A document is spent even when no time is: "Uses letter".
               if (o.card) {

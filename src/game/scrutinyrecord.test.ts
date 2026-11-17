@@ -11,9 +11,9 @@ import { allSetups } from './walk';
 // used to count the net change, 0, after the line had shown +2.
 describe('An answer records the scrutiny its line showed', () => {
   it('even when the supervisor finds nothing to ask and scrutiny drops on the same step', () => {
-    const base = allSetups('arrival').find((x) => x.character === 'mark' && x.bulletin === 'records' && x.loadout.join('+') === 'hotel+motherLetter+employerLetter+deed');
+    const base = allSetups('arrival').find((x) => x.character === 'lena' && x.bulletin === 'records' && x.loadout.join('+') === 'motherLetter+employerLetter+hospitalNote');
     expect(base).toBeDefined();
-    const setup = { ...base!, seed: 1 };
+    const setup = { ...base!, seed: 5 };
     let s = newRun(setup);
     let checked = false;
     for (const a of playRun('random', setup).actions) {
