@@ -304,13 +304,15 @@ export function cardsFor(s: RunState, topic: Topic, card?: string): EvidenceId[]
 /**
  * Why an evidence answer on card `card` has no document, when a packed one names
  * its topic (dap.41): 'shown' when that document would answer but was spent on an
- * earlier question, 'notFor' when it does not answer this card (EvidenceCard.notFor).
+ * earlier question, 'notFor' when it does not answer this card (EvidenceCard.notFor),
+ * or not while what you said holds (EvidenceCard.blockedBy: the hotel booking once
+ * you stay with family, dap.52).
  * Undefined when nothing packed names the topic: then it is "No matching document".
  */
 export function emptyReason(s: RunState, topic: Topic, card: string): { blocked: 'shown' | 'notFor'; doc: EvidenceId } | undefined {
   const shown = s.loadout.find((id) => s.used.includes(id) && answers(s, id, topic, card));
   if (shown) return { blocked: 'shown', doc: shown };
-  const other = s.loadout.find((id) => EVIDENCE[id].topics.includes(topic) && EVIDENCE[id].notFor?.includes(card));
+  const other = s.loadout.find((id) => EVIDENCE[id].topics.includes(topic) && !answers(s, id, topic, card));
   return other ? { blocked: 'notFor', doc: other } : undefined;
 }
 
@@ -334,7 +336,7 @@ export function freeContact(s: RunState, wanted: ContactId[] | undefined, topic?
 /**
  * noCard: nothing packed answers. shown: a packed document would, but it was shown
  * for an earlier question. notFor: a packed document names the topic but does not
- * answer this card. noContact: nobody left to name, every contact is named.
+ * answer this card, or not after what you said (blockedBy). noContact: nobody left to name, every contact is named.
  * noOther: someone is still unnamed, but not anyone this answer can name.
  */
 export type Unavailable = 'noCard' | 'shown' | 'notFor' | 'noContact' | 'noOther' | null;

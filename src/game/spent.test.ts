@@ -98,3 +98,23 @@ describe('Departure: the hotel booking and "It has been twelve days. Why?"', () 
     expect(choices(s).some((o) => o.card === 'hotel' && !o.blocked)).toBe(true);
   });
 });
+
+describe('Arrival: the hotel booking once you stay with family (dap.52)', () => {
+  const lena: RunSetup = { level: 'arrival', character: 'lena', loadout: ['hotel', 'employerLetter', 'returnTicket'], bulletin: 'customs', seed: 7 };
+  const atHost = (claims: RunState['claims']): RunState => ({ ...newRun(lena), reaction: null, claims, seen: ['p_host'], slot: 1, screen: { kind: 'encounter', id: 'p_host' } });
+
+  it('reads "Not answered by" the booking at "Who will you stay with?", not "No matching document"', () => {
+    const s = atHost(['familyVisit', 'stayingWithFamily']);
+    expect(choices(s).some((o) => o.card === 'hotel')).toBe(false);
+    const row = evidenceRow(s);
+    expect(row.blocked).toBe('notFor');
+    expect(row.blockedDoc).toBe('hotel');
+    expect(line(row)).toBe(`Not answered by ${t('ev.hotel.short')}`);
+    expect(line(row)).not.toContain(t('ui.blocked.noCard'));
+  });
+
+  it('still answers with the booking when you only visit family', () => {
+    const s = atHost(['familyVisit']);
+    expect(choices(s).some((o) => o.card === 'hotel' && !o.blocked)).toBe(true);
+  });
+});

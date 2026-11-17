@@ -409,7 +409,7 @@ export interface EvidenceCard {
    * harmless facts (HARMLESS_FACTS in src/game/content/world.ts).
    */
   settles?: Topic[];
-  /** The card can't back an answer while this holds. */
+  /** The card can't back an answer while this holds. Its row then reads "Not answered by ...", like notFor. */
   blockedBy?: Cond;
   /** The questions blockedBy applies to; every question when unset. */
   blockedOn?: Topic[];
