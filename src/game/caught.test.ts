@@ -107,7 +107,7 @@ describe('a caught claim quotes your own words next to the fact', () => {
           if (!CARDS.some((c) => l.key === `enc.${c}.q` || l.key.startsWith(`enc.${c}.`) && l.key.endsWith('.q'))) return;
           met++;
           const next = tr.lines[at + 1];
-          expect(next?.key, `${style} seed ${setup.seed} step ${l.step}`).toMatch(/^caught\.line\.(recorded|confirmed|flagged)$/);
+          expect(next?.key, `${style} seed ${setup.seed} step ${l.step}`).toMatch(/^caught\.line\.(recorded|confirmed|flagged)(\.shown)?$/);
           expect(next?.problem).toBeUndefined();
         });
       }
@@ -119,13 +119,13 @@ describe('the clarify answers fit the pair that dealt the card', () => {
   // What each pair is about: the claim the accept answer stands by, and the fact
   // its reaction names. A shortTrip answer to a hotel booking names the wrong claim.
   const FIT: Record<string, { claim: RegExp; fact: RegExp }> = {
-    'shortTrip.familyAddress': { claim: /short trip/, fact: /family's address/ },
     'shortTrip.fatherCondition': { claim: /short trip/, fact: /father's condition/ },
     'shortTrip.noBooking': { claim: /short trip/, fact: /no booking/ },
+    'shortTrip.sisterSaysWeeks': { claim: /short trip/, fact: /two weeks/ },
     'hotelStay.familyAddress': { claim: /hotel/, fact: /family's address/ },
   };
   const CLAIM_WORDS = /short trip|hotel/;
-  const FACT_WORDS = /family's address|father's condition|no booking/;
+  const FACT_WORDS = /family's address|father's condition|no booking|two weeks/;
   const pairs = INCONSISTENCIES.flatMap(([claim, fact]) => TRAVELERS.map((who) => [claim, fact, who] as const));
 
   it('has a wording for every pair', () => {

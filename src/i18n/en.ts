@@ -228,7 +228,7 @@ export const en: Record<string, string> = {
   // First-run explanations (src/game/explain.ts): shown once, the first time each matters.
   'explain.time': 'Lost hours come off your time to the bus.',
   'explain.scrutiny': 'At Scrutiny 3/3, a supervisor takes you to inspection.',
-  'explain.caught': 'A record speaks against your words. Every answer here costs something.',
+  'explain.caught': 'A record speaks against you. Every answer costs something.',
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
   'ui.blocked.noCard': 'No matching document',
@@ -663,7 +663,7 @@ export const en: Record<string, string> = {
   'enc.c_shortTrip.evidence.label': 'Show {cardThe}',
   'enc.c_shortTrip.evidence.reaction': 'He reads it, then rereads your entry card.',
   'enc.c_shortTrip.mother.label': 'Ask him to call {contact}',
-  'enc.c_shortTrip.mother.reaction': 'Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.',
+  'enc.c_shortTrip.mother.reaction': 'Your mother answers. He notes her address and who else lives there.',
 
   'enc.c_host.q': 'He finds your registered address. "Will you stay there, with your mother?"',
   // An accommodation day with no address on file at customs (questionKey()): every host is phoned.
@@ -731,7 +731,7 @@ export const en: Record<string, string> = {
   'enc.i_water.drink.label': 'Drink it',
   'enc.i_water.drink.reaction': '"Better? Then we go on."',
 
-  'enc.i_phone.q': 'The officer\'s phone buzzes. He reads it and puts it face down.',
+  'enc.i_phone.q': 'The officer\'s phone buzzes. He puts it face down.',
   'enc.i_phone.wait.label': 'Wait for him',
   'enc.i_phone.wait.reaction': '"Sorry. Where were we?"',
 
@@ -752,13 +752,14 @@ export const en: Record<string, string> = {
   'enc.i_clarify.accept.reaction': '"No reason, with your family\'s address on file?" The officer marks it as unexplained.',
   // The accept answer stands by the claim the file caught, so it is worded per pair (answerKey()).
   'enc.i_clarify.shortTrip.fatherCondition.accept.reaction': '"No reason, with your father\'s condition on file?" The officer marks it as unexplained.',
+  'enc.i_clarify.shortTrip.sisterSaysWeeks.accept.reaction': '"A short trip, when her sister says two weeks?" The officer marks it as unexplained.',
   'enc.i_clarify.shortTrip.noBooking.accept.reaction': '"A short trip with no booking?" The officer marks it as unexplained.',
   'enc.i_clarify.hotelStay.familyAddress.accept.label': '"I booked a hotel."',
   'enc.i_clarify.hotelStay.familyAddress.accept.reaction': '"With your family\'s address on file?" The officer marks it as unexplained.',
 
   'enc.i_contradiction.q': '"Your file says otherwise."',
   'enc.i_contradiction.apologise.label': '"I\'m sorry. I was scared."',
-  'enc.i_contradiction.apologise.reaction': 'The officer underlines the record that disproves you.',
+  'enc.i_contradiction.apologise.reaction': 'The officer underlines the record.',
   'enc.i_contradiction.review.label': 'Ask for a formal review',
   'enc.i_contradiction.review.event': 'Formal review',
   'enc.i_contradiction.review.reaction': 'A form, then another form, then a review of both.',
@@ -1125,6 +1126,7 @@ export const en: Record<string, string> = {
   'enc.d_entry.family.event': 'Register check',
   'enc.d_entry.family.reaction': 'She checks your family in the register.',
   'enc.d_entry.shortTrip.label': '"No reason, a short trip."',
+  'enc.d_entry.shortTrip.event': 'Form check',
   'enc.d_entry.shortTrip.reaction': 'She reads your entry form again.',
   // Where you stayed, with the entry form's answer quoted under it (fileLine()).
   'enc.d_stayed.q': '"Where did you stay?"',
@@ -1169,7 +1171,7 @@ export const en: Record<string, string> = {
   'enc.d_stay.father.onFile.reaction': 'She finds his condition already on your file and types the reason in.',
   'enc.d_stay.stand.label': '"Plans changed."',
   'enc.d_stay.stand.event': 'Record check',
-  'enc.d_stay.stand.reaction': "She writes today's date next to your entry record and checks it.",
+  'enc.d_stay.stand.reaction': "She checks your entry record against today's date.",
   'enc.d_hold.q': '"Your entry record has a problem. I\'m holding your passport."',
   'enc.d_hold.review.label': 'Wait for the review',
   'enc.d_hold.review.event': 'Records review',

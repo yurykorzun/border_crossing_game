@@ -24,12 +24,14 @@ import type { Check, CheckId, ClaimId, Cond, Effect, Encounter, FactId, Inspecti
  * conflicting testimony when a person does (TESTIMONY, catchKind()).
  */
 export const INCONSISTENCIES: readonly [ClaimId, FactId][] = [
-  // "No reason, a short trip" answers "Why now?" with no reason, so a
-  // fact on file that gives one (the family here, your father's condition) looks odd.
-  ['shortTrip', 'familyAddress'],
+  // "No reason, a short trip" answers "Why now?" with no reason, so your
+  // father's condition on file, which gives one, looks odd. A family address on
+  // its own does not: people visit family for a few days all the time.
   ['shortTrip', 'fatherCondition'],
   // A short trip home with nowhere booked (p_host).
   ['shortTrip', 'noBooking'],
+  // A short trip against a stay written down in weeks (The funeral, STATEMENTS).
+  ['shortTrip', 'sisterSaysWeeks'],
   // A hotel booking, and the family address on file.
   ['hotelStay', 'familyAddress'],
 ];
@@ -555,7 +557,15 @@ export const ENCOUNTERS: Encounter[] = [
       },
       {
         id: 'shortTrip', kind: 'say', reacts: 'suspicion',
-        effects: [{ claim: 'shortTrip' }, { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['familyVisit'] } }],
+        // Changing your story from family to a short trip costs time: she reads the
+        // entry form again (dap.50). So does a short trip again from a file with a claim
+        // shown false, because she checks it against the record (dap.16).
+        effects: [
+          { claim: 'shortTrip' },
+          { time: -2, when: { fileSaid: ['familyVisit'] } },
+          { time: -1, when: { fileSaid: ['shortTrip'], fileDisproved: true } },
+          { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['familyVisit'] } },
+        ],
       },
     ],
   },

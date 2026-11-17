@@ -184,9 +184,15 @@ describe('scenarios', () => {
     return step(step(s, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
   };
 
-  it('a shortTrip claim plus the family address on file deals the clarify card', () => {
-    const s = leavingInterview({ claims: ['shortTrip'], facts: known('familyAddress') });
+  it('a shortTrip claim plus no booking on file deals the clarify card', () => {
+    const s = leavingInterview({ claims: ['shortTrip'], facts: known('noBooking') });
     expect(s.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
+  });
+
+  it('a shortTrip claim with only the family address on file deals neither (dap.16)', () => {
+    const s = leavingInterview({ claims: ['shortTrip'], facts: known('familyAddress') });
+    expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_contradiction' });
+    expect(s.screen).not.toEqual({ kind: 'encounter', id: 'i_clarify' });
   });
 
   it('a family-visit claim with the same address deals neither', () => {
@@ -308,7 +314,7 @@ describe('contact results', () => {
   it('a vouch that passes: the beat alone, the on-file rows naming the desk, then what it settled', () => {
     const s = at(newRun(lena), 'c_shortTrip', { checkpoint: 1, claims: ['shortTrip'] });
     const n = playStep(s, { type: 'choose', approach: 'mother' });
-    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.']);
+    expect(n.reaction?.map((r) => t(r.key, r.vars))).toEqual(['Your mother answers. He notes her address and who else lives there.']);
     // Asked, she also gives her address and who else lives there (2op.12). On a records day both
     // reach the desks ahead too, which their known-facts line shows, so no row repeats them.
     // What she confirmed is said once, as the question it settles, last.
