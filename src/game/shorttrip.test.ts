@@ -4,12 +4,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { t } from '../i18n';
+import { SAMPLE_FILES } from './carry';
 import { CORE_CARDS, INCONSISTENCIES } from './content/encounters';
 import { issueOpen, newRun, spotCheckOf, step } from './engine';
 import type { RunSetup } from './engine';
 import type { Dealer } from './rng';
 import { CHECKPOINTS } from './types';
-import type { FactId, RunState } from './types';
+import type { CarriedFile, FactId, RunState } from './types';
 
 const lena: RunSetup = { character: 'lena', loadout: ['deed', 'hotel', 'motherLetter'], bulletin: 'customs', seed: 3 };
 
@@ -53,4 +54,18 @@ describe('a short trip and the file', () => {
     // A short trip with no return booking stays a discrepancy too.
     expect(issueOpen(at(['noBooking']), 'i_clarify')).toBe(true);
   });
+});
+
+describe('a short trip at the exit desk and the carried file (dap.50, dap.16)', () => {
+  /** The hours "a short trip" costs at d_entry, opened from `file`. */
+  const cost = (file: CarriedFile) => {
+    const setup: RunSetup = { level: 'departure', character: file.character, loadout: ['deed', 'hotel', 'motherLetter'], bulletin: 'records', seed: 7, file };
+    const s = { ...newRun(setup), seen: ['d_entry'], screen: { kind: 'encounter', id: 'd_entry' } } as RunState;
+    return s.time - step(s, { type: 'choose', approach: 'shortTrip' }, first).time;
+  };
+  const lenaFamily: CarriedFile = { ...SAMPLE_FILES.lena, claims: ['familyVisit'], said: [{ ...SAMPLE_FILES.lena.said![0], claim: 'familyVisit' }], disproved: [] };
+
+  it('costs 2 hours when the file says family', () => expect(cost(lenaFamily)).toBe(2));
+  it('costs 1 hour when the file says a short trip and a claim on it was shown false', () => expect(cost(SAMPLE_FILES.lena)).toBe(1));
+  it('costs nothing when the file says a short trip and nothing on it was shown false', () => expect(cost({ ...SAMPLE_FILES.lena, disproved: [] })).toBe(0));
 });

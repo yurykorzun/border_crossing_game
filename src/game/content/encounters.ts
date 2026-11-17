@@ -558,10 +558,12 @@ export const ENCOUNTERS: Encounter[] = [
       {
         id: 'shortTrip', kind: 'say', reacts: 'suspicion',
         // Changing your story from family to a short trip costs time: she reads the
-        // entry form again (dap.50).
+        // entry form again (dap.50). So does a short trip again from a file with a claim
+        // shown false, because she checks it against the record (dap.16).
         effects: [
           { claim: 'shortTrip' },
           { time: -2, when: { fileSaid: ['familyVisit'] } },
+          { time: -1, when: { fileSaid: ['shortTrip'], fileDisproved: true } },
           { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['familyVisit'] } },
         ],
       },
