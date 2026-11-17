@@ -11,19 +11,26 @@ const BASE = '/border_crossing_game/';
 // gate builds once. Run on its own (npm run e2e), the webServer builds first. Prebuilt
 // still builds when dist/ is older than what the build reads, because a gate rerun skips
 // the build step and a failed build leaves the last good dist/ behind.
-const INPUTS = ['src', 'public', 'index.html', 'vite.config.ts', 'package.json'];
+// A directory's own time counts too, because deleting or renaming a file only changes that.
+const INPUTS = [
+  'src', 'public', 'index.html', 'vite.config.ts', 'package.json', 'package-lock.json',
+  ...readdirSync('.').filter((n) => /^tsconfig.*\.json$|^\.env($|\.)/.test(n)),
+];
 function newest(path: string): number {
   if (!existsSync(path)) return 0;
   const st = statSync(path);
   if (!st.isDirectory()) return st.mtimeMs;
-  return Math.max(0, ...readdirSync(path).map((n) => newest(join(path, n))));
+  return Math.max(st.mtimeMs, ...readdirSync(path).map((n) => newest(join(path, n))));
 }
 function distIsFresh(): boolean {
   const out = 'dist/index.html';
   return existsSync(out) && statSync(out).mtimeMs >= Math.max(...INPUTS.map(newest));
 }
-const PREBUILT = process.env.E2E_PREBUILT === '1' && distIsFresh();
-const BUILD = PREBUILT ? 'echo "e2e: serving the gate\'s dist/"' : 'npx vite build';
+const BUILD = process.env.E2E_PREBUILT !== '1'
+  ? 'npx vite build'
+  : distIsFresh()
+    ? 'echo "e2e: serving the gate\'s dist/"'
+    : 'echo "e2e: E2E_PREBUILT=1 but dist/ is missing or older than its sources, so building" && npx vite build';
 
 export default defineConfig({
   testDir: 'e2e',
