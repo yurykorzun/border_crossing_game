@@ -194,7 +194,7 @@ test('a contact who vouches: the story beat, then separate rows for what went on
   const reaction = page.locator('main.run .panel.reaction');
   const beat = reaction.locator('.story-beat');
   const rows = reaction.locator('[data-line="changed"] li');
-  await expect(beat).toHaveText('Your mother answers on the second ring. He asks for her address and who else lives there, and writes down both.');
+  await expect(beat).toHaveText('Your mother answers. He notes her address and who else lives there.');
   // Her address and the family go on file too. On a records day both reach the desks ahead,
   // which their known-facts line shows, so no row repeats them.
   await expect(rows).toHaveText([
