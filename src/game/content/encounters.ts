@@ -557,7 +557,13 @@ export const ENCOUNTERS: Encounter[] = [
       },
       {
         id: 'shortTrip', kind: 'say', reacts: 'suspicion',
-        effects: [{ claim: 'shortTrip' }, { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['familyVisit'] } }],
+        // Changing your story from family to a short trip costs time: she reads the
+        // entry form again (dap.50).
+        effects: [
+          { claim: 'shortTrip' },
+          { time: -2, when: { fileSaid: ['familyVisit'] } },
+          { scrutiny: 1, reason: 'entryRecord', when: { facts: ['entryRecord'], fileSaid: ['familyVisit'] } },
+        ],
       },
     ],
   },
