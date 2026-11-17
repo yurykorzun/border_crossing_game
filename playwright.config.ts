@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 // Phone-size browser checks against the production build served by `vite preview`.
@@ -6,11 +8,22 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4173;
 const BASE = '/border_crossing_game/';
 // scripts/verify sets E2E_PREBUILT=1 because its build step has just built dist/, so the
-// gate builds once. Run on its own (npm run e2e), the webServer builds first so it never
-// serves an old dist/.
-const BUILD = process.env.E2E_PREBUILT === '1'
-  ? `test -f dist/index.html || { echo 'E2E_PREBUILT=1 but dist/index.html is missing: run npm run build first'; exit 1; }`
-  : 'npx vite build';
+// gate builds once. Run on its own (npm run e2e), the webServer builds first. Prebuilt
+// still builds when dist/ is older than what the build reads, because a gate rerun skips
+// the build step and a failed build leaves the last good dist/ behind.
+const INPUTS = ['src', 'public', 'index.html', 'vite.config.ts', 'package.json'];
+function newest(path: string): number {
+  if (!existsSync(path)) return 0;
+  const st = statSync(path);
+  if (!st.isDirectory()) return st.mtimeMs;
+  return Math.max(0, ...readdirSync(path).map((n) => newest(join(path, n))));
+}
+function distIsFresh(): boolean {
+  const out = 'dist/index.html';
+  return existsSync(out) && statSync(out).mtimeMs >= Math.max(...INPUTS.map(newest));
+}
+const PREBUILT = process.env.E2E_PREBUILT === '1' && distIsFresh();
+const BUILD = PREBUILT ? 'echo "e2e: serving the gate\'s dist/"' : 'npx vite build';
 
 export default defineConfig({
   testDir: 'e2e',
