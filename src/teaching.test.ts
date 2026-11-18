@@ -17,7 +17,7 @@ import { ENCOUNTER_BY_ID } from './game/content/encounters';
 import { answerKey, currentCard, deskOf, legalActions, newRun } from './game/engine';
 import type { RunSetup } from './game/engine';
 import { playStep } from './game/play';
-import type { RunState } from './game/types';
+import type { Effect, RunState } from './game/types';
 import { t, tn } from './i18n';
 
 const lena: RunSetup = { level: 'arrival', character: 'lena', loadout: ['hospitalNote', 'returnTicket', 'employerLetter'], bulletin: 'customs', seed: 7 };
@@ -27,8 +27,7 @@ const PICKS: Record<string, string> = {
 };
 
 const plain = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
-const hoursOf = (o: { effects: { time?: number }[] } | undefined) =>
-  (o?.effects ?? []).reduce((h, e) => h + ('time' in e && e.time! < 0 ? -e.time! : 0), 0);
+const hoursOf = (o: { effects: Effect[] }) => o.effects.reduce((h, e) => h + ('time' in e && e.time < 0 ? -e.time : 0), 0);
 
 /** Each state the run passes through, with the card it answered there, played the way the game moves a run. */
 function play(): { states: RunState[]; cards: (string | undefined)[] } {
