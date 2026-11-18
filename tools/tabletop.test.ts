@@ -42,6 +42,20 @@ describe('tabletop cards', () => {
     const rest = { ...en }; delete rest['enc.c_cash.q'];
     expect(buildTabletop(rest).missing).toEqual(['enc.c_cash.q']);
   });
+
+  it('takes the words around the game text from en.ts too, so a missing one fails the same way', () => {
+    for (const k of ['tabletop.document', 'tabletop.answers', 'tabletop.part.aDocument', 'tabletop.names', 'tabletop.only', 'tabletop.part.as']) {
+      const rest = { ...en }; delete rest[k];
+      expect(buildTabletop(rest).missing, k).toEqual([k]);
+    }
+  });
+
+  it("prints the security officer's scrutiny for naming Tom, as the engine adds it (officerFlags)", () => {
+    const card = tt.html.split('<div class="card').find((c) => c.includes('<div class="id">i_family</div>'))!;
+    const row = card.split('<li>').find((r) => r.includes(en['fact.brotherAbroad.reveal']))!;
+    expect(row).toContain(`${en['ui.line.scrutiny'].replace('{n}', '1')} <i>(`);
+    expect(row).toContain(`${en['fact.brotherAbroad'].toLowerCase()} not on file`);
+  });
 });
 
 describe('npm run tabletop', () => {

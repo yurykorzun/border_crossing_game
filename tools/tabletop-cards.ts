@@ -3,7 +3,7 @@
 // tools/tabletop.ts prints it to PDF; this file only builds the page, so tests can run it.
 import { CONTRADICTIONS, CORE_CARDS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from '../src/game/content/encounters';
 import * as W from '../src/game/content/world';
-import type { Approach, CharacterId, Cond, Effect } from '../src/game/types';
+import type { Approach, CharacterId, Checkpoint, Cond, Effect } from '../src/game/types';
 
 /** The six core questions, two per desk, in the order the desks ask them. */
 export const QUESTION_CARDS: readonly string[] = [...CORE_CARDS.passport, ...CORE_CARDS.customs, ...CORE_CARDS.interview];
@@ -40,24 +40,26 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
   function cond(c: Cond | undefined): string {
     if (!c) return '';
     const p: string[] = [];
-    if (c.character) p.push(`as ${name(c.character)}`);
-    if (c.background) { const ch = charOf(c.background); p.push(ch ? `as ${name(ch)}` : c.background); }
-    if (c.bulletin) p.push(`with the ${cap(c.bulletin)} bulletin`);
-    if (c.facts) p.push(`with ${c.facts.map((f) => t(`fact.${f}`).toLowerCase()).join(' and ')} on file`);
-    if (c.noFacts) p.push(`with ${c.noFacts.map((f) => t(`fact.${f}`).toLowerCase()).join(' or ')} not on file`);
-    if (c.claims) p.push(`if you said "${c.claims.map((x) => t(`claim.${x}`)).join('" and "')}"`);
-    if (c.noClaims) p.push(`unless you said "${c.noClaims.map((x) => t(`claim.${x}`)).join('" or "')}"`);
-    if (c.contactFree) p.push(`while ${c.contactFree.map((x) => t(`contact.${x}`)).join(' or ')} is not yet named`);
-    if (c.lastHours !== undefined) p.push(c.lastHours ? `with ${hours(W.LAST_HOURS)} or less left` : `with more than ${hours(W.LAST_HOURS)} left`);
-    if (c.holds) p.push(`if you hold a document for ${t(`topic.${c.holds}.helps`).toLowerCase()}`);
-    if (c.used) p.push(`once you showed ${c.used.map((x) => t(`ev.${x}.the`)).join(' and ')}`);
-    if (c.flagged !== undefined) p.push(c.flagged ? 'with a flagged fact on file' : 'with nothing flagged');
-    if (c.any) p.push(c.any.map((x) => cond(x) || 'always').join(' or '));
+    const and = ` ${t('ui.and')} `; const or = ` ${t('tabletop.part.or')} `;
+    const as = (ch: string) => t('tabletop.part.as', { name: name(ch) });
+    if (c.character) p.push(as(c.character));
+    if (c.background) { const ch = charOf(c.background); p.push(ch ? as(ch) : c.background); }
+    if (c.bulletin) p.push(t('tabletop.part.bulletin', { bulletin: cap(c.bulletin) }));
+    if (c.facts) p.push(t('tabletop.part.facts', { facts: c.facts.map((f) => t(`fact.${f}`).toLowerCase()).join(and) }));
+    if (c.noFacts) p.push(t('tabletop.part.noFacts', { facts: c.noFacts.map((f) => t(`fact.${f}`).toLowerCase()).join(or) }));
+    if (c.claims) p.push(t('tabletop.part.claims', { claims: c.claims.map((x) => t(`claim.${x}`)).join(`"${and}"`) }));
+    if (c.noClaims) p.push(t('tabletop.part.noClaims', { claims: c.noClaims.map((x) => t(`claim.${x}`)).join(`"${or}"`) }));
+    if (c.contactFree) p.push(t('tabletop.part.contactFree', { contacts: c.contactFree.map((x) => t(`contact.${x}`)).join(or) }));
+    if (c.lastHours !== undefined) p.push(t(c.lastHours ? 'tabletop.part.lastHours' : 'tabletop.part.moreHours', { hours: hours(W.LAST_HOURS) }));
+    if (c.holds) p.push(t('tabletop.part.holds', { topic: t(`topic.${c.holds}.helps`).toLowerCase() }));
+    if (c.used) p.push(t('tabletop.part.used', { docs: c.used.map((x) => t(`ev.${x}.the`)).join(and) }));
+    if (c.flagged !== undefined) p.push(t(c.flagged ? 'tabletop.part.flagged' : 'tabletop.part.unflagged'));
+    if (c.any) p.push(c.any.map((x) => cond(x) || t('tabletop.part.always')).join(or));
     if (c.not) {
       // Two travelers: "not as Mark" is "as Lena".
       const only = Object.keys(c.not);
       const other = only.length === 1 && c.not.character ? W.CHARACTER_IDS.find((x) => x !== c.not!.character) : undefined;
-      p.push(other ? `as ${name(other)}` : `not (${cond(c.not)})`);
+      p.push(other ? as(other) : t('tabletop.part.not', { cond: cond(c.not) }));
     }
     return p.join(', ');
   }
@@ -71,27 +73,33 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     if ('travel' in e) return { cost: t(e.travel === 1 ? 'ui.line.travel.one' : 'ui.line.travel.other', { n: e.travel }) };
     if ('claim' in e) return { gives: `${t(`claim.${e.claim}.recorded`)}: "${t(`claim.${e.claim}`)}"` };
     if ('fact' in e) return { gives: t(`fact.${e.fact}.reveal`) };
-    if ('send' in e) return { gives: `Sent on to the next desk: ${e.facts ? e.facts.map((f) => t(`fact.${f}`).toLowerCase()).join(', ') : 'everything this desk knows'}` };
+    if ('send' in e) return { gives: e.facts ? t('tabletop.sent', { facts: e.facts.map((f) => t(`fact.${f}`).toLowerCase()).join(', ') }) : t('tabletop.sentAll') };
     return {};
   }
 
-  /** One approach row: label (with Mark's wording if he has his own), cost and what it puts on record. */
-  function approachRow(prefix: string, card: string, variants: Approach[]): string {
+  /**
+   * One approach row: label (with Mark's wording if he has his own), cost and what it puts on record.
+   * On a desk's own question card the officer also reacts to the facts it cares about the first
+   * time they come out (OFFICERS reactions, officerFlags() in src/game/engine.ts), so that
+   * scrutiny prints too, under "not on file". An inspection card has no officer reaction.
+   */
+  function approachRow(prefix: string, card: string, variants: Approach[], desk?: Checkpoint): string {
     const a = variants[0];
     const k = `${prefix}.${card}.${a.id}`;
     const contacts = a.contacts ?? [];
     // Each traveler names only their own people: Lena her cousin, Mark his brother.
     const own = (c: CharacterId) => contacts.filter((x) => W.CHARACTERS[c].contacts.includes(x));
     const mine = (c: CharacterId) => () => own(c).map((x) => t(`contact.${x}.mine`)).join(' / ');
-    const label = t(`${k}.label`, { cardThe: 'a document', contact: contacts.map((c) => t(`contact.${c}`)).join(' or '), contactMine: mine('lena') });
+    const aDocument = t('tabletop.part.aDocument');
+    const label = t(`${k}.label`, { cardThe: aDocument, contact: contacts.map((c) => t(`contact.${c}`)).join(' or '), contactMine: mine('lena') });
     const markKey = `${prefix}.${card}.mark.${a.id}.label`;
     const mark = has(markKey) ? `<div class="alt">${esc(name('mark'))}: ${esc(t(markKey, { contactMine: mine('mark') }))}</div>` : '';
     const event = has(`${k}.event`) ? t(`${k}.event`) : undefined;
     const head: string[] = []; const names: string[] = [];
-    if (a.kind === 'evidence') head.push(`${esc(t('ui.line.uses', { cardShort: 'a document' }))} (${esc(t(`topic.${a.topic}.helps`).toLowerCase())})`);
+    if (a.kind === 'evidence') head.push(`${esc(t('ui.line.uses', { cardShort: aDocument }))} (${esc(t(`topic.${a.topic}.helps`).toLowerCase())})`);
     if (a.kind === 'perk') head.push(esc(t('ui.line.perk')));
     if (a.kind === 'withdraw') head.push(esc(t('ui.line.withdraw')));
-    if (a.kind === 'contact') names.push(`Names ${esc(contacts.map((c) => t(`contact.${c}`)).join(' or '))}`);
+    if (a.kind === 'contact') names.push(esc(t('tabletop.names', { contacts: contacts.map((c) => t(`contact.${c}`)).join(` ${t('tabletop.part.or')} `) })));
     if (a.check) head.push(esc(t('ui.line.check')));
     /** One variant's cost line and record line, under its condition when the choice has several. */
     const lines = (v: Approach, many: boolean) => {
@@ -100,10 +108,18 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
         const r = effect(e, event);
         if (r.cost) costs.push(esc(r.cost) + when(e.when));
         if (r.gives) gives.push(esc(r.gives) + when(e.when));
+        // The officer's own scrutiny for this fact, unless the answer already charges for it.
+        if (!desk || !('fact' in e) || v.effects.some((x) => 'scrutiny' in x && x.reason === e.fact)) continue;
+        const fact = e.fact;
+        for (const re of W.OFFICERS[desk].reactions) {
+          if (!re.reveals.includes(fact) || !re.scrutiny) continue;
+          const c: Cond = { ...(e.when ?? {}), ...(re.when ?? {}), noFacts: [...(e.when?.noFacts ?? []), ...(re.when?.noFacts ?? []), fact] };
+          costs.push(esc(t('ui.line.scrutiny', { n: re.scrutiny })) + when(c));
+        }
       }
-      if (v.ifVerified) costs.push(`<i>if already verified:</i> ${v.ifVerified.length ? v.ifVerified.map((e) => esc(effect(e, event).cost ?? '')).join(', ') : esc(t('ui.line.free'))}`);
+      if (v.ifVerified) costs.push(`<i>${esc(t('tabletop.ifVerified', { cost: v.ifVerified.length ? v.ifVerified.map((e) => effect(e, event).cost ?? '').join(', ') : t('ui.line.free') }))}</i>`);
       if (!costs.length) costs.push(esc(t('ui.line.free')));
-      const only = v.requires ? `<div class="req">${many ? 'If' : 'Only'} ${esc(cond(v.requires))}${many ? ':' : ''}</div>` : '';
+      const only = v.requires ? `<div class="req">${esc(t(many ? 'tabletop.if' : 'tabletop.only', { cond: cond(v.requires) }))}</div>` : '';
       return `${only}<div class="cost">${costs.join(' · ')}</div>${gives.length ? `<div class="gives">${gives.join(' · ')}</div>` : ''}`;
     };
     return `<li><div class="al">${esc(label)}</div>${mark}${variants.map((v) => lines(v, variants.length > 1)).join('')}</li>`;
@@ -131,8 +147,8 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     const markQ = has(`enc.${id}.mark.q`) ? `<div class="alt">${esc(name('mark'))}: ${esc(t(`enc.${id}.mark.q`))}</div>` : '';
     cards.push(`<div class="card q ${desk}"><div class="kind">${esc(t(`checkpoint.${desk}`))} · ${esc(t(`officer.${desk}`))}</div>
       <div class="qt">${esc(t(`enc.${id}.q`))}</div>${markQ}
-      ${e.when ? `<div class="req">Asked only ${esc(cond(e.when))}</div>` : ''}
-      <ol>${groups.map((g) => approachRow('enc', id, g)).join('')}</ol><div class="id">${id}</div></div>`);
+      ${e.when ? `<div class="req">${esc(t('tabletop.askedOnly', { cond: cond(e.when) }))}</div>` : ''}
+      <ol>${groups.map((g) => approachRow('enc', id, g, desk)).join('')}</ol><div class="id">${id}</div></div>`);
   }
 
   for (const id of INSPECTION_CARDS) {
@@ -140,22 +156,22 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     if (!s) throw new Error(`tabletop: no inspection ${id}`);
     cards.push(`<div class="card insp"><div class="kind">${esc(t('officer.inspection'))} · ${esc(t(`insp.issue.${s.issue}`))}</div>
       <div class="qt">${esc(t(`insp.${id}.q`))}</div>
-      ${s.when ? `<div class="req">Dealt only ${esc(cond(s.when))}</div>` : ''}
+      ${s.when ? `<div class="req">${esc(t('tabletop.dealtOnly', { cond: cond(s.when) }))}</div>` : ''}
       <ol>${merged('insp', id, s.approaches).map((g) => approachRow('insp', id, g)).join('')}</ol><div class="id">${id}</div></div>`);
   }
 
   for (const id of W.EVIDENCE_IDS) {
     const ev = W.EVIDENCE[id];
-    cards.push(`<div class="card doc"><div class="kind">Document</div><div class="qt">${esc(t(`ev.${id}.name`))}</div>
+    cards.push(`<div class="card doc"><div class="kind">${esc(t('tabletop.document'))}</div><div class="qt">${esc(t(`ev.${id}.name`))}</div>
       <p>${esc(t(`ev.${id}.desc`))}</p>
-      <div class="cost">Answers: ${ev.topics.map((x) => esc(t(`topic.${x}.helps`))).join(', ')}</div>
+      <div class="cost">${esc(t('tabletop.answers', { topics: ev.topics.map((x) => t(`topic.${x}.helps`)).join(', ') }))}</div>
       <div class="gives">${ev.onUse.map((e) => { const r = effect(e); return r.gives ? esc(r.gives) + when(e.when) : ''; }).filter(Boolean).join(' · ')}</div>
-      ${ev.blockedBy ? `<div class="req">Not usable ${esc(cond(ev.blockedBy))}</div>` : ''}<div class="id">${id}</div></div>`);
+      ${ev.blockedBy ? `<div class="req">${esc(t('tabletop.notUsable', { cond: cond(ev.blockedBy) }))}</div>` : ''}<div class="id">${id}</div></div>`);
   }
 
   for (const id of W.CHARACTER_IDS) {
     const ch = W.CHARACTERS[id];
-    cards.push(`<div class="card trav"><div class="kind">Traveler · ${esc(t(`char.${id}.role`))}</div><div class="qt">${esc(name(id))}</div>
+    cards.push(`<div class="card trav"><div class="kind">${esc(t('ui.traveler'))} · ${esc(t(`char.${id}.role`))}</div><div class="qt">${esc(name(id))}</div>
       <p>${esc(t(`char.${id}.blurb`))}</p>
       <div class="cost">${esc(t(ch.evidenceSlots === 1 ? 'ui.line.documents.one' : 'ui.line.documents.other', { n: ch.evidenceSlots }))} · ${esc(t('ui.scrutinyCount', { n: ch.startScrutiny, max: W.MAX_SCRUTINY }))}</div>
       <p><b>+</b> ${esc(t(`char.${id}.advantage`))}</p><p><b>−</b> ${esc(t(`char.${id}.complication`))}</p>

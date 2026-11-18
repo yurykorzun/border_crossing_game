@@ -55,6 +55,19 @@ describe('setup step counters', () => {
     expect(counters(html)).toEqual([]);
     expect(plain(html)).toContain(t('ui.level'));
   });
+
+  // Before the first ending Setup is Before you cross alone, with packing as a side trip
+  // back to it (FIRST_RUN in src/App.tsx): no steps in order, so neither screen counts.
+  for (const at of ['begin', 'documents'] as const) {
+    it(`the first run's ${at} screen shows no count, because the first run walks no steps in order`, () => {
+      const html = renderToStaticMarkup(createElement(Picks, {
+        bulletin: 'customs', endingsSeen: [], levelsFinished: [], savedFile: null, seed: 1,
+        onExit: () => {}, onStart: () => {}, opensAt: { at },
+      }));
+      expect(html).toContain(`${at}-step`);
+      expect(counters(html)).toEqual([]);
+    });
+  }
 });
 
 describe('packing and the Evidence sheet', () => {

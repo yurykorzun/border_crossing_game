@@ -14,7 +14,9 @@ const isFragment = (key: string) =>
   // What an answer that was an act did, mid-line: "Asked where you would stay, you gave your mother's address."
   /^did\./.test(key) ||
   // A desk named mid-sentence: "already confirmed at passport control" (the deskAt var).
-  /^checkpoint\.[^.]+\.at$/.test(key);
+  /^checkpoint\.[^.]+\.at$/.test(key) ||
+  // A tabletop card's condition, read mid-line: "Only as Mark, with your brother abroad not on file".
+  /^tabletop\.part\./.test(key);
 
 /** The names, from the contacts table (contact.* values) plus the one place name. */
 const NAMES: string[] = [
