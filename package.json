@@ -13,7 +13,8 @@
     "e2e": "playwright test",
     "autoplay": "tsx tools/autoplay.ts",
     "eval": "tsx tools/eval.ts",
-    "map": "tsx tools/map.ts"
+    "map": "tsx tools/map.ts",
+    "tabletop": "tsx tools/tabletop.ts"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
