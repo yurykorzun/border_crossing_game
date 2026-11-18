@@ -22,7 +22,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, officerLabel, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, axisLines, caughtLine, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
+import { SEPARATOR, axisLines, caughtLine, chains, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -1060,6 +1060,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
   const later = laterBeat(s);
   const decided = decisive(s);
   const rest = unlistedHours(s);
+  const linked = chains(s);
   return (
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
@@ -1140,6 +1141,19 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
           )}
           {/* The hours the answers left off the list cost, so the hours add up (unlistedHours()). */}
           {rest > 0 && <p className="decided-rest">{tn('ending.decided.rest', rest)}</p>}
+          {/* What led to what (dap.18): a desk that took what an earlier one verified, and a follow-up something on file brought. */}
+          {linked.length > 0 && (
+            <ul className="chains">
+              {linked.map((c) => (
+                <li key={c.kind} className={`chain chain-${c.kind}`}>
+                  {c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)}
+                  {c.costs?.map((x, j) => (
+                    <span key={j} className={`tone-${x.tone}`}>{j === 0 ? ' ' : SEPARATOR}{x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)}</span>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          )}
           <ul className="axes">
             {axisLines(s).map((l) => (
               <li key={l.axis} className={`axis axis-${l.axis}`}><strong>{t(`ending.axis.${l.axis}`)}:</strong> {t(l.key, l.vars)}</li>

@@ -18,7 +18,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
-import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
+import { SEPARATOR, axisLines, chains, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
 import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, remindLine, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -495,6 +495,15 @@ function endingLines(s: RunState, p: Page): void {
   }
   const rest = unlistedHours(s);
   if (rest) p.plural('ending.decided.rest', rest, CHROME);
+  // What led to what, chains(): chrome, under the decisive answers.
+  for (const c of chains(s)) {
+    if (c.n === undefined) p.add(c.key, c.vars, CHROME);
+    else p.plural(c.key, c.n, CHROME, c.vars);
+    for (const x of c.costs ?? []) {
+      if (x.n === undefined) p.add(x.key, x.vars, CHROME);
+      else p.plural(x.key, x.n, CHROME, x.vars);
+    }
+  }
   for (const l of axisLines(s)) {
     p.add(`ending.axis.${l.axis}`, {}, CHROME);
     p.add(l.key, l.vars, CHROME);

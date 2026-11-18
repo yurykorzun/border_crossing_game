@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { answerKey, chooseAction, deskOf, factIds, factTier, inspectionResult, legalActions, newRun, optionFor, pointVerified, reactionOf, step, travelOf, waitActions, waitKey } from './engine';
+import { answerKey, check, chooseAction, currentCard, deskOf, factIds, factTier, inspectionResult, legalActions, newRun, optionFor, pointVerified, reactionOf, step, topicOf, travelOf, usesVerified, waitActions, waitKey } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -10,7 +10,7 @@ import { CHARACTERS, MAX_SCRUTINY } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, Answered, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, InspectionResult, OnFileTier, ReactionKind, RunState, Topic } from './types';
+import type { Action, Answered, Approach, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, InspectionResult, OnFileTier, ReactionKind, RunState, Topic } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
@@ -116,6 +116,9 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
     caught: events.flatMap((e) => (e.type === 'claimChallenged' && e.kind === 'disproof' ? [e.claim] : [])),
     used: events.flatMap((e) => (e.type === 'documentUsed' ? [e.id] : [])),
     settled: events.flatMap((e) => (e.type === 'pointSettled' ? [e.topic] : [])),
+    // New on the crossing only: an old fact that turns flagged also reads factRecorded.
+    recorded: events.flatMap((e) => (e.type === 'factRecorded' && !factIds(s).includes(e.id) ? [e.id] : [])),
+    claimed: events.flatMap((e) => (e.type === 'claimRecorded' ? [e.id] : [])),
   };
   const answers = s.answers ?? [];
   const add = (a: Answered): RunState => ({ ...n, answers: [...answers, a] });
@@ -130,7 +133,8 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
     // same step (insp.none), and the ending would say up by 0 after the line said +2 (dap.54).
     const showed = o.effects.reduce((x, e) => x + ('scrutiny' in e ? e.scrutiny : 0), 0);
     const rose = Math.min(Math.max(0, showed), MAX_SCRUTINY - s.scrutiny);
-    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose) });
+    const saved = savedBy(s, o.approach);
+    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose), ...(saved ? { saved } : {}) });
   }
   if (action.type !== 'waitAction' || sc.kind !== 'wait' || action.action === 'ask') return n;
   const last = answers[answers.length - 1];
@@ -141,11 +145,26 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
       hours: last.hours + moved.hours, travel: last.travel + moved.travel, scrutiny: last.scrutiny + moved.scrutiny,
       named: [...last.named, ...moved.named], medicine: last.medicine || moved.medicine,
       caught: [...last.caught, ...moved.caught], used: [...last.used, ...moved.used], settled: [...last.settled, ...moved.settled],
+      recorded: [...(last.recorded ?? []), ...moved.recorded], claimed: [...(last.claimed ?? []), ...moved.claimed],
     };
     return { ...n, answers: [...answers.slice(0, -1), merged] };
   }
   const contact = waitActions(s).find((w) => w.action === action.action)?.contact;
   return add({ desk: deskOf(s), card: sc.check, pick: action.action, key: waitKey(sc.check, action.action, 'label'), ...(contact ? { vars: { contact } } : {}), ...moved });
+}
+
+/**
+ * What answer `a` saved by using a point verified at an earlier desk (Approach.ifVerified,
+ * dap.18): the hours its own effects would have cost here, where the point was verified
+ * and the document that did it. Undefined when it used none, or the plain answer was free.
+ */
+function savedBy(s: RunState, a: Approach): Answered['saved'] {
+  const topic = topicOf(currentCard(s));
+  if (!topic || !usesVerified(s, a, topic)) return undefined;
+  const hours = a.effects.reduce((h, e) => h + ('time' in e && e.time < 0 && check(e.when, s) ? -e.time : 0), 0);
+  const v = s.verified?.[topic];
+  if (!hours || !v || v.desk === deskOf(s)) return undefined;
+  return { hours, from: v.desk, ...(v.by ? { by: v.by } : {}) };
 }
 
 const added = <T>(before: T[], after: T[]) => after.filter((x) => !before.includes(x));

@@ -679,6 +679,15 @@ export interface Answered {
   used: EvidenceId[];
   /** Questions it settled for the desks ahead. */
   settled: Topic[];
+  /** Facts it put on file for the first time on this crossing (dap.18): what a later follow-up can be about. */
+  recorded?: FactId[];
+  /** Claims it wrote down. */
+  claimed?: ClaimId[];
+  /**
+   * It used a point verified at an earlier desk (Approach.ifVerified): the hours its own
+   * effects would have cost, where the point was verified and by which document (dap.18).
+   */
+  saved?: { hours: number; from: Checkpoint; by?: EvidenceId };
 }
 
 /**

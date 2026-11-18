@@ -1052,6 +1052,16 @@ export const en: Record<string, string> = {
   // Under the list (unlistedHours()): the hours the answers left off it cost, so the hours add up.
   'ending.decided.rest.one': 'Other answers: {n} hour lost',
   'ending.decided.rest.other': 'Other answers: {n} hours lost',
+  // What led to what (chains() in src/game/consequence.ts, dap.18): a point verified earlier that a later desk took, and what you put on file that brought a follow-up.
+  'ending.chain.saved.one': '{cardLabel} from {deskAt} counted at {desk}: {n} hour saved.',
+  'ending.chain.saved.other': '{cardLabel} from {deskAt} counted at {desk}: {n} hours saved.',
+  'ending.chain.saved.checked.one': 'What {deskAt} checked counted at {desk}: {n} hour saved.',
+  'ending.chain.saved.checked.other': 'What {deskAt} checked counted at {desk}: {n} hours saved.',
+  'ending.chain.followUp.fact': '{fact}, on file from {deskAt}, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.claim': '"{said}", said at {deskAt}, brought a follow-up at {desk}: {question}',
+  // The same when the follow-up came at the desk that put it on file.
+  'ending.chain.followUp.fact.here': '{fact}, put on file at {deskAt}, brought a follow-up there: {question}',
+  'ending.chain.followUp.claim.here': '"{said}", said at {deskAt}, brought a follow-up there: {question}',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',
   'ending.axis.arrival.onTime': 'On time. {left} left at the exit, the trip takes {trip}.',
