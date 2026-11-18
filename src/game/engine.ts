@@ -1052,7 +1052,7 @@ function relatedCard(s: RunState): Encounter | undefined {
 
 /** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
 function escalatesNext(s: RunState): boolean {
-  if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id) && followUpRoom(s, fromCheck(id)))) return true;
+  if (inspectionDue(s) || s.pending.some((id) => !s.seen.includes(id) && followUpRoom(s, fromCheck(id)))) return true;
   if (coreLeft(s)) return false;
   if (s.slot <= FOLLOW_UP_SLOT && relatedCard(s)) return true;
   return !!pendingChallenge(s);
@@ -1115,12 +1115,19 @@ function relativeNamedHere(s: RunState): boolean {
 /** Marks that an officer phoned your mother at this desk (queueMood). */
 const phoned = (s: RunState): RunState => (s.deskStart ? { ...s, deskStart: { ...s.deskStart, phoned: true } } : s);
 
+/**
+ * Scrutiny 3/3 sends you to an inspection, once per desk: one bounded resolution
+ * slot per desk (Branching Rules, page 3). At a desk that already ran one, scrutiny
+ * stays where it is and the next desk inspects instead (the walk's state rules).
+ */
+const inspectionDue = (s: RunState): boolean => s.scrutiny >= MAX_SCRUTINY && !(s.inspectedAt ?? []).includes(deskOf(s));
+
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
 function advance(s: RunState, dealer: Dealer, touched: ClaimId[] = []): RunState {
   if (s.withdrew) return finish(s);
   const rest = breather(s);
   if (rest) return show(s, rest.id);
-  if (s.scrutiny >= MAX_SCRUTINY) return inspect(s, dealer);
+  if (inspectionDue(s)) return inspect(s, dealer);
   while (s.pending.length) {
     const [id, ...rest] = s.pending;
     s = { ...s, pending: rest };
