@@ -6,7 +6,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/i18n/en';
-import { BULLETINS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
+import { BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS } from '../src/game/content/world';
+import { ENCOUNTER_BY_ID } from '../src/game/content/encounters';
+import { check, choices, newRun } from '../src/game/engine';
+import type { RunSetup } from '../src/game/engine';
+import type { Checkpoint, RunState } from '../src/game/types';
+import { CHECKPOINTS } from '../src/game/types';
 import { CONTACT_CARDS, INSPECTION_CARDS, QUESTION_CARDS, buildTabletop } from './tabletop-cards';
 
 describe('tabletop cards', () => {
@@ -56,6 +61,37 @@ describe('tabletop cards', () => {
     expect(row).toContain(`${en['ui.line.scrutiny'].replace('{n}', '1')} <i>(`);
     expect(row).toContain(`${en['fact.brotherAbroad'].toLowerCase()} not on file`);
   });
+});
+
+// The printed costs held to the engine: every question card, every answer the engine offers
+// there, for each traveler under each bulletin, on a fresh run at that desk. The printed
+// hours and scrutiny whose condition holds must add up to what options() charges, so a cost
+// the engine adds outside the answer's own effects (an officer's reaction, a weak point)
+// shows up here as a row that does not add up.
+describe('printed costs match the engine', () => {
+  const tt = buildTabletop(en);
+  const sum = (xs: (number | undefined)[]) => xs.reduce<number>((a, b) => a + (b ?? 0), 0);
+  for (const id of QUESTION_CARDS) {
+    const card = ENCOUNTER_BY_ID.get(id)!;
+    for (const character of CHARACTER_IDS) {
+      for (const bulletin of BULLETINS) {
+        it(`${id}, ${character}, ${bulletin} bulletin`, () => {
+          const setup: RunSetup = { character, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[character].evidenceSlots), bulletin, seed: 1 };
+          const s: RunState = {
+            ...newRun(setup), checkpoint: CHECKPOINTS.indexOf(card.checkpoint as Checkpoint), slot: 0,
+            screen: { kind: 'encounter', id }, seen: [id],
+          };
+          const rows = choices(s);
+          expect(rows.length, id).toBeGreaterThan(0);
+          for (const o of rows) {
+            const printed = (tt.prices[`enc.${id}.${o.approach.id}`] ?? []).filter((p) => check(p.when, s));
+            const engine = { hours: sum(o.effects.map((e) => ('time' in e ? -e.time : 0))), scrutiny: sum(o.effects.map((e) => ('scrutiny' in e ? e.scrutiny : 0))) };
+            expect({ hours: sum(printed.map((p) => p.hours)), scrutiny: sum(printed.map((p) => p.scrutiny)) }, o.approach.id).toEqual(engine);
+          }
+        });
+      }
+    }
+  }
 });
 
 describe('npm run tabletop', () => {

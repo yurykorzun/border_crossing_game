@@ -1027,6 +1027,7 @@ export const en: Record<string, string> = {
   'tabletop.part.flagged': 'with a flagged fact on file',
   'tabletop.part.unflagged': 'with nothing flagged',
   'tabletop.part.not': 'not ({cond})',
+  'tabletop.part.unverified': 'until {topic} is verified',
 
   // ── Endings
   'ending.homeInTime.title': 'Home in time',

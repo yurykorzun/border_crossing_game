@@ -3,7 +3,7 @@
 // tools/tabletop.ts prints it to PDF; this file only builds the page, so tests can run it.
 import { CONTRADICTIONS, CORE_CARDS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY_ID } from '../src/game/content/encounters';
 import * as W from '../src/game/content/world';
-import type { Approach, CharacterId, Checkpoint, Cond, Effect } from '../src/game/types';
+import type { Approach, CharacterId, Checkpoint, Cond, Effect, Topic } from '../src/game/types';
 
 /** The six core questions, two per desk, in the order the desks ask them. */
 export const QUESTION_CARDS: readonly string[] = [...CORE_CARDS.passport, ...CORE_CARDS.customs, ...CORE_CARDS.interview];
@@ -19,6 +19,19 @@ export interface Tabletop {
   /** Question card id and how many approaches it prints, after merging variants with the same label. */
   approaches: Record<string, number>;
   cards: number;
+  /** Every hour and scrutiny point a card prints, by `<prefix>.<card>.<approach>`. */
+  prices: Record<string, PrintedCost[]>;
+}
+
+/**
+ * One printed cost, as numbers: what tools/tabletop.test.ts holds against the engine's
+ * options(). `unverified`: only while that point is not yet verified.
+ */
+export interface PrintedCost {
+  hours?: number;
+  scrutiny?: number;
+  when?: Cond;
+  unverified?: Topic;
 }
 
 const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -82,8 +95,9 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
    * On a desk's own question card the officer also reacts to the facts it cares about the first
    * time they come out (OFFICERS reactions, officerFlags() in src/game/engine.ts), so that
    * scrutiny prints too, under "not on file". An inspection card has no officer reaction.
+   * A check of the card's `topic` costs a traveler whose weak point it is an hour more.
    */
-  function approachRow(prefix: string, card: string, variants: Approach[], desk?: Checkpoint): string {
+  function approachRow(prefix: string, card: string, variants: Approach[], desk: Checkpoint | undefined, topic: Topic | undefined): string {
     const a = variants[0];
     const k = `${prefix}.${card}.${a.id}`;
     const contacts = a.contacts ?? [];
@@ -104,10 +118,14 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     /** One variant's cost line and record line, under its condition when the choice has several. */
     const lines = (v: Approach, many: boolean) => {
       const costs = [...head]; const gives = [...names];
+      // Every hour and scrutiny point printed, with its condition, so a test can hold it to the engine.
+      const priced: PrintedCost[] = (prices[`${prefix}.${card}.${v.id}`] = []);
       for (const e of v.effects) {
         const r = effect(e, event);
         if (r.cost) costs.push(esc(r.cost) + when(e.when));
         if (r.gives) gives.push(esc(r.gives) + when(e.when));
+        if ('time' in e) priced.push({ hours: -e.time, when: e.when });
+        if ('scrutiny' in e) priced.push({ scrutiny: e.scrutiny, when: e.when });
         // The officer's own scrutiny for this fact, unless the answer already charges for it.
         if (!desk || !('fact' in e) || v.effects.some((x) => 'scrutiny' in x && x.reason === e.fact)) continue;
         const fact = e.fact;
@@ -115,6 +133,17 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
           if (!re.reveals.includes(fact) || !re.scrutiny) continue;
           const c: Cond = { ...(e.when ?? {}), ...(re.when ?? {}), noFacts: [...(e.when?.noFacts ?? []), ...(re.when?.noFacts ?? []), fact] };
           costs.push(esc(t('ui.line.scrutiny', { n: re.scrutiny })) + when(c));
+          priced.push({ scrutiny: re.scrutiny, when: c });
+        }
+      }
+      // A traveler's weak point costs an extra hour on a check of it, until it is verified
+      // (CHARACTERS weakTopics, resolvedEffects() in src/game/engine.ts): Lena's work.
+      if (v.kind === 'verify' && topic) {
+        for (const c of W.CHARACTER_IDS) {
+          if (!W.CHARACTERS[c].weakTopics.includes(topic)) continue;
+          const by: Cond = { character: c };
+          costs.push(`−${esc(hours(1))} <i>(${esc(`${cond(by)}, ${t('tabletop.part.unverified', { topic: t(`topic.${topic}.helps`).toLowerCase() })}`)})</i>`);
+          priced.push({ hours: 1, when: by, unverified: topic });
         }
       }
       if (v.ifVerified) costs.push(`<i>${esc(t('tabletop.ifVerified', { cost: v.ifVerified.length ? v.ifVerified.map((e) => effect(e, event).cost ?? '').join(', ') : t('ui.line.free') }))}</i>`);
@@ -136,6 +165,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
   }
 
   const approaches: Record<string, number> = {};
+  const prices: Record<string, PrintedCost[]> = {};
   const cards: string[] = [];
 
   for (const id of QUESTION_CARDS) {
@@ -148,7 +178,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     cards.push(`<div class="card q ${desk}"><div class="kind">${esc(t(`checkpoint.${desk}`))} · ${esc(t(`officer.${desk}`))}</div>
       <div class="qt">${esc(t(`enc.${id}.q`))}</div>${markQ}
       ${e.when ? `<div class="req">${esc(t('tabletop.askedOnly', { cond: cond(e.when) }))}</div>` : ''}
-      <ol>${groups.map((g) => approachRow('enc', id, g, desk)).join('')}</ol><div class="id">${id}</div></div>`);
+      <ol>${groups.map((g) => approachRow('enc', id, g, desk, e.topic)).join('')}</ol><div class="id">${id}</div></div>`);
   }
 
   for (const id of INSPECTION_CARDS) {
@@ -157,7 +187,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     cards.push(`<div class="card insp"><div class="kind">${esc(t('officer.inspection'))} · ${esc(t(`insp.issue.${s.issue}`))}</div>
       <div class="qt">${esc(t(`insp.${id}.q`))}</div>
       ${s.when ? `<div class="req">${esc(t('tabletop.dealtOnly', { cond: cond(s.when) }))}</div>` : ''}
-      <ol>${merged('insp', id, s.approaches).map((g) => approachRow('insp', id, g)).join('')}</ol><div class="id">${id}</div></div>`);
+      <ol>${merged('insp', id, s.approaches).map((g) => approachRow('insp', id, g, undefined, s.topic)).join('')}</ol><div class="id">${id}</div></div>`);
   }
 
   for (const id of W.EVIDENCE_IDS) {
@@ -221,7 +251,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
   <ol>
     <li><b>Deal.</b> The game master reads the next question card: ${QUESTION_CARDS.map((id) => `<code>${id}</code>`).join(', ')}, two per desk in that order. Skip a card whose "Asked only" line does not hold.</li>
     <li><b>Show legal choices.</b> Read out every approach whose "Only" line holds. A document answer needs a packed, unused document that answers that topic. A contact answer needs that person on the traveler card.</li>
-    <li><b>Apply cost.</b> Move the time marker down by the hours and the scrutiny marker up. A cost in <i>(brackets)</i> applies only when its condition holds. A used document is turned face down.</li>
+    <li><b>Apply cost.</b> Move the time marker down by the hours and the scrutiny marker up. A cost in <i>(brackets)</i> applies only when its condition holds. A used document is turned face down. Once someone has been named and called in, each later answer they could confirm costs 1 hour more while the desk checks their statement.</li>
     <li><b>Update records.</b> Write each claim and fact the answer gives in the column of this desk. A document puts on file what its own card says. "Sent on to the next desk" copies those facts into the next column.</li>
     <li><b>Resolve follow-up.</b> At the interview, check the record before its two cards. ${followUp}</li>
     <li><b>Inspection.</b> ${esc(t('ui.scrutinyHelp.max', { max: W.MAX_SCRUTINY, after: W.SCRUTINY_AFTER_INSPECTION }))} On paper: deal the first inspection card whose "Dealt only" line holds.</li>
@@ -255,5 +285,5 @@ p{margin:1mm 0}.small{font-size:6.4pt;color:#555}.id{position:absolute;right:2mm
 .rules{font-size:9.5pt;line-height:1.4}.rules h1{font-size:15pt;margin:0 0 2mm}.rules h2{font-size:11pt;margin:4mm 0 1mm}.rules li{margin-bottom:1.5mm}.lead{color:#444}
 </style></head><body>${page(rules)}${sheets.join('')}${page(`<h1 style="font-size:12pt;margin:0 0 3mm">Tokens and tracks</h1>${token}${tracks}`)}</body></html>`;
 
-  return { html, missing, approaches, cards: cards.length };
+  return { html, missing, approaches, cards: cards.length, prices };
 }
