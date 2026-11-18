@@ -84,6 +84,9 @@ const chip = (e: any, label: string, when: string) => `<span class="e${'scrutiny
  */
 function effs(list: any[] = []): string {
   if (!list.length) return '<span class="e n">no cost</span>';
+  return chips(list);
+}
+function chips(list: any[]): string {
   const pairOf = (e: any) => (e.when?.claims?.length === 1 && e.when?.facts?.length === 1 && Object.keys(e.when).every((k) => ['claims', 'facts', 'any'].includes(k)) && (!e.when.any || isNoneOf(e.when)) ? `${e.when.claims[0]} vs ${e.when.facts[0]}` : undefined);
   const groups = new Map<string, { e: any; pairs: string[] }>();
   const plain: string[] = [];
@@ -96,6 +99,46 @@ function effs(list: any[] = []): string {
   }
   const folded = [...groups].map(([label, g]) => chip(g.e, `${label} for the first pair caught`, g.pairs.join(', ')));
   return [...plain, ...folded].join(' ');
+}
+/** A claim a challenge card can catch: the facts on file that speak against it (section 1). */
+const caughtBy = (claim: string) => [...CONTRADICTIONS.map(([c, f]) => [c, f, 'i_contradiction']), ...INCONSISTENCIES.map(([c, f]) => [c, f, 'i_clarify'])].filter(([c]) => c === claim);
+const plainChip = (label: string, cls = '') => `<span class="e${cls ? ' ' + cls : ''}">${esc(label)}</span>`;
+/**
+ * One answer as a contract: what it needs, what it spends (a document or a contact counts,
+ * so a document answer never reads "no cost"), what you say, what goes on file, which point it
+ * settles for the later desks, and what it can set off. A label is left out where nothing
+ * applies, except costs, which says "nothing" so a free answer reads as free.
+ */
+function contract(a: any, effects: any[], ctx: { topic?: string; issue?: string }): string {
+  const isCost = (e: any) => 'time' in e || 'scrutiny' in e || 'loseMedicine' in e || 'travel' in e;
+  const said = effects.filter((e) => 'claim' in e);
+  const rows: [string, string][] = [];
+  const req: string[] = [];
+  if (a.kind === 'evidence') req.push(plainChip(`an unused document for ${a.topic ?? ctx.topic ?? 'this point'}`));
+  if (a.kind === 'contact') req.push(plainChip(`a contact not yet named${a.namesOnly ? '' : ` who can confirm ${ctx.topic ?? 'this point'}`}: ${a.contacts?.join(' / ') ?? 'any'}`));
+  if (a.kind === 'perk') req.push(plainChip(`your traveler's perk, unused, on ${ctx.topic ?? 'this point'}`));
+  if (a.requires) req.push(plainChip(cond(a.requires)));
+  if (req.length) rows.push(['requires', req.join(' ')]);
+  const cost: string[] = [];
+  if (a.kind === 'evidence') cost.push(plainChip('the document shown (spent, it cannot be shown again)', 't'));
+  if (a.kind === 'contact') cost.push(plainChip('the contact named (exposed for the rest of the run)', 't'));
+  if (a.kind === 'perk') cost.push(plainChip('the perk (once per run)', 't'));
+  const paid = chips(effects.filter(isCost));
+  if (paid) cost.push(paid);
+  rows.push(['costs', cost.length ? cost.join(' ') : plainChip('nothing', 'n')]);
+  const est = [chips(said), a.stayed ? plainChip(`where you stayed: ${a.stayed}`) : ''].filter(Boolean);
+  if (est.length) rows.push(['establishes', est.join(' ')]);
+  const rec = chips(effects.filter((e) => 'fact' in e || 'send' in e));
+  if (rec) rows.push(['records', rec]);
+  const settles = a.kind === 'evidence' || (a.kind === 'contact' && !a.namesOnly) || a.confirms;
+  if (settles) rows.push(['resolves', plainChip(ctx.issue ? `the open issue: ${ctx.issue}` : `${a.topic ?? ctx.topic ?? 'the point'}, verified for the later desks`)]);
+  const may: string[] = [];
+  if (a.check) may.push(plainChip(`check ${a.check} (the waiting room)`));
+  if (a.reacts) may.push(plainChip(`the officer holds it against you as ${a.reacts}`, 's'));
+  for (const e of said) for (const [, f, card] of caughtBy(e.claim)) may.push(plainChip(`${card} if ${f} is on file`, 's'));
+  if (a.kind === 'withdraw') may.push(plainChip('the end of the run: you turn back'));
+  if (may.length) rows.push(['may trigger', may.join(' ')]);
+  return rows.map(([l, v]) => `<div class="ct"><span class="cl">${l}</span> ${v}</div>`).join('');
 }
 const kindName: Record<string, string> = { evidence: 'show a document', verify: 'let them check', contact: 'name a person', say: 'just say it', perk: 'traveler perk', withdraw: 'turn back' };
 
@@ -110,14 +153,14 @@ function cardText(prefix: string, approaches: any[]) {
   }
   return { own: own.map((k) => line(k, prefix)).join(''), ans: (id: string) => (by[id] ?? []).map((k) => line(k, prefix)).join('') };
 }
-function cardBox(id: string, title: string, meta: string, approaches: any[], prefix: string) {
+function cardBox(id: string, title: string, meta: string, approaches: any[], prefix: string, ctx: { topic?: string; issue?: string } = {}) {
   const ct = cardText(prefix, approaches);
   return `<div class="card"><div class="ch"><b>${esc(title)}</b> <code>${id}</code> ${badges(id)}</div>
   ${meta ? `<div class="meta">${meta}</div>` : ''}
   <div class="q">${ct.own}</div>
   <ol class="ans">${approaches.map((a) => `<li><div class="ah">${esc(kindName[a.kind] ?? a.kind)}${a.topic ? ` (${a.topic})` : ''}${a.contacts ? ` (${a.contacts.join(' / ')})` : ''}${a.check ? ` → opens check <b>${a.check}</b>` : ''}${a.reacts ? ` · officer reads it as <b>${a.reacts}</b>` : ''}</div>
     ${a.requires ? `<div class="meta">shown only if ${esc(cond(a.requires))}</div>` : ''}
-    ${ct.ans(a.id)}<div class="fx">${effs(a.effects)}${a.ifVerified ? ` <i>· if already verified:</i> ${effs(a.ifVerified)}` : ''}</div></li>`).join('')}</ol></div>`;
+    ${ct.ans(a.id)}<div class="fx">${contract(a, a.effects, ctx)}${a.ifVerified ? `<div class="ct"><i>if already verified, instead:</i></div>${contract({ ...a, check: undefined }, a.ifVerified, ctx)}` : ''}</div></li>`).join('')}</ol></div>`;
 }
 
 // ── 1. Flow
@@ -184,7 +227,7 @@ const desks = deskIds.map((d, i) => {
     [e.topic && `topic: ${e.topic}`, e.priority && `priority ${e.priority}`,
       (CHALLENGES as readonly string[]).includes(e.id) ? challengeMeta[e.id] : e.when && `dealt only if ${cond(e.when)}`,
       !(CHALLENGES as readonly string[]).includes(e.id) && e.issue && `about the open issue: ${cond(e.issue)}`].filter(Boolean).map((x) => esc(String(x))).join(' · '),
-    e.approaches, `enc.${e.id}.`)).join('')}`;
+    e.approaches, `enc.${e.id}.`, { topic: e.topic })).join('')}`;
 }).join('');
 
 // ── 4-5. Checks and inspections
@@ -194,7 +237,7 @@ ${Object.values(CHECKS).map((c) => `<div class="card"><div class="ch"><b>${c.id}
 ${c.explain ? `<div class="meta">Explain first: ${effs(c.explain)}</div>` : ''}
 <div class="q">${lines(`check.${c.id}.`)}</div></div>`).join('')}
 <h1>5. Secondary inspections</h1><p class="lead">Dealt at Scrutiny ${W.MAX_SCRUTINY}/${W.MAX_SCRUTINY}, in the supervisor's order. Each is about one open point on your file.</p>
-${INSPECTIONS.map((i) => cardBox(i.id, `${i.kind} inspection`, esc([`about: ${i.issue}`, i.when && `dealt only if ${cond(i.when)}`].filter(Boolean).join(' · ')), i.approaches, `insp.${i.id}.`)).join('')}`;
+${INSPECTIONS.map((i) => cardBox(i.id, `${i.kind} inspection`, esc([`about: ${i.issue}`, i.when && `dealt only if ${cond(i.when)}`].filter(Boolean).join(' · ')), i.approaches, `insp.${i.id}.`, { issue: i.issue })).join('')}`;
 
 // ── 6. Setup content and the glossary of ids
 const setup = `<h1 class="pb">6. Travelers, documents and the glossary</h1>
@@ -237,14 +280,14 @@ h1{font-size:17pt;margin:14px 0 6px;color:#7a3e00}h2{font-size:12pt;margin:14px 
 .lane{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0 10px}.lane span{border:1px solid #2a5d8f;background:#eef4fb;border-radius:4px;padding:3px 6px}.lane b{color:#2a5d8f}
 .card{border:1px solid #bbb;border-radius:6px;padding:6px 9px;margin:8px 0;page-break-inside:avoid}.ch{border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:3px}
 .meta{color:#555;font-size:8.5pt;margin:2px 0}.q .tl{font-weight:600}.ans{margin:4px 0 0 16px;padding:0}.ans li{margin:4px 0}.ah{font-size:8.5pt;color:#2a5d8f;font-weight:600}
-.tl{margin:1px 0}.fx{margin-top:2px}.e{display:inline-block;font-size:8pt;border-radius:3px;padding:0 4px;margin:1px 2px 1px 0;background:#eee}.e.s{background:#fde2e2}.e.t{background:#fff0c8}.e.n{background:#e3f5e1}
+.tl{margin:1px 0}.fx{margin-top:2px}.ct{margin:1px 0}.cl{display:inline-block;min-width:62px;font-size:7.5pt;font-weight:700;color:#555;text-transform:uppercase}.e{display:inline-block;font-size:8pt;border-radius:3px;padding:0 4px;margin:1px 2px 1px 0;background:#eee}.e.s{background:#fde2e2}.e.t{background:#fff0c8}.e.n{background:#e3f5e1}
 .b{font-size:7.5pt;border-radius:3px;padding:0 4px;margin-left:2px}.b.on{background:#2a5d8f;color:#fff}.b.off{background:#eee;color:#999;text-decoration:line-through}
 table{border-collapse:collapse;width:100%;margin:6px 0}td,th{border:1px solid #ccc;padding:4px 6px;vertical-align:top;text-align:left;font-size:8.5pt}th{background:#f3efe8}tr{page-break-inside:avoid}
 </style></head><body>
 <div class="cover"><h1>Purpose of Visit</h1><h2>Game map: every step, text and option</h2>
 <p>Built ${today} from the game's own content files, branch ${esc(branch)}, commit ${esc(commit)}. The live game is https://yurykorzun.github.io/border_crossing_game/</p>
 <p>${ENCOUNTERS.length} desk cards, ${INSPECTIONS.length} inspections, ${Object.keys(CHECKS).length} checks, ${LV.length} levels, ${total} lines of English text, all of them in this map.</p>
-<p><b>Legend:</b> <span class="b on">Arrival</span> the card is dealt in that level, <span class="b off">Departure</span> not dealt there. <span class="e t">-1 h</span> time cost, <span class="e s">+1 scrutiny</span> scrutiny with its reason, <span class="e n">no cost</span>. Grey code before a line is its text key.</p>
+<p><b>Legend:</b> <span class="b on">Arrival</span> the card is dealt in that level, <span class="b off">Departure</span> not dealt there. <span class="e t">-1 h</span> time cost, <span class="e s">+1 scrutiny</span> scrutiny with its reason, <span class="e n">nothing</span> free. Under every answer its contract: <b>requires</b> what it needs, <b>costs</b> what it spends (a document shown or a contact named counts), <b>establishes</b> what you say, <b>records</b> what goes on file, <b>resolves</b> the point it settles for the later desks, <b>may trigger</b> what it can set off. A label is left out where nothing applies. Grey code before a line is its text key.</p>
 <p><b>Reading the keys:</b> <code>q</code> the question, <code>label</code> the answer button, <code>reaction</code> what the officer does, <code>event</code> what the hours are spent on, <code>detail</code> a longer line under the answer. A name in the key replaces the default line in that case: <code>mark.</code> for Mark, <code>bulletin.records.</code> on that bulletin's day, <code>verified.</code> when the point was already verified, <code>unsaid.</code> / <code>phoned.</code> for that situation, a claim and fact pair (<code>hotelStay.hostStatement.</code>) for that lie. “Departure wording” replaces the default in that level. Ids like familyAddress are explained in section 6.</p>
 <p><b>Contents:</b> 1 Flow · 2 Levels · 3 The three desks and follow-ups · 4 Checks · 5 Inspections · 6 Travelers, documents, glossary · 7 Queues, messages, endings · 8 Other screen text · 9 Levels still to come</p></div>
 <div class="pb">${flow}</div><div class="pb">${levels}</div>${desks}${checks}${setup}${story}${remaining}${planned}</body></html>`;

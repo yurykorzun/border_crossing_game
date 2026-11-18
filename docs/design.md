@@ -211,6 +211,21 @@ The rule behind questions 2 and 4: a check can establish facts, but does not pro
 
 Naming a contact causes harm only with a stated reason the player can see ("Ilya was already questioned about the fundraiser"). Each contact line in the ending carries one (`EndingLine.reason`, `consequences()` in `src/game/consequence.ts`), and his contact card says it before you name him. Recording an address never sends anyone by itself: officers visit your mother only when the run flagged something about her at a desk (her address, her account against yours, or the relative she named; `Contact.flaggedBy`), and the reason names it and the desk ("Customs flagged her address, and it is on the report."). Without that, she gets a phone call. The visit happens the following morning, so it agrees with every epilogue, where she is at the hospital that night.
 
+### Playtest checklist
+
+Ask these after one run, in this order, without explaining anything first (from the map review of 2026-11-12, dap.19). An answer that needs the rules explained before the player can give it means the screen did not say it. `docs/playtest.md` has the full script and the answer sheet.
+
+1. What are you trying to do?
+2. What can you afford?
+3. Why that answer?
+4. What changed?
+5. Which earlier answer caused a later question?
+6. Why did scrutiny rise?
+7. Does the ending button retry or continue?
+8. What would you try next time?
+
+The game map (`npm run map`) prints each answer as the contract these questions test: requires, costs (a document shown or a contact named counts), establishes, records, resolves, may trigger. When a player's answer to 2, 4 or 6 differs from the contract, the screen is hiding part of it.
+
 ## Answers no style picks
 
 `npm run walk` lists every answer the walk offers that no bot style with a purpose (honest, liar, cautious, situational) picks over every setup and seeds 1-10 (`neverPicked()` in `src/game/walk.ts`). The random style is left out, because over enough runs it picks everything once. An answer on that list never changes how the bots play, so it is cut, reworked, or named here with why it stays (`src/game/walk.test.ts` fails on one that is not).
