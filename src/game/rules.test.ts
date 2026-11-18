@@ -298,9 +298,15 @@ describe('documents are blocked only by claims that truly exclude them', () => {
   });
 
   it('the hotel is blocked once you say you stay with family', () => {
-    expect(EVIDENCE.hotel.blockedBy).toEqual({ claims: ['stayingWithFamily'] });
+    expect(EVIDENCE.hotel.blockedBy).toEqual({ any: [{ claims: ['stayingWithFamily'] }, { facts: ['hostStatement'] }] });
     const s = { ...newRun(lenaHotel), claims: ['familyVisit' as const, 'stayingWithFamily' as const] };
     expect(cardFor(s, 'accommodation')).toBeUndefined();
+  });
+
+  it('the hotel is blocked once your mother has said you stay with her', () => {
+    const s = newRun(lenaHotel);
+    expect(cardFor(s, 'accommodation')).toBe('hotel');
+    expect(cardFor({ ...s, facts: { ...s.facts, hostStatement: ['passport' as const] } }, 'accommodation')).toBeUndefined();
   });
 
   it('giving your mother\'s address as where you stay records staying with family', () => {

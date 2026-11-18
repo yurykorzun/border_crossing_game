@@ -806,9 +806,11 @@ export const en: Record<string, string> = {
   'enc.i_brother.calls.reaction': 'They go through your calls in the gray box.',
 
   // ── Follow-ups
-  'enc.f_host.q': '"Your mother isn\'t answering."',
+  'enc.f_host.q': '"She isn\'t answering."',
   'enc.f_host.again.label': 'Wait for another call',
   'enc.f_host.again.event': 'Second call',
+  // Her answer puts two facts on file (MOTHER_ANSWERS), named as one part of the cost line.
+  'enc.f_host.again.reveal': 'Her account recorded',
   'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up.',
   'enc.f_host.evidence.label': 'Show {cardThe}',
   'enc.f_host.evidence.reaction': 'He accepts it without looking up.',
