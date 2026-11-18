@@ -638,6 +638,9 @@ export const en: Record<string, string> = {
   'enc.c_medicine.declare.label': 'Declare it and wait',
   'enc.c_medicine.declare.event': 'Prescription verification',
   'enc.c_medicine.declare.reaction': 'He takes the medicine away for testing.',
+  // The cost line says how the lab will go (medicineLab): questions on a customs day with nothing on file.
+  'enc.c_medicine.declare.check.lab': 'Lab will ask for the prescription',
+  'enc.c_medicine.declare.check.clear': 'Lab clears it',
   'enc.c_medicine.declare.verified.label': 'Declare it, as already checked',
   'enc.c_medicine.declare.verified.reaction': 'He reads the prescription details already on your file and nods at the cool bag.',
 

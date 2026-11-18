@@ -362,6 +362,8 @@ export interface Option {
   usesVerified?: true;
   /** A 'shown' or 'notFor' row: the packed document it names (emptyReason()). */
   blockedDoc?: EvidenceId;
+  /** An answer that starts a check: the case it will meet (checkCase()), so its line can say so before it is picked. */
+  checkResult?: string;
 }
 
 /**
@@ -433,6 +435,7 @@ export function choices(s: RunState): Option[] {
       if (empty) o.blockedDoc = empty.doc;
       if (flagged.length) o.flagged = flagged;
       if (usesVerified(s, a, topic)) o.usesVerified = true;
+      else if (a.check) o.checkResult = checkCase(s, a.check).result;
       out.push(o);
     }
   }
@@ -1404,9 +1407,13 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
 
 // ── Waiting room
 
+/** The case a check meets on this run: the first whose condition holds, else a clear. */
+export const checkCase = (s: RunState, checkId: CheckId): CheckCase =>
+  CHECKS[checkId].cases.find((k) => check(k.when, s)) ?? { result: 'clear' };
+
 function startWait(s: RunState, checkId: NonNullable<Approach['check']>): RunState {
   const c = CHECKS[checkId];
-  const resolved: CheckCase = c.cases.find((k) => check(k.when, s)) ?? { result: 'clear' };
+  const resolved = checkCase(s, checkId);
   let rng = s.rng;
   const beats: number[] = [];
   while (beats.length < c.beats) {
