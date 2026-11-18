@@ -910,7 +910,7 @@ export const en: Record<string, string> = {
   'insp.s_supervisor.step.2': 'She asks his date of birth.',
   'insp.s_supervisor.step.3': 'She turns the screen toward you.',
   'insp.s_supervisor.result.clear': 'The dates match. She closes your file.',
-  'insp.s_supervisor.result.explained': 'The ward spells your name another way. You explain.',
+  'insp.s_supervisor.result.explained': 'She asks why you are in such a hurry. You explain.',
   'insp.s_supervisor.result.found': 'He has been there for weeks. Not a short trip.',
   'insp.s_supervisor.evidence.label': 'Show {cardThe}',
   'insp.s_supervisor.evidence.reaction': 'She keeps it for the file and waves you on.',

@@ -770,9 +770,9 @@ export const INSPECTIONS: Inspection[] = [
     id: 's_supervisor', kind: 'verification', issue: 'purpose', topic: 'purpose',
     when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
     remind: ['shortTrip', 'familyVisit'], steps: 3,
-    // A short trip was the story she feared would not hold. Mark's second passport
-    // gives the ward a second spelling of his name, which he explains.
-    results: [{ when: { claims: ['shortTrip'] }, result: 'found' }, { when: { facts: ['secondPassport'] }, result: 'explained' }, { result: 'clear' }],
+    // A short trip is the story the ward does not back. Your hurry on file is the
+    // ordinary detail she asks about and you explain.
+    results: [{ when: { claims: ['shortTrip'] }, result: 'found' }, { when: { facts: ['urgency'] }, result: 'explained' }, { result: 'clear' }],
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
       { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },

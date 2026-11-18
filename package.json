@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "walk": "tsx tools/walk.ts",
+    "sweep": "tsx tools/sweep.ts",
     "e2e": "playwright test",
     "autoplay": "tsx tools/autoplay.ts",
     "eval": "tsx tools/eval.ts",

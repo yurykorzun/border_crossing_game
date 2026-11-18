@@ -17,6 +17,10 @@ function contentKeys(): string[] {
   for (const i of INSPECTIONS) {
     keys.push(`insp.${i.id}.q`);
     for (const a of i.approaches) keys.push(`insp.${i.id}.${a.id}.label`, `insp.${i.id}.${a.id}.reaction`);
+    // The build-up (dap.17): the reminder, the progression lines and each result's line.
+    keys.push(`insp.${i.id}.remind`);
+    for (let n = 1; n <= i.steps; n++) keys.push(`insp.${i.id}.step.${n}`);
+    for (const r of i.results) keys.push(`insp.${i.id}.result.${r.result}`);
   }
   for (const c of Object.values(CHECKS)) {
     keys.push(`check.${c.id}.title`);
