@@ -224,8 +224,8 @@ interface NextLevel { level: LevelId; character: CharacterId }
  * comes before a level is picked, so it is not counted and shows no count, since its
  * total would be Arrival's or Departure's (dap.37: it said "1 / 4" before Departure's "2 / 5").
  */
-export const stepCount = (steps: readonly SetupStep[], step: SetupStep) => {
-  const counted = steps.filter((s) => s !== 'level');
+const stepCount = (steps: readonly SetupStep[], step: SetupStep) => {
+  const counted: readonly SetupStep[] = steps.filter((s) => s !== 'level');
   return t('ui.progressCount', { n: counted.indexOf(step) + 1, total: counted.length });
 };
 
