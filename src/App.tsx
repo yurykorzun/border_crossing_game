@@ -218,9 +218,16 @@ type OnStart = (level: LevelId, c: CharacterId, l: EvidenceId[], file?: CarriedF
 /** "Continue to ..." from an ending: the next level, as the traveler who just finished. */
 interface NextLevel { level: LevelId; character: CharacterId }
 
-/** "2 / 4" on a setup screen, counted over the steps this player walks. */
-const stepCount = (steps: readonly SetupStep[], step: SetupStep) =>
-  t('ui.progressCount', { n: steps.indexOf(step) + 1, total: steps.length });
+/**
+ * "2 / 4" on a setup screen, counted over the picked level's own screens: the traveler,
+ * the record in a level that reads one, packing and Before you cross. The level list
+ * comes before a level is picked, so it is not counted and shows no count, since its
+ * total would be Arrival's or Departure's (dap.37: it said "1 / 4" before Departure's "2 / 5").
+ */
+export const stepCount = (steps: readonly SetupStep[], step: SetupStep) => {
+  const counted = steps.filter((s) => s !== 'level');
+  return t('ui.progressCount', { n: counted.indexOf(step) + 1, total: counted.length });
+};
 
 // Before the first ending (firstRun) there is no traveler to choose yet: Setup opens on the
 // begin screen as FIRST_RUN's traveler and packing in Level 1. Back goes to the title, and
@@ -245,7 +252,7 @@ function Setup({ bulletin, same, next, endingsSeen, levelsFinished, savedFile, s
   return <Picks bulletin={bulletin} next={next} endingsSeen={endingsSeen} levelsFinished={levelsFinished} savedFile={savedFile} seed={seed} onExit={onExit} onStart={onStart} />;
 }
 
-function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart }: {
+export function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, seed, onExit, onStart, opensAt }: {
   bulletin: BulletinId;
   /** Set from an ending's "Continue to ...": that level and traveler, picked already. */
   next?: NextLevel;
@@ -256,14 +263,16 @@ function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, seed, o
   /** Back from the first step: the title. */
   onExit: () => void;
   onStart: OnStart;
+  /** The screen to open on, and the file picked so far: tests open each screen with it. */
+  opensAt?: { at: SetupStep; file?: CarriedFile };
 }) {
   const firstRun = endingsSeen.length === 0 && !next;
   const [level, setLevel] = useState<LevelId>(next?.level ?? DEFAULT_LEVEL);
   // The file the run opens with, picked on the record step (RecordStep).
-  const [file, setFile] = useState<CarriedFile | undefined>(undefined);
+  const [file, setFile] = useState<CarriedFile | undefined>(opensAt?.file);
   const steps = stepsFor(levelsFinished, level);
   // Continuing opens on the step after the traveler: in Departure, the traveler's file.
-  const [at, setAt] = useState<SetupStep>(firstRun ? 'begin' : next ? steps[steps.indexOf('traveler') + 1] : steps[0]);
+  const [at, setAt] = useState<SetupStep>(opensAt ? opensAt.at : firstRun ? 'begin' : next ? steps[steps.indexOf('traveler') + 1] : steps[0]);
   setStory(level);
   const [character, setCharacter] = useState<CharacterId | null>(next?.character ?? (firstRun ? FIRST_RUN.character : null));
   const [picked, setPicked] = useState<EvidenceId[]>(firstRun ? [...FIRST_RUN.loadout] : []);
@@ -271,15 +280,16 @@ function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, seed, o
   const begin = (c: CharacterId) => onStart(level, c, picked, LEVELS[level].readsFile ? file : undefined);
 
   if (firstRun && character) {
-    // No traveler screen yet, so packing goes back and forward to the begin screen.
+    // No traveler screen yet, so packing goes back and forward to the begin screen, and
+    // neither shows a count, since the first run walks no steps in order.
     if (at === 'documents') {
-      return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => setAt('begin')} onContinue={() => setAt('begin')} />;
+      return <DocumentsStep character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => setAt('begin')} onContinue={() => setAt('begin')} />;
     }
     return <BeginStep level={level} picked={picked} traveler={character} onBack={onExit} onChangeDocuments={() => setAt('documents')} onBegin={() => begin(character)} />;
   }
   if (at === 'level') {
     // The next step comes from the level picked, since only some levels have a record step.
-    return <LevelStep steps={steps} levelsFinished={levelsFinished} onPick={(id) => { setLevel(id); setAt('traveler'); }} />;
+    return <LevelStep levelsFinished={levelsFinished} onPick={(id) => { setLevel(id); setAt('traveler'); }} />;
   }
   if (at === 'traveler' || !character) {
     return (
@@ -309,7 +319,7 @@ function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, seed, o
     return <DocumentsStep count={stepCount(steps, 'documents')} character={character} bulletin={bulletin} picked={picked} setPicked={setPicked} onBack={() => move(-1)} onContinue={() => move(1)} />;
   }
   // Change documents is the way to packing, so Back goes one screen further, to the traveler.
-  return <BeginStep level={level} picked={picked} traveler={character} onBack={() => setAt('traveler')} onChangeDocuments={() => setAt('documents')} onBegin={() => begin(character)} />;
+  return <BeginStep count={stepCount(steps, 'begin')} level={level} picked={picked} traveler={character} onBack={() => setAt('traveler')} onChangeDocuments={() => setAt('documents')} onBegin={() => begin(character)} />;
 }
 
 /**
@@ -363,14 +373,14 @@ function RecordStep({ count, traveler, saved, onBack, onPick }: {
  * Setup 1, once a second level is open: the level list. Each level is one button, so
  * a tap starts it and the traveler screen follows. Level 1 Arrival is today's mission.
  */
-function LevelStep({ steps, levelsFinished, onPick }: { steps: readonly SetupStep[]; levelsFinished: readonly LevelId[]; onPick: (id: LevelId) => void }) {
-  const count = stepCount(steps, 'level');
+function LevelStep({ levelsFinished, onPick }: { levelsFinished: readonly LevelId[]; onPick: (id: LevelId) => void }) {
   return (
     <main className="setup setup-step level-step">
       <div className="setup-body">
         <p className="setup-title">{t('ui.title')}</p>
         <header className="step-head">
-          <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.level') })} part={count} /></p>
+          {/* Not counted: the steps after it depend on the level picked here (stepCount). */}
+          <p className="stage-label">{t('ui.level')}</p>
           <h2 className="on-dark">{t('ui.pickLevel')}</h2>
         </header>
         <ul className="levels" aria-label={t('ui.pickLevel')}>
@@ -400,7 +410,8 @@ function BackButton({ onBack }: { onBack: () => void }) {
 
 /** Setup 3. Packing is where hours and scrutiny first matter, so both are explained here. */
 export function DocumentsStep({ count, character, bulletin, picked, setPicked, onBack, onContinue }: {
-  count: string;
+  /** "3 / 4", or none on the first run. */
+  count?: string;
   character: CharacterId;
   bulletin: BulletinId;
   picked: EvidenceId[];
@@ -427,7 +438,7 @@ export function DocumentsStep({ count, character, bulletin, picked, setPicked, o
         <header className="step-head">
           <div className="step-nav">
             <BackButton onBack={onBack} />
-            <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.preparation') })} part={count} /></p>
+            <p className="stage-label">{count ? <PickOut text={t('ui.progress', { count, name: t('ui.preparation') })} part={count} /> : t('ui.preparation')}</p>
           </div>
           <div className="pack-title">
             <h2 className="on-dark">{t('ui.prepareDocuments')}</h2>
@@ -504,7 +515,9 @@ function useMoreBelow() {
  * A same-setup retry has no Back or Change documents, and shows the day's `bulletin`
  * again, since it is the same day.
  */
-export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeDocuments, onBegin }: {
+export function BeginStep({ count, level, picked, traveler, bulletin, onBack, onChangeDocuments, onBegin }: {
+  /** "4 / 4", the last setup step; none on the first run or a same-setup retry, which walk no steps. */
+  count?: string;
   level: LevelId;
   picked: EvidenceId[];
   traveler: CharacterId;
@@ -518,6 +531,8 @@ export function BeginStep({ level, picked, traveler, bulletin, onBack, onChangeD
     <main className={`setup setup-step begin-step ${bulletin ? 'same-setup' : ''}`}>
       <div className="setup-body">
         <header className="step-head">
+          {/* The count alone, since the heading names the screen. */}
+          {count && <p className="stage-label"><PickOut text={count} part={count} /></p>}
           <h2 className="on-dark">{t('ui.beforeYouCross')}</h2>
           {bulletin && <p className="muted-dark">{t('ui.sameSetup')}</p>}
         </header>

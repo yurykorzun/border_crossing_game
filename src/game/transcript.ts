@@ -163,12 +163,13 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   const list = levels.length > 1;
   // A level that reads a file adds the record step after the traveler (RecordStep in src/App.tsx).
   const record = !!(setup.file && levelOf(setup).readsFile);
-  const total = (list ? 4 : 3) + (record ? 1 : 0);
-  const at = (n: number) => t('ui.progressCount', { n: (list ? n : n - 1) + (record && n > 2 ? 1 : 0), total });
+  // The count runs over the level's own screens (stepCount() in src/App.tsx): the list is not counted.
+  const total = 3 + (record ? 1 : 0);
+  const at = (screen: 'traveler' | 'record' | 'documents' | 'begin') =>
+    t('ui.progressCount', { n: ['traveler', ...(record ? ['record'] : []), 'documents', 'begin'].indexOf(screen) + 1, total });
   if (list) {
     p.add('ui.title');
     p.add('ui.level');
-    p.add('ui.progress', { count: at(1), name: t('ui.level') });
     p.add('ui.pickLevel');
     const picked = levelOf(setup).id;
     for (const l of levels) {
@@ -183,7 +184,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('scene.traveler', {}, CHROME);
   p.add('ui.back');
   p.add('ui.traveler');
-  p.add('ui.progress', { count: at(2), name: t('ui.traveler') });
+  p.add('ui.progress', { count: at('traveler'), name: t('ui.traveler') });
   p.add('ui.premise');
   // The radio group's accessible name: read out, never shown.
   p.add('ui.pickCharacter', {}, CHROME);
@@ -208,7 +209,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   if (record && setup.file) {
     p.add('ui.title');
     p.add('ui.back');
-    p.add('ui.progress', { count: t('ui.progressCount', { n: list ? 3 : 2, total }), name: t('ui.record.title') });
+    p.add('ui.progress', { count: at('record'), name: t('ui.record.title') });
     for (const l of recordLines(setup.file)) p.add(l.key, l.vars ?? {});
     p.add('ui.record.carries');
     p.add('ui.record.continue', { traveler: name });
@@ -219,7 +220,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   const slots = CHARACTERS[setup.character].evidenceSlots;
   p.add('ui.back');
   p.add('scene.preparation', {}, CHROME);
-  const count = at(3);
+  const count = at('documents');
   p.add('ui.preparation');
   p.add('ui.progress', { count, name: t('ui.preparation') });
   p.add('ui.prepareDocuments');
@@ -250,6 +251,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.continue');
   // Setup 4: Before you cross (BeginStep), the level's goal with its hours, the traveler and the packed list.
   const level = levelOf(setup);
+  p.add('ui.progressCount', { n: total, total });
   p.add('ui.beforeYouCross');
   p.add(level.goalTitle);
   p.add(level.goalBody);
@@ -313,6 +315,7 @@ function storyLines(s: RunState, p: Page): void {
     p.add(`ev.${id}.desc`, {}, CHROME);
   }
   p.add(s.medicine ? 'ui.medicine' : 'ui.medicineLost', {}, CHROME);
+  p.add(s.medicine ? 'ui.medicineDesc' : 'ui.medicineLostDesc', {}, CHROME);
 }
 
 /** ConsequenceLine in src/ui/parts.tsx: one line per answer, its parts joined by " · ". */

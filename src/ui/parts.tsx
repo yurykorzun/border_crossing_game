@@ -299,6 +299,7 @@ export function EvidenceContent({ s }: { s: RunState }) {
       ))}
       <li className={`doc mission-item ${s.medicine ? '' : 'used'}`}>
         <strong>{t(s.medicine ? 'ui.medicine' : 'ui.medicineLost')}</strong>
+        <p>{t(s.medicine ? 'ui.medicineDesc' : 'ui.medicineLostDesc')}</p>
       </li>
     </ul>
   );
