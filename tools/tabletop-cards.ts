@@ -238,6 +238,9 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
   const pairs = (list: readonly (readonly [string, string])[]) => list.map(([c, f]) => `"${esc(t(`claim.${c}`))}" with ${esc(t(`fact.${f}`).toLowerCase())}`).join('; ');
   const followUp = `A claim looks odd next to a fact on file (${pairs(INCONSISTENCIES)}): ${esc(t('enc.i_clarify.clarify.label'))} costs ${price('i_clarify', 'clarify')}, or accept it for ${price('i_clarify', 'accept')}. A fact says the opposite (${pairs(CONTRADICTIONS)}): ${esc(t('enc.i_contradiction.apologise.label'))} costs ${price('i_contradiction', 'apologise')}, or "${esc(t('enc.i_contradiction.review.label'))}" costs ${price('i_contradiction', 'review')}. One follow-up per crossing, the contradiction first.`;
 
+  // The called-in hour follows callInsDue() in src/game/engine.ts: never on an inspection,
+  // a withdraw or a point already verified. A card marked noCallIns (Departure's d_out) is
+  // not printed here.
   const rules = `<div class="rules"><h1>${esc(t('ui.title'))} · tabletop rules</h1>
   <p class="lead">${esc(t('ui.tagline'))} ${esc(t('mission.body'))}</p>
   <h2>Set up</h2>
@@ -251,7 +254,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
   <ol>
     <li><b>Deal.</b> The game master reads the next question card: ${QUESTION_CARDS.map((id) => `<code>${id}</code>`).join(', ')}, two per desk in that order. Skip a card whose "Asked only" line does not hold.</li>
     <li><b>Show legal choices.</b> Read out every approach whose "Only" line holds. A document answer needs a packed, unused document that answers that topic. A contact answer needs that person on the traveler card.</li>
-    <li><b>Apply cost.</b> Move the time marker down by the hours and the scrutiny marker up. A cost in <i>(brackets)</i> applies only when its condition holds. A used document is turned face down. Once someone has been named and called in, each later answer they could confirm costs 1 hour more while the desk checks their statement.</li>
+    <li><b>Apply cost.</b> Move the time marker down by the hours and the scrutiny marker up. A cost in <i>(brackets)</i> applies only when its condition holds. A used document is turned face down. Once someone has been named and called in, each later answer on a question card about a point they could confirm costs 1 hour more while the desk checks their statement. Not on an inspection card, not for "${esc(t('ui.line.withdraw'))}", and not once that point is verified.</li>
     <li><b>Update records.</b> Write each claim and fact the answer gives in the column of this desk. A document puts on file what its own card says. "Sent on to the next desk" copies those facts into the next column.</li>
     <li><b>Resolve follow-up.</b> At the interview, check the record before its two cards. ${followUp}</li>
     <li><b>Inspection.</b> ${esc(t('ui.scrutinyHelp.max', { max: W.MAX_SCRUTINY, after: W.SCRUTINY_AFTER_INSPECTION }))} On paper: deal the first inspection card whose "Dealt only" line holds.</li>
