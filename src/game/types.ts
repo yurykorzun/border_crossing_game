@@ -758,6 +758,12 @@ export interface RunState {
    */
   spotChecked?: Checkpoint[];
   /**
+   * The desk each inspection started at, in order (inspect() in src/game/engine.ts).
+   * One bounded resolution slot per desk: no desk appears twice (the walk's state
+   * rules). Unset in saves from before it existed.
+   */
+  inspectedAt?: Checkpoint[];
+  /**
    * The open point the supervisor said she will check before admission, announced
    * on the way to the last desk (announce() in src/game/engine.ts). Below Scrutiny
    * 3/3 she inspects only for this point, and only while it is still open.

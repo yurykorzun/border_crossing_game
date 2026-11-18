@@ -1400,6 +1400,7 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
+    inspectedAt: [...(s.inspectedAt ?? []), deskOf(s)],
     // The announced point is the only reason inspect() gets an issue (admission()).
     screen: { kind: 'inspection', id, reason: issue ? 'announced' : 'scrutiny' },
   };
