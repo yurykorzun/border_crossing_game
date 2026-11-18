@@ -11,7 +11,7 @@ import { en } from '../src/i18n/en';
 import { CHALLENGES, CHECKS, CONTRADICTIONS, CORE_CARDS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from '../src/game/content/encounters';
 import { LEVELS, LEVEL_IDS, dealsCard } from '../src/game/content/levels';
 import * as W from '../src/game/content/world';
-import { documentEffects } from '../src/game/engine';
+import { documentEffects, documentFits } from '../src/game/engine';
 
 /** The longest condition the map prints before it fails: past this a reader cannot follow it. */
 const MAX_CONDITION = 300;
@@ -110,7 +110,7 @@ const plainChip = (label: string, cls = '') => `<span class="e${cls ? ' ' + cls 
  * settles for the later desks, and what it can set off. A label is left out where nothing
  * applies, except costs, which says "nothing" so a free answer reads as free.
  */
-function contract(a: any, effects: any[], ctx: { topic?: string; issue?: string }): string {
+function contract(a: any, effects: any[], ctx: { topic?: string; issue?: string; card?: string }): string {
   const isCost = (e: any) => 'time' in e || 'scrutiny' in e || 'loseMedicine' in e || 'travel' in e;
   const said = effects.filter((e) => 'claim' in e);
   const rows: [string, string][] = [];
@@ -128,10 +128,12 @@ function contract(a: any, effects: any[], ctx: { topic?: string; issue?: string 
   if (paid) cost.push(paid);
   rows.push(['costs', cost.length ? cost.join(' ') : plainChip('nothing', 'n')]);
   // A document answer also does what the document shown does (documentEffects() in engine.ts):
-  // one chip per document that fits the point, since which one is shown is the player's pick.
+  // one chip per document the engine lets answer this card (documentFits()), since which one
+  // is shown is the player's pick, with the condition that rules it out where one does.
   const point = a.topic ?? ctx.topic;
-  const docs = a.kind === 'evidence' && point ? W.EVIDENCE_IDS.filter((d) => W.EVIDENCE[d].topics.includes(point as any)) : [];
-  const withDoc = (pick: (e: any) => boolean) => docs.map((d) => { const c = chips(documentEffects(d, point as any).filter(pick)); return c ? `${plainChip(`with ${d}:`, 'n')} ${c}` : ''; }).filter(Boolean);
+  const docs = a.kind === 'evidence' && point ? W.EVIDENCE_IDS.filter((d) => documentFits(d, point as any, ctx.card).fits) : [];
+  const docName = (d: any) => { const b = documentFits(d, point as any, ctx.card).blockedBy; return `with ${d}${b ? ` (not once ${cond(b)})` : ''}:`; };
+  const withDoc = (pick: (e: any) => boolean) => docs.map((d) => { const c = chips(documentEffects(d, point as any).filter(pick)); return c ? `${plainChip(docName(d), 'n')} ${c}` : ''; }).filter(Boolean);
   const est = [chips(said), ...withDoc((e) => 'claim' in e), a.stayed ? plainChip(`where you stayed: ${a.stayed}`) : ''].filter(Boolean);
   if (est.length) rows.push(['establishes', est.join(' ')]);
   const rec = [chips(effects.filter((e) => 'fact' in e || 'send' in e)), ...withDoc((e) => 'fact' in e || 'send' in e)].filter(Boolean);
@@ -145,7 +147,7 @@ function contract(a: any, effects: any[], ctx: { topic?: string; issue?: string 
   const resolved: string[] = [];
   if (settles) resolved.push(plainChip(ctx.issue ? `the open issue: ${ctx.issue}${caveat}` : `${point ?? 'the point'}, verified for the later desks${caveat}`));
   // A document that forwards a point (hospitalNote shown for why you came) verifies that point too (pointsResolved()).
-  for (const d of docs) for (const t of W.EVIDENCE[d].forwards ?? []) if (t !== point && !ctx.issue) resolved.push(plainChip(`with ${d}: ${t} too`));
+  for (const d of docs) for (const t of W.EVIDENCE[d].forwards ?? []) if (t !== point && !ctx.issue) resolved.push(plainChip(`${docName(d)} ${t} too`));
   if (resolved.length) rows.push(['resolves', resolved.join(' ')]);
   const may: string[] = [];
   if (a.check) may.push(plainChip(`check ${a.check} (the waiting room)`));
@@ -168,7 +170,8 @@ function cardText(prefix: string, approaches: any[]) {
   }
   return { own: own.map((k) => line(k, prefix)).join(''), ans: (id: string) => (by[id] ?? []).map((k) => line(k, prefix)).join('') };
 }
-function cardBox(id: string, title: string, meta: string, approaches: any[], prefix: string, ctx: { topic?: string; issue?: string } = {}) {
+function cardBox(id: string, title: string, meta: string, approaches: any[], prefix: string, where: { topic?: string; issue?: string } = {}) {
+  const ctx = { ...where, card: id };
   const ct = cardText(prefix, approaches);
   return `<div class="card"><div class="ch"><b>${esc(title)}</b> <code>${id}</code> ${badges(id)}</div>
   ${meta ? `<div class="meta">${meta}</div>` : ''}

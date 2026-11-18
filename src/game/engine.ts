@@ -289,11 +289,21 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
 
 export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
+/**
+ * Whether document `id` can ever answer `topic` on card `card` (EvidenceCard.notFor), whatever
+ * was said; and the condition that rules it out there when one does (EvidenceCard.blockedBy).
+ * answers() and the game map (tools/map.ts) both read it, so the map lists what the engine offers.
+ */
+export function documentFits(id: EvidenceId, topic: Topic, card?: string): { fits: boolean; blockedBy?: Cond } {
+  const c = EVIDENCE[id];
+  const fits = c.topics.includes(topic) && !(card && c.notFor?.includes(card));
+  return { fits, ...(c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) ? { blockedBy: c.blockedBy } : {}) };
+}
+
 /** Whether document `id` answers `topic` now, spent or not; on card `card` when named (EvidenceCard.notFor). */
 function answers(s: RunState, id: EvidenceId, topic: Topic, card?: string): boolean {
-  const c = EVIDENCE[id];
-  const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
-  return c.topics.includes(topic) && !blocked && !(card && c.notFor?.includes(card));
+  const f = documentFits(id, topic, card);
+  return f.fits && !(f.blockedBy && check(f.blockedBy, s));
 }
 
 /** Every packed, unspent document that answers `topic`, in packing order; on card `card` when named. */
