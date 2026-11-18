@@ -11,6 +11,7 @@ import { en } from '../src/i18n/en';
 import { CHALLENGES, CHECKS, CONTRADICTIONS, CORE_CARDS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from '../src/game/content/encounters';
 import { LEVELS, LEVEL_IDS, dealsCard } from '../src/game/content/levels';
 import * as W from '../src/game/content/world';
+import { documentEffects } from '../src/game/engine';
 
 /** The longest condition the map prints before it fails: past this a reader cannot follow it. */
 const MAX_CONDITION = 300;
@@ -126,12 +127,26 @@ function contract(a: any, effects: any[], ctx: { topic?: string; issue?: string 
   const paid = chips(effects.filter(isCost));
   if (paid) cost.push(paid);
   rows.push(['costs', cost.length ? cost.join(' ') : plainChip('nothing', 'n')]);
-  const est = [chips(said), a.stayed ? plainChip(`where you stayed: ${a.stayed}`) : ''].filter(Boolean);
+  // A document answer also does what the document shown does (documentEffects() in engine.ts):
+  // one chip per document that fits the point, since which one is shown is the player's pick.
+  const point = a.topic ?? ctx.topic;
+  const docs = a.kind === 'evidence' && point ? W.EVIDENCE_IDS.filter((d) => W.EVIDENCE[d].topics.includes(point as any)) : [];
+  const withDoc = (pick: (e: any) => boolean) => docs.map((d) => { const c = chips(documentEffects(d, point as any).filter(pick)); return c ? `${plainChip(`with ${d}:`, 'n')} ${c}` : ''; }).filter(Boolean);
+  const est = [chips(said), ...withDoc((e) => 'claim' in e), a.stayed ? plainChip(`where you stayed: ${a.stayed}`) : ''].filter(Boolean);
   if (est.length) rows.push(['establishes', est.join(' ')]);
-  const rec = chips(effects.filter((e) => 'fact' in e || 'send' in e));
-  if (rec) rows.push(['records', rec]);
-  const settles = a.kind === 'evidence' || (a.kind === 'contact' && !a.namesOnly) || a.confirms;
-  if (settles) rows.push(['resolves', plainChip(ctx.issue ? `the open issue: ${ctx.issue}` : `${a.topic ?? ctx.topic ?? 'the point'}, verified for the later desks`)]);
+  const rec = [chips(effects.filter((e) => 'fact' in e || 'send' in e)), ...withDoc((e) => 'fact' in e || 'send' in e)].filter(Boolean);
+  if (rec.length) rows.push(['records', rec.join(' ')]);
+  // A contact named on the day the bulletin orders that point checked settles nothing at the desk
+  // (choose() in engine.ts): the check is what confirms it.
+  const vouches = a.kind === 'contact' && !a.namesOnly;
+  const unlessDay = vouches ? (Object.keys(W.BULLETIN_TOPICS) as (keyof typeof W.BULLETIN_TOPICS)[]).filter((b) => W.BULLETIN_TOPICS[b] === (ctx.issue ?? point)) : [];
+  const caveat = unlessDay.length ? `, except on the ${unlessDay.join(' / ')} bulletin day, when only the check confirms it` : '';
+  const settles = a.kind === 'evidence' || vouches || a.confirms;
+  const resolved: string[] = [];
+  if (settles) resolved.push(plainChip(ctx.issue ? `the open issue: ${ctx.issue}${caveat}` : `${point ?? 'the point'}, verified for the later desks${caveat}`));
+  // A document that forwards a point (hospitalNote shown for why you came) verifies that point too (pointsResolved()).
+  for (const d of docs) for (const t of W.EVIDENCE[d].forwards ?? []) if (t !== point && !ctx.issue) resolved.push(plainChip(`with ${d}: ${t} too`));
+  if (resolved.length) rows.push(['resolves', resolved.join(' ')]);
   const may: string[] = [];
   if (a.check) may.push(plainChip(`check ${a.check} (the waiting room)`));
   if (a.reacts) may.push(plainChip(`the officer holds it against you as ${a.reacts}`, 's'));
@@ -237,7 +252,7 @@ ${Object.values(CHECKS).map((c) => `<div class="card"><div class="ch"><b>${c.id}
 ${c.explain ? `<div class="meta">Explain first: ${effs(c.explain)}</div>` : ''}
 <div class="q">${lines(`check.${c.id}.`)}</div></div>`).join('')}
 <h1>5. Secondary inspections</h1><p class="lead">Dealt at Scrutiny ${W.MAX_SCRUTINY}/${W.MAX_SCRUTINY}, in the supervisor's order. Each is about one open point on your file.</p>
-${INSPECTIONS.map((i) => cardBox(i.id, `${i.kind} inspection`, esc([`about: ${i.issue}`, i.when && `dealt only if ${cond(i.when)}`].filter(Boolean).join(' · ')), i.approaches, `insp.${i.id}.`, { issue: i.issue })).join('')}`;
+${INSPECTIONS.map((i) => cardBox(i.id, `${i.kind} inspection`, esc([`about: ${i.issue}`, i.when && `dealt only if ${cond(i.when)}`].filter(Boolean).join(' · ')), i.approaches, `insp.${i.id}.`, { issue: i.issue, topic: i.topic })).join('')}`;
 
 // ── 6. Setup content and the glossary of ids
 const setup = `<h1 class="pb">6. Travelers, documents and the glossary</h1>
