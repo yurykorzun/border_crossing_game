@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 // Phone-size browser checks against the production build served by `vite preview`.
@@ -5,6 +7,30 @@ import { defineConfig, devices } from '@playwright/test';
 // as command 'serve', so vite.config.ts gives it base '/'; --base puts it back.
 const PORT = 4173;
 const BASE = '/border_crossing_game/';
+// scripts/verify sets E2E_PREBUILT=1 because its build step has just built dist/, so the
+// gate builds once. Run on its own (npm run e2e), the webServer builds first. Prebuilt
+// still builds when dist/ is older than what the build reads, because a gate rerun skips
+// the build step and a failed build leaves the last good dist/ behind.
+// A directory's own time counts too, because deleting or renaming a file only changes that.
+const INPUTS = [
+  'src', 'public', 'index.html', 'vite.config.ts', 'package.json', 'package-lock.json',
+  ...readdirSync('.').filter((n) => /^tsconfig.*\.json$|^\.env($|\.)/.test(n)),
+];
+function newest(path: string): number {
+  if (!existsSync(path)) return 0;
+  const st = statSync(path);
+  if (!st.isDirectory()) return st.mtimeMs;
+  return Math.max(st.mtimeMs, ...readdirSync(path).map((n) => newest(join(path, n))));
+}
+function distIsFresh(): boolean {
+  const out = 'dist/index.html';
+  return existsSync(out) && statSync(out).mtimeMs >= Math.max(...INPUTS.map(newest));
+}
+const BUILD = process.env.E2E_PREBUILT !== '1'
+  ? 'npx vite build'
+  : distIsFresh()
+    ? 'echo "e2e: serving the gate\'s dist/"'
+    : 'echo "e2e: E2E_PREBUILT=1 but dist/ is missing or older than its sources, so building" && npx vite build';
 
 export default defineConfig({
   testDir: 'e2e',
@@ -25,7 +51,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx vite build && npx vite preview --base ${BASE} --port ${PORT} --strictPort`,
+    command: `${BUILD} && npx vite preview --base ${BASE} --port ${PORT} --strictPort`,
+    // Server output goes to the log, so it shows whether this run built or served the gate's build.
+    stdout: 'pipe',
     url: `http://localhost:${PORT}${BASE}`,
     // Never reuse whatever already listens on the port: it may be an old build.
     reuseExistingServer: false,
