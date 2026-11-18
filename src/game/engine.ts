@@ -3,7 +3,7 @@
 
 import type {
   Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, InspectionResult, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -744,6 +744,28 @@ export function inspectionReason(s: RunState): InspectionReason | undefined {
 
 export function inspectionIssue(s: RunState): Topic | undefined {
   return s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id)?.issue : undefined;
+}
+
+/**
+ * The inspection card's reminder (dap.17): the first claim in Inspection.remind that you
+ * made, in your own wording, so you know what in your file it may touch. Under the
+ * known line, on the card's answers only, like that line.
+ */
+export function remindLine(s: RunState): KnownPart | undefined {
+  if (s.screen.kind !== 'inspection' || s.reaction || s.documentList) return undefined;
+  const insp = INSPECTION_BY_ID.get(s.screen.id);
+  const claim = insp?.remind.find((c) => s.claims.includes(c));
+  if (!insp || !claim) return undefined;
+  return { key: `insp.${insp.id}.remind`, vars: { claim: own(`claim.${claim}`, s.character).slice('claim.'.length) } };
+}
+
+/**
+ * How the inspection on screen ends if you let it run (Approach.runs): the first of its
+ * results whose `when` holds on the file as the card was dealt. Undefined off one.
+ */
+export function inspectionResult(s: RunState): InspectionResult | undefined {
+  const insp = s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
+  return insp ? (insp.results.find((r) => check(r.when, s)) ?? { result: 'clear' }).result : undefined;
 }
 
 /**
@@ -1576,8 +1598,13 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   // An answer that uses a point verified earlier names the desk that verified it (dap.46).
   const earlier = topic && usesVerified(s, opt.approach, topic) ? s.verified?.[topic] : undefined;
   if (earlier) vars.deskAt = earlier.desk;
+  // Let run, an inspection goes on line by line (its progression, then the answer's own
+  // reaction) and ends in one of its three results, decided by the file (dap.17).
+  const insp = opt.approach.runs && s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
+  if (insp) n = say(n, Array.from({ length: insp.steps }, (_, i) => ({ key: `insp.${insp.id}.step.${i + 1}` })));
   // A reaction against you says which of three it is, and only a disproof records the claim as disproved.
   n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars, ...(reacted ? { kind: reacted.kind } : {}) }]);
+  if (insp) n = say(n, [{ key: `insp.${insp.id}.result.${inspectionResult(s)}` }]);
   // A place that differs from the entry form: the clerk says she checks it against the form.
   const differs = formDiffers(s, opt.approach, opt.card);
   if (differs) n = say(n, [{ key: `form.differs.${differs}` }]);

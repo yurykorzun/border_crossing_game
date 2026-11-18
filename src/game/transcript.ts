@@ -19,10 +19,10 @@ import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
 import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
-import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
+import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, remindLine, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
-import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
+import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, InspectionResult, Level, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
 export interface Line {
@@ -51,6 +51,8 @@ export interface Line {
 export type Happening =
   | { step: number; type: 'checkStarted'; id: CheckId }
   | { step: number; type: 'checkResolved'; id: CheckId; result: string }
+  /** An inspection let run to its end (Approach.runs), and which of its three results it reached. */
+  | { step: number; type: 'inspectionResolved'; id: string; result: InspectionResult }
   /** An encounter card or an inspection. routinesLeft: the routine cards the desk could still have asked. */
   | { step: number; type: 'cardDealt'; id: string; claims: ClaimId[]; facts: FactId[]; routinesLeft: string[] };
 
@@ -397,6 +399,9 @@ function screenLines(s: RunState, p: Page, explained: string[] = [], read: Statu
     if (desk && !list) p.add(`officer.${desk}.priority`);
     // What this officer already knows, on every desk card (knownLine()).
     if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
+    // On an inspection card, the claim on file it may touch (remindLine()).
+    const remind = remindLine(s);
+    if (remind) p.add(remind.key, remind.vars ?? {});
     // At the last desk, the point the supervisor announced (supervisorLine()).
     const supervisor = list ? undefined : supervisorLine(s);
     // Read on every card it shows, like the known line above it.
@@ -561,6 +566,7 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
     for (const e of eventsBetween(s, n, action)) {
       if (e.type === 'checkStarted') happenings.push({ step: i, type: 'checkStarted', id: e.id });
       if (e.type === 'checkResolved') happenings.push({ step: i, type: 'checkResolved', id: e.id, result: e.result });
+      if (e.type === 'inspectionResolved') happenings.push({ step: i, type: 'inspectionResolved', id: e.id, result: e.result });
       if (e.type === 'cardDealt' || e.type === 'inspectionStarted')
         // What the official dealing the card knows, not every fact on the crossing.
         happenings.push({

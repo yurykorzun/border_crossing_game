@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { answerKey, chooseAction, deskOf, factIds, factTier, legalActions, newRun, optionFor, pointVerified, reactionOf, step, travelOf, waitActions, waitKey } from './engine';
+import { answerKey, chooseAction, deskOf, factIds, factTier, inspectionResult, legalActions, newRun, optionFor, pointVerified, reactionOf, step, travelOf, waitActions, waitKey } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -10,7 +10,7 @@ import { CHARACTERS, MAX_SCRUTINY } from './content/world';
 import type { RunSetup } from './engine';
 import { randomDealer } from './rng';
 import type { Dealer } from './rng';
-import type { Action, Answered, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, OnFileTier, ReactionKind, RunState, Topic } from './types';
+import type { Action, Answered, CheckId, Checkpoint, ClaimId, ContactId, EndingId, EvidenceId, FactId, InspectionResult, OnFileTier, ReactionKind, RunState, Topic } from './types';
 
 /**
  * Bump when rules or content change in a way that changes how a run plays, so
@@ -55,6 +55,8 @@ export type GameEvent =
   | { type: 'checkResolved'; id: CheckId; result: string }
   | { type: 'cardDealt'; id: string }
   | { type: 'inspectionStarted'; id: string }
+  /** An inspection you let run (Approach.runs) ended in one of its three results. */
+  | { type: 'inspectionResolved'; id: string; result: InspectionResult }
   | { type: 'checkpointReached'; index: number }
   | { type: 'runEnded'; ending: EndingId };
 
@@ -163,6 +165,8 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   // A challenge card, or a disproof answered anywhere else (f_donation's denial): the claim it catches.
   const opt = action.type === 'choose' ? optionFor(s, action) : undefined;
   const reacted = opt && reactionOf(s, opt);
+  const result = opt?.approach.runs ? inspectionResult(s) : undefined;
+  if (result && s.screen.kind === 'inspection' && n !== s) ev.push({ type: 'inspectionResolved', id: s.screen.id, result });
   const challenge = reacted?.claim && reacted.fact ? { kind: reacted.kind, claim: reacted.claim, fact: reacted.fact } : undefined;
   if (challenge) {
     const said = own(`claim.${challenge.claim}`, s.character).slice('claim.'.length);

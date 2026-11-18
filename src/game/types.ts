@@ -165,6 +165,13 @@ export interface Approach {
   /** Opens the waiting room for this check after the effects apply. */
   check?: CheckId;
   /**
+   * Inspection answers only: the answer that lets the inspection run its course (the
+   * full search, the lab test, the call to the hospital, the later shuttle). Its
+   * reaction goes on with the inspection's progression lines and ends in one of its
+   * three results (Inspection.results, inspectionResult() in src/game/engine.ts).
+   */
+  runs?: true;
+  /**
    * On a desk's card whose point was verified earlier (RunState.verified), these
    * effects replace `effects` and no check opens: the officer uses what is on
    * file instead of asking again. The answer reads `<key>.verified.label`/`.reaction`.
@@ -307,7 +314,28 @@ export interface Inspection {
   /** What a contact could confirm here. Without one, nobody can be named. */
   topic?: Topic;
   when?: Cond;
+  /**
+   * The build-up (dap.17). The card reminds you of the first of these claims you made
+   * that is on file (`insp.<id>.remind`, remindLine() in src/game/engine.ts), so you
+   * know what the inspection may touch. Every file that gets the card has one.
+   */
+  remind: ClaimId[];
+  /** How many progression lines (`insp.<id>.step.<n>`) follow the answer that lets it run: 2 or 3. */
+  steps: 2 | 3;
+  /** How it ends after that answer: first matching case wins, and the last has no `when`. */
+  results: InspectionCase[];
   approaches: Approach[];
+}
+
+/**
+ * How an inspection that ran its course ends (`insp.<id>.result.<result>`): it clears,
+ * it finds an ordinary detail you explain, or it finds what you feared.
+ */
+export type InspectionResult = 'clear' | 'explained' | 'found';
+
+export interface InspectionCase {
+  when?: Cond;
+  result: InspectionResult;
 }
 
 export interface Character {

@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, setStory, t, tn } from './i18n';
-import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, inspectionReason, knownLine, newRun, observation, options, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
+import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, inspectionReason, knownLine, newRun, observation, options, remindLine, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { explanationsDue, markShown } from './game/explain';
 import type { Explanation } from './game/explain';
@@ -900,6 +900,8 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
   const desk = deskIntro(s);
   // On every desk card, one line of what this officer already knows, from the file.
   const known = knownLine(s);
+  // On an inspection card, the claim on file it may touch (dap.17).
+  const remind = remindLine(s);
   // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
   const finishing = canFinish(s);
   // The list behind "Show a document" keeps only the question over the documents,
@@ -914,6 +916,7 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
         {desk && !list && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         {supervisor && !list && <p className="known supervisor" data-supervisor>{t(supervisor)}</p>}
         {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
+        {remind && <p className="known remind" data-remind>{t(remind.key, remind.vars)}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
         <Explain ids={explain} />
