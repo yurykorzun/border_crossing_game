@@ -8,15 +8,18 @@
 // --jobs splits the setups over that many child processes. A child gets
 // --part i --parts n and prints one JSON line, which the parent adds up.
 // --max tries another ceiling, so a test can see the failing path.
+// It also counts how each inspection you let run ended (clear, explained, found:
+// Inspection.results), so a result no run reaches shows as 0 (dap.17).
 import { spawn } from 'node:child_process';
 import { BOT_STYLES, playRun } from '../src/game/bots';
+import { INSPECTIONS } from '../src/game/content/encounters';
 import { LEVEL_IDS, isLevelId } from '../src/game/content/levels';
 import { PLAY_MINUTES, playMinutes, transcriptOf } from '../src/game/transcript';
 import { allSetups } from '../src/game/walk';
 import type { LevelId } from '../src/game/types';
 
 type Long = { minutes: number; run: string };
-type Part = { runs: number; over: Long[]; longest: Long };
+type Part = { runs: number; over: Long[]; longest: Long; results: Record<string, number> };
 
 function flag(name: string, fallback: number): number {
   const i = process.argv.indexOf(`--${name}`);
@@ -43,13 +46,19 @@ const PART = flag('part', 0);
 const MAX = flag('max', PLAY_MINUTES.max);
 
 function sweep(level: LevelId, part: number, parts: number): Part {
-  const out: Part = { runs: 0, over: [], longest: { minutes: 0, run: '' } };
+  const out: Part = { runs: 0, over: [], longest: { minutes: 0, run: '' }, results: {} };
   allSetups(level).forEach((base, i) => {
     if (i % parts !== part) return;
     for (let seed = 1; seed <= SEEDS; seed++)
       for (const style of BOT_STYLES) {
         const setup = { ...base, seed };
-        const minutes = playMinutes(transcriptOf(playRun(style, setup), setup));
+        const tr = transcriptOf(playRun(style, setup), setup);
+        const minutes = playMinutes(tr);
+        for (const h of tr.happenings) {
+          if (h.type !== 'inspectionResolved') continue;
+          const k = `${h.id} ${h.result}`;
+          out.results[k] = (out.results[k] ?? 0) + 1;
+        }
         out.runs++;
         const run = `${style} seed ${seed} ${base.character} ${base.bulletin} bulletin, packed ${base.loadout.join(', ')}`;
         if (minutes > out.longest.minutes) out.longest = { minutes, run };
@@ -91,5 +100,11 @@ const longest = parts.map((p) => p.longest).sort((a, b) => b.minutes - a.minutes
 console.log(`sweep: level ${LEVEL}, ${allSetups(LEVEL).length} setups x ${SEEDS} seeds x ${BOT_STYLES.length} styles = ${runs} runs`);
 console.log(`  longest ${longest.minutes.toFixed(2)} of ${MAX} min: ${longest.run}`);
 for (const o of over.slice(0, 20)) console.log(`  over: ${o.minutes.toFixed(2)} min, ${o.run}`);
+const results: Record<string, number> = {};
+for (const p of parts) for (const [k, n] of Object.entries(p.results)) results[k] = (results[k] ?? 0) + n;
+const count = (id: string, r: string) => results[`${id} ${r}`] ?? 0;
+// An inspection this level never lets run (none of its results reached) is left out.
+for (const i of INSPECTIONS.filter((x) => x.results.some((r) => count(x.id, r.result))))
+  console.log(`  ${i.id} results: ${i.results.map((r) => `${r.result} ${count(i.id, r.result)}`).join(', ')}`);
 console.log(over.length ? `sweep: FAIL, ${over.length} runs over ${MAX} min` : 'sweep: PASS');
 process.exit(over.length ? 1 : 0);

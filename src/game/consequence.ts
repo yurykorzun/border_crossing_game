@@ -7,9 +7,10 @@ import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
 import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, lineTier, travelOf } from './engine';
-import type { Answered, CarriedFile, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import type { Answered, CarriedFile, Cond, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
+import { ENCOUNTER_BY_ID } from './content/encounters';
 
 export type PartKind = 'medicine' | 'miss' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -423,6 +424,71 @@ function picked(s: RunState): { a: Answered; i: number }[] {
 export function unlistedHours(s: RunState): number {
   const listed = new Set(picked(s).map((x) => x.i));
   return (s.answers ?? []).reduce((h, a, i) => h + (listed.has(i) ? 0 : a.hours), 0);
+}
+
+/**
+ * One link from an earlier answer to a later desk, for the ending (dap.18): a document or
+ * check that a later desk accepted, saving its hours, or something put on file that
+ * brought a follow-up question, with what that follow-up cost.
+ */
+export interface ChainLine {
+  kind: 'saved' | 'followUp';
+  key: string;
+  vars: Record<string, string>;
+  /** Plural count: render with tn(key, n, vars). */
+  n?: number;
+  costs?: DecisiveCost[];
+}
+
+/** The facts and claims a condition needs on file, not the ones it needs absent. */
+function condNeeds(c: Cond | undefined): { facts: FactId[]; claims: ClaimId[] } {
+  const facts = [...(c?.facts ?? [])];
+  const claims = [...(c?.claims ?? [])];
+  for (const x of c?.any ?? []) {
+    const n = condNeeds(x);
+    facts.push(...n.facts);
+    claims.push(...n.claims);
+  }
+  return { facts, claims };
+}
+
+/**
+ * The two links a run teaches (dap.18), from its own record (RunState.answers), each at
+ * most once: the later desk that took a point verified earlier and the hours that saved
+ * (Answered.saved, most hours first), and the follow-up card that something you put on
+ * file brought (Encounter.issue needs a fact or claim an earlier answer recorded), the one
+ * that cost most. A follow-up that cost nothing is not named. Ending in src/App.tsx lists
+ * them under the decisive answers, and endingLines() in src/game/transcript.ts writes them down.
+ */
+export function chains(s: RunState): ChainLine[] {
+  const answers = s.answers ?? [];
+  const out: ChainLine[] = [];
+  const saved = answers.filter((a) => a.saved).sort((x, y) => y.saved!.hours - x.saved!.hours)[0];
+  if (saved?.saved) {
+    const { hours, from, by } = saved.saved;
+    out.push({ kind: 'saved', key: by ? 'ending.chain.saved' : 'ending.chain.saved.checked', n: hours, vars: { desk: saved.desk, deskAt: from, ...(by ? { cardLabel: by } : {}) } });
+  }
+  const protectedContact = CHARACTERS[s.character].protectedContact;
+  let best: { line: ChainLine; w: number } | undefined;
+  answers.forEach((a, j) => {
+    const card = ENCOUNTER_BY_ID.get(a.card);
+    if (!card || card.kind === 'routine' || !card.issue) return;
+    const w = weight(a, protectedContact);
+    if (w <= 0 || (best && best.w >= w)) return;
+    const needs = condNeeds(card.issue);
+    for (const cause of answers.slice(0, j)) {
+      const fact = (cause.recorded ?? []).find((f) => needs.facts.includes(f));
+      const claim = fact ? undefined : (cause.claimed ?? []).find((c) => needs.claims.includes(c));
+      if (!fact && !claim) continue;
+      const question = t(questionKey(s, 'enc', card.id), questionVars(s, card.id));
+      const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : { said: own(`said.${claim}`, s.character).slice('said.'.length) }) };
+      const key = `ending.chain.followUp.${fact ? 'fact' : 'claim'}${cause.desk === a.desk ? '.here' : ''}`;
+      best = { w, line: { kind: 'followUp', key, vars, costs: costsOf(s, a, protectedContact) } };
+      return;
+    }
+  });
+  if (best) out.push(best.line);
+  return out;
 }
 
 export type Axis = 'arrival' | 'flight' | 'medicine' | 'contacts';

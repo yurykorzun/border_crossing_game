@@ -769,10 +769,14 @@ export const INSPECTIONS: Inspection[] = [
     // while there is a paper or your mother for the second answer.
     id: 's_supervisor', kind: 'verification', issue: 'purpose', topic: 'purpose',
     when: { noFacts: ['fatherCondition'], any: [{ holds: 'purpose' }, { contactFree: ['mother'] }] },
+    remind: ['shortTrip', 'familyVisit'], steps: 3,
+    // A short trip is the story the ward does not back. Your hurry on file is the
+    // ordinary detail she asks about and you explain.
+    results: [{ when: { claims: ['shortTrip'] }, result: 'found' }, { when: { facts: ['urgency'] }, result: 'explained' }, { result: 'clear' }],
     approaches: [
       { id: 'evidence', kind: 'evidence', topic: 'purpose', requires: { holds: 'purpose' }, effects: [] },
       { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { not: { holds: 'purpose' }, contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
-      { id: 'accept', kind: 'say', effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
+      { id: 'accept', kind: 'say', runs: true, effects: [{ fact: 'fatherCondition' }, { time: -1, when: { lastHours: false } }] },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
@@ -782,10 +786,14 @@ export const INSPECTIONS: Inspection[] = [
     // only on the day the bulletin sends medicines to the lab: any other day the
     // open prescription gets the bag search instead.
     id: 's_medicine', kind: 'confiscation', issue: 'medicine', when: { bulletin: 'customs' },
+    remind: ['shortTrip', 'stayWeeks', 'stayDays', 'familyVisit'], steps: 2,
+    // The dose is for weeks, which a short trip does not explain. Who it is for is the
+    // ordinary detail you explain, unless a hospital note already said it.
+    results: [{ when: { claims: ['shortTrip'] }, result: 'found' }, { when: { not: { used: ['hospitalNote'] } }, result: 'explained' }, { result: 'clear' }],
     approaches: [
       { id: 'surrender', kind: 'say', effects: [{ loseMedicine: true }] },
       // The lab looks at it and hands it back, so the prescription is verified (Approach.confirms).
-      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }], confirms: true },
+      { id: 'wait', kind: 'verify', requires: { lastHours: false }, effects: [{ time: -3 }], confirms: true, runs: true },
       { id: 'withdraw', kind: 'withdraw', effects: [] },
     ],
   },
@@ -794,12 +802,16 @@ export const INSPECTIONS: Inspection[] = [
     // out of reach, you lay it all out yourself instead.
     id: 's_bag', kind: 'search', issue: 'medicine', topic: 'medicine',
     when: { any: [{ contactFree: ['mother'] }, { noFacts: ['cashCount'] }, { noFacts: ['fatherCondition'] }] },
+    remind: ['cashUnderLimit', 'shortTrip', 'familyVisit'], steps: 2,
+    // The count is over the limit you said. The label names your father, which needs
+    // explaining while his condition is not on file.
+    results: [{ when: { claims: ['cashUnderLimit'] }, result: 'found' }, { when: { noFacts: ['fatherCondition'] }, result: 'explained' }, { result: 'clear' }],
     approaches: [
       // A full search counts the cash, so the total goes on file.
       // The search report, cash total included, goes with you to the next desk.
       // They find the prescription with the medicine, so it is verified (Approach.confirms).
       {
-        id: 'wait', kind: 'verify', requires: { lastHours: false }, confirms: true,
+        id: 'wait', kind: 'verify', requires: { lastHours: false }, confirms: true, runs: true,
         effects: [{ time: -3 }, { fact: 'cashCount' }, { send: 'printout', facts: ['cashCount'] }],
       },
       { id: 'contact', kind: 'contact', contacts: ['mother'], requires: { contactFree: ['mother'] }, effects: [{ time: -1, when: { lastHours: false } }] },
@@ -821,9 +833,13 @@ export const INSPECTIONS: Inspection[] = [
     // not confirming anything, so anyone close enough will do (namesOnly).
     id: 's_connection', kind: 'connection', issue: 'accommodation',
     when: { any: [{ holds: 'accommodation' }, { contactFree: ['mother', 'cousin'] }, { noFacts: ['familyAddress'] }] },
+    remind: ['hotelStay', 'stayingWithFamily', 'familyVisit', 'shortTrip'], steps: 2,
+    // She rings ahead to where you said you stay: a hotel you named has no booking.
+    // A short trip on a later shuttle is the ordinary detail you explain.
+    results: [{ when: { claims: ['hotelStay'] }, result: 'found' }, { when: { claims: ['shortTrip'] }, result: 'explained' }, { result: 'clear' }],
     approaches: [
       // The supervisor rings ahead to say you will be late, which confirms where you stay (Approach.confirms).
-      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }], confirms: true },
+      { id: 'later', kind: 'say', requires: { lastHours: false }, effects: [{ travel: 1 }], confirms: true, runs: true },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', requires: { holds: 'accommodation' }, effects: [] },
       // With no hours left for the later shuttle, the lift and the transfer stand beside
       // the paper, so two answers remain (dap.49).

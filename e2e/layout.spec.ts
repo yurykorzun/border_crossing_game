@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { newRun } from '../src/game/engine';
+import { chooseAction, newRun, options } from '../src/game/engine';
+import { playStep } from '../src/game/play';
+import { t } from '../src/i18n';
 import { CHECKS, ENCOUNTERS, INSPECTIONS } from '../src/game/content/encounters';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MISSION_MIN_TIME, START_TIME } from '../src/game/content/world';
 import { SAVE_KEY, freshSave } from '../src/game/save';
-import type { RunState, Screen } from '../src/game/types';
+import type { ClaimId, RunState, Screen } from '../src/game/types';
 import { CHECKPOINTS } from '../src/game/types';
 import { openReturning, openSaved, pickArrival } from './returning';
 
@@ -223,7 +225,11 @@ function crowdedStates(): { name: string; run: RunState; card: boolean }[] {
       const cp = e.checkpoint === 'followup' ? 2 : CHECKPOINTS.indexOf(e.checkpoint);
       out.push({ name: `${id} ${e.id}`, run: at({ kind: 'encounter', id: e.id }, cp), card: true });
     }
-    for (const i of INSPECTIONS) out.push({ name: `${id} ${i.id}`, run: at({ kind: 'inspection', id: i.id }, 1), card: true });
+    // With the longest claim it can remind you of on file, so the reminder line shows (dap.17).
+    for (const i of INSPECTIONS) {
+      const claim = [...i.remind].sort((a, b) => t(`claim.${b}`).length - t(`claim.${a}`).length)[0];
+      out.push({ name: `${id} ${i.id}`, run: { ...at({ kind: 'inspection', id: i.id }, 1), claims: [claim] }, card: true });
+    }
     for (const c of Object.values(CHECKS)) {
       const beats = Array.from({ length: c.beats }, (_, n) => n);
       const screen: Screen = { kind: 'wait', check: c.id, beats, shown: beats.length, resolved: { result: 'clear' }, asked: false };
@@ -307,6 +313,42 @@ test('the security interview with three answers fits at 390x844 with every line 
   expect(errors).toEqual([]);
 });
 
+// The answer that lets an inspection run: its progression, the reaction and the
+// longest of its three results, with the change rows under them (dap.17).
+test('an inspection let run fits at 390x844 with its build-up and result', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('./');
+  let seen = 0;
+  for (const id of CHARACTER_IDS) {
+    const base = newRun({ character: id, loadout: EVIDENCE_IDS.slice(0, CHARACTERS[id].evidenceSlots), bulletin: 'customs', seed: 7 });
+    for (const i of INSPECTIONS) {
+      const runs = i.approaches.find((a) => a.runs)!;
+      for (const claims of [[], ...i.remind.map((c) => [c])] as ClaimId[][]) {
+        const card: RunState = { ...base, reaction: null, screen: { kind: 'inspection', id: i.id }, checkpoint: 1, slot: 1, claims };
+        const opt = options(card).find((o) => o.approach.id === runs.id && !o.blocked);
+        if (!opt) continue;
+        const run = playStep(card, chooseAction(opt));
+        if (!run.reaction?.some((r) => r.key.startsWith(`insp.${i.id}.result.`))) continue;
+        const where = `${id} ${i.id} ${run.reaction.at(-1)?.key}`;
+        await openSaved(page, { ...freshSave(), run });
+        await expect(page.locator('main.run .reaction'), where).toContainText(t(`insp.${i.id}.step.1`));
+        await expectFits(page, where);
+        // The result line, last of the build-up, is on screen and not scrolled out of its panel.
+        const result = page.locator('main.run .reaction p.said').last();
+        await expect(result, where).toHaveText(t(run.reaction.at(-1)!.key));
+        const box = (await result.boundingBox())!;
+        const panel = (await page.locator('main.run .reaction').boundingBox())!;
+        expect(box.y + box.height, `result below the screen on ${where}`).toBeLessThanOrEqual(page.viewportSize()!.height);
+        expect(box.y + box.height, `result clipped on ${where}`).toBeLessThanOrEqual(panel.y + panel.height + 1);
+        seen++;
+      }
+    }
+  }
+  expect(seen).toBeGreaterThan(4);
+  expect(errors).toEqual([]);
+});
+
 test('every card and waiting room fits at 390x844 with no page scroll', async ({ page }) => {
   test.setTimeout(120_000);
   const errors: string[] = [];
@@ -318,6 +360,7 @@ test('every card and waiting room fits at 390x844 with no page scroll', async ({
     await expect(page.locator('main.run .controls button').first(), name).toBeVisible();
     await expectFits(page, name, card);
     await expectLinesVisible(page, name);
+    if (run.screen.kind === 'inspection') await expect(page.locator('main.run [data-remind]'), name).toBeVisible();
     // Each answer card: an action row and one consequence row, and the consequence text
     // in one weight on every card, contacts included (colour marks the protected one).
     const answers = await page.locator('main.run .controls button.choice').evaluateAll((buttons) =>
