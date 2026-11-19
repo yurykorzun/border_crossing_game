@@ -236,6 +236,22 @@ export function noFreeExits(s: RunState): string[] {
   return bad;
 }
 
+/**
+ * One bounded resolution slot per desk (Branching Rules, page 3): no desk runs a
+ * second inspection in the run. Two inspections at two different desks are allowed.
+ * An inspection with no desk on record could have been at any desk, so once the run
+ * has two or more, one unrecorded is reported too: the rule errs toward failing.
+ */
+export function repeatInspections(s: RunState): string[] {
+  const at = s.inspectedAt ?? [];
+  const bad: string[] = [];
+  const twice = CHECKPOINTS.filter((d) => at.filter((a) => a === d).length > 1);
+  if (twice.length) bad.push(`second inspection at the same desk: [${twice}] in [${at}]`);
+  if (at.length !== s.inspections && (s.inspections > 1 || at.length > s.inspections))
+    bad.push(`${s.inspections} inspections but desks on record [${at}]`);
+  return bad;
+}
+
 /** The rules every reachable state must keep. Returns what is broken. */
 export function checkState(s: RunState): string[] {
   const bad: string[] = [];
@@ -287,6 +303,7 @@ export function checkState(s: RunState): string[] {
   const onFile = statements.filter((f) => s.facts[f]);
   if (statements.length && (onFile.length !== 1 || s.facts[onFile[0]]!.length !== CHECKPOINTS.length))
     bad.push(`statements on file: [${onFile.map((f) => `${f} at ${s.facts[f]}`)}]`);
+  for (const d of repeatInspections(s)) bad.push(d);
   // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !s.reaction && options(s).length > 3)
     bad.push(`${s.screen.id} shows ${options(s).length} answers`);

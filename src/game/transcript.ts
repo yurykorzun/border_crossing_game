@@ -867,6 +867,35 @@ export function hoursSummary(picks: readonly TimedPick[], runsPerStyle: number):
   return { rule: HOURS_RULE.id, ok: turns.length > 0, text };
 }
 
+/**
+ * One plain policy's results over a level's seeds, for rule 13: how many runs
+ * arrived (homeInTime or homeAtCost), kept the medicine, and named no contact.
+ */
+export interface PolicyScore { policy: string; runs: number; arrival: number; medicine: number; noContact: number }
+
+/** The three outcome axes rule 13 compares, in the order tools/eval.ts prints them. */
+export const POLICY_AXES = ['arrival', 'medicine', 'noContact'] as const;
+
+export const POLICY_RULE = { id: 13, name: 'no plain policy (always show, always wait, always refuse) beats every other on arrival, medicine kept and no contact named' } as const;
+
+/**
+ * Rule 13, strategy variety (Branching Rules PDF, 2026-11-11): fails when one
+ * policy is at least as good as every other on all three axes and better than
+ * each of them on at least one, so one plain habit would be the answer to the
+ * whole level. Rates are compared, so the policies need the same seeds. Gated
+ * like rules 7-12 by the fewest runs any policy has.
+ */
+export function policySummary(rows: readonly PolicyScore[]): Summary {
+  const rate = (r: PolicyScore, axis: (typeof POLICY_AXES)[number]) => (r.runs ? r[axis] / r.runs : 0);
+  const beats = (a: PolicyScore, b: PolicyScore) =>
+    POLICY_AXES.every((x) => rate(a, x) >= rate(b, x)) && POLICY_AXES.some((x) => rate(a, x) > rate(b, x));
+  const top = rows.filter((a) => rows.length > 1 && rows.every((b) => b === a || beats(a, b)));
+  const text = top.length ? `${top[0].policy} beats every other policy on all three axes` : `no policy beats every other on all three axes (${rows.map((r) => r.policy).join(', ')})`;
+  const fewest = rows.length ? Math.min(...rows.map((r) => r.runs)) : 0;
+  if (fewest < BALANCE.minRuns) return { rule: POLICY_RULE.id, ok: true, text: `${text} (not checked: ${fewest} runs per policy, needs ${BALANCE.minRuns})` };
+  return { rule: POLICY_RULE.id, ok: !top.length, text };
+}
+
 /** An inspection, or an encounter card that is not routine. */
 const escalating = (id: string) => INSPECTION_BY_ID.has(id) || ENCOUNTER_BY_ID.get(id)?.kind !== 'routine';
 

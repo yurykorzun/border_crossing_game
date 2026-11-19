@@ -5,8 +5,8 @@ import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MIN_TIMED_PICKS, hoursSummary, packingSummary } from '../src/game/transcript';
-import type { PackingResult, TimedPick } from '../src/game/transcript';
+import { MIN_TIMED_PICKS, hoursSummary, packingSummary, policySummary } from '../src/game/transcript';
+import type { PackingResult, PolicyScore, TimedPick } from '../src/game/transcript';
 
 // setupFor() cycles Lena's setups first; 60 is Mark's first, so its run seed is 61.
 const MARK = 60;
@@ -44,12 +44,19 @@ describe('npm run eval', () => {
     expect(r.stdout).toMatch(/rule 10: memorised homeInTime [\d.]+% of 3 runs \(not checked/);
     expect(r.stdout).toMatch(/rule 11: .*\(not checked: 3 runs per style/);
     expect(r.stdout).toMatch(/rule 12: .*\(not checked: 3 runs per style/);
+    expect(r.stdout).toMatch(/rule 13: .*\(not checked: 3 runs per policy/);
   }, 30_000);
 
   it('checks the balance shares and the memorised script on the default 200 seeds', () => {
     const r = evalCli([]);
     expect(r.status, r.stdout).toBe(0);
-    for (const id of [7, 8, 9, 10, 11, 12]) expect(r.stdout).toMatch(new RegExp(`ok {4}rule ${id}:`));
+    for (const id of [7, 8, 9, 10, 11, 12, 13]) expect(r.stdout).toMatch(new RegExp(`ok {4}rule ${id}:`));
+    // Arrival and Departure each print the three policies on all three axes over the same 200 seeds.
+    for (const level of ['arrival', 'departure']) {
+      const part = r.stdout.split(/^eval: level /m).find((x) => x.includes(` ${level},`))!;
+      expect(part).toMatch(/policy +arrival +medicine +no contact +\(same 200 seeds each\)/);
+      for (const policy of ['show', 'wait', 'refuse']) expect(part).toMatch(new RegExp(`^ +${policy} +[0-9.]+% +[0-9.]+% +[0-9.]+%$`, 'm'));
+    }
     expect(r.stdout).toMatch(/rule 11: best style differs across 35 packings .*every packing home in time at least once\n/);
     expect(r.stdout).toMatch(/rule 12: best answer changes with hours left on [1-9]\d* of \d+ cards \(/);
     expect(r.stdout).toMatch(/rule 9: runs with an inspection [\d.]+% of 1000 runs\n/);
@@ -132,5 +139,29 @@ describe('rule 12: hours left change the best choice', () => {
 
   it('does not decide with fewer than 100 runs per style', () => {
     expect(hoursSummary([], 3)).toMatchObject({ ok: true, text: 'best answer changes with hours left on 0 of 0 cards (not checked: 3 runs per style, needs 100)' });
+  });
+});
+
+/** A made-up policy row over `runs` seeds, from its arrival, medicine-kept and no-contact counts. */
+const row = (policy: string, arrival: number, medicine: number, noContact: number, runs = 200): PolicyScore => ({ policy, runs, arrival, medicine, noContact });
+
+describe('rule 13: no plain policy beats the others on every outcome', () => {
+  it('fails when one policy is as good on every axis and better on one', () => {
+    const x = policySummary([row('show', 150, 190, 180), row('wait', 150, 170, 120), row('refuse', 90, 190, 180)]);
+    expect(x).toMatchObject({ rule: 13, ok: false, text: 'show beats every other policy on all three axes' });
+  });
+
+  it('passes when each policy loses on some axis', () => {
+    const x = policySummary([row('show', 114, 198, 170), row('wait', 68, 200, 194), row('refuse', 191, 154, 200)]);
+    expect(x).toMatchObject({ rule: 13, ok: true, text: 'no policy beats every other on all three axes (show, wait, refuse)' });
+  });
+
+  it('passes when two policies tie on every axis, since neither beats the other', () => {
+    expect(policySummary([row('show', 100, 100, 100), row('wait', 100, 100, 100), row('refuse', 50, 50, 50)]).ok).toBe(true);
+  });
+
+  it('does not decide with fewer than 100 runs per policy', () => {
+    const x = policySummary([row('show', 3, 3, 3, 3), row('wait', 0, 0, 0, 3), row('refuse', 0, 0, 0, 3)]);
+    expect(x).toMatchObject({ ok: true, text: 'show beats every other policy on all three axes (not checked: 3 runs per policy, needs 100)' });
   });
 });

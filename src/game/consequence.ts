@@ -131,7 +131,10 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
     }
     else if ('claim' in e) claims.push(e.claim);
   }
-  const checkKey = `${cardKey}.check`;
+  // A `<cardKey>.check.<result>` text says how the check will go this run (Option.checkResult):
+  // "Lab will ask for the prescription" only where the lab will (dap.21).
+  const caseKey = o.checkResult ? `${cardKey}.check.${o.checkResult}` : '';
+  const checkKey = caseKey && has(caseKey) ? caseKey : `${cardKey}.check`;
   // An answer that uses a point verified earlier opens no check (usesVerified()), so it does not say it starts one.
   if (!o.usesVerified && (a.check || has(checkKey))) all.push({ kind: 'check', key: has(checkKey) ? checkKey : 'ui.line.check', tone: 'amber' });
   // Against the last bus, the way the engine applies it (apply() and doomed() in
