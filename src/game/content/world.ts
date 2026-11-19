@@ -150,10 +150,13 @@ export const EVIDENCE: Record<EvidenceId, EvidenceCard> = {
     id: 'hotel',
     topics: ['accommodation', 'stay'],
     // With family as where you stay, the booking only gives its dates: no hotel stay on file.
-    onUse: [{ claim: 'hotelStay', when: { noClaims: ['stayingWithFamily'] } }],
-    // Only staying with family rules out a hotel; visiting family does not. It rules
-    // out the hotel as where you stay, not the three nights as how long (p_stay).
-    blockedBy: { claims: ['stayingWithFamily'] },
+    // Your mother's account that you stay with her (hostStatement) counts the same, so
+    // the booking shown after her call is not a new claim her account then catches.
+    onUse: [{ claim: 'hotelStay', when: { noClaims: ['stayingWithFamily'], noFacts: ['hostStatement'] } }],
+    // Only staying with family rules out a hotel, said by you or by your mother on the
+    // host call; visiting family does not. It rules out the hotel as where you stay,
+    // not the three nights as how long (p_stay).
+    blockedBy: { any: [{ claims: ['stayingWithFamily'] }, { facts: ['hostStatement'] }] },
     blockedOn: ['accommodation'],
     // The exit desk's stay question quotes its three nights and asks why you stayed
     // twelve days: the booking holds no later date to answer with (dap.41).

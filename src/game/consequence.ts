@@ -131,6 +131,14 @@ export function consequence(o: Option, cardKey: string, protectedContact: Contac
     }
     else if ('claim' in e) claims.push(e.claim);
   }
+  // One person's account that puts several facts on file reads as one part, a
+  // `<cardKey>.reveal` text ("Her account goes on file"), so the line stays short.
+  const revealKey = `${cardKey}.reveal`;
+  if (has(revealKey) && all.some((p) => p.kind === 'fact')) {
+    const rest = all.filter((p) => p.kind !== 'fact');
+    all.length = 0;
+    all.push(...rest, { kind: 'fact', key: revealKey, tone: 'plain' });
+  }
   // A `<cardKey>.check.<result>` text says how the check will go this run (Option.checkResult):
   // "Lab will ask for the prescription" only where the lab will (dap.21).
   const caseKey = o.checkResult ? `${cardKey}.check.${o.checkResult}` : '';

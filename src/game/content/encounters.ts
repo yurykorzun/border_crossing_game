@@ -493,7 +493,7 @@ export const ENCOUNTERS: Encounter[] = [
     issue: { noFacts: ['hostStatement'] },
     approaches: [
       // "The phone rings and rings. Then she picks up."
-      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }] },
+      { id: 'again', kind: 'verify', phonesMother: true, effects: [{ time: -1 }, ...MOTHER_ANSWERS] },
       { id: 'evidence', kind: 'evidence', topic: 'accommodation', effects: [] },
       { id: 'cousin', kind: 'contact', contacts: ['cousin'], effects: [] },
     ],

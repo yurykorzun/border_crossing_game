@@ -113,6 +113,9 @@ export const en: Record<string, string> = {
   'ui.bulletin': "Today's bulletin",
   'ui.medicine': "Father's medicine",
   'ui.medicineLost': 'Medicine lost',
+  // The line under it in the Evidence sheet, as each document has its own (dap.37).
+  'ui.medicineDesc': 'His doses, in your bag. Customs asks what it is.',
+  'ui.medicineLostDesc': 'Customs kept it. It does not come with you.',
   'ui.contacts': 'People',
   'ui.exposed': 'exposed',
   'ui.protected': 'protect',
@@ -371,9 +374,9 @@ export const en: Record<string, string> = {
   'ev.hospitalNote.name': 'Hospital note',
   'ev.hospitalNote.desc': "Your father's admission, with his prescriptions. Answers medicine and purpose. Puts his condition on file.",
   'ev.returnTicket.name': 'Return ticket',
-  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay. Shown for that, nothing goes on file.',
+  'ev.returnTicket.desc': 'Flight out in five days. Answers length of stay. Puts your departure date on file.',
   'ev.deed.name': 'Apartment deed',
-  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Does not prove a photo. Shown for identity, nothing goes on file.',
+  'ev.deed.desc': 'Registered owner, local address. Answers identity and accommodation. Does not prove a photo. Puts your apartment on file.',
   // Handed over: "Show your mother's letter". Used up: "Uses letter".
   // The packing screen's rows: a short name, then every topic it answers (topic.<t>.helps) and "Reveals ..." (fact.<id>.reveal).
   'ev.hotel.label': 'Hotel booking',
@@ -806,9 +809,11 @@ export const en: Record<string, string> = {
   'enc.i_brother.calls.reaction': 'They go through your calls in the gray box.',
 
   // ── Follow-ups
-  'enc.f_host.q': '"Your mother isn\'t answering."',
+  'enc.f_host.q': '"She isn\'t answering."',
   'enc.f_host.again.label': 'Wait for another call',
   'enc.f_host.again.event': 'Second call',
+  // Her answer puts two facts on file (MOTHER_ANSWERS), named as one part of the cost line.
+  'enc.f_host.again.reveal': 'Her account recorded',
   'enc.f_host.again.reaction': 'The phone rings and rings. Then she picks up.',
   'enc.f_host.evidence.label': 'Show {cardThe}',
   'enc.f_host.evidence.reaction': 'He accepts it without looking up.',
@@ -1020,6 +1025,38 @@ export const en: Record<string, string> = {
   'beat.interview.3': 'Somebody behind the wall laughs.',
   'beat.interview.4': 'The clock above the door is five minutes fast.',
   'beat.interview.5': 'Your phone buzzes in the tray. You cannot reach it.',
+
+  // ── Tabletop prototype (npm run tabletop, tools/tabletop-cards.ts): the words a paper card
+  // prints around the game's own text. tabletop.part.* are fragments read mid-line.
+  'tabletop.document': 'Document',
+  'tabletop.answers': 'Answers: {topics}',
+  'tabletop.names': 'Names {contacts}',
+  'tabletop.askedOnly': 'Asked only {cond}',
+  'tabletop.dealtOnly': 'Dealt only {cond}',
+  'tabletop.notUsable': 'Not usable {cond}',
+  'tabletop.only': 'Only {cond}',
+  'tabletop.if': 'If {cond}:',
+  'tabletop.ifVerified': 'If already verified: {cost}',
+  'tabletop.sent': 'Sent on to the next desk: {facts}',
+  'tabletop.sentAll': 'Sent on to the next desk: everything this desk knows',
+  'tabletop.part.aDocument': 'a document',
+  'tabletop.part.or': 'or',
+  'tabletop.part.always': 'always',
+  'tabletop.part.as': 'as {name}',
+  'tabletop.part.bulletin': 'with the {bulletin} bulletin',
+  'tabletop.part.facts': 'with {facts} on file',
+  'tabletop.part.noFacts': 'with {facts} not on file',
+  'tabletop.part.claims': 'if you said "{claims}"',
+  'tabletop.part.noClaims': 'unless you said "{claims}"',
+  'tabletop.part.contactFree': 'while {contacts} is not yet named',
+  'tabletop.part.lastHours': 'with {hours} or less left',
+  'tabletop.part.moreHours': 'with more than {hours} left',
+  'tabletop.part.holds': 'if you hold a document for {topic}',
+  'tabletop.part.used': 'once you showed {docs}',
+  'tabletop.part.flagged': 'with a flagged fact on file',
+  'tabletop.part.unflagged': 'with nothing flagged',
+  'tabletop.part.not': 'not ({cond})',
+  'tabletop.part.unverified': 'until {topic} is verified',
 
   // ── Endings
   'ending.homeInTime.title': 'Home in time',
@@ -1274,6 +1311,7 @@ export const en: Record<string, string> = {
   'departure:msg.prep': "Flying back for Monday's client meeting?",
   'departure:mission.title': 'Your father needs another week of care.',
   'departure:mission.body': 'Your flight leaves tonight.',
+  'departure:ui.medicineDesc': 'His medicine box, so a pharmacy abroad can match it. Customs asks what you take out.',
   'departure:ui.goal': 'Catch your flight',
   // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
   'departure:topic.purpose.helps': 'Why you stayed',
