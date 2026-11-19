@@ -3,7 +3,7 @@
 
 import type {
   Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, InspectionResult, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -289,11 +289,21 @@ export function currentCard(s: RunState): Encounter | Inspection | null {
 
 export const topicOf = (card: Encounter | Inspection | null): Topic | undefined => card?.topic;
 
+/**
+ * Whether document `id` can ever answer `topic` on card `card` (EvidenceCard.notFor), whatever
+ * was said; and the condition that rules it out there when one does (EvidenceCard.blockedBy).
+ * answers() and the game map (tools/map.ts) both read it, so the map lists what the engine offers.
+ */
+export function documentFits(id: EvidenceId, topic: Topic, card?: string): { fits: boolean; blockedBy?: Cond } {
+  const c = EVIDENCE[id];
+  const fits = c.topics.includes(topic) && !(card && c.notFor?.includes(card));
+  return { fits, ...(c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) ? { blockedBy: c.blockedBy } : {}) };
+}
+
 /** Whether document `id` answers `topic` now, spent or not; on card `card` when named (EvidenceCard.notFor). */
 function answers(s: RunState, id: EvidenceId, topic: Topic, card?: string): boolean {
-  const c = EVIDENCE[id];
-  const blocked = c.blockedBy && (!c.blockedOn || c.blockedOn.includes(topic)) && check(c.blockedBy, s);
-  return c.topics.includes(topic) && !blocked && !(card && c.notFor?.includes(card));
+  const f = documentFits(id, topic, card);
+  return f.fits && !(f.blockedBy && check(f.blockedBy, s));
 }
 
 /** Every packed, unspent document that answers `topic`, in packing order; on card `card` when named. */
@@ -362,6 +372,8 @@ export interface Option {
   usesVerified?: true;
   /** A 'shown' or 'notFor' row: the packed document it names (emptyReason()). */
   blockedDoc?: EvidenceId;
+  /** An answer that starts a check: the case it will meet (checkCase()), so its line can say so before it is picked. */
+  checkResult?: string;
 }
 
 /**
@@ -433,6 +445,7 @@ export function choices(s: RunState): Option[] {
       if (empty) o.blockedDoc = empty.doc;
       if (flagged.length) o.flagged = flagged;
       if (usesVerified(s, a, topic)) o.usesVerified = true;
+      else if (a.check) o.checkResult = checkCase(s, a.check).result;
       out.push(o);
     }
   }
@@ -747,6 +760,28 @@ export function inspectionIssue(s: RunState): Topic | undefined {
 }
 
 /**
+ * The inspection card's reminder (dap.17): the first claim in Inspection.remind that you
+ * made, in your own wording, so you know what in your file it may touch. Under the
+ * known line, on the card's answers only, like that line.
+ */
+export function remindLine(s: RunState): KnownPart | undefined {
+  if (s.screen.kind !== 'inspection' || s.reaction || s.documentList) return undefined;
+  const insp = INSPECTION_BY_ID.get(s.screen.id);
+  const claim = insp?.remind.find((c) => s.claims.includes(c));
+  if (!insp || !claim) return undefined;
+  return { key: `insp.${insp.id}.remind`, vars: { claim: own(`claim.${claim}`, s.character).slice('claim.'.length) } };
+}
+
+/**
+ * How the inspection on screen ends if you let it run (Approach.runs): the first of its
+ * results whose `when` holds on the file as the card was dealt. Undefined off one.
+ */
+export function inspectionResult(s: RunState): InspectionResult | undefined {
+  const insp = s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
+  return insp ? (insp.results.find((r) => check(r.when, s)) ?? { result: 'clear' }).result : undefined;
+}
+
+/**
  * The desk the player has just reached: the first card dealt there is on screen,
  * so the officer's priority line shows above it. Undefined anywhere else.
  */
@@ -1049,7 +1084,7 @@ function relatedCard(s: RunState): Encounter | undefined {
 
 /** Whether advance() would deal an escalating card next: an inspection, a follow-up, a challenge or a related card. */
 function escalatesNext(s: RunState): boolean {
-  if (s.scrutiny >= MAX_SCRUTINY || s.pending.some((id) => !s.seen.includes(id) && followUpRoom(s, fromCheck(id)))) return true;
+  if (inspectionDue(s) || s.pending.some((id) => !s.seen.includes(id) && followUpRoom(s, fromCheck(id)))) return true;
   if (coreLeft(s)) return false;
   if (s.slot <= FOLLOW_UP_SLOT && relatedCard(s)) return true;
   return !!pendingChallenge(s);
@@ -1112,12 +1147,19 @@ function relativeNamedHere(s: RunState): boolean {
 /** Marks that an officer phoned your mother at this desk (queueMood). */
 const phoned = (s: RunState): RunState => (s.deskStart ? { ...s, deskStart: { ...s.deskStart, phoned: true } } : s);
 
+/**
+ * Scrutiny 3/3 sends you to an inspection, once per desk: one bounded resolution
+ * slot per desk (Branching Rules, page 3). At a desk that already ran one, scrutiny
+ * stays where it is and the next desk inspects instead (the walk's state rules).
+ */
+const inspectionDue = (s: RunState): boolean => s.scrutiny >= MAX_SCRUTINY && !(s.inspectedAt ?? []).includes(deskOf(s));
+
 /** Deal the next card: a pending follow-up, an inspection, the next slot, or the end. */
 function advance(s: RunState, dealer: Dealer, touched: ClaimId[] = []): RunState {
   if (s.withdrew) return finish(s);
   const rest = breather(s);
   if (rest) return show(s, rest.id);
-  if (s.scrutiny >= MAX_SCRUTINY) return inspect(s, dealer);
+  if (inspectionDue(s)) return inspect(s, dealer);
   while (s.pending.length) {
     const [id, ...rest] = s.pending;
     s = { ...s, pending: rest };
@@ -1397,6 +1439,7 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
     seen: s.seen.includes(id) ? s.seen : [...s.seen, id],
     streak: (s.streak ?? 0) + 1,
     inspections: s.inspections + 1,
+    inspectedAt: [...(s.inspectedAt ?? []), deskOf(s)],
     // The announced point is the only reason inspect() gets an issue (admission()).
     screen: { kind: 'inspection', id, reason: issue ? 'announced' : 'scrutiny' },
   };
@@ -1404,9 +1447,13 @@ function inspect(s: RunState, dealer: Dealer, issue?: Topic): RunState {
 
 // ── Waiting room
 
+/** The case a check meets on this run: the first whose condition holds, else a clear. */
+export const checkCase = (s: RunState, checkId: CheckId): CheckCase =>
+  CHECKS[checkId].cases.find((k) => check(k.when, s)) ?? { result: 'clear' };
+
 function startWait(s: RunState, checkId: NonNullable<Approach['check']>): RunState {
   const c = CHECKS[checkId];
-  const resolved: CheckCase = c.cases.find((k) => check(k.when, s)) ?? { result: 'clear' };
+  const resolved = checkCase(s, checkId);
   let rng = s.rng;
   const beats: number[] = [];
   while (beats.length < c.beats) {
@@ -1576,8 +1623,13 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   // An answer that uses a point verified earlier names the desk that verified it (dap.46).
   const earlier = topic && usesVerified(s, opt.approach, topic) ? s.verified?.[topic] : undefined;
   if (earlier) vars.deskAt = earlier.desk;
+  // Let run, an inspection goes on line by line (its progression, then the answer's own
+  // reaction) and ends in one of its three results, decided by the file (dap.17).
+  const insp = opt.approach.runs && s.screen.kind === 'inspection' ? INSPECTION_BY_ID.get(s.screen.id) : undefined;
+  if (insp) n = say(n, Array.from({ length: insp.steps }, (_, i) => ({ key: `insp.${insp.id}.step.${i + 1}` })));
   // A reaction against you says which of three it is, and only a disproof records the claim as disproved.
   n = say(n, [{ key: answerKey(s, approachId, 'reaction'), vars, ...(reacted ? { kind: reacted.kind } : {}) }]);
+  if (insp) n = say(n, [{ key: `insp.${insp.id}.result.${inspectionResult(s)}` }]);
   // A place that differs from the entry form: the clerk says she checks it against the form.
   const differs = formDiffers(s, opt.approach, opt.card);
   if (differs) n = say(n, [{ key: `form.differs.${differs}` }]);

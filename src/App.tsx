@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { has, setStory, t, tn } from './i18n';
-import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, inspectionReason, knownLine, newRun, observation, options, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
+import { afford, answerKey, canFinish, canTurnBack, chooseAction, deskIntro, endingFor, endingText, inspectionReason, knownLine, newRun, observation, options, remindLine, setupOf, shownCheckpoint, supervisorLine, waitActions, waitKey } from './game/engine';
 import { playStep } from './game/play';
 import { explanationsDue, markShown } from './game/explain';
 import type { Explanation } from './game/explain';
@@ -22,7 +22,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, officerLabel, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, axisLines, caughtLine, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
+import { SEPARATOR, axisLines, caughtLine, chains, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -915,6 +915,8 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
   const desk = deskIntro(s);
   // On every desk card, one line of what this officer already knows, from the file.
   const known = knownLine(s);
+  // On an inspection card, the claim on file it may touch (dap.17).
+  const remind = remindLine(s);
   // Once the bus is out of reach, say so plainly and offer to finish instead of more clicking.
   const finishing = canFinish(s);
   // The list behind "Show a document" keeps only the question over the documents,
@@ -929,6 +931,7 @@ export function Panel({ s, dispatch, reduceWait, explain }: { s: RunState; dispa
         {desk && !list && <p className="priority">{t(`officer.${desk}.priority`)}</p>}
         {supervisor && !list && <p className="known supervisor" data-supervisor>{t(supervisor)}</p>}
         {known.length > 0 && !list && <p className="known" data-known>{known.map((k) => t(k.key, k.vars)).join(' ')}</p>}
+        {remind && <p className="known remind" data-remind>{t(remind.key, remind.vars)}</p>}
         <h2 className="question">{question}</h2>
         {caught && <p className="caught">{t(caught.key, caught.vars)}</p>}
         <Explain ids={explain} />
@@ -1072,6 +1075,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
   const later = laterBeat(s);
   const decided = decisive(s);
   const rest = unlistedHours(s);
+  const linked = chains(s);
   return (
     <main className={`ending ending-${ending}`}>
       <p className="setup-title">{t('ui.title')}</p>
@@ -1152,6 +1156,19 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
           )}
           {/* The hours the answers left off the list cost, so the hours add up (unlistedHours()). */}
           {rest > 0 && <p className="decided-rest">{tn('ending.decided.rest', rest)}</p>}
+          {/* What led to what (dap.18): a desk that took what an earlier one verified, and a follow-up something on file brought. */}
+          {linked.length > 0 && (
+            <ul className="chains">
+              {linked.map((c) => (
+                <li key={c.kind} className={`chain chain-${c.kind}`}>
+                  {c.n === undefined ? t(c.key, c.vars) : tn(c.key, c.n, c.vars)}
+                  {c.costs?.map((x, j) => (
+                    <span key={j} className={`tone-${x.tone}`}>{j === 0 ? ' ' : SEPARATOR}{x.n === undefined ? t(x.key, x.vars) : tn(x.key, x.n, x.vars)}</span>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          )}
           <ul className="axes">
             {axisLines(s).map((l) => (
               <li key={l.axis} className={`axis axis-${l.axis}`}><strong>{t(`ending.axis.${l.axis}`)}:</strong> {t(l.key, l.vars)}</li>

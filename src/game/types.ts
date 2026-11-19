@@ -165,6 +165,13 @@ export interface Approach {
   /** Opens the waiting room for this check after the effects apply. */
   check?: CheckId;
   /**
+   * Inspection answers only: the answer that lets the inspection run its course (the
+   * full search, the lab test, the call to the hospital, the later shuttle). Its
+   * reaction goes on with the inspection's progression lines and ends in one of its
+   * three results (Inspection.results, inspectionResult() in src/game/engine.ts).
+   */
+  runs?: true;
+  /**
    * On a desk's card whose point was verified earlier (RunState.verified), these
    * effects replace `effects` and no check opens: the officer uses what is on
    * file instead of asking again. The answer reads `<key>.verified.label`/`.reaction`.
@@ -307,7 +314,28 @@ export interface Inspection {
   /** What a contact could confirm here. Without one, nobody can be named. */
   topic?: Topic;
   when?: Cond;
+  /**
+   * The build-up (dap.17). The card reminds you of the first of these claims you made
+   * that is on file (`insp.<id>.remind`, remindLine() in src/game/engine.ts), so you
+   * know what the inspection may touch. Every file that gets the card has one.
+   */
+  remind: ClaimId[];
+  /** How many progression lines (`insp.<id>.step.<n>`) follow the answer that lets it run: 2 or 3. */
+  steps: 2 | 3;
+  /** How it ends after that answer: first matching case wins, and the last has no `when`. */
+  results: InspectionCase[];
   approaches: Approach[];
+}
+
+/**
+ * How an inspection that ran its course ends (`insp.<id>.result.<result>`): it clears,
+ * it finds an ordinary detail you explain, or it finds what you feared.
+ */
+export type InspectionResult = 'clear' | 'explained' | 'found';
+
+export interface InspectionCase {
+  when?: Cond;
+  result: InspectionResult;
 }
 
 export interface Character {
@@ -651,6 +679,15 @@ export interface Answered {
   used: EvidenceId[];
   /** Questions it settled for the desks ahead. */
   settled: Topic[];
+  /** Facts it put on file for the first time on this crossing (dap.18): what a later follow-up can be about. */
+  recorded?: FactId[];
+  /** Claims it wrote down. */
+  claimed?: ClaimId[];
+  /**
+   * It used a point verified at an earlier desk (Approach.ifVerified): the hours its own
+   * effects would have cost, where the point was verified and by which document (dap.18).
+   */
+  saved?: { hours: number; from: Checkpoint; by?: EvidenceId };
 }
 
 /**
@@ -757,6 +794,12 @@ export interface RunState {
    * src/game/engine.ts), once each before you leave. Unset in saves from before it existed.
    */
   spotChecked?: Checkpoint[];
+  /**
+   * The desk each inspection started at, in order (inspect() in src/game/engine.ts).
+   * One bounded resolution slot per desk: no desk appears twice (the walk's state
+   * rules). Unset in saves from before it existed.
+   */
+  inspectedAt?: Checkpoint[];
   /**
    * The open point the supervisor said she will check before admission, announced
    * on the way to the last desk (announce() in src/game/engine.ts). Below Scrutiny

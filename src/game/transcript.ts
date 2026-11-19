@@ -18,11 +18,11 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
-import { SEPARATOR, axisLines, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
-import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
+import { SEPARATOR, axisLines, chains, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
+import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, remindLine, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
-import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, Level, LevelId, RunState } from './types';
+import type { CharacterId, CheckId, ClaimId, ContactId, EndingId, FactId, InspectionResult, Level, LevelId, RunState } from './types';
 import { CHECKPOINTS } from './types';
 
 export interface Line {
@@ -51,6 +51,8 @@ export interface Line {
 export type Happening =
   | { step: number; type: 'checkStarted'; id: CheckId }
   | { step: number; type: 'checkResolved'; id: CheckId; result: string }
+  /** An inspection let run to its end (Approach.runs), and which of its three results it reached. */
+  | { step: number; type: 'inspectionResolved'; id: string; result: InspectionResult }
   /** An encounter card or an inspection. routinesLeft: the routine cards the desk could still have asked. */
   | { step: number; type: 'cardDealt'; id: string; claims: ClaimId[]; facts: FactId[]; routinesLeft: string[] };
 
@@ -400,6 +402,9 @@ function screenLines(s: RunState, p: Page, explained: string[] = [], read: Statu
     if (desk && !list) p.add(`officer.${desk}.priority`);
     // What this officer already knows, on every desk card (knownLine()).
     if (!list) for (const k of knownLine(s)) p.add(k.key, k.vars ?? {});
+    // On an inspection card, the claim on file it may touch (remindLine()).
+    const remind = remindLine(s);
+    if (remind) p.add(remind.key, remind.vars ?? {});
     // At the last desk, the point the supervisor announced (supervisorLine()).
     const supervisor = list ? undefined : supervisorLine(s);
     // Read on every card it shows, like the known line above it.
@@ -493,6 +498,15 @@ function endingLines(s: RunState, p: Page): void {
   }
   const rest = unlistedHours(s);
   if (rest) p.plural('ending.decided.rest', rest, CHROME);
+  // What led to what, chains(): chrome, under the decisive answers.
+  for (const c of chains(s)) {
+    if (c.n === undefined) p.add(c.key, c.vars, CHROME);
+    else p.plural(c.key, c.n, CHROME, c.vars);
+    for (const x of c.costs ?? []) {
+      if (x.n === undefined) p.add(x.key, x.vars, CHROME);
+      else p.plural(x.key, x.n, CHROME, x.vars);
+    }
+  }
   for (const l of axisLines(s)) {
     p.add(`ending.axis.${l.axis}`, {}, CHROME);
     p.add(l.key, l.vars, CHROME);
@@ -564,6 +578,7 @@ function transcribe(run: BotRun, setup: RunSetup, levels: readonly Level[]): Tra
     for (const e of eventsBetween(s, n, action)) {
       if (e.type === 'checkStarted') happenings.push({ step: i, type: 'checkStarted', id: e.id });
       if (e.type === 'checkResolved') happenings.push({ step: i, type: 'checkResolved', id: e.id, result: e.result });
+      if (e.type === 'inspectionResolved') happenings.push({ step: i, type: 'inspectionResolved', id: e.id, result: e.result });
       if (e.type === 'cardDealt' || e.type === 'inspectionStarted')
         // What the official dealing the card knows, not every fact on the crossing.
         happenings.push({
@@ -853,6 +868,35 @@ export function hoursSummary(picks: readonly TimedPick[], runsPerStyle: number):
     + (turns.length ? ` (${turns.slice(0, 3).join('; ')}${turns.length > 3 ? '; ...' : ''})` : '');
   if (runsPerStyle < BALANCE.minRuns) return { rule: HOURS_RULE.id, ok: true, text: `${text} (not checked: ${runsPerStyle} runs per style, needs ${BALANCE.minRuns})` };
   return { rule: HOURS_RULE.id, ok: turns.length > 0, text };
+}
+
+/**
+ * One plain policy's results over a level's seeds, for rule 13: how many runs
+ * arrived (homeInTime or homeAtCost), kept the medicine, and named no contact.
+ */
+export interface PolicyScore { policy: string; runs: number; arrival: number; medicine: number; noContact: number }
+
+/** The three outcome axes rule 13 compares, in the order tools/eval.ts prints them. */
+export const POLICY_AXES = ['arrival', 'medicine', 'noContact'] as const;
+
+export const POLICY_RULE = { id: 13, name: 'no plain policy (always show, always wait, always refuse) beats every other on arrival, medicine kept and no contact named' } as const;
+
+/**
+ * Rule 13, strategy variety (Branching Rules PDF, 2026-11-11): fails when one
+ * policy is at least as good as every other on all three axes and better than
+ * each of them on at least one, so one plain habit would be the answer to the
+ * whole level. Rates are compared, so the policies need the same seeds. Gated
+ * like rules 7-12 by the fewest runs any policy has.
+ */
+export function policySummary(rows: readonly PolicyScore[]): Summary {
+  const rate = (r: PolicyScore, axis: (typeof POLICY_AXES)[number]) => (r.runs ? r[axis] / r.runs : 0);
+  const beats = (a: PolicyScore, b: PolicyScore) =>
+    POLICY_AXES.every((x) => rate(a, x) >= rate(b, x)) && POLICY_AXES.some((x) => rate(a, x) > rate(b, x));
+  const top = rows.filter((a) => rows.length > 1 && rows.every((b) => b === a || beats(a, b)));
+  const text = top.length ? `${top[0].policy} beats every other policy on all three axes` : `no policy beats every other on all three axes (${rows.map((r) => r.policy).join(', ')})`;
+  const fewest = rows.length ? Math.min(...rows.map((r) => r.runs)) : 0;
+  if (fewest < BALANCE.minRuns) return { rule: POLICY_RULE.id, ok: true, text: `${text} (not checked: ${fewest} runs per policy, needs ${BALANCE.minRuns})` };
+  return { rule: POLICY_RULE.id, ok: !top.length, text };
 }
 
 /** An inspection, or an encounter card that is not routine. */

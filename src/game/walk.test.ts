@@ -134,6 +134,19 @@ describe('the walker itself', () => {
     expect(checkState({ ...s, reaction: [{ key: 'no.such.key' }] })).toEqual(['missing text: no.such.key']);
   });
 
+  it('flags a second inspection at a desk that already ran one, and allows one each at two desks', () => {
+    const s = newRun(allSetups()[0]);
+    // The step: customs already ran an inspection, and now starts another.
+    const repeat: RunState = { ...s, checkpoint: 1, inspections: 2, inspectedAt: ['customs', 'customs'] };
+    expect(checkState(repeat)).toContain('second inspection at the same desk: [customs] in [customs,customs]');
+    const twoDesks: RunState = { ...s, checkpoint: 1, inspections: 2, inspectedAt: ['passport', 'customs'] };
+    expect(checkState(twoDesks)).toEqual(checkState({ ...s, checkpoint: 1 }));
+    expect(checkState(twoDesks).filter((d) => d.includes('inspection'))).toEqual([]);
+    // Two inspections with a desk missing from the record could be a repeat, so it fails.
+    expect(checkState({ ...s, inspections: 2, inspectedAt: ['passport'] })).toContain('2 inspections but desks on record [passport]');
+    expect(checkState({ ...s, inspections: 1 })).toEqual(checkState(s));
+  });
+
   it('tries every pick the dealer could make', () => {
     // Walk one run until the dealer has a real choice, then expect one outcome per pick: a card
     // dealt, or the claim a spot-check picks (same screen, its own reaction line).
