@@ -205,24 +205,40 @@ const NAMED_DESTINATIONS: ReadonlySet<DestinationId> = (() => {
 export const rulesSee = (d: DestinationId | undefined): string =>
   !d ? '' : NAMED_DESTINATIONS.has(d) ? d : `travel ${DESTINATIONS[d].travel}`;
 
+/**
+ * Fields the merge key leaves out or writes its own way. Left out: the seed and the log move
+ * nothing; the level, traveler, bulletin, packing and file are fixed for the whole setup (the
+ * memo is per setup); where and how each claim was said or shown is only read into the next
+ * file; the answers so far are only read by the ending (decisive()).
+ */
+const UNKEYED: ReadonlySet<string> = new Set([
+  'seed', 'rng', 'log', 'file', 'level', 'character', 'bulletin', 'loadout',
+  'saidOn', 'saidAs', 'shownOn', 'shownBy', 'answers', 'destination', 'facts', 'reaction', 'screen',
+]);
+
+/** Each list of field names seen, as a small number, so the key names its fields once. */
+const SHAPES = new Map<string, number>();
+
+/**
+ * The merge key: the state's field names (as their SHAPES number) and their values, with the
+ * destination as the rules see it, the facts as factsKey() and only whether a reaction shows.
+ */
 const key = (state: RunState) => {
   const s = statementKey(state);
-  return JSON.stringify({
-    ...s,
-    destination: rulesSee(destinationOf(s)),
-    facts: factsKey(s),
-    seed: 0,
-    rng: 0,
-    log: 0,
-    // Fixed for the whole setup (the memo is per setup), or only read into the next file.
-    file: 0,
-    saidOn: 0,
-    shownBy: 0,
-    // The answers so far are only read by the ending (decisive()), never by the rules.
-    answers: 0,
-    reaction: s.reaction ? 1 : 0,
-    screen: s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
-  });
+  const fields = s as unknown as Record<string, unknown>;
+  const names = Object.keys(fields);
+  const shape = names.join();
+  let id = SHAPES.get(shape);
+  if (id === undefined) SHAPES.set(shape, (id = SHAPES.size));
+  const values: unknown[] = [id];
+  for (const k of names) if (!UNKEYED.has(k)) values.push(fields[k]);
+  values.push(
+    rulesSee(destinationOf(s)),
+    factsKey(s),
+    s.reaction ? 1 : 0,
+    s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
+  );
+  return JSON.stringify(values);
 };
 
 const unique = <T>(list: T[]) => new Set(list).size === list.length;

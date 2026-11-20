@@ -9,12 +9,20 @@ import { LEVELS, LEVEL_IDS } from './content/levels';
 import { t } from '../i18n';
 import type { RunState } from './types';
 
+// Node's process, which src/ has no types for: the test runner always runs on Node.
+type CpuUsage = { user: number; system: number };
+const { process } = globalThis as unknown as { process: { threadCpuUsage(since?: CpuUsage): CpuUsage } };
+
 // One walk per level shared by every assertion: every character, packing and
 // bulletin, at every destination in Arrival, every player choice and every card the dealer could deal.
 for (const level of LEVEL_IDS) {
-  const started = Date.now();
+  // The walk's own CPU time on this thread, not the clock, because the walks run while every
+  // other test file loads on the same machine: alone Arrival takes about 90 s by either measure,
+  // and the clock under that load reads a third more.
+  const started = process.threadCpuUsage();
   const report = walk(walkSetups(level));
-  const seconds = (Date.now() - started) / 1000;
+  const spent = process.threadCpuUsage(started);
+  const seconds = (spent.user + spent.system) / 1e6;
   const cards = new Set(LEVELS[level].cards);
 
   describe(`every possible run in ${level}`, () => {
