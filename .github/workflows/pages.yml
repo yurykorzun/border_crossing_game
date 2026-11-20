@@ -9,10 +9,9 @@ on:
     branches: [main, worktree-prototype]
   workflow_dispatch:
 
+# Only deploy gets the Pages and OIDC tokens, because the test jobs also run a PR's code.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # A PR run gets its own group, because sharing `pages` would cancel a deploy in progress.
 concurrency:
@@ -35,6 +34,7 @@ jobs:
       - run: npx vitest run --exclude tools/sweep.test.ts --exclude src/game/walk.test.ts
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: dist
 
@@ -70,6 +70,9 @@ jobs:
   deploy:
     needs: [build, sweep, walk]
     if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     environment:
       name: github-pages
