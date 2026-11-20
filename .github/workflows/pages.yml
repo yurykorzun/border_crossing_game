@@ -27,8 +27,8 @@ jobs:
       - run: npm ci
       # tools/tabletop.test.ts prints the tabletop PDF through Playwright's Chromium.
       - run: npx playwright install --with-deps chromium
-      # The sweep runs in its own job below, so it gets a whole runner.
-      - run: npx vitest run --exclude tools/sweep.test.ts
+      # The sweep and the walk run in their own jobs below, so each gets a whole runner.
+      - run: npx vitest run --exclude tools/sweep.test.ts --exclude src/game/walk.test.ts
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -50,8 +50,21 @@ jobs:
         env:
           SWEEP_ALONE: '1'
 
+  # src/game/walk.test.ts on its own runner for the same reason: beside the other
+  # test files the 3-destination walk took 150 s against its 120 s limit (run 44733297576).
+  walk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run src/game/walk.test.ts
+
   deploy:
-    needs: [build, sweep]
+    needs: [build, sweep, walk]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
