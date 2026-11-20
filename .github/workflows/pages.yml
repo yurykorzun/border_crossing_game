@@ -4,15 +4,18 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, worktree-prototype]
+  # A PR runs the tests too, so a broken job shows before the merge rather than as a failed deploy.
+  pull_request:
+    branches: [main, worktree-prototype]
   workflow_dispatch:
 
+# Only deploy gets the Pages and OIDC tokens, because the test jobs also run a PR's code.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# A PR run gets its own group, because sharing `pages` would cancel a deploy in progress.
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
@@ -27,10 +30,11 @@ jobs:
       - run: npm ci
       # tools/tabletop.test.ts prints the tabletop PDF through Playwright's Chromium.
       - run: npx playwright install --with-deps chromium
-      # The sweep runs in its own job below, so it gets a whole runner.
-      - run: npx vitest run --exclude tools/sweep.test.ts
+      # The sweep and the walk run in their own jobs below, so each gets a whole runner.
+      - run: npx vitest run --exclude tools/sweep.test.ts --exclude src/game/walk.test.ts
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: dist
 
@@ -50,8 +54,25 @@ jobs:
         env:
           SWEEP_ALONE: '1'
 
+  # src/game/walk.test.ts on its own runner for the same reason: beside the other
+  # test files the 3-destination walk took 150 s against its 120 s limit (run 44733297576).
+  walk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run src/game/walk.test.ts
+
   deploy:
-    needs: [build, sweep]
+    needs: [build, sweep, walk]
+    if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     environment:
       name: github-pages
