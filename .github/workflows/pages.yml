@@ -25,6 +25,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # tools/tabletop.test.ts prints the tabletop PDF through Playwright's Chromium.
+      - run: npx playwright install --with-deps chromium
       # The sweep runs in its own job below, so it gets a whole runner.
       - run: npx vitest run --exclude tools/sweep.test.ts
       - run: npm run build
