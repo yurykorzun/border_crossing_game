@@ -414,6 +414,16 @@ export const vouchTopic = (a: Approach, topic: Topic | undefined): Topic | null 
  * is visible.
  */
 export function options(s: RunState): Option[] {
+  const known = OPTIONS.get(s);
+  if (known) return known;
+  const out = rowsOf(s);
+  OPTIONS.set(s, out);
+  return out;
+}
+/** options() per state object, like CHOICES. */
+const OPTIONS = new WeakMap<RunState, Option[]>();
+
+function rowsOf(s: RunState): Option[] {
   const all = choices(s);
   // The list behind "Show a document": only the packed documents that answer, each with its own cost.
   if (s.documentList) return all.filter((o) => o.approach.id === s.documentList && o.card);
@@ -432,10 +442,26 @@ export const documentsOf = (s: RunState, o: Option): Option[] =>
   o.documents ? options({ ...s, documentList: o.approach.id }) : [];
 
 /**
+ * choices() for each state object already asked. A state is never changed after it is made
+ * (step() returns a new one), so its answers never change either. The walk asks the same
+ * state's answers several times per move, and this keeps the destinations walk inside its budget.
+ */
+const CHOICES = new WeakMap<RunState, Option[]>();
+
+/**
  * Every answer the card has, with one per packed document that fits, before
  * options() puts two or more documents behind one "Show a document" row.
+ * The list is shared between callers: read it, never change it.
  */
 export function choices(s: RunState): Option[] {
+  const known = CHOICES.get(s);
+  if (known) return known;
+  const out = answersOf(s);
+  CHOICES.set(s, out);
+  return out;
+}
+
+function answersOf(s: RunState): Option[] {
   const card = currentCard(s);
   if (!card) return [];
   const ch = CHARACTERS[s.character];
@@ -1591,11 +1617,14 @@ function shownOrSpoken(s: RunState, n: RunState, opt: Option, topic: Topic | und
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = vars.cardThe = opt.card;
   if (opt.contact) vars.contact = vars.contactMine = opt.contact;
-  const answer: AnswerLabel = { id: opt.approach.id, key: answerKey(s, opt.approach.id, 'label'), ...(opt.card || opt.contact ? { vars } : {}) };
+  // Worked out only for an answer that makes a claim, because most answers make none.
+  let answer: AnswerLabel | undefined;
+  const label = (): AnswerLabel =>
+    (answer ??= { id: opt.approach.id, key: answerKey(s, opt.approach.id, 'label'), ...(opt.card || opt.contact ? { vars } : {}) });
   for (const c of claimsIn(opt.effects)) {
     // Said here for the first time, or said aloud after only a document had made it.
     if (!fromDoc.includes(c) && out.claims.includes(c) && (!s.claims.includes(c) || s.shownBy?.[c]))
-      out = { ...out, saidAs: { ...out.saidAs, [c]: answer } };
+      out = { ...out, saidAs: { ...out.saidAs, [c]: label() } };
     if (fromDoc.includes(c)) {
       if (!s.claims.includes(c) && opt.card) out = { ...out, shownBy: { ...out.shownBy, [c]: opt.card } };
     } else if (out.shownBy?.[c]) {
@@ -1732,6 +1761,16 @@ export const canFinish = (s: RunState): boolean =>
 
 /** Everything the player can do right now, for tests and the autoplay bot. */
 export function legalActions(s: RunState): Action[] {
+  const known = LEGAL.get(s);
+  if (known) return known;
+  const out = actionsOf(s);
+  LEGAL.set(s, out);
+  return out;
+}
+/** legalActions() per state object, like CHOICES: shared between callers, never changed. */
+const LEGAL = new WeakMap<RunState, Action[]>();
+
+function actionsOf(s: RunState): Action[] {
   if (s.ending) return [];
   if (s.reaction) return [{ type: 'ack' }];
   const sc: Screen = s.screen;

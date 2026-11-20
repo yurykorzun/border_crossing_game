@@ -72,14 +72,17 @@ export const sameAction = (a: Action, b: Action) => JSON.stringify(a) === JSON.s
  * Plays `action` if it is legal right now. An action from an earlier screen, a
  * spent document, an exposed contact or a double tap is rejected and the state
  * is returned untouched, so nothing is ever spent twice.
+ * `record: false` leaves the answer unwritten (RunState.answers, and no events): the walk,
+ * whose merged states ignore the answers so far, plays millions of moves this way.
  */
-export function tryStep(s: RunState, given: Action, dealer: Dealer = randomDealer): StepResult {
+export function tryStep(s: RunState, given: Action, dealer: Dealer = randomDealer, record = true): StepResult {
   if (s.ending) return { ok: false, state: s, reason: 'runOver' };
   // A document answer that names no document shows the first packed one that fits (optionFor()).
   const first = given.type === 'choose' && !given.card ? optionFor(s, given) : undefined;
   const action = first ? chooseAction(first) : given;
   if (!legalActions(s).some((a) => sameAction(a, action))) return { ok: false, state: s, reason: 'notAllowed' };
   const n = step(s, action, dealer);
+  if (!record) return { ok: true, state: n, events: [] };
   const events = eventsBetween(s, n, action);
   return { ok: true, state: answered(s, n, action, events), events };
 }

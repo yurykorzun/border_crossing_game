@@ -65,10 +65,17 @@ export function has(key: string): boolean {
  * lives across the border and Lena's cousin lives here.
  */
 export function own(key: string, traveler: string): string {
+  const memo = `${traveler}|${key}`;
+  const known = owned.get(memo);
+  if (known !== undefined) return known;
   const parts = key.split('.');
   const variant = [...parts.slice(0, 2), traveler, ...parts.slice(2)].join('.');
-  return variant in en ? variant : key;
+  const out = variant in en ? variant : key;
+  owned.set(memo, out);
+  return out;
 }
+/** own() per traveler and key: the English table never changes, and the walk asks the same keys millions of times. */
+const owned = new Map<string, string>();
 
 /** t(key, { ...vars, n }): the plural form of `key` for the count n, with {n} set. */
 export function tn(key: string, n: number, vars: Record<string, string | number> = {}): string {

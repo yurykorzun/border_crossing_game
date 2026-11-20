@@ -24,12 +24,13 @@ import type { Dealer } from './rng';
 import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, DestinationId, Effect, EndingId, EvidenceId, FactId, LevelId, LogEntry, Requirement, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, DEFAULT_DESTINATION, DESTINATIONS, DESTINATION_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_REQUIREMENTS, MAX_SCRUTINY, OFFICERS,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, CONTACTS, DEFAULT_DESTINATION, DESTINATIONS, DESTINATION_IDS, EVIDENCE, EVIDENCE_IDS, LAST_HOURS, MAX_REQUIREMENTS, MAX_SCRUTINY, OFFICERS,
   canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, CONTRADICTIONS, ENCOUNTERS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTIONS, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
 import { queueBeats } from './content/queues';
-import { DEFAULT_LEVEL, levelOf } from './content/levels';
+import { DEFAULT_LEVEL, LEVELS, levelOf } from './content/levels';
+import { en } from '../i18n/en';
 import { has, t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
@@ -55,21 +56,21 @@ const defaultFor = (c: CharacterId): CarriedFile => {
  * A level that reads a file (Level.readsFile) gets the traveler's seeded default file and a
  * played-looking one (SAMPLE_FILES) in a checkerboard over packing and bulletin, so both
  * files meet every packing and every bulletin without doubling the walk. A level with
- * contact statements (Level.statements) gets each of them on every setup.
+ * contact statements (Level.statements) gets each of them on every setup. The destinations of one
+ * packing and bulletin sit next to each other, so the walk can share a memo between them (rulesSee()).
  */
 export function allSetups(level: LevelId = DEFAULT_LEVEL, destinations: readonly DestinationId[] = [DEFAULT_DESTINATION]): RunSetup[] {
   const out: RunSetup[] = [];
   const reads = levelOf({ level }).readsFile;
   const statements = levelOf({ level }).statements ?? [undefined];
   const goes = levelOf({ level }).destinations ? destinations : [undefined];
-  for (const destination of goes)
-    for (const character of CHARACTER_IDS as CharacterId[])
-      combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots).forEach((loadout, i) =>
-        BULLETINS.forEach((bulletin, j) => statements.forEach((statement) => out.push({
-          level, ...(destination ? { destination } : {}), character, loadout, bulletin, seed: 1,
-          ...(reads ? { file: (i + j) % 2 ? SAMPLE_FILES[character] : defaultFor(character) } : {}),
-          ...(statement ? { statement } : {}),
-        }))));
+  for (const character of CHARACTER_IDS as CharacterId[])
+    combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots).forEach((loadout, i) =>
+      BULLETINS.forEach((bulletin, j) => goes.forEach((destination) => statements.forEach((statement) => out.push({
+        level, ...(destination ? { destination } : {}), character, loadout, bulletin, seed: 1,
+        ...(reads ? { file: (i + j) % 2 ? SAMPLE_FILES[character] : defaultFor(character) } : {}),
+        ...(statement ? { statement } : {}),
+      })))));
   return out;
 }
 
@@ -102,7 +103,7 @@ export function outcomes(s: RunState, action: Action): Outcome[] {
       sizes.push(size);
       return { index, rng };
     };
-    const r = tryStep(s, action, dealer);
+    const r = tryStep(s, action, dealer, false);
     const used = sizes.map((_, i) => script[i] ?? 0);
     out.push(r.ok ? { state: r.state, picks: used } : { state: s, picks: used, rejected: r.reason });
     let j = used.length - 1;
@@ -183,10 +184,32 @@ function statementKey(s: RunState): RunState {
   return { ...s, facts: { ...facts, statement: desks } as RunState['facts'], claims: s.claims.map(as), logged: rename(s.logged), saidAt: rename(s.saidAt) };
 }
 
+/**
+ * Destinations the rules tell apart: one a card, effect or level names in a condition
+ * (Cond.destination), or one with its own wording (`<key>.destination.<id>.<part>`).
+ */
+const NAMED_DESTINATIONS: ReadonlySet<DestinationId> = (() => {
+  const content = JSON.stringify([ENCOUNTERS, INSPECTIONS, CHECKS, EVIDENCE, OFFICERS, CONTACTS, CHARACTERS, LEVELS]);
+  const named = new Set<string>([...content.matchAll(/"destination":"(\w+)"/g)].map((m) => m[1]));
+  for (const k of Object.keys(en)) for (const m of k.matchAll(/\.destination\.(\w+)\./g)) named.add(m[1]);
+  return new Set(DESTINATION_IDS.filter((d) => named.has(d)));
+})();
+
+/**
+ * How the rules see a destination: its own id when they name it (NAMED_DESTINATIONS), else
+ * only its travel time. Runs at two unnamed destinations with the same travel time play the
+ * same move for move, so they share one memo and their states merge (the Capital and the South
+ * today), which keeps the walk of every destination inside its budget. The standing rules are
+ * still judged for each of them (enforced()).
+ */
+export const rulesSee = (d: DestinationId | undefined): string =>
+  !d ? '' : NAMED_DESTINATIONS.has(d) ? d : `travel ${DESTINATIONS[d].travel}`;
+
 const key = (state: RunState) => {
   const s = statementKey(state);
   return JSON.stringify({
     ...s,
+    destination: rulesSee(destinationOf(s)),
     facts: factsKey(s),
     seed: 0,
     rng: 0,
@@ -345,12 +368,16 @@ export function checkState(s: RunState): string[] {
   return bad;
 }
 
-/** The standing rules of the run's destination that this card enforces (Requirement.enforcedBy). */
+/**
+ * The standing rules this card enforces (Requirement.enforcedBy) at the run's destination, and
+ * at every destination the rules see the same way (rulesSee()), whose runs share this state.
+ */
 export function enforced(s: RunState): Requirement[] {
   const to = destinationOf(s);
   if (!to || s.reaction || s.screen.kind !== 'encounter') return [];
   const id = s.screen.id;
-  return DESTINATIONS[to].requirements.filter((r) => r.enforcedBy === id);
+  return DESTINATION_IDS.filter((d) => rulesSee(d) === rulesSee(to))
+    .flatMap((d) => DESTINATIONS[d].requirements.filter((r) => r.enforcedBy === id));
 }
 
 /** The open answers on the card that need no document: not a document, not walking away. */
@@ -685,12 +712,16 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
   // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
   // Setups that differ only in the contact statement share one map, because
   // their runs merge (statementKey()).
-  let memo = new Map<string, [number, number, number] | null>();
-  let group = '';
+  // Setups that differ only in a destination the rules see the same way (rulesSee()) share
+  // one too. The last few memos stay, so those setups need only be near each other (allSetups()).
+  const memos = new Map<string, Map<string, [number, number, number] | null>>();
   for (const setup of setups) {
-    const same = JSON.stringify({ ...setup, statement: 0 });
-    if (same !== group) memo = new Map();
-    group = same;
+    const same = JSON.stringify({ ...setup, statement: 0, destination: rulesSee(destinationOf(setup)) });
+    const memo = memos.get(same) ?? new Map<string, [number, number, number] | null>();
+    if (!memos.has(same)) {
+      memos.set(same, memo);
+      for (const old of memos.keys()) if (memos.size > DESTINATION_IDS.length) memos.delete(old);
+    }
     const path: Move[] = [];
     const problem = (rule: string, detail: string, extra?: Move) => {
       if (report.problems.length >= 50) return;
