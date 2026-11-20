@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { en } from './en';
 import { ru } from './ru';
 import { ENCOUNTERS, INSPECTIONS, CHECKS } from '../game/content/encounters';
-import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, OFFICERS } from '../game/content/world';
+import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, DESTINATIONS, DESTINATION_IDS, EVIDENCE, EVIDENCE_IDS, OFFICERS } from '../game/content/world';
 import { QUEUES } from '../game/content/queues';
 import { CHECKPOINTS } from '../game/types';
 
@@ -46,6 +46,10 @@ function contentKeys(): string[] {
   for (const id of EVIDENCE_IDS) keys.push(`ev.${id}.name`, `ev.${id}.desc`, `ev.${id}.label`);
   for (const id of EVIDENCE_IDS) for (const topic of EVIDENCE[id].topics) keys.push(`topic.${topic}.helps`);
   for (const b of BULLETINS) keys.push(`bulletin.${b}`, `bulletin.${b}.cue`);
+  for (const d of DESTINATION_IDS) {
+    keys.push(`destination.${d}.name`, DESTINATIONS[d].town);
+    for (const r of DESTINATIONS[d].requirements) keys.push(r.briefing);
+  }
   for (const cp of CHECKPOINTS) {
     keys.push(`checkpoint.${cp}`, `officer.${cp}`, `officer.${cp}.priority`);
     if (OFFICERS[cp].reactions.length) keys.push(`officer.${cp}.flags`);

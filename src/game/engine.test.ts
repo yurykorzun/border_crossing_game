@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { endingText, factIds, legalActions, loggedAt, newRun, noCost, options, step, travelOf } from './engine';
+import { check, choices, costsOf, destinationOf, endingFor, endingText, factIds, legalActions, loggedAt, newRun, noCost, options, setupOf, step, travelOf } from './engine';
 import { playRun, setupFor } from './bots';
 import { StoryContent } from '../ui/parts';
 import { t, tn } from '../i18n';
@@ -15,10 +15,11 @@ import { CONTENT_VERSION, playStep, replay, tryStep } from './play';
 import type { Move } from './play';
 import { load, save, freshSave } from './save';
 import { nextRandom } from './rng';
-import { allSetups } from './walk';
-import { EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION } from './content/world';
+import { allSetups, enforced } from './walk';
+import { SAMPLE_FILES } from './carry';
+import { DESTINATIONS, DESTINATION_IDS, EVIDENCE, HARMLESS_FACTS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION } from './content/world';
 import { CHECKS, CONTRADICTIONS, CORE_CARDS, ENCOUNTERS, INCONSISTENCIES, INSPECTIONS } from './content/encounters';
-import type { Action, FactId, FactMap, RunState } from './types';
+import type { Action, DestinationId, FactId, FactMap, RunState } from './types';
 
 /** Facts the interview officer knows: the desk most fixtures here are at. */
 const known = (...f: FactId[]): FactMap => Object.fromEntries(f.map((x) => [x, ['interview']]));
@@ -305,6 +306,59 @@ describe('too late endings', () => {
       expect(ka).not.toBe(kb);
       expect(t(ka)).not.toBe(t(kb));
     }
+  });
+});
+
+describe('destinations', () => {
+  const to = (destination: DestinationId, setup: RunSetup = lenaNoSponsor): RunState => newRun({ ...setup, destination });
+  /** Lena with no sponsor for Orvek: no mother's letter packed. */
+  const lenaNoSponsor: RunSetup = { character: 'lena', loadout: ['hotel', 'employerLetter', 'hospitalNote'], bulletin: 'records', seed: 7 };
+
+  it('North with no sponsor still has a costly way through', () => {
+    const s = at(to('north'), 'p_host', { slot: 1 });
+    expect(enforced(s).map((r) => r.id)).toEqual(['north.sponsor']);
+    const open = choices(s).filter((o) => !o.blocked && !o.card && o.approach.kind !== 'evidence');
+    expect(open.map((o) => o.approach.id).sort()).toEqual(['mother', 'undecided']);
+    // Every way through without a sponsor's paper costs something: your mother named, or an hour.
+    for (const o of open) expect(costsOf(s, o), o.approach.id).not.toEqual([]);
+    const n = step(s, { type: 'choose', approach: 'undecided' });
+    expect(s.time - n.time).toBe(1);
+    expect(n.reaction?.map((l) => l.key)).toContain('enc.p_host.undecided.destination.north.reaction');
+    expect(n.ending).toBeNull();
+    // In the Capital the same answer is free: the hour is Orvek's rule, not the clerk's.
+    const capital = at(to('capital'), 'p_host', { slot: 1 });
+    expect(step(capital, { type: 'choose', approach: 'undecided' }).time).toBe(capital.time);
+  });
+
+  it('travel time decides tooLate per region', () => {
+    expect(DESTINATION_IDS.map((d) => [d, travelOf(to(d))])).toEqual([['capital', 2], ['north', 3], ['south', 2]]);
+    for (const d of DESTINATION_IDS) {
+      const s = to(d);
+      const travel = DESTINATIONS[d].travel;
+      expect(endingFor({ ...s, time: travel }), `${d} with ${travel} hours`).toBe('homeInTime');
+      expect(endingFor({ ...s, time: travel - 1 }), `${d} with ${travel - 1} hours`).toBe('tooLate');
+    }
+    // Two hours left at the last desk: in time for the capital, too late for Orvek.
+    expect(endingFor({ ...to('capital'), time: 2 })).toBe('homeInTime');
+    expect(endingFor({ ...to('north'), time: 2 })).toBe('tooLate');
+  });
+
+  it('lets cards read the destination, and keeps it through the same setup', () => {
+    expect(check({ destination: 'north' }, to('north'))).toBe(true);
+    expect(check({ destination: 'north' }, to('south'))).toBe(false);
+    expect(setupOf(to('south')).destination).toBe('south');
+    expect(newRun(setupOf(to('north'))).travel).toBe(3);
+  });
+
+  it('sends an Arrival save from before destinations to the capital, and gives other levels none', () => {
+    const { destination: _, travel: __, ...old } = to('north');
+    expect(destinationOf(old)).toBe('capital');
+    expect(travelOf(old)).toBe(2);
+    const file = SAMPLE_FILES.lena;
+    const departure = newRun({ level: 'departure', character: 'lena', loadout: ['deed', 'hotel', 'motherLetter'], bulletin: 'records', seed: 7, file });
+    expect(departure.destination).toBeUndefined();
+    expect(check({ destination: 'capital' }, departure)).toBe(false);
+    expect(() => newRun({ level: 'departure', destination: 'north', character: 'lena', loadout: ['deed', 'hotel', 'motherLetter'], bulletin: 'records', seed: 7, file })).toThrow(/no destinations/);
   });
 });
 

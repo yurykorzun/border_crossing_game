@@ -486,6 +486,21 @@ export const en: Record<string, string> = {
   'bulletin.accommodation.cue': "Officers are calling hosts to check where you'll stay.",
   'bulletin.records.cue': 'Officers check who you are against old files.',
 
+  // ── Destinations: where in Veyra your father's hospital is (DESTINATIONS). Fictional rules,
+  // two per region, published before packing and the same every run, unlike the bulletin.
+  'destination.capital.name': 'Capital District',
+  'destination.capital.town': 'The capital',
+  'destination.north.name': 'Northern Industrial Region',
+  'destination.north.town': 'Orvek',
+  'destination.south.name': 'Southern Border Province',
+  'destination.south.town': 'The provincial capital',
+  'requirement.capital.accommodation': 'Visitors need registered accommodation.',
+  'requirement.capital.employment': 'Foreign employment gets extra checks.',
+  'requirement.north.sponsor': 'A visit to a restricted town needs a resident or institution to sponsor it.',
+  'requirement.north.electronics': 'Foreign electronics must be declared.',
+  'requirement.south.contacts': 'Cross-border contacts get extra scrutiny.',
+  'requirement.south.medicine': 'Some medicines need authorization.',
+
   // ── Checkpoints
   'checkpoint.passport': 'Passport control',
   'checkpoint.customs': 'Customs',
@@ -714,6 +729,8 @@ export const en: Record<string, string> = {
   'enc.p_host.undecided.label': '"I haven\'t decided yet."',
   'enc.p_host.undecided.reaction': '"You came all this way without a place to sleep?" The clerk moves on.',
   'enc.p_host.undecided.bulletin.accommodation.reaction': '"Hosts are phoned today, and you have none to name?" The clerk flags it.',
+  // Orvek is a restricted town (north.sponsor): with nobody to sponsor you, she phones its permit office.
+  'enc.p_host.undecided.destination.north.reaction': '"Orvek is restricted. Nobody sponsors you?" The clerk phones the town\'s permit office.',
   'enc.p_host.undecidedOnFile.label': '"I haven\'t decided yet."',
   'enc.p_host.undecidedOnFile.reaction': '"Your mother\'s address is on file, and you haven\'t decided?"',
 

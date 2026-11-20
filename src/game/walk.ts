@@ -15,21 +15,22 @@
 
 import {
   DELAY_HOURS, callInsDue, check, checkEffects, claimsTouched, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
-  choices, optionFor, options, routinesLeft, topicOf, travelOf,
+  choices, destinationOf, optionFor, options, routinesLeft, topicOf, travelOf, tripTime,
 } from './engine';
 import { consequences } from './consequence';
 import { SAMPLE_FILES, defaultFile } from './carry';
 import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, LogEntry, RunState } from './types';
+import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, DestinationId, Effect, EndingId, EvidenceId, FactId, LevelId, LogEntry, Requirement, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, DEFAULT_DESTINATION, DESTINATIONS, DESTINATION_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_REQUIREMENTS, MAX_SCRUTINY, OFFICERS,
+  canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, CONTRADICTIONS, ENCOUNTERS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTIONS, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
 import { queueBeats } from './content/queues';
 import { DEFAULT_LEVEL, levelOf } from './content/levels';
-import { t } from '../i18n';
+import { has, t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
 
@@ -48,25 +49,32 @@ const defaultFor = (c: CharacterId): CarriedFile => {
 };
 
 /**
- * Every character x packing x bulletin in one level. The seed only moves cosmetic beats here.
+ * Every character x packing x bulletin in one level, for each of `destinations` in a level that
+ * has them (Level.destinations; Capital alone by default, so the bot sweeps stay their size).
+ * The seed only moves cosmetic beats here.
  * A level that reads a file (Level.readsFile) gets the traveler's seeded default file and a
  * played-looking one (SAMPLE_FILES) in a checkerboard over packing and bulletin, so both
  * files meet every packing and every bulletin without doubling the walk. A level with
  * contact statements (Level.statements) gets each of them on every setup.
  */
-export function allSetups(level: LevelId = DEFAULT_LEVEL): RunSetup[] {
+export function allSetups(level: LevelId = DEFAULT_LEVEL, destinations: readonly DestinationId[] = [DEFAULT_DESTINATION]): RunSetup[] {
   const out: RunSetup[] = [];
   const reads = levelOf({ level }).readsFile;
   const statements = levelOf({ level }).statements ?? [undefined];
-  for (const character of CHARACTER_IDS as CharacterId[])
-    combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots).forEach((loadout, i) =>
-      BULLETINS.forEach((bulletin, j) => statements.forEach((statement) => out.push({
-        level, character, loadout, bulletin, seed: 1,
-        ...(reads ? { file: (i + j) % 2 ? SAMPLE_FILES[character] : defaultFor(character) } : {}),
-        ...(statement ? { statement } : {}),
-      }))));
+  const goes = levelOf({ level }).destinations ? destinations : [undefined];
+  for (const destination of goes)
+    for (const character of CHARACTER_IDS as CharacterId[])
+      combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots).forEach((loadout, i) =>
+        BULLETINS.forEach((bulletin, j) => statements.forEach((statement) => out.push({
+          level, ...(destination ? { destination } : {}), character, loadout, bulletin, seed: 1,
+          ...(reads ? { file: (i + j) % 2 ? SAMPLE_FILES[character] : defaultFor(character) } : {}),
+          ...(statement ? { statement } : {}),
+        }))));
   return out;
 }
+
+/** What the full walk plays in a level: every setup, at every destination the level has. */
+export const walkSetups = (level: LevelId = DEFAULT_LEVEL): RunSetup[] => allSetups(level, DESTINATION_IDS);
 
 /** Worst to best, so a higher rank is a better ending. */
 export const ENDING_RANK: EndingId[] = ['turnedBack', 'tooLate', 'homeAtCost', 'homeInTime'];
@@ -140,6 +148,11 @@ export interface WalkReport {
   afterAnswer: AfterAnswerTally;
   /** Your mother's after-desk messages queuePremises() looked at, by kind. */
   queues: QueueTally;
+  /**
+   * Per standing rule (Requirement.id), at its destination: states that showed its enforcing card,
+   * and how many of them offered an answer that needs no document and costs something.
+   */
+  requirements: Map<string, { shown: number; costly: number }>;
 }
 
 export interface AfterAnswerTally {
@@ -256,7 +269,8 @@ export function repeatInspections(s: RunState): string[] {
 export function checkState(s: RunState): string[] {
   const bad: string[] = [];
   const ch = CHARACTERS[s.character];
-  const { startTime, minTripTime } = levelOf(s);
+  const { startTime } = levelOf(s);
+  const minTripTime = tripTime(s);
   if (s.time < 0 || s.time > startTime) bad.push(`time ${s.time} outside 0..${startTime}`);
   if (s.scrutiny < 0 || s.scrutiny > MAX_SCRUTINY) bad.push(`scrutiny ${s.scrutiny} outside 0..${MAX_SCRUTINY}`);
   if (!s.used.every((id) => s.loadout.includes(id)) || !unique(s.used)) bad.push(`used ${s.used} not a subset of loadout`);
@@ -304,6 +318,7 @@ export function checkState(s: RunState): string[] {
   if (statements.length && (onFile.length !== 1 || s.facts[onFile[0]]!.length !== CHECKPOINTS.length))
     bad.push(`statements on file: [${onFile.map((f) => `${f} at ${s.facts[f]}`)}]`);
   for (const d of repeatInspections(s)) bad.push(d);
+  for (const d of requirementAnswers(s)) bad.push(d);
   // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !s.reaction && options(s).length > 3)
     bad.push(`${s.screen.id} shows ${options(s).length} answers`);
@@ -326,6 +341,70 @@ export function checkState(s: RunState): string[] {
     } catch (e) {
       bad.push((e as Error).message);
     }
+  }
+  return bad;
+}
+
+/** The standing rules of the run's destination that this card enforces (Requirement.enforcedBy). */
+export function enforced(s: RunState): Requirement[] {
+  const to = destinationOf(s);
+  if (!to || s.reaction || s.screen.kind !== 'encounter') return [];
+  const id = s.screen.id;
+  return DESTINATIONS[to].requirements.filter((r) => r.enforcedBy === id);
+}
+
+/** The open answers on the card that need no document: not a document, not walking away. */
+const noDocument = (s: RunState): Option[] =>
+  choices(s).filter((o) => !o.blocked && !o.card && o.approach.kind !== 'evidence' && o.approach.kind !== 'withdraw');
+
+/**
+ * A standing rule is never a wall: whenever its enforcing card is on screen at its destination,
+ * some open answer needs no document (fairness, epic 70r). Whether one of them costs something
+ * is counted across the walk (WalkReport.requirements), because a point settled earlier can
+ * rightly make the answer free on one path.
+ */
+export function requirementAnswers(s: RunState): string[] {
+  const rules = enforced(s);
+  if (!rules.length || noDocument(s).length) return [];
+  return rules.map((r) => `${r.id}: ${r.enforcedBy} offers no answer without a document`);
+}
+
+/**
+ * The fairness rules of the destinations (epic 70r), once the walk is done: every standing rule
+ * has briefing text, published before packing; at most MAX_REQUIREMENTS per destination; every
+ * enforcing card is a card the level deals, is shown at its destination somewhere in the walk, and
+ * there offers an answer that needs no document, at a cost; every setup guarantees at least tooLate
+ * and can reach homeAtCost. Only the destinations among `setups` are judged.
+ */
+export function fairnessProblems(report: Pick<WalkReport, 'setups' | 'requirements'>, setups: readonly RunSetup[]): string[] {
+  const bad: string[] = [];
+  const going = DESTINATION_IDS.filter((d) => setups.some((x) => levelOf(x).destinations && destinationOf(x) === d));
+  for (const d of going) {
+    const rules = DESTINATIONS[d].requirements;
+    if (rules.length > MAX_REQUIREMENTS) bad.push(`${d} has ${rules.length} standing rules, more than ${MAX_REQUIREMENTS}`);
+    if (!has(DESTINATIONS[d].town)) bad.push(`${d} has no text for its town ${DESTINATIONS[d].town}`);
+    for (const r of rules) {
+      if (!has(r.briefing) || !t(r.briefing).trim()) bad.push(`${r.id} has no briefing text at ${r.briefing}`);
+      if (!r.evidence.length && !r.facts.length) bad.push(`${r.id} names nothing that satisfies it`);
+      const card = ENCOUNTER_BY_ID.get(r.enforcedBy);
+      if (!card) {
+        bad.push(`${r.id} is enforced by ${r.enforcedBy}, which is no encounter`);
+        continue;
+      }
+      if (card.topic !== r.topic) bad.push(`${r.id} is about ${r.topic} but ${card.id} asks about ${card.topic ?? 'nothing'}`);
+      const levels = setups.filter((x) => destinationOf(x) === d).map((x) => levelOf(x));
+      if (!levels.some((l) => l.cards.includes(card.id))) bad.push(`${r.id}: no level going to ${d} deals ${card.id}`);
+      const tally = report.requirements.get(r.id);
+      if (!tally?.shown) bad.push(`${r.id}: ${card.id} is never shown going to ${d}`);
+      else if (!tally.costly) bad.push(`${r.id}: ${card.id} never offers an answer without a document that costs something`);
+    }
+  }
+  const atLeast = ENDING_RANK.indexOf('tooLate');
+  const reach = ENDING_RANK.indexOf('homeAtCost');
+  for (const x of report.setups) {
+    const where = `${destinationOf(x.setup) ?? x.setup.level} ${x.setup.character} ${x.setup.bulletin} [${x.setup.loadout}]`;
+    if (ENDING_RANK.indexOf(x.guaranteed) < atLeast) bad.push(`${where} guarantees only ${x.guaranteed}`);
+    if (ENDING_RANK.indexOf(x.best) < reach) bad.push(`${where} can reach only ${x.best}`);
   }
   return bad;
 }
@@ -600,6 +679,7 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     chanceNodes: 0,
     afterAnswer: { checksOut: 0, settles: 0, bagSearches: 0 },
     queues: { call: 0, callRelative: 0, delay: 0, smooth: 0 },
+    requirements: new Map(),
   };
 
   // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
@@ -630,6 +710,12 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
       report.states++;
       for (const d of checkState(s)) problem('state rules', d);
       if (s.screen.kind === 'encounter' || s.screen.kind === 'inspection') report.seenCards.add(s.screen.id);
+      for (const r of enforced(s)) {
+        const tally = report.requirements.get(r.id) ?? { shown: 0, costly: 0 };
+        tally.shown++;
+        if (noDocument(s).some((o) => costsOf(s, o).length)) tally.costly++;
+        report.requirements.set(r.id, tally);
+      }
 
       let value: [number, number, number];
       const actions = legalActions(s);
@@ -709,6 +795,11 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     }
     const value = visit(start);
     report.setups.push({ setup, guaranteed: ENDING_RANK[value[0]], best: ENDING_RANK[value[1]], homeChance: value[2] });
+  }
+  if (setups.length) {
+    const repro: ReplayRecord = { contentVersion: CONTENT_VERSION, setup: setups[0], moves: [] };
+    for (const d of fairnessProblems(report, setups))
+      if (report.problems.length < 50) report.problems.push({ rule: 'fairness', detail: d, repro });
   }
   return report;
 }

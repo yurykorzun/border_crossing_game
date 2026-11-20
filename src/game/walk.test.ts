@@ -1,24 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import designDoc from '../../docs/design.md?raw';
-import { ENDING_RANK, allSetups, checkState, neverPicked, outcomes, walk, warningShares } from './walk';
+import { ENDING_RANK, allSetups, checkState, fairnessProblems, neverPicked, outcomes, requirementAnswers, walk, walkSetups, warningShares } from './walk';
 import { pickedAnswers } from './bots';
 import { legalActions, newRun, step } from './engine';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
-import { BULLETINS, BULLETIN_TOPICS } from './content/world';
+import { BULLETINS, BULLETIN_TOPICS, DESTINATIONS, DESTINATION_IDS } from './content/world';
 import { LEVELS, LEVEL_IDS } from './content/levels';
 import { t } from '../i18n';
 import type { RunState } from './types';
 
 // One walk per level shared by every assertion: every character, packing and
-// bulletin, every player choice and every card the dealer could deal (about 11 s a level).
+// bulletin, at every destination in Arrival, every player choice and every card the dealer could deal.
 for (const level of LEVEL_IDS) {
-  const report = walk(allSetups(level));
+  const started = Date.now();
+  const report = walk(walkSetups(level));
+  const seconds = (Date.now() - started) / 1000;
   const cards = new Set(LEVELS[level].cards);
 
   describe(`every possible run in ${level}`, () => {
     it('covers every setup', () => {
-      expect(report.setups.length).toBe(allSetups(level).length);
+      expect(report.setups.length).toBe(walkSetups(level).length);
     });
+
+    if (LEVELS[level].destinations)
+      it('covers all three destinations with the fairness rules, under 120 s', () => {
+        expect(new Set(report.setups.map((s) => s.setup.destination))).toEqual(new Set(DESTINATION_IDS));
+        expect(DESTINATION_IDS).toHaveLength(3);
+        // Each standing rule's card was shown at its destination and offered a costly answer without a document.
+        for (const d of DESTINATION_IDS)
+          for (const r of DESTINATIONS[d].requirements) {
+            expect(report.requirements.get(r.id)?.shown, r.id).toBeGreaterThan(0);
+            expect(report.requirements.get(r.id)?.costly, r.id).toBeGreaterThan(0);
+          }
+        expect(report.problems.filter((p) => p.rule === 'fairness').map((p) => p.detail)).toEqual([]);
+        expect(seconds).toBeLessThan(120);
+      });
 
     it('breaks no rule in any reachable state', () => {
       // bounds, subsets, no dead ends, no loops, every action moves, endings match
@@ -126,6 +142,28 @@ for (const level of LEVEL_IDS) {
 }
 
 describe('the walker itself', () => {
+  it('flags each broken fairness rule of the destinations', () => {
+    const setups = walkSetups('arrival').filter((x) => x.destination === 'north').slice(0, 1);
+    const requirements = new Map(DESTINATION_IDS.flatMap((d) => DESTINATIONS[d].requirements.map((r) => [r.id, { shown: 1, costly: 1 }] as [string, { shown: number; costly: number }])));
+    const fine = { setup: setups[0], guaranteed: 'tooLate' as const, best: 'homeAtCost' as const, homeChance: 0 };
+    expect(fairnessProblems({ setups: [fine], requirements }, setups)).toEqual([]);
+    // A setup that can be turned back whatever you do, or never gets home.
+    expect(fairnessProblems({ setups: [{ ...fine, guaranteed: 'turnedBack' }], requirements }, setups)).toEqual([expect.stringMatching(/guarantees only turnedBack/)]);
+    expect(fairnessProblems({ setups: [{ ...fine, best: 'tooLate' }], requirements }, setups)).toEqual([expect.stringMatching(/can reach only tooLate/)]);
+    // A standing rule whose card never shows, or only ever offers free or document answers there.
+    const unseen = new Map(requirements).set('north.sponsor', { shown: 0, costly: 0 });
+    expect(fairnessProblems({ setups: [fine], requirements: unseen }, setups)).toEqual(['north.sponsor: p_host is never shown going to north']);
+    const free = new Map(requirements).set('north.electronics', { shown: 4, costly: 0 });
+    expect(fairnessProblems({ setups: [fine], requirements: free }, setups)).toEqual(['north.electronics: c_phone never offers an answer without a document that costs something']);
+  });
+
+  it("finds an answer without a document on a standing rule's card, with or without your mother named", () => {
+    const s = { ...newRun({ ...allSetups()[0], destination: 'north', loadout: ['motherLetter', 'hotel', 'deed'] }), screen: { kind: 'encounter', id: 'p_host' } } as RunState;
+    expect(requirementAnswers(s)).toEqual([]);
+    expect(requirementAnswers({ ...s, exposed: ['mother'] })).toEqual([]);
+    expect(requirementAnswers({ ...s, exposed: ['mother'], facts: { familyAddress: ['passport'] } })).toEqual([]);
+  });
+
   it('flags a broken state', () => {
     const s = newRun(allSetups()[0]);
     expect(checkState({ ...s, scrutiny: 9 })).toHaveLength(1);

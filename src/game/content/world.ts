@@ -2,10 +2,11 @@
 // names and descriptions are in src/i18n/en.ts under the same ids.
 
 import type {
-  OnFileTier, BulletinId, Character, CharacterId, Checkpoint, ClaimId, Contact, ContactId, EvidenceCard, EvidenceId, FactId, Officer, Topic,
+  OnFileTier, BulletinId, Character, CharacterId, Checkpoint, ClaimId, Contact, ContactId, Destination, DestinationId, EvidenceCard, EvidenceId, FactId, Officer, Topic,
 } from '../types';
 
 export const START_TIME = 8;
+/** Hours the trip from the border takes on the crossings that do not go to the hospital (Departure, The funeral). Arrival's comes from its destination (DESTINATIONS). */
 export const MISSION_MIN_TIME = 2;
 export const MAX_SCRUTINY = 3;
 export const SCRUTINY_AFTER_INSPECTION = 1;
@@ -220,6 +221,55 @@ export const BULLETIN_TOPICS: Record<BulletinId, Topic> = {
   // The records scan takes longer: a paper that proves who you are skips it.
   records: 'identity',
 };
+
+/**
+ * The three regions of Veyra your father's hospital can be in (epic border_crossing_game-70r).
+ * Each gives the hours from the last desk to the hospital, which replace the one trip time
+ * Arrival had, and exactly two standing rules. The rules are fictional: no real country's law.
+ * They stay the same from run to run, so a player can learn them, while the bulletin changes.
+ * Names, towns and briefings are in src/i18n/en.ts (destination.<id>.*, requirement.<id>).
+ */
+export const DESTINATIONS: Record<DestinationId, Destination> = {
+  capital: {
+    id: 'capital',
+    town: 'destination.capital.town',
+    travel: 2,
+    requirements: [
+      // Registered accommodation: a booking, a deed, or a registered family address.
+      { id: 'capital.accommodation', topic: 'accommodation', briefing: 'requirement.capital.accommodation', evidence: ['hotel', 'deed'], facts: ['familyAddress'], enforcedBy: 'p_host' },
+      // Extra checks on foreign employment: the clerk wants paper or the register.
+      { id: 'capital.employment', topic: 'work', briefing: 'requirement.capital.employment', evidence: ['employerLetter'], facts: ['employer'], enforcedBy: 'p_employer' },
+    ],
+  },
+  north: {
+    id: 'north',
+    town: 'destination.north.town',
+    // Orvek is a restricted town further away: an hour more than the others.
+    travel: 3,
+    requirements: [
+      // A resident or institution must sponsor a visit to a restricted town: your mother's invitation, or her word on the phone.
+      { id: 'north.sponsor', topic: 'accommodation', briefing: 'requirement.north.sponsor', evidence: ['motherLetter'], facts: ['hostStatement'], enforcedBy: 'p_host' },
+      // Foreign electronics must be declared: the phone, shown to the inspector.
+      { id: 'north.electronics', topic: 'history', briefing: 'requirement.north.electronics', evidence: [], facts: ['phoneSearched'], enforcedBy: 'c_phone' },
+    ],
+  },
+  south: {
+    id: 'south',
+    town: 'destination.south.town',
+    travel: 2,
+    requirements: [
+      // Cross-border contacts get scrutiny: relatives on record, named or found.
+      { id: 'south.contacts', topic: 'history', briefing: 'requirement.south.contacts', evidence: [], facts: ['relativeContact', 'brotherAbroad'], enforcedBy: 'i_family' },
+      // Some medicines need authorization: the hospital's note, or the prescription on file.
+      { id: 'south.medicine', topic: 'medicine', briefing: 'requirement.south.medicine', evidence: ['hospitalNote'], facts: ['fatherCondition'], enforcedBy: 'c_medicine' },
+    ],
+  },
+};
+export const DESTINATION_IDS = Object.keys(DESTINATIONS) as DestinationId[];
+/** Where an Arrival run goes when nothing picked a destination: a save from before destinations, a test fixture. */
+export const DEFAULT_DESTINATION: DestinationId = 'capital';
+/** At most this many standing rules per destination, so the briefing stays learnable (epic 70r non-goals). */
+export const MAX_REQUIREMENTS = 2;
 
 /** Whether a packing has a document on the topic the bulletin warns about. */
 export const coversWarning = (loadout: readonly EvidenceId[], bulletin: BulletinId): boolean =>

@@ -3,12 +3,14 @@
 // "lucky" is the best ending with the kindest deal. Ending shares count
 // branches, not players, so they are a smell, not a balance verdict.
 //
-// Every level in turn (LEVEL_IDS in src/game/content/levels.ts), or only --level.
+// Every level in turn (LEVEL_IDS in src/game/content/levels.ts), or only --level. A level
+// with destinations (Arrival) is walked at each of them, and the fairness rules of the
+// destinations (fairnessProblems() in src/game/walk.ts) are problems like any other.
 // Each level's rules are then played by bots that ignore them (ruleShares() in
 // src/game/bots.ts): a rule earns its place when ignoring it gets home in time
 // less often. --ignore <rule> plays only that rule, in the level that has it.
 import { writeFileSync } from 'node:fs';
-import { ENDING_RANK, allSetups, neverPicked, walk, warningShares } from '../src/game/walk';
+import { ENDING_RANK, neverPicked, walk, walkSetups, warningShares } from '../src/game/walk';
 import { PICKING_STYLES, WALK_SEEDS, pickedAnswers, ruleOf, ruleShares } from '../src/game/bots';
 import { BULLETIN_TOPICS } from '../src/game/content/world';
 import { LEVELS, LEVEL_IDS, isLevelId } from '../src/game/content/levels';
@@ -64,7 +66,7 @@ for (const level of levels) {
   }
 
   const started = Date.now();
-  const r = walk(allSetups(level));
+  const r = walk(walkSetups(level));
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
   const total = Object.values(r.endings).reduce((a, b) => a + b, 0);
   problems += r.problems.length;
@@ -84,17 +86,17 @@ for (const level of levels) {
 
   const best = [...ENDING_RANK].reverse();
   const row = (label: string, list: SetupResult[], pickEnding: (x: SetupResult) => EndingId) =>
-    `  ${label.padEnd(22)} ${best.map((e) => String(list.filter((x) => pickEnding(x) === e).length).padStart(11)).join('')}`;
+    `  ${label.padEnd(32)} ${best.map((e) => String(list.filter((x) => pickEnding(x) === e).length).padStart(11)).join('')}`;
 
   for (const [title, pickEnding] of [
     ['Guaranteed ending (any deal), packings per group', (x: SetupResult) => x.guaranteed],
     ['Lucky ending (best deal), packings per group', (x: SetupResult) => x.best],
   ] as const) {
     console.log(`\n${title}`);
-    console.log(`  ${''.padEnd(22)} ${best.map((e) => e.padStart(11)).join('')}`);
+    console.log(`  ${''.padEnd(32)} ${best.map((e) => e.padStart(11)).join('')}`);
     const groups = new Map<string, SetupResult[]>();
     for (const s of r.setups) {
-      const g = `${s.setup.character} / ${s.setup.bulletin}`;
+      const g = `${s.setup.destination ? `${s.setup.destination} / ` : ''}${s.setup.character} / ${s.setup.bulletin}`;
       groups.set(g, [...(groups.get(g) ?? []), s]);
     }
     for (const [g, list] of groups) console.log(row(g, list, pickEnding));

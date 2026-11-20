@@ -3,7 +3,7 @@
 // Every level uses the same three desks and officers (epic border_crossing_game-rwf).
 
 import type { ClaimId, Level, LevelId } from '../types';
-import { MISSION_MIN_TIME, START_TIME } from './world';
+import { DEFAULT_DESTINATION, DESTINATIONS, MISSION_MIN_TIME, START_TIME } from './world';
 import { ENCOUNTERS, INSPECTIONS, STATEMENTS } from './encounters';
 
 /** Cards only Departure deals: the desks open with your carried file (rwf.3). */
@@ -31,7 +31,10 @@ export const LEVELS: Record<LevelId, Level> = {
     goalTitle: 'mission.title',
     goalBody: 'mission.body',
     startTime: START_TIME,
-    minTripTime: MISSION_MIN_TIME,
+    // The destination's travel time replaces it (DESTINATIONS); this is Capital's, the default.
+    minTripTime: DESTINATIONS[DEFAULT_DESTINATION].travel,
+    // Your father's hospital is in one of three regions, each with two standing rules.
+    destinations: true,
     cards: without(DEPARTURE_ONLY, FUNERAL_ONLY),
     rules: [],
   },
