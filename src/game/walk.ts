@@ -15,21 +15,23 @@
 
 import {
   DELAY_HOURS, callInsDue, check, checkEffects, claimsTouched, checkFindings, costsOf, explainEffects, currentCard, deskOf, doomed, endingFor, escalates, factIds, knows, legalActions, newRun, nextDesk, noCost,
-  choices, optionFor, options, routinesLeft, topicOf, travelOf,
+  choices, destinationOf, optionFor, options, routinesLeft, topicOf, travelOf, tripTime,
 } from './engine';
 import { consequences } from './consequence';
 import { SAMPLE_FILES, defaultFile } from './carry';
 import type { Option, RunSetup } from './engine';
 import type { Dealer } from './rng';
-import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, Effect, EndingId, EvidenceId, FactId, LevelId, LogEntry, RunState } from './types';
+import type { Action, BulletinId, CarriedFile, CharacterId, ClaimId, DestinationId, Effect, EndingId, EvidenceId, FactId, LevelId, LogEntry, Requirement, RunState } from './types';
 import { CHECKPOINTS } from './types';
 import {
-  BULLETINS, CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, canConfirm, coversWarning,
+  BULLETINS, CHARACTERS, CHARACTER_IDS, CONTACTS, DEFAULT_DESTINATION, DESTINATIONS, DESTINATION_IDS, EVIDENCE, EVIDENCE_IDS, LAST_HOURS, MAX_REQUIREMENTS, MAX_SCRUTINY, OFFICERS,
+  canConfirm, coversWarning,
 } from './content/world';
 import { CHECKS, CONTRADICTIONS, ENCOUNTERS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTIONS, INSPECTION_BY_ID, STATEMENTS } from './content/encounters';
 import { queueBeats } from './content/queues';
-import { DEFAULT_LEVEL, levelOf } from './content/levels';
-import { t } from '../i18n';
+import { DEFAULT_LEVEL, LEVELS, levelOf } from './content/levels';
+import { en } from '../i18n/en';
+import { has, t } from '../i18n';
 import { CONTENT_VERSION, tryStep } from './play';
 import type { Move, ReplayRecord } from './play';
 
@@ -48,25 +50,32 @@ const defaultFor = (c: CharacterId): CarriedFile => {
 };
 
 /**
- * Every character x packing x bulletin in one level. The seed only moves cosmetic beats here.
+ * Every character x packing x bulletin in one level, for each of `destinations` in a level that
+ * has them (Level.destinations; Capital alone by default, so the bot sweeps stay their size).
+ * The seed only moves cosmetic beats here.
  * A level that reads a file (Level.readsFile) gets the traveler's seeded default file and a
  * played-looking one (SAMPLE_FILES) in a checkerboard over packing and bulletin, so both
  * files meet every packing and every bulletin without doubling the walk. A level with
- * contact statements (Level.statements) gets each of them on every setup.
+ * contact statements (Level.statements) gets each of them on every setup. The destinations of one
+ * packing and bulletin sit next to each other, so the walk can share a memo between them (rulesSee()).
  */
-export function allSetups(level: LevelId = DEFAULT_LEVEL): RunSetup[] {
+export function allSetups(level: LevelId = DEFAULT_LEVEL, destinations: readonly DestinationId[] = [DEFAULT_DESTINATION]): RunSetup[] {
   const out: RunSetup[] = [];
   const reads = levelOf({ level }).readsFile;
   const statements = levelOf({ level }).statements ?? [undefined];
+  const goes = levelOf({ level }).destinations ? destinations : [undefined];
   for (const character of CHARACTER_IDS as CharacterId[])
     combinations<EvidenceId>(EVIDENCE_IDS, CHARACTERS[character].evidenceSlots).forEach((loadout, i) =>
-      BULLETINS.forEach((bulletin, j) => statements.forEach((statement) => out.push({
-        level, character, loadout, bulletin, seed: 1,
+      BULLETINS.forEach((bulletin, j) => goes.forEach((destination) => statements.forEach((statement) => out.push({
+        level, ...(destination ? { destination } : {}), character, loadout, bulletin, seed: 1,
         ...(reads ? { file: (i + j) % 2 ? SAMPLE_FILES[character] : defaultFor(character) } : {}),
         ...(statement ? { statement } : {}),
-      }))));
+      })))));
   return out;
 }
+
+/** What the full walk plays in a level: every setup, at every destination the level has. */
+export const walkSetups = (level: LevelId = DEFAULT_LEVEL): RunSetup[] => allSetups(level, DESTINATION_IDS);
 
 /** Worst to best, so a higher rank is a better ending. */
 export const ENDING_RANK: EndingId[] = ['turnedBack', 'tooLate', 'homeAtCost', 'homeInTime'];
@@ -94,7 +103,7 @@ export function outcomes(s: RunState, action: Action): Outcome[] {
       sizes.push(size);
       return { index, rng };
     };
-    const r = tryStep(s, action, dealer);
+    const r = tryStep(s, action, dealer, false);
     const used = sizes.map((_, i) => script[i] ?? 0);
     out.push(r.ok ? { state: r.state, picks: used } : { state: s, picks: used, rejected: r.reason });
     let j = used.length - 1;
@@ -140,6 +149,11 @@ export interface WalkReport {
   afterAnswer: AfterAnswerTally;
   /** Your mother's after-desk messages queuePremises() looked at, by kind. */
   queues: QueueTally;
+  /**
+   * Per standing rule (Requirement.id), at its destination: states that showed its enforcing card,
+   * and how many of them offered an answer that needs no document and costs something.
+   */
+  requirements: Map<string, { shown: number; costly: number }>;
 }
 
 export interface AfterAnswerTally {
@@ -170,23 +184,61 @@ function statementKey(s: RunState): RunState {
   return { ...s, facts: { ...facts, statement: desks } as RunState['facts'], claims: s.claims.map(as), logged: rename(s.logged), saidAt: rename(s.saidAt) };
 }
 
+/**
+ * Destinations the rules tell apart: one a card, effect or level names in a condition
+ * (Cond.destination), or one with its own wording (`<key>.destination.<id>.<part>`).
+ */
+const NAMED_DESTINATIONS: ReadonlySet<DestinationId> = (() => {
+  const content = JSON.stringify([ENCOUNTERS, INSPECTIONS, CHECKS, EVIDENCE, OFFICERS, CONTACTS, CHARACTERS, LEVELS]);
+  const named = new Set<string>([...content.matchAll(/"destination":"(\w+)"/g)].map((m) => m[1]));
+  for (const k of Object.keys(en)) for (const m of k.matchAll(/\.destination\.(\w+)\./g)) named.add(m[1]);
+  return new Set(DESTINATION_IDS.filter((d) => named.has(d)));
+})();
+
+/**
+ * How the rules see a destination: its own id when they name it (NAMED_DESTINATIONS), else
+ * only its travel time. Runs at two unnamed destinations with the same travel time play the
+ * same move for move, so they share one memo and their states merge (the Capital and the South
+ * today), which keeps the walk of every destination inside its budget. The standing rules are
+ * still judged for each of them (enforced()).
+ */
+export const rulesSee = (d: DestinationId | undefined): string =>
+  !d ? '' : NAMED_DESTINATIONS.has(d) ? d : `travel ${DESTINATIONS[d].travel}`;
+
+/**
+ * Fields the merge key leaves out or writes its own way. Left out: the seed and the log move
+ * nothing; the level, traveler, bulletin, packing and file are fixed for the whole setup (the
+ * memo is per setup); where and how each claim was said or shown is only read into the next
+ * file; the answers so far are only read by the ending (decisive()).
+ */
+const UNKEYED: ReadonlySet<string> = new Set([
+  'seed', 'rng', 'log', 'file', 'level', 'character', 'bulletin', 'loadout',
+  'saidOn', 'saidAs', 'shownOn', 'shownBy', 'answers', 'destination', 'facts', 'reaction', 'screen',
+]);
+
+/** Each list of field names seen, as a small number, so the key names its fields once. */
+const SHAPES = new Map<string, number>();
+
+/**
+ * The merge key: the state's field names (as their SHAPES number) and their values, with the
+ * destination as the rules see it, the facts as factsKey() and only whether a reaction shows.
+ */
 const key = (state: RunState) => {
   const s = statementKey(state);
-  return JSON.stringify({
-    ...s,
-    facts: factsKey(s),
-    seed: 0,
-    rng: 0,
-    log: 0,
-    // Fixed for the whole setup (the memo is per setup), or only read into the next file.
-    file: 0,
-    saidOn: 0,
-    shownBy: 0,
-    // The answers so far are only read by the ending (decisive()), never by the rules.
-    answers: 0,
-    reaction: s.reaction ? 1 : 0,
-    screen: s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
-  });
+  const fields = s as unknown as Record<string, unknown>;
+  const names = Object.keys(fields);
+  const shape = names.join();
+  let id = SHAPES.get(shape);
+  if (id === undefined) SHAPES.set(shape, (id = SHAPES.size));
+  const values: unknown[] = [id];
+  for (const k of names) if (!UNKEYED.has(k)) values.push(fields[k]);
+  values.push(
+    rulesSee(destinationOf(s)),
+    factsKey(s),
+    s.reaction ? 1 : 0,
+    s.screen.kind === 'wait' ? { ...s.screen, beats: s.screen.beats.length } : s.screen,
+  );
+  return JSON.stringify(values);
 };
 
 const unique = <T>(list: T[]) => new Set(list).size === list.length;
@@ -256,7 +308,8 @@ export function repeatInspections(s: RunState): string[] {
 export function checkState(s: RunState): string[] {
   const bad: string[] = [];
   const ch = CHARACTERS[s.character];
-  const { startTime, minTripTime } = levelOf(s);
+  const { startTime } = levelOf(s);
+  const minTripTime = tripTime(s);
   if (s.time < 0 || s.time > startTime) bad.push(`time ${s.time} outside 0..${startTime}`);
   if (s.scrutiny < 0 || s.scrutiny > MAX_SCRUTINY) bad.push(`scrutiny ${s.scrutiny} outside 0..${MAX_SCRUTINY}`);
   if (!s.used.every((id) => s.loadout.includes(id)) || !unique(s.used)) bad.push(`used ${s.used} not a subset of loadout`);
@@ -304,6 +357,7 @@ export function checkState(s: RunState): string[] {
   if (statements.length && (onFile.length !== 1 || s.facts[onFile[0]]!.length !== CHECKPOINTS.length))
     bad.push(`statements on file: [${onFile.map((f) => `${f} at ${s.facts[f]}`)}]`);
   for (const d of repeatInspections(s)) bad.push(d);
+  for (const d of requirementAnswers(s)) bad.push(d);
   // A card keeps to three answers on screen, the crowded case the layout is built for (docs/design.md, screen rule 8).
   if ((s.screen.kind === 'encounter' || s.screen.kind === 'inspection') && !s.reaction && options(s).length > 3)
     bad.push(`${s.screen.id} shows ${options(s).length} answers`);
@@ -326,6 +380,74 @@ export function checkState(s: RunState): string[] {
     } catch (e) {
       bad.push((e as Error).message);
     }
+  }
+  return bad;
+}
+
+/**
+ * The standing rules this card enforces (Requirement.enforcedBy) at the run's destination, and
+ * at every destination the rules see the same way (rulesSee()), whose runs share this state.
+ */
+export function enforced(s: RunState): Requirement[] {
+  const to = destinationOf(s);
+  if (!to || s.reaction || s.screen.kind !== 'encounter') return [];
+  const id = s.screen.id;
+  return DESTINATION_IDS.filter((d) => rulesSee(d) === rulesSee(to))
+    .flatMap((d) => DESTINATIONS[d].requirements.filter((r) => r.enforcedBy === id));
+}
+
+/** The open answers on the card that need no document: not a document, not walking away. */
+const noDocument = (s: RunState): Option[] =>
+  choices(s).filter((o) => !o.blocked && !o.card && o.approach.kind !== 'evidence' && o.approach.kind !== 'withdraw');
+
+/**
+ * A standing rule is never a wall: whenever its enforcing card is on screen at its destination,
+ * some open answer needs no document (fairness, epic 70r). Whether one of them costs something
+ * is counted across the walk (WalkReport.requirements), because a point settled earlier can
+ * rightly make the answer free on one path.
+ */
+export function requirementAnswers(s: RunState): string[] {
+  const rules = enforced(s);
+  if (!rules.length || noDocument(s).length) return [];
+  return rules.map((r) => `${r.id}: ${r.enforcedBy} offers no answer without a document`);
+}
+
+/**
+ * The fairness rules of the destinations (epic 70r), once the walk is done: every standing rule
+ * has briefing text, published before packing; at most MAX_REQUIREMENTS per destination; every
+ * enforcing card is a card the level deals, is shown at its destination somewhere in the walk, and
+ * there offers an answer that needs no document, at a cost; every setup guarantees at least tooLate
+ * and can reach homeAtCost. Only the destinations among `setups` are judged.
+ */
+export function fairnessProblems(report: Pick<WalkReport, 'setups' | 'requirements'>, setups: readonly RunSetup[]): string[] {
+  const bad: string[] = [];
+  const going = DESTINATION_IDS.filter((d) => setups.some((x) => levelOf(x).destinations && destinationOf(x) === d));
+  for (const d of going) {
+    const rules = DESTINATIONS[d].requirements;
+    if (rules.length > MAX_REQUIREMENTS) bad.push(`${d} has ${rules.length} standing rules, more than ${MAX_REQUIREMENTS}`);
+    if (!has(DESTINATIONS[d].town)) bad.push(`${d} has no text for its town ${DESTINATIONS[d].town}`);
+    for (const r of rules) {
+      if (!has(r.briefing) || !t(r.briefing).trim()) bad.push(`${r.id} has no briefing text at ${r.briefing}`);
+      if (!r.evidence.length && !r.facts.length) bad.push(`${r.id} names nothing that satisfies it`);
+      const card = ENCOUNTER_BY_ID.get(r.enforcedBy);
+      if (!card) {
+        bad.push(`${r.id} is enforced by ${r.enforcedBy}, which is no encounter`);
+        continue;
+      }
+      if (card.topic !== r.topic) bad.push(`${r.id} is about ${r.topic} but ${card.id} asks about ${card.topic ?? 'nothing'}`);
+      const levels = setups.filter((x) => destinationOf(x) === d).map((x) => levelOf(x));
+      if (!levels.some((l) => l.cards.includes(card.id))) bad.push(`${r.id}: no level going to ${d} deals ${card.id}`);
+      const tally = report.requirements.get(r.id);
+      if (!tally?.shown) bad.push(`${r.id}: ${card.id} is never shown going to ${d}`);
+      else if (!tally.costly) bad.push(`${r.id}: ${card.id} never offers an answer without a document that costs something`);
+    }
+  }
+  const atLeast = ENDING_RANK.indexOf('tooLate');
+  const reach = ENDING_RANK.indexOf('homeAtCost');
+  for (const x of report.setups) {
+    const where = `${destinationOf(x.setup) ?? x.setup.level} ${x.setup.character} ${x.setup.bulletin} [${x.setup.loadout}]`;
+    if (ENDING_RANK.indexOf(x.guaranteed) < atLeast) bad.push(`${where} guarantees only ${x.guaranteed}`);
+    if (ENDING_RANK.indexOf(x.best) < reach) bad.push(`${where} can reach only ${x.best}`);
   }
   return bad;
 }
@@ -600,17 +722,22 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     chanceNodes: 0,
     afterAnswer: { checksOut: 0, settles: 0, bagSearches: 0 },
     queues: { call: 0, callRelative: 0, delay: 0, smooth: 0 },
+    requirements: new Map(),
   };
 
   // key -> [guaranteed rank, best rank, homeInTime chance]; null while that state is being explored.
   // Setups that differ only in the contact statement share one map, because
   // their runs merge (statementKey()).
-  let memo = new Map<string, [number, number, number] | null>();
-  let group = '';
+  // Setups that differ only in a destination the rules see the same way (rulesSee()) share
+  // one too. The last few memos stay, so those setups need only be near each other (allSetups()).
+  const memos = new Map<string, Map<string, [number, number, number] | null>>();
   for (const setup of setups) {
-    const same = JSON.stringify({ ...setup, statement: 0 });
-    if (same !== group) memo = new Map();
-    group = same;
+    const same = JSON.stringify({ ...setup, statement: 0, destination: rulesSee(destinationOf(setup)) });
+    const memo = memos.get(same) ?? new Map<string, [number, number, number] | null>();
+    if (!memos.has(same)) {
+      memos.set(same, memo);
+      for (const old of memos.keys()) if (memos.size > DESTINATION_IDS.length) memos.delete(old);
+    }
     const path: Move[] = [];
     const problem = (rule: string, detail: string, extra?: Move) => {
       if (report.problems.length >= 50) return;
@@ -630,6 +757,12 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
       report.states++;
       for (const d of checkState(s)) problem('state rules', d);
       if (s.screen.kind === 'encounter' || s.screen.kind === 'inspection') report.seenCards.add(s.screen.id);
+      for (const r of enforced(s)) {
+        const tally = report.requirements.get(r.id) ?? { shown: 0, costly: 0 };
+        tally.shown++;
+        if (noDocument(s).some((o) => costsOf(s, o).length)) tally.costly++;
+        report.requirements.set(r.id, tally);
+      }
 
       let value: [number, number, number];
       const actions = legalActions(s);
@@ -710,5 +843,62 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     const value = visit(start);
     report.setups.push({ setup, guaranteed: ENDING_RANK[value[0]], best: ENDING_RANK[value[1]], homeChance: value[2] });
   }
+  if (setups.length) {
+    const repro: ReplayRecord = { contentVersion: CONTENT_VERSION, setup: setups[0], moves: [] };
+    for (const d of fairnessProblems(report, setups))
+      if (report.problems.length < 50) report.problems.push({ rule: 'fairness', detail: d, repro });
+  }
   return report;
+}
+
+/**
+ * Setups split by how the rules see their destination (rulesSee()): runs in different groups
+ * never merge, so each group can be walked on its own, at the same time as the others, and
+ * the reports joined with mergeReports(). A level with no destinations is one group.
+ */
+export function walkGroups(setups: RunSetup[]): RunSetup[][] {
+  const groups = new Map<string, RunSetup[]>();
+  for (const x of setups) {
+    const seen = rulesSee(destinationOf(x));
+    groups.set(seen, [...(groups.get(seen) ?? []), x]);
+  }
+  return [...groups.values()];
+}
+
+/** The reports of walks over separate setups (walkGroups()) as one report. */
+export function mergeReports(reports: WalkReport[]): WalkReport {
+  const [first, ...rest] = reports;
+  const out: WalkReport = {
+    ...first,
+    endings: { ...first.endings },
+    problems: [...first.problems],
+    seenCards: new Set(first.seenCards),
+    offered: new Map([...first.offered].map(([card, m]) => [card, new Map(m)])),
+    setups: [...first.setups],
+    afterAnswer: { ...first.afterAnswer },
+    queues: { ...first.queues },
+    requirements: new Map([...first.requirements].map(([id, n]) => [id, { ...n }])),
+  };
+  for (const r of rest) {
+    out.states += r.states;
+    for (const e of ENDING_RANK) out.endings[e] += r.endings[e];
+    out.problems.push(...r.problems.slice(0, 50 - out.problems.length));
+    out.maxDecisions = Math.max(out.maxDecisions, r.maxDecisions);
+    out.maxInspections = Math.max(out.maxInspections, r.maxInspections);
+    for (const c of r.seenCards) out.seenCards.add(c);
+    for (const [card, m] of r.offered) {
+      const mine = out.offered.get(card) ?? new Map<string, number>();
+      for (const [a, n] of m) mine.set(a, (mine.get(a) ?? 0) + n);
+      out.offered.set(card, mine);
+    }
+    out.setups.push(...r.setups);
+    out.chanceNodes += r.chanceNodes;
+    for (const k of Object.keys(out.afterAnswer) as (keyof AfterAnswerTally)[]) out.afterAnswer[k] += r.afterAnswer[k];
+    for (const k of Object.keys(out.queues) as (keyof QueueTally)[]) out.queues[k] += r.queues[k];
+    for (const [id, n] of r.requirements) {
+      const mine = out.requirements.get(id) ?? { shown: 0, costly: 0 };
+      out.requirements.set(id, { shown: mine.shown + n.shown, costly: mine.costly + n.costly });
+    }
+  }
+  return out;
 }

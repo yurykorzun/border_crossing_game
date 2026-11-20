@@ -10,6 +10,8 @@ export type EvidenceId = 'hotel' | 'motherLetter' | 'employerLetter' | 'hospital
 export type Topic = 'purpose' | 'accommodation' | 'stay' | 'work' | 'money' | 'medicine' | 'identity' | 'history';
 export type ContactId = 'mother' | 'cousin' | 'brother';
 export type BulletinId = 'customs' | 'accommodation' | 'records';
+/** Where in Veyra your father's hospital is (DESTINATIONS in src/game/content/world.ts). */
+export type DestinationId = 'capital' | 'north' | 'south';
 
 /** What officials know. Shown to the player as On file cards. */
 export type FactId =
@@ -69,6 +71,8 @@ export interface Cond {
   character?: CharacterId;
   background?: BackgroundId;
   bulletin?: BulletinId;
+  /** The run's destination (destinationOf() in src/game/engine.ts). Never holds in a level without destinations. */
+  destination?: DestinationId;
   /** Known at the current desk (not anywhere on the crossing). */
   facts?: FactId[];
   noFacts?: FactId[];
@@ -457,6 +461,38 @@ export interface EvidenceCard {
   stayed?: Stayed;
 }
 
+/**
+ * A standing entry rule of one destination (fictional, DESTINATIONS in src/game/content/world.ts):
+ * published before packing, and learnable across runs, unlike the bulletin.
+ */
+export interface Requirement {
+  id: string;
+  /** What the rule asks about. */
+  topic: Topic;
+  /** i18n key of the briefing line, shown before packing. */
+  briefing: string;
+  /** Documents that satisfy it. */
+  evidence: readonly EvidenceId[];
+  /** Facts that satisfy it once on file. */
+  facts: readonly FactId[];
+  /**
+   * The encounter that enforces it. It always has an answer that needs no document, at a cost,
+   * so the rule is never a wall (fairnessProblems() in src/game/walk.ts).
+   */
+  enforcedBy: string;
+}
+
+/** One region of Veyra: the hospital town, the hours from the last desk to it, and its standing rules. */
+export interface Destination {
+  id: DestinationId;
+  /** i18n key of the hospital town. */
+  town: string;
+  /** Hours the trip from the border to the hospital takes: the run needs at least this many left. */
+  travel: number;
+  /** Its standing rules: two at most (fairnessProblems() in src/game/walk.ts). */
+  requirements: readonly Requirement[];
+}
+
 /** A level: one crossing, with its own clock, goal and cards (LEVELS in src/game/content/levels.ts). */
 export type LevelId = 'arrival' | 'departure' | 'funeral';
 
@@ -491,8 +527,13 @@ export interface Level {
   goalBody: string;
   /** Hours until the last bus when the run starts. */
   startTime: number;
-  /** Hours the trip from the border takes: the run needs at least this many left. */
+  /**
+   * Hours the trip from the border takes: the run needs at least this many left. In a level
+   * with destinations the destination's travel time replaces it (tripTime() in src/game/engine.ts).
+   */
   minTripTime: number;
+  /** The run goes to one of DESTINATIONS (RunSetup.destination): Arrival, to your father's hospital. */
+  destinations?: true;
   /** Encounter and inspection ids this level can deal. Follow-ups and challenges come from what was dealt. */
   cards: readonly string[];
   /** The rules this level adds. Level 1 adds none. */
@@ -713,6 +754,8 @@ export interface RunState {
   rng: number;
   character: CharacterId;
   bulletin: BulletinId;
+  /** Where the hospital is, in a level with destinations. Unset in other levels; unset in an Arrival save from before it existed: Capital. */
+  destination?: DestinationId;
   loadout: EvidenceId[];
   used: EvidenceId[];
   exposed: ContactId[];

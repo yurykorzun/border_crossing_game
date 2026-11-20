@@ -2,12 +2,12 @@
 // and returns the next state. The UI only renders state and sends actions.
 
 import type {
-  Action, AnswerLabel, Approach, BulletinId, CarriedClaim, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
+  Action, AnswerLabel, Approach, BulletinId, CarriedClaim, DestinationId, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
   CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, InspectionResult, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, CORE_CARDS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
@@ -16,8 +16,13 @@ import { nextRandom, randomDealer } from './rng';
 import type { Dealer } from './rng';
 
 export interface RunSetup {
-  /** The level to play (LEVELS in src/game/content/levels.ts). Unset: Arrival. A destination (70r.1) sits beside it. */
+  /** The level to play (LEVELS in src/game/content/levels.ts). Unset: Arrival. */
   level?: LevelId;
+  /**
+   * Where your father's hospital is (DESTINATIONS in src/game/content/world.ts), in a level
+   * with destinations (Level.destinations). Unset there: Capital. A level without them refuses one.
+   */
+  destination?: DestinationId;
   character: CharacterId;
   loadout: EvidenceId[];
   bulletin: BulletinId;
@@ -87,6 +92,8 @@ export function newRun(setup: RunSetup): RunState {
   // One traveler's file never opens another's crossing.
   if (setup.file && setup.file.character !== ch.id) throw new Error(`${setup.file.character}'s file cannot open ${ch.id}'s crossing`);
   const statement = statementOf(setup);
+  if (setup.destination && !level.destinations) throw new Error(`${level.id} has no destinations`);
+  const destination = level.destinations ? setup.destination ?? DEFAULT_DESTINATION : undefined;
   // Old records the passport desk has at once (Character.onFile).
   const onFile = (ch.onFile ?? []).reduce<FactMap>((m, f) => teach(m, f, desksLearning(setup.bulletin, 'passport')), {});
   return {
@@ -97,12 +104,13 @@ export function newRun(setup: RunSetup): RunState {
     rng: setup.seed,
     character: ch.id,
     bulletin: setup.bulletin,
+    ...(destination ? { destination } : {}),
     loadout: [...setup.loadout],
     used: [],
     exposed: [],
     calledIn: [],
     time: level.startTime,
-    travel: level.minTripTime,
+    travel: tripTime({ level: level.id, destination }),
     scrutiny: ch.startScrutiny,
     // Leaving, every desk has your entry record from the crossing in.
     // A contact statement was given before you came, so every desk has it too.
@@ -142,10 +150,24 @@ export const setupOf = (s: RunState): RunSetup => ({
   character: s.character,
   loadout: [...s.loadout],
   bulletin: s.bulletin,
+  ...(destinationOf(s) ? { destination: destinationOf(s) } : {}),
   seed: s.seed,
   ...(s.file ? { file: s.file } : {}),
   ...(statementIn(s) ? { statement: statementIn(s) } : {}),
 });
+
+/** Where the run goes: its destination, Capital in an Arrival save from before destinations, none in a level without them. */
+export const destinationOf = (s: { level?: LevelId; destination?: DestinationId }): DestinationId | undefined =>
+  levelOf(s).destinations ? s.destination ?? DEFAULT_DESTINATION : undefined;
+
+/**
+ * Hours the trip from the border takes before anything delays it: the destination's travel
+ * time in a level with destinations, else the level's minTripTime.
+ */
+export function tripTime(s: { level?: LevelId; destination?: DestinationId }): number {
+  const to = destinationOf(s);
+  return to ? DESTINATIONS[to].travel : levelOf(s).minTripTime;
+}
 
 /** The contact statement on this run's file, if its level has them. */
 const statementIn = (s: RunState): FactId | undefined => levelOf(s).statements?.find((f) => s.facts[f]);
@@ -234,6 +256,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.character && cond.character !== s.character) return false;
   if (cond.background && !ch.background.includes(cond.background)) return false;
   if (cond.bulletin && cond.bulletin !== s.bulletin) return false;
+  if (cond.destination && cond.destination !== destinationOf(s)) return false;
   if (cond.facts && !cond.facts.every((f) => knows(s, f))) return false;
   if (cond.noFacts && cond.noFacts.some((f) => knows(s, f))) return false;
   if (cond.claims && !cond.claims.every((c) => s.claims.includes(c))) return false;
@@ -391,6 +414,16 @@ export const vouchTopic = (a: Approach, topic: Topic | undefined): Topic | null 
  * is visible.
  */
 export function options(s: RunState): Option[] {
+  const known = OPTIONS.get(s);
+  if (known) return known;
+  const out = rowsOf(s);
+  OPTIONS.set(s, out);
+  return out;
+}
+/** options() per state object, like CHOICES. */
+const OPTIONS = new WeakMap<RunState, Option[]>();
+
+function rowsOf(s: RunState): Option[] {
   const all = choices(s);
   // The list behind "Show a document": only the packed documents that answer, each with its own cost.
   if (s.documentList) return all.filter((o) => o.approach.id === s.documentList && o.card);
@@ -409,10 +442,26 @@ export const documentsOf = (s: RunState, o: Option): Option[] =>
   o.documents ? options({ ...s, documentList: o.approach.id }) : [];
 
 /**
+ * choices() for each state object already asked. A state is never changed after it is made
+ * (step() returns a new one), so its answers never change either. The walk asks the same
+ * state's answers several times per move, and this keeps the destinations walk inside its budget.
+ */
+const CHOICES = new WeakMap<RunState, Option[]>();
+
+/**
  * Every answer the card has, with one per packed document that fits, before
  * options() puts two or more documents behind one "Show a document" row.
+ * The list is shared between callers: read it, never change it.
  */
 export function choices(s: RunState): Option[] {
+  const known = CHOICES.get(s);
+  if (known) return known;
+  const out = answersOf(s);
+  CHOICES.set(s, out);
+  return out;
+}
+
+function answersOf(s: RunState): Option[] {
   const card = currentCard(s);
   if (!card) return [];
   const ch = CHARACTERS[s.character];
@@ -951,7 +1000,7 @@ function apply(s: RunState, effects: Effect[]): RunState {
 }
 
 /** Hours the trip from the border to the bus takes: the run needs at least this many left. */
-export const travelOf = (s: Pick<RunState, 'travel' | 'level'>): number => s.travel ?? levelOf(s).minTripTime;
+export const travelOf = (s: Pick<RunState, 'travel' | 'level' | 'destination'>): number => s.travel ?? tripTime(s);
 
 /**
  * The bus is out of reach: fewer hours left than the trip takes. Time never
@@ -964,7 +1013,7 @@ export const doomed = (s: RunState): boolean => !s.ending && !s.withdrew && s.ti
  * The hours this crossing can still spend and make the bus: hours left minus the
  * trip after the border. Shown next to the answers as one line (afford()).
  */
-export const spareHours = (s: Pick<RunState, 'time' | 'travel' | 'level'>): number => s.time - travelOf(s);
+export const spareHours = (s: Pick<RunState, 'time' | 'travel' | 'level' | 'destination'>): number => s.time - travelOf(s);
 
 /** The time budget line next to the answers ("You can afford 1 hour."), or undefined once the bus is lost. */
 export function afford(s: RunState): { key: string; n: number } | undefined {
@@ -1328,6 +1377,9 @@ export function answerKey(s: RunState, approach: string, part: 'label' | 'reacti
   if (filed && has(filed)) return filed;
   const daily = own(`${prefix}.${id}.${approach}.bulletin.${s.bulletin}.${part}`, s.character);
   if (has(daily)) return daily;
+  // The destination's wording, when its standing rule changes what the answer does (DESTINATIONS).
+  const regional = destinationOf(s) && own(`${prefix}.${id}.${approach}.destination.${destinationOf(s)}.${part}`, s.character);
+  if (regional && has(regional)) return regional;
   return own(`${prefix}.${id}.${approach}.${part}`, s.character);
 }
 
@@ -1565,11 +1617,14 @@ function shownOrSpoken(s: RunState, n: RunState, opt: Option, topic: Topic | und
   const vars: Record<string, string> = {};
   if (opt.card) vars.card = vars.cardThe = opt.card;
   if (opt.contact) vars.contact = vars.contactMine = opt.contact;
-  const answer: AnswerLabel = { id: opt.approach.id, key: answerKey(s, opt.approach.id, 'label'), ...(opt.card || opt.contact ? { vars } : {}) };
+  // Worked out only for an answer that makes a claim, because most answers make none.
+  let answer: AnswerLabel | undefined;
+  const label = (): AnswerLabel =>
+    (answer ??= { id: opt.approach.id, key: answerKey(s, opt.approach.id, 'label'), ...(opt.card || opt.contact ? { vars } : {}) });
   for (const c of claimsIn(opt.effects)) {
     // Said here for the first time, or said aloud after only a document had made it.
     if (!fromDoc.includes(c) && out.claims.includes(c) && (!s.claims.includes(c) || s.shownBy?.[c]))
-      out = { ...out, saidAs: { ...out.saidAs, [c]: answer } };
+      out = { ...out, saidAs: { ...out.saidAs, [c]: label() } };
     if (fromDoc.includes(c)) {
       if (!s.claims.includes(c) && opt.card) out = { ...out, shownBy: { ...out.shownBy, [c]: opt.card } };
     } else if (out.shownBy?.[c]) {
@@ -1706,6 +1761,16 @@ export const canFinish = (s: RunState): boolean =>
 
 /** Everything the player can do right now, for tests and the autoplay bot. */
 export function legalActions(s: RunState): Action[] {
+  const known = LEGAL.get(s);
+  if (known) return known;
+  const out = actionsOf(s);
+  LEGAL.set(s, out);
+  return out;
+}
+/** legalActions() per state object, like CHOICES: shared between callers, never changed. */
+const LEGAL = new WeakMap<RunState, Action[]>();
+
+function actionsOf(s: RunState): Action[] {
   if (s.ending) return [];
   if (s.reaction) return [{ type: 'ack' }];
   const sc: Screen = s.screen;

@@ -138,6 +138,8 @@ describe('a time cost names what the hours are spent on', () => {
     'enc.p_photo.questions': { always: 2, most: 3 },
     'enc.p_secondPassport.handOver': { always: 1, most: 2 },
     'enc.p_employer.check': { always: 1, most: 1 },
+    // No place to stay costs an hour only on the way to Orvek, a restricted town (70r.1).
+    'enc.p_host.undecided': { always: 0, most: 1 },
     'enc.c_medicine.declare': { always: 1, most: 2 },
     'enc.c_cash.count': { always: 1, most: 1 },
     'enc.c_shortTrip.admit': { always: 1, most: 1 },

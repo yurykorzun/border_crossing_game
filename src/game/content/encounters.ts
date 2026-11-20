@@ -201,6 +201,9 @@ export const ENCOUNTERS: Encounter[] = [
           { fact: 'noBooking', when: { claims: ['shortTrip'] } },
           { fact: 'noBooking', when: { bulletin: 'accommodation' } },
           { scrutiny: 1, reason: 'noBooking', when: { bulletin: 'accommodation' } },
+          // Orvek is a restricted town (north.sponsor): with no host to sponsor you, the
+          // clerk phones the town's permit office. An hour, but you get through.
+          { time: -1, when: { destination: 'north' } },
         ],
       },
       {
