@@ -1338,7 +1338,7 @@ const saidDesk = (s: RunState, c: ClaimId): Checkpoint => s.saidAt?.[c] ?? logge
 export function spotLine(s: RunState, claimed: ClaimId, found: SpotResult): LogEntry {
   // The claim in this traveler's own wording when there is one: Mark's denial is
   // claim.noOtherFamily.mark, about the border, not Lena's relatives here.
-  const vars: Record<string, string> = { claim: own(`claim.${claimed}`, s.character).slice('claim.'.length), hours: String(SPOT_CHECK_HOURS) };
+  const vars: Record<string, string | number> = { claim: own(`claim.${claimed}`, s.character).slice('claim.'.length), n: SPOT_CHECK_HOURS };
   if (found.result === 'explained') {
     // Like a challenge card (caught()): your words, where you said them, and the fact
     // that makes them look odd. No inconsistency claim has a traveler's own wording,

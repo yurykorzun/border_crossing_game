@@ -58,7 +58,7 @@ describe('tabletop cards', () => {
   it("prints the security officer's scrutiny for naming Tom, as the engine adds it (officerFlags)", () => {
     const card = tt.html.split('<div class="card').find((c) => c.includes('<div class="id">i_family</div>'))!;
     const row = card.split('<li>').find((r) => r.includes(en['fact.brotherAbroad.reveal']))!;
-    expect(row).toContain(`${en['ui.line.scrutiny'].replace('{n}', '1')} <i>(`);
+    expect(row).toContain(`${en['ui.line.scrutiny#other'].replace('{n}', '1')} <i>(`);
     expect(row).toContain(`${en['fact.brotherAbroad'].toLowerCase()} not on file`);
   });
 });

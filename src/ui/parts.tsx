@@ -22,7 +22,7 @@ export function TopStrip({ s, onScrutiny }: { s: RunState; onScrutiny: () => voi
   const level = Math.min(s.scrutiny, MAX_SCRUTINY);
   const now = shownCheckpoint(s);
   const hours = tn('ui.hours', s.time);
-  const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
+  const count = t('ui.progressCount', { step: now + 1, total: CHECKPOINTS.length });
   const start = levelOf(s).startTime;
   const left = Math.max(0, Math.min(s.time, start)) / start;
   // The hours the trip to the bus needs: once the bar runs past this mark, the last bus is gone.

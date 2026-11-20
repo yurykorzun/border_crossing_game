@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { en } from './en';
+import { ru } from './ru';
 import { ENCOUNTERS, INSPECTIONS, CHECKS } from '../game/content/encounters';
 import { BEAT_COUNT, BULLETINS, CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, OFFICERS } from '../game/content/world';
 import { QUEUES } from '../game/content/queues';
@@ -92,10 +93,10 @@ describe('English text', () => {
 
   // One clock only: the mission card sets up the last bus, not days of leave (BeginStep).
   it('sets up the last bus on the mission card', () => {
-    expect(en['ui.lastBus.other']).toMatch(/^Last bus/);
-    expect(en['ui.lastBus.other']).toContain('{n} hours');
-    expect(en['ui.allowTravel.other']).toContain('{n} hours');
-    for (const k of ['mission.title', 'mission.body', 'ui.lastBus.other', 'ui.allowTravel.other']) expect(en[k]).not.toMatch(/days of leave/);
+    expect(en['ui.lastBus#other']).toMatch(/^Last bus/);
+    expect(en['ui.lastBus#other']).toContain('{n} hours');
+    expect(en['ui.allowTravel#other']).toContain('{n} hours');
+    for (const k of ['mission.title', 'mission.body', 'ui.lastBus#other', 'ui.allowTravel#other']) expect(en[k]).not.toMatch(/days of leave/);
   });
 
   // The final check says Before you cross; Begin the crossing is only the button (g0q.3).
@@ -104,13 +105,27 @@ describe('English text', () => {
     expect(Object.values(en).filter((v) => v === 'Begin the crossing')).toHaveLength(1);
   });
 
-  it('has both plural forms for every plural key', () => {
-    const keys = Object.keys(en);
-    const missing = keys
-      .filter((k) => k.endsWith('.one') || k.endsWith('.other'))
-      .map((k) => k.replace(/\.(one|other)$/, ''))
-      .filter((base) => !(`${base}.one` in en && `${base}.other` in en));
-    expect(missing).toEqual([]);
+  // A count is a plural key, `<key>#<CLDR category>`, read by t(key, { n }) through
+  // Intl.PluralRules. Every one has the #other form t() falls back to, and any text
+  // with {n} is one, so a number never lands in a sentence that cannot agree with it.
+  describe.each([['en', en], ['ru', ru]] as const)('%s plural keys', (_, table) => {
+    it('use CLDR category names', () => {
+      expect(Object.keys(table).filter((k) => k.includes('#') && !/#(zero|one|two|few|many|other)$/.test(k))).toEqual([]);
+    });
+
+    it('each have an #other form', () => {
+      const bases = Object.keys(table).filter((k) => k.includes('#')).map((k) => k.slice(0, k.indexOf('#')));
+      expect([...new Set(bases)].filter((b) => !(`${b}#other` in table))).toEqual([]);
+    });
+
+    it('hold every text that takes {n}', () => {
+      expect(Object.entries(table).filter(([k, v]) => v.includes('{n}') && !k.includes('#')).map(([k]) => k)).toEqual([]);
+    });
+
+    it('never share a name with a plain key', () => {
+      const bases = new Set(Object.keys(table).filter((k) => k.includes('#')).map((k) => k.slice(0, k.indexOf('#'))));
+      expect([...bases].filter((b) => b in table)).toEqual([]);
+    });
   });
 
   it("states every officer's priority in one sentence", () => {

@@ -226,7 +226,7 @@ interface NextLevel { level: LevelId; character: CharacterId }
  */
 const stepCount = (steps: readonly SetupStep[], step: SetupStep) => {
   const counted: readonly SetupStep[] = steps.filter((s) => s !== 'level');
-  return t('ui.progressCount', { n: counted.indexOf(step) + 1, total: counted.length });
+  return t('ui.progressCount', { step: counted.indexOf(step) + 1, total: counted.length });
 };
 
 // Before the first ending (firstRun) there is no traveler to choose yet: Setup opens on the
@@ -387,7 +387,7 @@ function LevelStep({ levelsFinished, onPick }: { levelsFinished: readonly LevelI
           {levelRows(levelsFinished).map(({ level: l, open, opensAfter }) => (
             <li key={l.id}>
               <button type="button" className="level" data-level={l.id} disabled={!open} onClick={() => onPick(l.id)}>
-                <span className="mono level-number">{t('ui.levelNumber', { n: l.number })}</span>
+                <span className="mono level-number">{t('ui.levelNumber', { number: l.number })}</span>
                 <strong className="level-name">{t(l.title)}</strong>
                 <span className="level-line">{opensAfter ? t(opensAfter.key, { level: t(opensAfter.level.title) }) : t(l.blurb)}</span>
               </button>

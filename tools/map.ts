@@ -198,7 +198,7 @@ ${box('Setup 1: Choose your traveler', `Premise: “${txt('ui.premise')}” · �
 ${arrow()}
 ${box('Setup 2: Pack your documents', `“${txt('ui.prepareDocuments')}”: ${W.CHARACTER_IDS.map((c) => `${en[`char.${c}.name`]} packs ${W.CHARACTERS[c].evidenceSlots}`).join(', ')} of ${W.EVIDENCE_IDS.length} documents. Today's bulletin warns what the desks check today (one of ${W.BULLETINS.join(', ')}).`)}
 ${arrow()}
-${box('Setup 3: Before you cross', `“${txt('ui.beforeYouCross')}”: ${txt('ui.lastBus.other')} ${txt('ui.allowTravel.other')} [${txt('ui.beginCrossing')}] or [${txt('ui.changeDocuments')}]`)}
+${box('Setup 3: Before you cross', `“${txt('ui.beforeYouCross')}”: ${txt('ui.lastBus#other')} ${txt('ui.allowTravel#other')} [${txt('ui.beginCrossing')}] or [${txt('ui.changeDocuments')}]`)}
 ${arrow('queue scene, phone messages, then up to the desk')}
 ${box('Desk 1: Passport control', 'Two core cards always, then at most one follow-up on an open issue. A caught lie deals a challenge card before you leave the desk. You may turn back while in the passport queue.', 'desk')}
 ${arrow()}
