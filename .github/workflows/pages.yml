@@ -4,6 +4,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, worktree-prototype]
+  # A PR runs the tests too, so a broken job shows before the merge rather than as a failed deploy.
+  pull_request:
+    branches: [main, worktree-prototype]
   workflow_dispatch:
 
 permissions:
@@ -11,8 +14,9 @@ permissions:
   pages: write
   id-token: write
 
+# A PR run gets its own group, because sharing `pages` would cancel a deploy in progress.
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
@@ -65,6 +69,7 @@ jobs:
 
   deploy:
     needs: [build, sweep, walk]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
