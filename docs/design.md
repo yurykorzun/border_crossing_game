@@ -368,7 +368,7 @@ English first, built for translation from day one:
 1. All player-facing text lives in `src/i18n/<locale>.ts`, keyed by content id (`enc.<id>.q`, `enc.<id>.<approach>.label`). Game logic files hold no prose.
 2. A test fails when English is missing a key the content uses, so holes fail loudly (Alexis pattern).
 3. Other locales may be partial and fall back to English, and a script reports their coverage.
-4. Numbers and plurals go through `Intl.PluralRules`, no string concatenation of sentences.
+4. Numbers and plurals go through `Intl.PluralRules`, no string concatenation of sentences. A count is a plural key with one entry per CLDR category (`ui.hours#one`, `#few`, `#many`, `#other`), and `t(key, { n })` picks the form for the locale, falling back to `#other`. Any text with `{n}` is a plural key, and every plural key has `#other` (`src/i18n/keys.test.ts`). The locale is `en` or `ru` (`setLocale()`): Russian starts as an empty table that falls back to English, and `<html lang>` follows the locale.
 5. Layout leaves room for ~30% longer text (German, Russian), and buttons wrap instead of truncating.
 6. Not yet: RTL, locale-specific art.
 

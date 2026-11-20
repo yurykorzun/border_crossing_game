@@ -108,7 +108,7 @@ function checkEnding(p: Played, file: CarriedFile | undefined, where: string, se
   if (rest) seen.rest++;
   if (p.relative) seen.relative++;
   if (laterBeat(s) && !consequences(s).length) seen.beatOnly++;
-  if (rest) expect(shown, where).toContain(t(`ending.decided.rest.${rest === 1 ? 'one' : 'other'}`, { n: String(rest) }));
+  if (rest) expect(shown, where).toContain(t('ending.decided.rest', { n: rest }));
   else expect(html, where).not.toContain('class="decided-rest"');
   const headings = html.split('class="mono later-heading"').length - 1;
   expect(headings, `${where}: one heading for the costs, none without them`).toBe(consequences(s).length ? 1 : 0);

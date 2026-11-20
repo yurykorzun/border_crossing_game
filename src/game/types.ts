@@ -625,7 +625,7 @@ export type QueueMood = 'call' | 'callRelative' | 'delay' | 'smooth';
 export interface LogEntry {
   /** i18n key of the line shown after a choice. */
   key: string;
-  vars?: Record<string, string>;
+  vars?: Record<string, string | number>;
   /** Set on a reaction against you: a challenge answered, a fact the officer flags or reads something into. */
   kind?: ReactionKind;
 }

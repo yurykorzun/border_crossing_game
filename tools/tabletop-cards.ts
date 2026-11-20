@@ -40,12 +40,16 @@ const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 export function buildTabletop(en: Record<string, string>): Tabletop {
   const missing: string[] = [];
   /** A card's text. A missing key is recorded and prints as the key, so the PDF shows the gap. */
-  const t = (k: string, vars: Record<string, string | number | (() => string)> = {}) => {
+  const plural = new Intl.PluralRules('en');
+  const t = (key: string, vars: Record<string, string | number | (() => string)> = {}) => {
+    // A count reads its plural form (`ui.hours#one`), as t() in src/i18n does.
+    const n = vars.n;
+    const k = key in en || typeof n !== 'number' ? key : [`${key}#${plural.select(n)}`, `${key}#other`].find((f) => f in en) ?? `${key}#other`;
     if (!(k in en)) { if (!missing.includes(k)) missing.push(k); return `[${k}]`; }
     return en[k].replace(/\{(\w+)\}/g, (m, v) => { const x = vars[v]; return x === undefined ? m : typeof x === 'function' ? x() : String(x); });
   };
   const has = (k: string) => k in en;
-  const hours = (n: number) => t(n === 1 ? 'ui.hours.one' : 'ui.hours.other', { n });
+  const hours = (n: number) => t('ui.hours', { n });
   const charOf = (bg: string) => W.CHARACTER_IDS.find((c) => (W.CHARACTERS[c].background as string[]).includes(bg));
   const name = (c: string) => t(`char.${c}.name`);
 
@@ -80,10 +84,10 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
 
   /** What one effect costs or establishes, as a printed line. */
   function effect(e: Effect, event?: string): { cost?: string; gives?: string } {
-    if ('time' in e) return { cost: event ? t(-e.time === 1 ? 'ui.line.event.one' : 'ui.line.event.other', { event, n: -e.time }) : `−${hours(-e.time)}` };
+    if ('time' in e) return { cost: event ? t('ui.line.event', { event, n: -e.time }) : `−${hours(-e.time)}` };
     if ('scrutiny' in e) return { cost: t('ui.line.scrutiny', { n: e.scrutiny }) };
     if ('loseMedicine' in e) return { cost: t('ui.line.medicine') };
-    if ('travel' in e) return { cost: t(e.travel === 1 ? 'ui.line.travel.one' : 'ui.line.travel.other', { n: e.travel }) };
+    if ('travel' in e) return { cost: t('ui.line.travel', { n: e.travel }) };
     if ('claim' in e) return { gives: `${t(`claim.${e.claim}.recorded`)}: "${t(`claim.${e.claim}`)}"` };
     if ('fact' in e) return { gives: t(`fact.${e.fact}.reveal`) };
     if ('send' in e) return { gives: e.facts ? t('tabletop.sent', { facts: e.facts.map((f) => t(`fact.${f}`).toLowerCase()).join(', ') }) : t('tabletop.sentAll') };
@@ -203,7 +207,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     const ch = W.CHARACTERS[id];
     cards.push(`<div class="card trav"><div class="kind">${esc(t('ui.traveler'))} · ${esc(t(`char.${id}.role`))}</div><div class="qt">${esc(name(id))}</div>
       <p>${esc(t(`char.${id}.blurb`))}</p>
-      <div class="cost">${esc(t(ch.evidenceSlots === 1 ? 'ui.line.documents.one' : 'ui.line.documents.other', { n: ch.evidenceSlots }))} · ${esc(t('ui.scrutinyCount', { n: ch.startScrutiny, max: W.MAX_SCRUTINY }))}</div>
+      <div class="cost">${esc(t('ui.line.documents', { n: ch.evidenceSlots }))} · ${esc(t('ui.scrutinyCount', { n: ch.startScrutiny, max: W.MAX_SCRUTINY }))}</div>
       <p><b>+</b> ${esc(t(`char.${id}.advantage`))}</p><p><b>−</b> ${esc(t(`char.${id}.complication`))}</p>
       <div class="gives">${esc(t('ui.contacts'))}: ${ch.contacts.map((c) => esc(t(`contact.${c}`))).join(', ')}</div>
       <p class="small">${esc(t(`char.${id}.protects`))}</p><div class="id">${id}</div></div>`);
@@ -223,7 +227,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
   const token = `<div class="tokens"><div class="token">${esc(t('ui.medicine'))}</div><div class="token lost">${esc(t('ui.medicineLost'))}</div></div>`;
   const time = Array.from({ length: W.START_TIME + 1 }, (_, i) => W.START_TIME - i);
   const scrutiny = Array.from({ length: W.MAX_SCRUTINY + 1 }, (_, i) => i);
-  const tracks = `<div class="track"><div class="th">${esc(t('ui.lastBus.other', { n: W.START_TIME }))} · ${esc(t('ui.line.need.other', { n: W.MISSION_MIN_TIME }))}</div>
+  const tracks = `<div class="track"><div class="th">${esc(t('ui.lastBus', { n: W.START_TIME }))} · ${esc(t('ui.line.need', { n: W.MISSION_MIN_TIME }))}</div>
     <div class="cells">${time.map((n) => `<div class="cell">${n}</div>`).join('')}</div></div>
     <div class="track"><div class="th">${esc(t('ui.scrutiny'))} · ${esc(t('ui.scrutinyHelp.what'))}</div>
     <div class="cells">${scrutiny.map((n) => `<div class="cell${n === W.MAX_SCRUTINY ? ' max' : ''}">${n}</div>`).join('')}</div></div>`;
@@ -261,7 +265,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     <li><b>Advance.</b> After two cards, move to the next desk. After the interview, the crossing ends.</li>
   </ol>
   <h2>Ending</h2>
-  <p>${esc(t('ui.line.need.other', { n: W.MISSION_MIN_TIME }))}: with ${W.MISSION_MIN_TIME} or more hours left you make the last bus. At 0 hours, or after "${esc(t('ui.line.withdraw'))}", the crossing is over. Losing the medicine means you get home without it.</p>
+  <p>${esc(t('ui.line.need', { n: W.MISSION_MIN_TIME }))}: with ${W.MISSION_MIN_TIME} or more hours left you make the last bus. At 0 hours, or after "${esc(t('ui.line.withdraw'))}", the crossing is over. Losing the medicine means you get home without it.</p>
   <p class="small">Cut along the dashed lines. Cards are 63 × 88 mm. Printed from the game content; the card id is in each corner.</p>
   </div>`;
 

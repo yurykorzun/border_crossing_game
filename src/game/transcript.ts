@@ -107,8 +107,8 @@ function chromeLines(s: RunState, p: Page): void {
     p.add('ui.inInspection', { name: cpName }, CHROME);
     name = t('ui.inInspection', { name: cpName });
   }
-  const count = t('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length });
-  p.add('ui.progressCount', { n: now + 1, total: CHECKPOINTS.length }, CHROME);
+  const count = t('ui.progressCount', { step: now + 1, total: CHECKPOINTS.length });
+  p.add('ui.progressCount', { step: now + 1, total: CHECKPOINTS.length }, CHROME);
   p.add('ui.progress', { count, name }, CHROME);
   // The counter scene's name for screen readers (CheckpointScene): on every run screen but the queue.
   if (!(s.screen.kind === 'between' && !s.reaction)) {
@@ -168,7 +168,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   // The count runs over the level's own screens (stepCount() in src/App.tsx): the list is not counted.
   const total = 3 + (record ? 1 : 0);
   const at = (screen: 'traveler' | 'record' | 'documents' | 'begin') =>
-    t('ui.progressCount', { n: ['traveler', ...(record ? ['record'] : []), 'documents', 'begin'].indexOf(screen) + 1, total });
+    t('ui.progressCount', { step: ['traveler', ...(record ? ['record'] : []), 'documents', 'begin'].indexOf(screen) + 1, total });
   if (list) {
     p.add('ui.title');
     p.add('ui.level');
@@ -176,7 +176,7 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
     const picked = levelOf(setup).id;
     for (const l of levels) {
       const extra = l.id === picked ? {} : ONCE;
-      p.add('ui.levelNumber', { n: l.number }, extra);
+      p.add('ui.levelNumber', { number: l.number }, extra);
       p.add(l.title, {}, extra);
       p.add(l.blurb, {}, extra);
     }
@@ -253,12 +253,12 @@ function setupLines(setup: RunSetup, p: Page, levels: readonly Level[]): void {
   p.add('ui.continue');
   // Setup 4: Before you cross (BeginStep), the level's goal with its hours, the traveler and the packed list.
   const level = levelOf(setup);
-  p.add('ui.progressCount', { n: total, total });
+  p.add('ui.progressCount', { step: total, total });
   p.add('ui.beforeYouCross');
   p.add(level.goalTitle);
   p.add(level.goalBody);
-  p.add(`ui.lastBus.${level.startTime === 1 ? 'one' : 'other'}`, { n: level.startTime });
-  p.add(`ui.allowTravel.${level.minTripTime === 1 ? 'one' : 'other'}`, { n: level.minTripTime });
+  p.add('ui.lastBus', { n: level.startTime });
+  p.add('ui.allowTravel', { n: level.minTripTime });
   p.add(`char.${setup.character}.name`);
   p.add(`char.${setup.character}.role`);
   // What officials may look at, under the name: Lena's donation before any desk (BeginStep).
@@ -307,7 +307,7 @@ function storyLines(s: RunState, p: Page): void {
     p.add(`fact.${f}`, {}, CHROME);
     p.add(`ui.tier.${factTier(s, f)}`, {}, CHROME);
     const at = s.facts[f] ?? [];
-    p.add(`ui.haveOnFile.${at.length === 1 ? 'one' : 'other'}`, { desks: desks(at), n: at.length }, CHROME);
+    p.add('ui.haveOnFile', { desks: desks(at), n: at.length }, CHROME);
   }
   if (!factIds(s).length) p.add('ui.nothingYet', {}, CHROME);
   // EvidenceContent

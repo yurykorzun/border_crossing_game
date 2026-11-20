@@ -278,9 +278,8 @@ describe('what changed, under the reaction', () => {
   it('every fact, time and scrutiny event has a change line key in en.ts', () => {
     const events = seenEvents().filter((e) => (CHANGE_EVENTS as readonly string[]).includes(e.type));
     for (const type of ['factRecorded', 'timeSpent', 'scrutinyChanged']) expect(events.some((e) => e.type === type), type).toBe(true);
-    const missing = changeLines(events, 'cousin').flatMap((c) =>
-      c.n === undefined ? (c.key in en ? [] : [c.key]) : [`${c.key}.one`, `${c.key}.other`].filter((k) => !(k in en)),
-    );
+    // has() counts a plural key by its #other form, so a count line passes whether or not it carries n.
+    const missing = changeLines(events, 'cousin').flatMap((c) => (has(c.key) ? [] : [c.key]));
     expect([...new Set(missing)]).toEqual([]);
     // And every fact in the game, not only the ones the bots happened to reveal: each has a tier, and each tier a line.
     const facts = Object.keys(en).filter((k) => /^fact\.[^.]+$/.test(k)).map((k) => k.slice('fact.'.length));

@@ -69,7 +69,7 @@ describe('spot-checks', () => {
     const s = { ...leaving('customs', [], fitting('cashUnderLimit'), { bulletin: 'records' as const }), screen: { kind: 'encounter' as const, id: 'c_cash' }, seen: [...CORE_CARDS.customs] };
     const n = step(s, { type: 'choose', approach: 'under' }, picks(0));
     expect(n.spotChecked).toContain('customs');
-    expect(n.reaction).toContainEqual({ key: 'spot.clear', vars: { claim: 'cashUnderLimit', hours: String(SPOT_CHECK_HOURS) } });
+    expect(n.reaction).toContainEqual({ key: 'spot.clear', vars: { claim: 'cashUnderLimit', n: SPOT_CHECK_HOURS } });
   });
 
   it('checks each desk once, with the claim the dealer picks', () => {
@@ -93,7 +93,7 @@ describe('spot-checks', () => {
     const n = step(s, choose('customs'), picks(0));
     expect(n.screen).toEqual({ kind: 'encounter', id: 'i_contradiction' });
     expect(n.time).toBe(s.time);
-    expect(n.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', hours: String(SPOT_CHECK_HOURS) } });
+    expect(n.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', n: SPOT_CHECK_HOURS } });
   });
 
   it('an inconsistency you have since explained clears after the check, which takes its hours', () => {
@@ -129,7 +129,7 @@ describe('spot-checks', () => {
     // Both claims would be a flaw here; only the hotel stay was written down.
     const s = leaving('customs', ['shortTrip', 'hotelStay'], ['noBooking', 'hostStatement'], { logged: { hotelStay: ['passport'] } });
     const checked = step(s, choose('customs'), picks(0));
-    expect(checked.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', hours: String(SPOT_CHECK_HOURS) } });
+    expect(checked.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', n: SPOT_CHECK_HOURS } });
     // Nothing written down: no claim to check, and the dealer is not asked.
     let drew = 0;
     const counting: Dealer = (rng) => { drew++; return { index: 0, rng }; };
@@ -191,7 +191,7 @@ describe('spot-checks', () => {
 
   it('every result has text, with no dash', () => {
     for (const r of ['clear', 'flaw', 'answered', 'explained']) {
-      const line = t(`spot.${r}`, { claim: 'shortTrip', said: 'shortTrip', desk: 'passport', fact: 'familyAddress', hours: '2' });
+      const line = t(`spot.${r}`, { claim: 'shortTrip', said: 'shortTrip', desk: 'passport', fact: 'familyAddress', n: 2 });
       expect(line).not.toMatch(/[{}—]/);
     }
   });
