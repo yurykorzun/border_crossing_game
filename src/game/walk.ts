@@ -850,3 +850,55 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
   }
   return report;
 }
+
+/**
+ * Setups split by how the rules see their destination (rulesSee()): runs in different groups
+ * never merge, so each group can be walked on its own, at the same time as the others, and
+ * the reports joined with mergeReports(). A level with no destinations is one group.
+ */
+export function walkGroups(setups: RunSetup[]): RunSetup[][] {
+  const groups = new Map<string, RunSetup[]>();
+  for (const x of setups) {
+    const seen = rulesSee(destinationOf(x));
+    groups.set(seen, [...(groups.get(seen) ?? []), x]);
+  }
+  return [...groups.values()];
+}
+
+/** The reports of walks over separate setups (walkGroups()) as one report. */
+export function mergeReports(reports: WalkReport[]): WalkReport {
+  const [first, ...rest] = reports;
+  const out: WalkReport = {
+    ...first,
+    endings: { ...first.endings },
+    problems: [...first.problems],
+    seenCards: new Set(first.seenCards),
+    offered: new Map([...first.offered].map(([card, m]) => [card, new Map(m)])),
+    setups: [...first.setups],
+    afterAnswer: { ...first.afterAnswer },
+    queues: { ...first.queues },
+    requirements: new Map([...first.requirements].map(([id, n]) => [id, { ...n }])),
+  };
+  for (const r of rest) {
+    out.states += r.states;
+    for (const e of ENDING_RANK) out.endings[e] += r.endings[e];
+    out.problems.push(...r.problems.slice(0, 50 - out.problems.length));
+    out.maxDecisions = Math.max(out.maxDecisions, r.maxDecisions);
+    out.maxInspections = Math.max(out.maxInspections, r.maxInspections);
+    for (const c of r.seenCards) out.seenCards.add(c);
+    for (const [card, m] of r.offered) {
+      const mine = out.offered.get(card) ?? new Map<string, number>();
+      for (const [a, n] of m) mine.set(a, (mine.get(a) ?? 0) + n);
+      out.offered.set(card, mine);
+    }
+    out.setups.push(...r.setups);
+    out.chanceNodes += r.chanceNodes;
+    for (const k of Object.keys(out.afterAnswer) as (keyof AfterAnswerTally)[]) out.afterAnswer[k] += r.afterAnswer[k];
+    for (const k of Object.keys(out.queues) as (keyof QueueTally)[]) out.queues[k] += r.queues[k];
+    for (const [id, n] of r.requirements) {
+      const mine = out.requirements.get(id) ?? { shown: 0, costly: 0 };
+      out.requirements.set(id, { shown: mine.shown + n.shown, costly: mine.costly + n.costly });
+    }
+  }
+  return out;
+}

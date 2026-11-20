@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import designDoc from '../../docs/design.md?raw';
-import { ENDING_RANK, allSetups, checkState, fairnessProblems, neverPicked, outcomes, requirementAnswers, walk, walkSetups, warningShares } from './walk';
+import { ENDING_RANK, allSetups, checkState, fairnessProblems, mergeReports, neverPicked, outcomes, requirementAnswers, walk, walkGroups, walkSetups, warningShares } from './walk';
+import type { WalkReport } from './walk';
+import type { RunSetup } from './engine';
 import { pickedAnswers } from './bots';
 import { legalActions, newRun, step } from './engine';
 import { ENCOUNTERS, INSPECTIONS } from './content/encounters';
@@ -9,20 +11,37 @@ import { LEVELS, LEVEL_IDS } from './content/levels';
 import { t } from '../i18n';
 import type { RunState } from './types';
 
-// Node's process, which src/ has no types for: the test runner always runs on Node.
-type CpuUsage = { user: number; system: number };
-const { process } = globalThis as unknown as { process: { threadCpuUsage(since?: CpuUsage): CpuUsage } };
+// Node's worker threads, which src/ has no types for: the test runner always runs on Node.
+interface Worker {
+  once(event: 'message', on: (report: WalkReport) => void): void;
+  once(event: 'error', on: (e: Error) => void): void;
+  terminate(): Promise<number>;
+}
+type Threads = { Worker: new (url: URL, options: { workerData: unknown }) => Worker };
+const { Worker } = (globalThis as unknown as { process: { getBuiltinModule(id: string): Threads } }).process.getBuiltinModule('node:worker_threads');
+
+/** walk(setups) on a worker thread (walk.worker.mjs). */
+const walkAside = (setups: RunSetup[]) =>
+  new Promise<WalkReport>((done, fail) => {
+    const worker = new Worker(new URL('./walk.worker.mjs', import.meta.url), { workerData: setups });
+    worker.once('message', (report) => {
+      done(report);
+      void worker.terminate();
+    });
+    worker.once('error', fail);
+  });
 
 // One walk per level shared by every assertion: every character, packing and
 // bulletin, at every destination in Arrival, every player choice and every card the dealer could deal.
 for (const level of LEVEL_IDS) {
-  // The walk's own CPU time on this thread, not the clock, because the walks run while every
-  // other test file loads on the same machine: alone Arrival takes about 90 s by either measure,
-  // and the clock under that load reads a third more.
-  const started = process.threadCpuUsage();
-  const report = walk(walkSetups(level));
-  const spent = process.threadCpuUsage(started);
-  const seconds = (spent.user + spent.system) / 1e6;
+  // Each group of setups the rules tell apart (walkGroups(): in Arrival the North, and the Capital
+  // with the South) walks on its own thread at the same time, because their runs never merge and
+  // one thread for all three took about 135 s while every other test file loads.
+  const started = Date.now();
+  const [here, ...aside] = walkGroups(walkSetups(level));
+  const others = aside.map(walkAside);
+  const report = mergeReports([walk(here), ...(await Promise.all(others))]);
+  const seconds = (Date.now() - started) / 1000;
   const cards = new Set(LEVELS[level].cards);
 
   describe(`every possible run in ${level}`, () => {
