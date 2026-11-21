@@ -54,8 +54,9 @@ jobs:
         env:
           SWEEP_ALONE: '1'
 
-  # src/game/walk.test.ts on its own runner for the same reason: beside the other
-  # test files the 3-destination walk took 150 s against its 120 s limit (run 44733297576).
+  # src/game/walk.test.ts on its own runner, because beside the other test files the
+  # 3-destination walk took 150 s (run 44733297576). Its 120 s limit is checked only
+  # with WALK_ALONE=1, so here the job prints the time and fails only on a real problem.
   walk:
     runs-on: ubuntu-latest
     steps:
@@ -65,7 +66,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx vitest run src/game/walk.test.ts
+      # --silent=false, because vitest hides a passing test's output and the walk prints its time.
+      - run: npx vitest run src/game/walk.test.ts --silent=false
 
   deploy:
     needs: [build, sweep, walk]
