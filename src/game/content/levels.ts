@@ -36,6 +36,8 @@ export const LEVELS: Record<LevelId, Level> = {
     // Your father's hospital is in one of three regions, each with two standing rules.
     destinations: true,
     cards: without(DEPARTURE_ONLY, FUNERAL_ONLY),
+    // The teaching level checks the worst claim on file, so a run repeats; the seed only breaks ties.
+    spotByRule: true,
     rules: [],
   },
   // Level 2: the return ticket. Your father needs another week of care, and you leave

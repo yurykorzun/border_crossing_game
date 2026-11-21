@@ -113,6 +113,15 @@ export function outcomes(s: RunState, action: Action): Outcome[] {
   }
 }
 
+/**
+ * Whether the dealer's picks led to states that differ in more than the reaction line
+ * (and the log that keeps it), so the seed changed the run itself, not only what it says.
+ */
+export function dealtBeyondLine(next: Outcome[]): boolean {
+  const bare = (o: Outcome) => JSON.stringify({ ...o.state, reaction: null, log: [] });
+  return new Set(next.map(bare)).size > 1;
+}
+
 export interface Problem {
   rule: string;
   detail: string;
@@ -145,6 +154,12 @@ export interface WalkReport {
   setups: SetupResult[];
   /** (state, action) pairs where the dealer had more than one card to deal. */
   chanceNodes: number;
+  /**
+   * Chance nodes whose picks differ in more than the reaction line (dealtBeyondLine()). In a
+   * level that spot-checks by rule (Level.spotByRule) each one is a problem, because there the
+   * seed only names which tied claim was checked.
+   */
+  dealerBranches: number;
   /** Moves afterAnswerLines() looked at: a "Checks out" shown, a question settled, a bag search answered. */
   afterAnswer: AfterAnswerTally;
   /** Your mother's after-desk messages queuePremises() looked at, by kind. */
@@ -720,6 +735,7 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
     offered: new Map(),
     setups: [],
     chanceNodes: 0,
+    dealerBranches: 0,
     afterAnswer: { checksOut: 0, settles: 0, bagSearches: 0 },
     queues: { call: 0, callRelative: 0, delay: 0, smooth: 0 },
     requirements: new Map(),
@@ -798,7 +814,13 @@ export function walk(setups: RunSetup[] = allSetups()): WalkReport {
             problem('engine never throws', (e as Error).message, { action: a });
             continue;
           }
-          if (next.length > 1) report.chanceNodes++;
+          if (next.length > 1) {
+            report.chanceNodes++;
+            if (dealtBeyondLine(next)) {
+              report.dealerBranches++;
+              if (levelOf(s).spotByRule) problem('the seed only breaks ties', `dealer picks after ${JSON.stringify(a)} on ${JSON.stringify(s.screen)} differ in more than the reaction line`, { action: a, picks: next[1].picks });
+            }
+          }
           for (const o of next) {
             const move = { action: a, picks: o.picks };
             if (o.rejected) {
@@ -893,6 +915,7 @@ export function mergeReports(reports: WalkReport[]): WalkReport {
     }
     out.setups.push(...r.setups);
     out.chanceNodes += r.chanceNodes;
+    out.dealerBranches += r.dealerBranches;
     for (const k of Object.keys(out.afterAnswer) as (keyof AfterAnswerTally)[]) out.afterAnswer[k] += r.afterAnswer[k];
     for (const k of Object.keys(out.queues) as (keyof QueueTally)[]) out.queues[k] += r.queues[k];
     for (const [id, n] of r.requirements) {

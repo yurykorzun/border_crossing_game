@@ -540,6 +540,11 @@ export interface Level {
   rules: readonly LevelRule[];
   /** Each desk's two core cards here, when they differ from CORE_CARDS (src/game/content/encounters.ts). */
   core?: Partial<Record<Checkpoint, readonly [string, string]>>;
+  /**
+   * Each desk's spot-check takes the claim by rule, the worst finding first (spotRank() in
+   * src/game/engine.ts), and the seed only breaks ties: Arrival, so the teaching level repeats.
+   */
+  spotByRule?: true;
   /** The level opens with the file from your last crossing (RunSetup.file): Departure. */
   readsFile?: true;
   /**

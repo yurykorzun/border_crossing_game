@@ -1405,16 +1405,29 @@ export function spotLine(s: RunState, claimed: ClaimId, found: SpotResult): LogE
 }
 
 /**
+ * How a spot-check that finds `found` ranks, lowest first: a flaw (the open issue
+ * the Branching Rules put first), then a claim explained, then one answered, then
+ * a clean pass. Flaws rank by their card (CHALLENGES order), so claims tied on a
+ * rank open the same check and differ only in the claim the line names.
+ */
+export function spotRank(found: SpotResult): number {
+  if (found.result === 'flaw') return CHALLENGES.indexOf(found.card);
+  return CHALLENGES.length + ['explained', 'answered', 'clear'].indexOf(found.result);
+}
+
+/**
  * Each desk spot-checks one claim you made before you leave it, once: the
  * dealer picks which, among the claims on file (written down at some desk, so
  * one only said aloud to an officer who does not write it down is never
- * checked). A claim that fits what this desk has on file passes
+ * checked). In a level that checks by rule (Level.spotByRule: Arrival) the best
+ * ranked claim is checked (spotRank()), and the dealer picks only among claims
+ * tied on that rank. A claim that fits what this desk has on file passes
  * cleanly, at no cost. A flaw opens a check and the check decides
  * (spotCheckOf()): the challenge card is queued like a follow-up, so the pacing
  * rule still puts a routine card first, and its answers keep the price they
  * show. The check shows under the last answer, so a clean pass says "Checks
  * out" only when that answer touched the claim (`touched`, claimsTouched()).
- * Randomness picks the problem; the answer is a known cost. A challenge
+ * Randomness picks the problem (in Arrival only among ties); the answer is a known cost. A challenge
  * that applies at the interview is still always dealt there (pendingChallenge()).
  */
 function spotCheck(s: RunState, dealer: Dealer, touched: ClaimId[]): RunState {
@@ -1423,8 +1436,12 @@ function spotCheck(s: RunState, dealer: Dealer, touched: ClaimId[]): RunState {
   // spot-checking. It also keeps a long run inside the decision budget.
   const onFile = s.claims.filter((c) => loggedAt(s, c).length);
   if (!onFile.length || s.inspections) return n;
-  const r = dealer(s.rng, onFile.length);
-  const claimed = onFile[r.index];
+  // In a level that checks by rule (Level.spotByRule) only the best ranked claims are drawn from.
+  const rank = (c: ClaimId) => spotRank(spotCheckOf(s, c));
+  const best = Math.min(...onFile.map(rank));
+  const drawn = levelOf(s).spotByRule ? onFile.filter((c) => rank(c) === best) : onFile;
+  const r = dealer(s.rng, drawn.length);
+  const claimed = drawn[r.index];
   const found = spotCheckOf(s, claimed);
   // A clean pass costs nothing, so its line shows only after an answer that touched the
   // claim (claimsTouched()): under any other answer it would read as that answer's result.
