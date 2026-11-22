@@ -30,9 +30,9 @@ export const en: Record<string, string> = {
   'ui.scrutinyHelp.rise': 'Some answers add scrutiny. Their cards show it, for example "+1 scrutiny".',
   'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, a supervisor takes you to secondary inspection before you can go on, even at the last desk. Below that, she inspects only for the one open point she names on your way to the last desk, and only if it is still open when that desk is done and your scrutiny is above 0. A point settled on the way stays settled unless a new flag reopens it. After an inspection, scrutiny drops back to {after}.',
   // On the way to the last desk (announce() in src/game/engine.ts): the one point the supervisor checks, and what follows.
-  'supervisor.announce.medicine': 'A supervisor checks the prescription before you go. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.accommodation': 'A supervisor checks your address here before you go. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.purpose': 'A supervisor checks why you came back before you go. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.medicine': 'A supervisor checks the prescription. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.accommodation': 'A supervisor checks your address here. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.purpose': 'A supervisor checks why you came back. Still open, with any scrutiny: secondary inspection.',
   // At Scrutiny 3/3 after her point was settled or has nothing left to ask: the point she takes up instead (inspect()).
   'supervisor.instead.medicine': 'Scrutiny 3/3: she checks the prescription instead.',
   'supervisor.instead.accommodation': 'Scrutiny 3/3: she checks your address here instead.',
@@ -1194,7 +1194,7 @@ export const en: Record<string, string> = {
   'file.disproved': '{crossing}, {date}, {desk}, {context}: "{words}". A record did not match.',
   'file.said.undated': '{crossing}: "{words}".',
   'file.disproved.undated': '{crossing}: a record did not match "{words}".',
-  'file.said.shown': '{crossing}, {date}, {desk}. Asked {context}, you showed {cardThe}.',
+  'file.said.shown': '{crossing}, {date}, {desk}: you showed {cardThe}.',
   'file.disproved.shown': '{crossing}, {date}, {desk}, {context}: you showed {cardThe}. A record did not match.',
   'file.declared.under': 'Kept from {crossing}: your cash, declared under the limit.',
   'file.declared.counted': 'Kept from {crossing}: your cash, counted.',
@@ -1377,7 +1377,7 @@ export const en: Record<string, string> = {
   'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
   'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
-  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long before you go. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long. Still open, with any scrutiny: secondary inspection.',
   // The two purpose lines #59 added (dap.49), on the way out (dap.53).
   'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
   'departure:supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you stayed instead.',

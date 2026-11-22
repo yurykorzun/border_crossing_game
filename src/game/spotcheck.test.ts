@@ -1,5 +1,6 @@
 // Each desk spot-checks one claim you made before you leave it (spotCheck() in
-// src/game/engine.ts). The dealer picks the claim; the file decides the result.
+// src/game/engine.ts). Arrival checks the worst claim on file and the dealer picks
+// only among ties (fixeddeal.test.ts); the file decides the result.
 
 import { describe, expect, it } from 'vitest';
 import { own, t } from '../i18n';
@@ -72,11 +73,11 @@ describe('spot-checks', () => {
     expect(n.reaction).toContainEqual({ key: 'spot.clear', vars: { claim: 'cashUnderLimit', n: SPOT_CHECK_HOURS } });
   });
 
-  it('checks each desk once, with the claim the dealer picks', () => {
+  it('checks each desk once, the worst claim on file in Arrival', () => {
     const s = leaving('customs', ['familyVisit', 'shortTrip'], ['noBooking']);
-    // The first claim fits; the second, a short trip with nowhere booked, does not.
-    expect(step(s, choose('customs'), picks(0)).time).toBe(s.time);
-    expect(step(s, choose('customs'), picks(1)).time).toBe(s.time - SPOT_CHECK_HOURS);
+    // The first claim fits; the second, a short trip with nowhere booked, does not, so
+    // Arrival checks it whatever the dealer would pick (azv.2; fixeddeal.test.ts has Departure).
+    expect(step(s, choose('customs'), picks(0)).time).toBe(s.time - SPOT_CHECK_HOURS);
     const caught = step({ ...s, claims: ['shortTrip'] }, choose('customs'), picks(0));
     expect(caught.screen).toEqual({ kind: 'encounter', id: 'i_clarify' });
     expect(caught.spotChecked).toEqual(['customs']);

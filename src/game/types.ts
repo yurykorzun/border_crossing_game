@@ -1,6 +1,8 @@
 // Game data types. Logic and ids only: every player-facing string lives in
 // src/i18n, keyed by these ids (see docs/design.md "Languages").
 
+import type { CHALLENGES } from './content/encounters';
+
 export type Checkpoint = 'passport' | 'customs' | 'interview';
 export const CHECKPOINTS: readonly Checkpoint[] = ['passport', 'customs', 'interview'];
 
@@ -540,6 +542,11 @@ export interface Level {
   rules: readonly LevelRule[];
   /** Each desk's two core cards here, when they differ from CORE_CARDS (src/game/content/encounters.ts). */
   core?: Partial<Record<Checkpoint, readonly [string, string]>>;
+  /**
+   * Each desk's spot-check takes the claim by rule, the worst finding first (spotRank() in
+   * src/game/engine.ts), and the seed only breaks ties: Arrival, so the teaching level repeats.
+   */
+  spotByRule?: true;
   /** The level opens with the file from your last crossing (RunSetup.file): Departure. */
   readsFile?: true;
   /**
@@ -838,6 +845,13 @@ export interface RunState {
    */
   spotChecked?: Checkpoint[];
   /**
+   * What spot-checks found, in order: a claim with the challenge card of its flaw, or
+   * 'explained' when the check billed it. Kept only in a level that checks by rule
+   * (Level.spotByRule), where a claim found the same way again ranks after every other
+   * claim (byRule() in src/game/engine.ts). Unset elsewhere and in older saves.
+   */
+  spotClaims?: SpotFound[];
+  /**
    * The desk each inspection started at, in order (inspect() in src/game/engine.ts).
    * One bounded resolution slot per desk: no desk appears twice (the walk's state
    * rules). Unset in saves from before it existed.
@@ -906,3 +920,6 @@ export type Action =
   | { type: 'turnBack' }
   /** Only once the bus is out of reach (doomed()): the rest of the crossing plays out, Too late. */
   | { type: 'finish' };
+
+/** One thing a spot-check found on a claim (RunState.spotClaims): the challenge card a flaw opens, or 'explained'. */
+export type SpotFound = { claim: ClaimId; found: (typeof CHALLENGES)[number] | 'explained' };

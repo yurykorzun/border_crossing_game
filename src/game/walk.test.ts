@@ -95,6 +95,17 @@ for (const level of LEVEL_IDS) {
       expect(report.chanceNodes).toBeGreaterThan(0);
     });
 
+    // azv.2: Arrival spot-checks by rule, so a dealer pick only names which tied claim was checked.
+    if (LEVELS[level].spotByRule)
+      it('lets every dealer choice differ only in the reaction line', () => {
+        expect(report.problems.filter((p) => p.rule === 'the seed only breaks ties').map((p) => p.detail)).toEqual([]);
+        expect(report.dealerBranches).toBe(0);
+      });
+    else
+      it('lets the dealer change the run itself, not only its line', () => {
+        expect(report.dealerBranches).toBeGreaterThan(0);
+      });
+
     it('can reach all four endings', () => {
       for (const [ending, n] of Object.entries(report.endings)) expect(n, ending).toBeGreaterThan(0);
     });
@@ -224,8 +235,9 @@ describe('the walker itself', () => {
 
   it('tries every pick the dealer could make', () => {
     // Walk one run until the dealer has a real choice, then expect one outcome per pick: a card
-    // dealt, or the claim a spot-check picks (same screen, its own reaction line).
-    let s = newRun(allSetups()[0]);
+    // dealt, or the claim a spot-check picks (same screen, its own reaction line). Departure,
+    // because Arrival draws only among tied claims, whose clean passes can say the same nothing.
+    let s = newRun(allSetups('departure')[0]);
     for (let i = 0; i < 200 && !s.ending; i++) {
       const a = legalActions(s)[0];
       const next = outcomes(s, a);
