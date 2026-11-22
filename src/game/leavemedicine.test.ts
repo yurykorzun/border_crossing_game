@@ -3,17 +3,18 @@
 
 import { describe, expect, it } from 'vitest';
 import { t } from '../i18n';
-import { MISSION_MIN_TIME } from './content/world';
+import { DESTINATION_IDS, MISSION_MIN_TIME } from './content/world';
 import { costsOf, newRun, options, spareAfter } from './engine';
 import type { RunSetup } from './engine';
 import { tryStep } from './play';
-import type { BulletinId, RunState } from './types';
+import type { BulletinId, DestinationId, RunState } from './types';
 
-const lena = (bulletin: BulletinId): RunSetup => ({ character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin, seed: 7 });
+const lena = (bulletin: BulletinId, destination?: DestinationId): RunSetup =>
+  ({ character: 'lena', loadout: ['motherLetter', 'hotel', 'employerLetter'], bulletin, seed: 7, ...(destination ? { destination } : {}) });
 
 /** Lena at the cool bag question with `time` hours left. */
-const atMedicine = (time: number, bulletin: BulletinId = 'records'): RunState => {
-  const s = newRun(lena(bulletin));
+const atMedicine = (time: number, bulletin: BulletinId = 'records', destination?: DestinationId): RunState => {
+  const s = newRun(lena(bulletin, destination));
   return { ...s, time, reaction: null, checkpoint: 1, slot: 0, screen: { kind: 'encounter', id: 'c_medicine' }, seen: [...s.seen, 'c_medicine'] };
 };
 const ids = (s: RunState) => options(s).map((o) => o.approach.id);
@@ -22,13 +23,16 @@ const declareHours = (s: RunState) => -options(s).find((o) => o.approach.id === 
 
 describe('leave the medicine (c_medicine)', () => {
   it('is offered exactly when hours left minus the declare hours minus MISSION_MIN_TIME is 1 or less', () => {
-    // A customs day makes the declare wait 2 hours, so the line moves with it.
-    for (const bulletin of ['records', 'customs'] as const) {
-      for (let time = 0; time <= 8; time++) {
-        const s = atMedicine(time, bulletin);
-        const tight = time - declareHours(s) - MISSION_MIN_TIME <= 1;
-        expect(ids(s).includes('leave'), `${bulletin}, ${time} h left`).toBe(tight);
-        expect(spareAfter(s, 'declare')).toBe(time - declareHours(s) - MISSION_MIN_TIME);
+    // A customs day makes the declare wait 2 hours, so the line moves with it. Orvek's
+    // longer trip does not: the line is MISSION_MIN_TIME everywhere.
+    for (const destination of DESTINATION_IDS) {
+      for (const bulletin of ['records', 'customs'] as const) {
+        for (let time = 0; time <= 8; time++) {
+          const s = atMedicine(time, bulletin, destination);
+          const tight = time - declareHours(s) - MISSION_MIN_TIME <= 1;
+          expect(ids(s).includes('leave'), `${destination}, ${bulletin}, ${time} h left`).toBe(tight);
+          expect(spareAfter(s, 'declare')).toBe(time - declareHours(s) - MISSION_MIN_TIME);
+        }
       }
     }
     expect(declareHours(atMedicine(4, 'records'))).toBe(1);
@@ -36,7 +40,9 @@ describe('leave the medicine (c_medicine)', () => {
   });
 
   it('is absent at 6 hours left', () => {
-    expect(ids(atMedicine(6))).toEqual(['evidence', 'declare']);
+    for (const destination of DESTINATION_IDS) {
+      for (const bulletin of ['records', 'customs'] as const) expect(ids(atMedicine(6, bulletin, destination))).toEqual(['evidence', 'declare']);
+    }
   });
 
   it('at 4 hours left with no hospital note it stands beside the wait', () => {

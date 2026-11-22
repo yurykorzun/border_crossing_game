@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, CORE_CARDS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
@@ -899,10 +899,12 @@ export const usesVerified = (s: RunState, a: Approach, topic: Topic | undefined)
   !!a.ifVerified && s.screen.kind === 'encounter' && !!topic && pointVerified(s, topic);
 
 /**
- * Hours left beyond the trip after the border once answer `id` on the card on screen is
- * taken: spareHours() minus the hours its button shows (resolvedEffects(), so a customs
- * day, a weak topic or a verified point counts as it does there). NaN with no such answer,
- * so no comparison with it holds.
+ * Hours left beyond the shortest trip after the border once answer `id` on the card on
+ * screen is taken: hours left minus the hours its button shows (resolvedEffects(), so a
+ * customs day, a weak topic or a verified point counts as it does there) minus
+ * MISSION_MIN_TIME, as dap.22 states it. It counts MISSION_MIN_TIME, not this run's own
+ * trip (travelOf()), so Orvek's longer trip does not move the line. NaN with no such
+ * answer, so no comparison with it holds.
  */
 export function spareAfter(s: RunState, id: string): number {
   const card = currentCard(s);
@@ -913,7 +915,7 @@ export function spareAfter(s: RunState, id: string): number {
     if ('time' in e) spent -= e.time;
     else if ('travel' in e) spent += Math.max(0, e.travel);
   }
-  return spareHours(s) - spent;
+  return s.time - spent - MISSION_MIN_TIME;
 }
 
 /** The answer's own effects, or its verified ones when it uses a verified point. */
