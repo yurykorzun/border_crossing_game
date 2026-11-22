@@ -84,6 +84,12 @@ export interface Cond {
   contactFree?: ContactId[];
   /** true: LAST_HOURS hours left or fewer (src/game/content/world.ts). false: more than that. */
   lastHours?: boolean;
+  /**
+   * The card's answer `answer`, taken now, would leave `atMost` hours or fewer beyond the trip
+   * after the border: hours left minus the hours on that answer's button minus the trip
+   * (spareAfter() in src/game/engine.ts). Never holds on a card without that answer.
+   */
+  spareAfter?: { answer: string; atMost: number };
   /** A held, unused card covers this topic. */
   holds?: Topic;
   /** Every one of these cards has been shown on this crossing. */

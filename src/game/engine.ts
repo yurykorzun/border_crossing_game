@@ -263,6 +263,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.noClaims && cond.noClaims.some((c) => s.claims.includes(c))) return false;
   if (cond.contactFree && !cond.contactFree.some((c) => ch.contacts.includes(c) && !s.exposed.includes(c))) return false;
   if (cond.lastHours !== undefined && (s.time <= LAST_HOURS) !== cond.lastHours) return false;
+  if (cond.spareAfter && !(spareAfter(s, cond.spareAfter.answer) <= cond.spareAfter.atMost)) return false;
   if (cond.holds && !cardFor(s, cond.holds)) return false;
   if (cond.used && !cond.used.every((c) => s.used.includes(c))) return false;
   if (cond.flagged !== undefined && knownAt(s).some((f) => factTier(s, f) === 'flagged') !== cond.flagged) return false;
@@ -896,6 +897,24 @@ export function pointsResolved(card: EvidenceId | undefined, vouches: Topic | un
  */
 export const usesVerified = (s: RunState, a: Approach, topic: Topic | undefined): boolean =>
   !!a.ifVerified && s.screen.kind === 'encounter' && !!topic && pointVerified(s, topic);
+
+/**
+ * Hours left beyond the trip after the border once answer `id` on the card on screen is
+ * taken: spareHours() minus the hours its button shows (resolvedEffects(), so a customs
+ * day, a weak topic or a verified point counts as it does there). NaN with no such answer,
+ * so no comparison with it holds.
+ */
+export function spareAfter(s: RunState, id: string): number {
+  const card = currentCard(s);
+  const a = card?.approaches.find((x) => x.id === id);
+  if (!a) return NaN;
+  let spent = 0;
+  for (const e of resolvedEffects(s, a, topicOf(card), undefined)) {
+    if ('time' in e) spent -= e.time;
+    else if ('travel' in e) spent += Math.max(0, e.travel);
+  }
+  return spareHours(s) - spent;
+}
 
 /** The answer's own effects, or its verified ones when it uses a verified point. */
 const answerEffects = (s: RunState, a: Approach, topic: Topic | undefined): Effect[] =>

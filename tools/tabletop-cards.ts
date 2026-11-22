@@ -68,6 +68,7 @@ export function buildTabletop(en: Record<string, string>): Tabletop {
     if (c.noClaims) p.push(t('tabletop.part.noClaims', { claims: c.noClaims.map((x) => t(`claim.${x}`)).join(`"${or}"`) }));
     if (c.contactFree) p.push(t('tabletop.part.contactFree', { contacts: c.contactFree.map((x) => t(`contact.${x}`)).join(or) }));
     if (c.lastHours !== undefined) p.push(t(c.lastHours ? 'tabletop.part.lastHours' : 'tabletop.part.moreHours', { hours: hours(W.LAST_HOURS) }));
+    if (c.spareAfter) p.push(t('tabletop.part.spareAfter', { hours: hours(c.spareAfter.atMost) }));
     if (c.holds) p.push(t('tabletop.part.holds', { topic: t(`topic.${c.holds}.helps`).toLowerCase() }));
     if (c.used) p.push(t('tabletop.part.used', { docs: c.used.map((x) => t(`ev.${x}.the`)).join(and) }));
     if (c.flagged !== undefined) p.push(t(c.flagged ? 'tabletop.part.flagged' : 'tabletop.part.unflagged'));
