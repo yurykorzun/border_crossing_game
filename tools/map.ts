@@ -54,6 +54,7 @@ function cond(c: any): string {
   if (c.noClaims) p.push(`you did not say: ${c.noClaims.join(', ')}`);
   if (c.contactFree) p.push(`still unexposed: ${c.contactFree.join('/')}`);
   if (c.lastHours !== undefined) p.push(c.lastHours ? `${W.LAST_HOURS} h or less left` : `more than ${W.LAST_HOURS} h left`);
+  if (c.spareAfter) p.push(`"${c.spareAfter.answer}" would leave ${c.spareAfter.atMost} h or less beyond the shortest trip (${W.MISSION_MIN_TIME} h)`);
   if (c.holds) p.push(`you hold a document for ${c.holds}`);
   if (c.used) p.push(`already shown: ${c.used.join(', ')}`);
   if (c.flagged !== undefined) p.push(c.flagged ? 'a fact here is flagged' : 'nothing here flagged');

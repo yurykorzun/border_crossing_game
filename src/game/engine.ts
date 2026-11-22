@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, CORE_CARDS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
@@ -263,6 +263,7 @@ export function check(cond: Cond | undefined, s: RunState): boolean {
   if (cond.noClaims && cond.noClaims.some((c) => s.claims.includes(c))) return false;
   if (cond.contactFree && !cond.contactFree.some((c) => ch.contacts.includes(c) && !s.exposed.includes(c))) return false;
   if (cond.lastHours !== undefined && (s.time <= LAST_HOURS) !== cond.lastHours) return false;
+  if (cond.spareAfter && !(spareAfter(s, cond.spareAfter.answer) <= cond.spareAfter.atMost)) return false;
   if (cond.holds && !cardFor(s, cond.holds)) return false;
   if (cond.used && !cond.used.every((c) => s.used.includes(c))) return false;
   if (cond.flagged !== undefined && knownAt(s).some((f) => factTier(s, f) === 'flagged') !== cond.flagged) return false;
@@ -896,6 +897,26 @@ export function pointsResolved(card: EvidenceId | undefined, vouches: Topic | un
  */
 export const usesVerified = (s: RunState, a: Approach, topic: Topic | undefined): boolean =>
   !!a.ifVerified && s.screen.kind === 'encounter' && !!topic && pointVerified(s, topic);
+
+/**
+ * Hours left beyond the shortest trip after the border once answer `id` on the card on
+ * screen is taken: hours left minus the hours its button shows (resolvedEffects(), so a
+ * customs day, a weak topic or a verified point counts as it does there) minus
+ * MISSION_MIN_TIME, as dap.22 states it. It counts MISSION_MIN_TIME, not this run's own
+ * trip (travelOf()), so Orvek's longer trip does not move the line. NaN with no such
+ * answer, so no comparison with it holds.
+ */
+export function spareAfter(s: RunState, id: string): number {
+  const card = currentCard(s);
+  const a = card?.approaches.find((x) => x.id === id);
+  if (!a) return NaN;
+  let spent = 0;
+  for (const e of resolvedEffects(s, a, topicOf(card), undefined)) {
+    if ('time' in e) spent -= e.time;
+    else if ('travel' in e) spent += Math.max(0, e.travel);
+  }
+  return s.time - spent - MISSION_MIN_TIME;
+}
 
 /** The answer's own effects, or its verified ones when it uses a verified point. */
 const answerEffects = (s: RunState, a: Approach, topic: Topic | undefined): Effect[] =>

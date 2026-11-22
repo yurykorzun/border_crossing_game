@@ -663,6 +663,9 @@ export const en: Record<string, string> = {
   'enc.c_medicine.declare.check.clear': 'Lab clears it',
   'enc.c_medicine.declare.verified.label': 'Declare it, as already checked',
   'enc.c_medicine.declare.verified.reaction': 'He reads the prescription details already on your file and nods at the cool bag.',
+  // Offered only when the wait would leave an hour or less beyond the trip (Cond.spareAfter).
+  'enc.c_medicine.leave.label': 'Leave the medicine',
+  'enc.c_medicine.leave.reaction': 'The bag goes into a bin marked SURRENDERED.',
 
   // Asked how much and where from: the count shows how much, the employer letter where from, not a ticket.
   'enc.c_cash.q': '"How much cash, and where from?"',
@@ -1073,6 +1076,7 @@ export const en: Record<string, string> = {
   'tabletop.part.contactFree': 'while {contacts} is not yet named',
   'tabletop.part.lastHours': 'with {hours} or less left',
   'tabletop.part.moreHours': 'with more than {hours} left',
+  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond the shortest trip',
   'tabletop.part.holds': 'if you hold a document for {topic}',
   'tabletop.part.used': 'once you showed {docs}',
   'tabletop.part.flagged': 'with a flagged fact on file',
