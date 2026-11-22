@@ -3,7 +3,7 @@
 
 import type {
   Action, AnswerLabel, Approach, BulletinId, CarriedClaim, DestinationId, CarriedFile, CharacterId, CheckCase, Checkpoint, ClaimId, Cond, ContactId, Effect, Encounter,
-  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, InspectionResult, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, Stayed, Topic, WaitAction,
+  CheckId, EndingId, EvidenceId, FactId, FactMap, Inspection, InspectionReason, InspectionResult, LevelId, LogEntry, OnFileTier, QueueMood, ReactionKind, RunState, Screen, ScrutinyReason, SpotFound, Stayed, Topic, WaitAction,
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
@@ -1412,7 +1412,51 @@ export function spotLine(s: RunState, claimed: ClaimId, found: SpotResult): LogE
  */
 export function spotRank(found: SpotResult): number {
   if (found.result === 'flaw') return CHALLENGES.indexOf(found.card);
-  return CHALLENGES.length + ['explained', 'answered', 'clear'].indexOf(found.result);
+  return CHALLENGES.length + PASSES.indexOf(found.result);
+}
+
+const PASSES = ['explained', 'answered', 'clear'] as const;
+
+/** Added to the rank of a claim an earlier desk already found the same thing on, so it ranks after every rank spotRank() gives. */
+const CHECKED_BEFORE = CHALLENGES.length + PASSES.length;
+
+/** What a check found on a claim, as RunState.spotClaims keeps it: the challenge card of a flaw, or 'explained'. Undefined for a pass that costs nothing. */
+function spotFound(c: ClaimId, found: SpotResult): SpotFound | undefined {
+  if (found.result === 'flaw') return { claim: c, found: found.card };
+  if (found.result === 'explained') return { claim: c, found: 'explained' };
+  return undefined;
+}
+
+/** Whether an earlier desk already found `found` on claim `c` (RunState.spotClaims). */
+function foundBefore(s: RunState, c: ClaimId, found: SpotResult): boolean {
+  const f = spotFound(c, found);
+  return !!f && (s.spotClaims ?? []).some((d) => d.claim === f.claim && d.found === f.found);
+}
+
+/**
+ * The claims a level that checks by rule draws its spot-check from: the best ranked
+ * (spotRank()), with a claim an earlier desk found the same thing on (RunState.spotClaims)
+ * after every other claim, because an explained claim would otherwise be billed again at
+ * every desk, and a flaw whose card was dropped (followUpRoom()) would repeat its line at
+ * every desk with no card after it. A claim explained before that a record now
+ * contradicts is a new finding, so it ranks as the flaw it is. Tied flaws open the same
+ * card, so when the claim caught() names is among them that claim alone is drawn and the
+ * line names what the card asks right now (a card dealt later can ask about another).
+ * Tied explained claims are taken in file order, because the one billed is kept in
+ * spotClaims and the seed may only pick where nothing but the line differs.
+ */
+function byRule(s: RunState, onFile: ClaimId[]): ClaimId[] {
+  const ranked = onFile.map((c) => {
+    const found = spotCheckOf(s, c);
+    return { c, found, rank: spotRank(found) + (foundBefore(s, c, found) ? CHECKED_BEFORE : 0) };
+  });
+  const best = Math.min(...ranked.map((x) => x.rank));
+  const tied = ranked.filter((x) => x.rank === best);
+  const first = tied[0].found;
+  const named = first.result === 'flaw' ? caught(s, first.card)?.claim : undefined;
+  if (named && tied.some((x) => x.c === named)) return [named];
+  if (first.result === 'flaw' || first.result === 'explained') return [tied[0].c];
+  return tied.map((x) => x.c);
 }
 
 /**
@@ -1437,16 +1481,19 @@ function spotCheck(s: RunState, dealer: Dealer, touched: ClaimId[]): RunState {
   const onFile = s.claims.filter((c) => loggedAt(s, c).length);
   if (!onFile.length || s.inspections) return n;
   // In a level that checks by rule (Level.spotByRule) only the best ranked claims are drawn from.
-  const rank = (c: ClaimId) => spotRank(spotCheckOf(s, c));
-  const best = Math.min(...onFile.map(rank));
-  const drawn = levelOf(s).spotByRule ? onFile.filter((c) => rank(c) === best) : onFile;
+  const ruled = levelOf(s).spotByRule;
+  const drawn = ruled ? byRule(s, onFile) : onFile;
   const r = dealer(s.rng, drawn.length);
   const claimed = drawn[r.index];
   const found = spotCheckOf(s, claimed);
+  // Only a level that checks by rule keeps which claims a check found something on, because only
+  // byRule() reads it. A clean or answered pass costs nothing, so checking it again does no harm.
+  const kept = ruled && !foundBefore(s, claimed, found) ? spotFound(claimed, found) : undefined;
+  const m: RunState = kept ? { ...n, rng: r.rng, spotClaims: [...(s.spotClaims ?? []), kept] } : { ...n, rng: r.rng };
   // A clean pass costs nothing, so its line shows only after an answer that touched the
   // claim (claimsTouched()): under any other answer it would read as that answer's result.
-  if (found.result === 'clear' && !touched.includes(claimed)) return { ...n, rng: r.rng };
-  const checked = say({ ...n, rng: r.rng }, [spotLine(s, claimed, found)]);
+  if (found.result === 'clear' && !touched.includes(claimed)) return m;
+  const checked = say(m, [spotLine(s, claimed, found)]);
   if (found.result === 'explained') return { ...checked, time: Math.max(0, checked.time - SPOT_CHECK_HOURS) };
   if (found.result === 'flaw') return { ...checked, pending: [...checked.pending, found.card] };
   return checked;
