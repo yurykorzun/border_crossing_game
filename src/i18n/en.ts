@@ -1348,8 +1348,9 @@ export const en: Record<string, string> = {
   'departure:mission.body': 'Your flight leaves tonight.',
   'departure:ui.medicineDesc': 'His medicine box, so a pharmacy abroad can match it. Customs asks what you take out.',
   'departure:ui.goal': 'Catch your flight',
-  // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
-  'departure:topic.purpose.helps': 'Why you stayed',
+  // The packing row for a purpose document, never "came back" (dap.51). It does not say "stayed"
+  // either, because the desk's "Why so long?" (d_stay) asks the stay topic and takes no purpose document (azv.6).
+  'departure:topic.purpose.helps': 'Reason for the trip',
   'departure:ui.travelReserve': '{hours} to the airport',
   // The inspection says the shuttle was missed only once the hours left are below the trip to the airport (questionKey(), azv.5).
   'departure:insp.s_connection.q': '"Where did you stay here?"',
