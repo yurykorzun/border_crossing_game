@@ -1389,7 +1389,9 @@ export const en: Record<string, string> = {
   'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
   // On the way out the purpose point is why you stayed this long, not why you came back (dap.51).
-  'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
+  // The supervisor's question on that point, about the stay, since you are leaving (azv.18).
+  'departure:insp.s_supervisor.q': 'A supervisor opens your file. "Twelve days. Why did you stay so long?"',
+  'departure:insp.issue.purpose':'Not verified yet: why you stayed this long.',
   'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
   'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long. Still open, with any scrutiny: secondary inspection.',

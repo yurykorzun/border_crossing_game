@@ -138,4 +138,19 @@ describe('Departure never says why you came back (dap.51)', () => {
     }
     expect(arrivalText.filter((x) => CAME_BACK.test(x)).length).toBeGreaterThanOrEqual(6);
   });
+
+  // azv.18: the supervisor asked "Why are you here?" under a line about why you stayed this long.
+  it("the supervisor's purpose question asks about the length of the stay in Departure, and Arrival keeps its own", () => {
+    const arrivalQ = t('insp.s_supervisor.q');
+    expect(arrivalQ).toContain('"Why are you here?"');
+    setStory('departure');
+    try {
+      const q = t('insp.s_supervisor.q');
+      expect(q).not.toContain('Why are you here');
+      expect(q).toMatch(/\bstay\b/);
+      expect(q).toMatch(/\bTwelve days\b/);
+    } finally {
+      setStory(undefined);
+    }
+  });
 });
