@@ -54,7 +54,8 @@ for (const text of ['homeAtCost', 'missedBus']) {
     expect(decided.length).toBeGreaterThanOrEqual(2);
     expect(decided.length).toBeLessThanOrEqual(3);
     for (const [i, d] of decided.entries()) {
-      await expect(items.nth(i).locator('.decisive-desk')).toHaveText(t('ending.decided.at', { desk: d.desk }));
+      // An answer given to the supervisor is hers, not the desk's (azv.16).
+      await expect(items.nth(i).locator('.decisive-desk')).toHaveText(d.inspection ? t('ending.decided.inspection') : t('ending.decided.at', { desk: d.desk }));
       await expect(items.nth(i).locator('.decisive-label')).toHaveText(t(d.key, d.vars));
       await expect(items.nth(i).locator('.decisive-cost')).not.toBeEmpty();
       await readable(page, items.nth(i), `answer ${i + 1}`);
