@@ -486,14 +486,18 @@ export function chains(s: RunState): ChainLine[] {
     if (!card || card.kind === 'routine' || !card.issue) return;
     const w = weight(a, protectedContact);
     if (w <= 0 || (best && best.w >= w)) return;
-    const needs = condNeeds(card.issue);
+    // A challenge card was dealt for one pair (Answered.about), so it names that claim and no other.
+    const needs = a.about ? { facts: [], claims: [a.about.claim] } : condNeeds(card.issue);
     for (const cause of answers.slice(0, j)) {
       const fact = (cause.recorded ?? []).find((f) => needs.facts.includes(f));
       const claim = fact ? undefined : (cause.claimed ?? []).find((c) => needs.claims.includes(c));
       if (!fact && !claim) continue;
       const question = t(questionKey(s, 'enc', card.id), questionVars(s, card.id));
-      const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : { said: own(`said.${claim}`, s.character).slice('said.'.length) }) };
-      const key = `ending.chain.followUp.${fact ? 'fact' : 'claim'}${cause.desk === a.desk ? '.here' : ''}`;
+      // A claim a document made is the document, not words you said (showing your mother's letter is not "My family needs me here").
+      const doc = claim ? cause.vars?.card : undefined;
+      const said = claim && !doc ? { said: own(`said.${claim}`, s.character).slice('said.'.length) } : {};
+      const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : {}), ...(doc ? { cardLabel: doc } : {}), ...said };
+      const key = `ending.chain.followUp.${fact ? 'fact' : doc ? 'shown' : 'claim'}${cause.desk === a.desk ? '.here' : ''}`;
       best = { w, line: { kind: 'followUp', key, vars, costs: costsOf(s, a, protectedContact) } };
       return;
     }

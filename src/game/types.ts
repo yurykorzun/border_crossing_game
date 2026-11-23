@@ -738,6 +738,12 @@ export interface Answered {
   /** Claims it wrote down. */
   claimed?: ClaimId[];
   /**
+   * On a challenge card, the pair it was dealt for (caught() in src/game/engine.ts): the claim
+   * a fact on file spoke against. The ending's follow-up line names this claim (azv.12), not
+   * the first earlier claim the card's condition could match.
+   */
+  about?: { claim: ClaimId; fact: FactId };
+  /**
    * It used a point verified at an earlier desk (Approach.ifVerified): the hours its own
    * effects would have cost, where the point was verified and by which document (dap.18).
    */
