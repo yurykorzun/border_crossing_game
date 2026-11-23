@@ -724,13 +724,18 @@ export function recordLines(file: CarriedFile): { key: string; vars?: Record<str
   const claims = fileSaid(file);
   const quoteOf = (c: ClaimId): FileQuote => claims.find((x) => x.claim === c) ?? { claim: c, crossing: file.level };
   const shownDoc = (c: ClaimId) => claims.flatMap((x) => (x.claim === c && 'shown' in x && x.shown ? [x.shown] : []))[0];
+  // One answer can make two claims (p_stay's father answer makes familyVisit and
+  // stayUntilRecovered), so a line already in the list is not repeated.
+  const push = (l: { key: string; vars?: Record<string, string> }) => {
+    if (!lines.some((x) => x.key === l.key && JSON.stringify(x.vars) === JSON.stringify(l.vars))) lines.push(l);
+  };
   for (const c of claims) {
-    if (!('date' in c)) lines.push({ key: 'ui.record.said.undated', vars: { words: wordsOf(c, file.character) } });
-    else if (c.shown) lines.push({ key: 'ui.record.shown', vars: { date: fileDate(c.date), desk: c.desk, cardThe: c.shown } });
+    if (!('date' in c)) push({ key: 'ui.record.said.undated', vars: { words: wordsOf(c, file.character) } });
+    else if (c.shown) push({ key: 'ui.record.shown', vars: { date: fileDate(c.date), desk: c.desk, cardThe: c.shown } });
     else {
       const part = saidPart(c, file.character);
       const dated = { date: fileDate(c.date), desk: c.desk };
-      lines.push('did' in part ? { key: 'ui.record.did', vars: { ...dated, did: part.did } } : { key: 'ui.record.said', vars: { ...dated, words: part.words } });
+      push('did' in part ? { key: 'ui.record.did', vars: { ...dated, did: part.did } } : { key: 'ui.record.said', vars: { ...dated, words: part.words } });
     }
   }
   if (!claims.length) lines.push({ key: 'ui.record.none' });

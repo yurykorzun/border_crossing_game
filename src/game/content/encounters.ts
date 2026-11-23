@@ -244,10 +244,12 @@ export const ENCOUNTERS: Encounter[] = [
       { id: 'evidence', kind: 'evidence', topic: 'stay', effects: [] },
       // The honest answer gives the reason, and your father's condition goes on file. She
       // phones the hospital to confirm it, unless his condition is already on her file:
-      // then she reads it there (Approach.onFile).
+      // then she reads it there (Approach.onFile). The answer itself goes on the file you
+      // carry (stayUntilRecovered), because a document that made familyVisit first stays
+      // that claim's record (azv.4) and the answer would otherwise be quoted nowhere (azv.20).
       {
         id: 'father', kind: 'verify', onFile: ['fatherCondition'],
-        effects: [{ claim: 'familyVisit' }, { fact: 'fatherCondition' }, { time: -2, when: { noFacts: ['fatherCondition'] } }],
+        effects: [{ claim: 'familyVisit' }, { claim: 'stayUntilRecovered' }, { fact: 'fatherCondition' }, { time: -2, when: { noFacts: ['fatherCondition'] } }],
       },
       // No date to give: she enters an open stay and checks your residence registration.
       // The answer is yours, so the file you carry out quotes it (CarriedFile.said).

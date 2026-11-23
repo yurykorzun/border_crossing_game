@@ -311,6 +311,8 @@ Every reaction against you says which of three it is (`ReactionKind` in `src/gam
 
 Only a disproof records the claim as disproved (`RunState.disproved`).
 
+Two stay answers at the passport desk go on the file you carry as claims of their own, said aloud and written down nowhere, so nothing spot-checks them: "I don't know yet" (`stayUndecided`) and "Until my father is out of hospital" (`stayUntilRecovered`). The second also makes `familyVisit`, and when a document made that first the document stays its record (azv.4), so without a claim of its own the answer was quoted nowhere. "Your file" quotes it on its own line, and the first Departure question still quotes the document (decided 2026-11-23, border_crossing_game-azv.20). One answer that makes two claims is one line in "Your file".
+
 After an answer (design rule 3, `Reaction` in `src/App.tsx`, `changeLines()` in `src/game/consequence.ts`) the screen shows three blocks: what happened (the officer's reaction), what changed (a document spent, a person named, hours, scrutiny, what went on file) and what it resolves (each question now settled for the officers ahead, from the `pointSettled` event: "Settled for later desks: the prescription."). A settled point opens again when something new is flagged (`pointVerified()`), and the next officer checks it again. A question left open says "not proven" on its changed line.
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).

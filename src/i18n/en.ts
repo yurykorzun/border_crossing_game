@@ -423,6 +423,7 @@ export const en: Record<string, string> = {
   'claim.stayDays': 'Staying three days',
   'claim.stayWeeks': 'Staying two weeks',
   'claim.stayUndecided': 'No date out yet',
+  'claim.stayUntilRecovered': 'Until your father is out of hospital',
   'fact.familyAddress': 'Your family address',
   'fact.employer': 'Your employer',
   'fact.fatherCondition': "Your father's condition",
@@ -454,6 +455,7 @@ export const en: Record<string, string> = {
   'claim.stayDays.recorded': "Recorded as how long you're staying",
   'claim.stayWeeks.recorded': "Recorded as how long you're staying",
   'claim.stayUndecided.recorded': "Recorded as how long you're staying",
+  'claim.stayUntilRecovered.recorded': "Recorded as how long you're staying",
   // The same, where this officer does not write the claim down (OFFICERS writesDown).
   'claim.said': 'Said aloud, not written down',
   'fact.familyAddress.reveal': 'Reveals her address',
@@ -1032,6 +1034,7 @@ export const en: Record<string, string> = {
   'said.stayDays': 'Three days',
   'said.stayWeeks': 'Two weeks',
   'said.stayUndecided': "I don't know yet",
+  'said.stayUntilRecovered': 'Until my father is out of hospital',
   'weak.work.reaction': "Your employer's name comes up in an old investigation, so they check it again.",
 
   'beat.passport.0': 'The clerk checks your photograph again.',

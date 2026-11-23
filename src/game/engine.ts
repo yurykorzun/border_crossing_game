@@ -61,10 +61,10 @@ export const fileSaid = (file: CarriedFile | undefined): FileQuote[] =>
 
 /**
  * The claim a carried file is quoted on: why you came if it says, else the first thing it
- * has you saying. Never an open stay: "I don't know yet" does not say why you came.
+ * has you saying. Never a stay answer: "I don't know yet" does not say why you came.
  */
 export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined {
-  const said = fileSaid(file).filter((c) => c.claim !== 'stayUndecided');
+  const said = fileSaid(file).filter((c) => c.claim !== 'stayUndecided' && c.claim !== 'stayUntilRecovered');
   return said.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? said[0];
 }
 

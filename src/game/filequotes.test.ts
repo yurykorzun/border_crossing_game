@@ -17,7 +17,7 @@ import { allSetups } from './walk';
 
 const CLAIMS: readonly ClaimId[] = [
   'familyVisit', 'shortTrip', 'hotelStay', 'noOtherFamily', 'noFamilyAbroad', 'neverDonated', 'stayingWithFamily', 'cashUnderLimit',
-  'stayDays', 'stayWeeks', 'stayUndecided',
+  'stayDays', 'stayWeeks', 'stayUndecided', 'stayUntilRecovered',
 ];
 
 /** The claim in this traveler's words, in quotes, as a file line quotes it. */
@@ -182,5 +182,40 @@ describe("the mother's letter at Passport, then \"I don't know yet\"", () => {
     } finally {
       setStory(undefined);
     }
+  });
+});
+
+describe('the mother\'s letter at Passport, then "Until my father is out of hospital" (border_crossing_game-azv.20)', () => {
+  it('Your file quotes the answer as well as the letter, and the first Departure question still quotes the letter', () => {
+    const setup: RunSetup = { level: 'arrival', character: 'lena', loadout: ['deed', 'employerLetter', 'motherLetter'], bulletin: 'records', seed: 3 };
+    const s = drive(setup, { p_purpose: 'motherLetter', p_stay: 'father', i_family: 'deny' });
+    expect(s.seen).toContain('p_stay');
+    const file = fileOf(s);
+    // The letter made familyVisit first, so it stays that claim's record; the answer is its own line.
+    expect(file.said?.find((c) => c.claim === 'familyVisit')?.shown).toBe('motherLetter');
+    const record = render(recordLines(file));
+    expect(record).toContain("you showed your mother's letter");
+    expect(record).toContain('"Until my father is out of hospital"');
+    expect(record.split('Until my father is out of hospital').length - 1).toBe(1);
+    setStory('departure');
+    try {
+      let d = newRun({ level: 'departure', character: 'lena', loadout: allSetups('departure').find((x) => x.character === 'lena')!.loadout, bulletin: 'records', seed: 3, file });
+      for (let i = 0; i < 10 && d.screen.kind !== 'encounter'; i++) d = step(d, legalActions(d)[0], dealer);
+      expect(d.screen).toMatchObject({ kind: 'encounter', id: 'd_entry' });
+      expect(render([fileLine(d, 'd_entry')])).toContain("you showed your mother's letter");
+    } finally {
+      setStory(undefined);
+    }
+  });
+
+  it('one answer that makes two claims is one line in Your file', () => {
+    const quote = { date: '2026-03-09', crossing: 'arrival' as const, desk: 'passport' as const, context: 'p_stay', answer: { id: 'father', key: 'enc.p_stay.father.label' } };
+    const file: CarriedFile = {
+      level: 'arrival', character: 'lena', ending: 'homeInTime', claims: ['shortTrip', 'familyVisit', 'stayUntilRecovered'],
+      said: [{ claim: 'shortTrip', date: '2026-03-09', crossing: 'arrival', desk: 'passport', context: 'p_purpose' }, { claim: 'familyVisit', ...quote }, { claim: 'stayUntilRecovered', ...quote }],
+      disproved: [], named: [], kept: [], spent: [], medicine: true,
+    };
+    const record = render(recordLines(file));
+    expect(record.split('"Until my father is out of hospital"').length - 1).toBe(1);
   });
 });

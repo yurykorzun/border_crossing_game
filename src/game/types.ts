@@ -66,7 +66,12 @@ export type ClaimId =
   /** How long you stay (p_days, The funeral). */
   | 'stayDays' | 'stayWeeks'
   /** No date out yet (p_stay): said aloud, kept on the file you carry, written down nowhere. */
-  | 'stayUndecided';
+  | 'stayUndecided'
+  /**
+   * Until your father is out of hospital (p_stay): kept on the file you carry like stayUndecided,
+   * so "Your file" quotes the answer even when a document made familyVisit first (azv.20).
+   */
+  | 'stayUntilRecovered';
 
 /** All fields must hold. Mirrors the Cond pattern in alexis_adventure_game/src/core/dialogue.ts. */
 export interface Cond {
