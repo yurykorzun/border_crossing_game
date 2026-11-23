@@ -87,6 +87,8 @@ Turning back is offered at one set early point: the passport queue, after the cl
 
 Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
+A missed-time ending (Too late, Missed the bus, a missed flight) keeps the missed bus or flight as its headline, and the aftermath still shows the consequences of what is flagged on file: the names you gave (consequences()) and the beat days later for a lie a record caught, a flagged relative, the donation or the registration check (laterBeat()). Yury decided this on 2026-11-23 (border_crossing_game-azv.19) after a playtest missed the flight at Scrutiny 3/3 with two lies caught and saw no consequence of them, because otherwise lying costs nothing once the time is lost. Only turning back has no later beat, since you never crossed.
+
 Under "Your run", "What decided it" names the two or three answers that moved the run most, in the order they were given, each with its desk and what it cost (hours lost, the medicine taken, a person named, a statement a record showed false, scrutiny, a document used). They come from the run's own record, `RunState.answers`, which answered() in src/game/play.ts writes from the same events as the after-answer lines, and decisive() picks them. Three lines follow, one per axis: arrival (on time or late, the hours left against the trip), the medicine (kept or taken) and contacts (who is on file, or no one), from axisLines(). The ending title does not change.
 
 ## Run shape

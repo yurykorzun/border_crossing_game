@@ -557,9 +557,12 @@ export function endingBody(s: RunState, text: string): string {
 }
 
 /**
- * What comes back days after a crossing that got you home (rwf.10), or nothing. It
+ * What comes back days after a crossing you got through (rwf.10), or nothing. It
  * never changes the ending: Home in time stays Home in time, and the beat is its own
- * line after it. The run's record decides it, first match wins, worst first:
+ * line after it. A crossing that ran out of time gets it too (azv.19): the missed bus
+ * or flight stays the headline, and what is flagged on file still comes back, because
+ * otherwise a lie costs nothing once the time is lost. Only turning back has none.
+ * The run's record decides it, first match wins, worst first:
  * - statement: a claim a desk wrote down that a record then disproved (RunState.disproved).
  * - relative: another relative flagged at a desk (relativeNamed or relativeContact).
  * - donation: the old donation on file, by the record or the bank notice. A truthful answer can put it there.
@@ -568,7 +571,7 @@ export function endingBody(s: RunState, text: string): string {
  * Each beat names the desk and the choice in its reason (`later.<id>.reason`).
  */
 export function laterBeat(s: RunState): LaterBeat | undefined {
-  if (s.ending !== 'homeInTime' && s.ending !== 'homeAtCost') return undefined;
+  if (!s.ending || s.ending === 'turnedBack') return undefined;
   const facts = factIds(s);
   const first = (f: FactId) => s.flaggedAt?.[f] ?? s.facts[f]?.[0];
   const statement = (s.disproved ?? []).find((c) => s.logged?.[c]?.length);

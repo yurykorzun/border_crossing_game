@@ -27,7 +27,8 @@ const caughtAtCustoms = (): RunState => ({
 });
 
 const runs = BOT_STYLES.flatMap((style) => Array.from({ length: 200 }, (_, i) => playRun(style, setupFor(i))));
-const gotHome = (s: RunState) => s.ending === 'homeInTime' || s.ending === 'homeAtCost';
+/** Every ending but turning back gets through the border, so a beat can follow it (azv.19). */
+const gotThrough = (s: RunState) => s.ending !== 'turnedBack';
 
 describe('a beat days after you get home', () => {
   it('keeps the crossing ending: a Home in time run stays Home in time, and the beat is its own line', () => {
@@ -55,10 +56,10 @@ describe('a beat days after you get home', () => {
     for (const r of truthful) expect(r.final.disproved ?? []).toEqual([]);
   });
 
-  it('only follows a run that got home, and every beat names its time, what happens and the choice behind it', () => {
+  it('only follows a run that got through, and every beat names its time, what happens and the choice behind it', () => {
     for (const r of runs) {
       const beat = laterBeat(r.final);
-      if (!gotHome(r.final)) expect(beat).toBeUndefined();
+      if (!gotThrough(r.final)) expect(beat).toBeUndefined();
       if (!beat) continue;
       for (const key of [`later.${beat.id}.when`, `later.${beat.id}`, `later.${beat.id}.reason`]) {
         const text = t(key, beat.vars);
