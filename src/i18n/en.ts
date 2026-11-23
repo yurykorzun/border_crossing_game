@@ -1124,12 +1124,16 @@ export const en: Record<string, string> = {
   'ending.chain.saved.checked#one': 'What {deskAt} checked counted at {desk}: {n} hour saved.',
   'ending.chain.saved.checked#other': 'What {deskAt} checked counted at {desk}: {n} hours saved.',
   'ending.chain.followUp.fact': '{fact}, on file from {deskAt}, brought a follow-up at {desk}: {question}',
-  'ending.chain.followUp.claim': '"{said}", said at {deskAt}, brought a follow-up at {desk}: {question}',
+  // {words} is the answer as it read on screen, so the line never quotes words you did not say.
+  'ending.chain.followUp.claim': '"{words}", said at {deskAt}, brought a follow-up at {desk}: {question}',
+  // An answer that was an act, not words: what you did ("you gave your mother's address").
+  'ending.chain.followUp.did': 'At {deskAt} {did}, and that brought a follow-up at {desk}: {question}',
   // A claim a document made: the document, never words you did not say.
   'ending.chain.followUp.shown': '{cardLabel}, shown at {deskAt}, brought a follow-up at {desk}: {question}',
   // The same when the follow-up came at the desk that put it on file.
   'ending.chain.followUp.fact.here': '{fact}, put on file at {deskAt}, brought a follow-up there: {question}',
-  'ending.chain.followUp.claim.here': '"{said}", said at {deskAt}, brought a follow-up there: {question}',
+  'ending.chain.followUp.claim.here': '"{words}", said at {deskAt}, brought a follow-up there: {question}',
+  'ending.chain.followUp.did.here': 'At {deskAt} {did}, and that brought a follow-up there: {question}',
   'ending.chain.followUp.shown.here': '{cardLabel}, shown at {deskAt}, brought a follow-up there: {question}',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',

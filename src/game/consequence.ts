@@ -7,7 +7,7 @@ import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
 import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, lineTier, travelOf } from './engine';
-import type { Answered, CarriedFile, Cond, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
+import type { Answered, AnswerLabel, CarriedFile, Cond, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
 import { ENCOUNTER_BY_ID } from './content/encounters';
@@ -495,9 +495,12 @@ export function chains(s: RunState): ChainLine[] {
       const question = t(questionKey(s, 'enc', card.id), questionVars(s, card.id));
       // A claim a document made is the document, not words you said (showing your mother's letter is not "My family needs me here").
       const doc = claim ? cause.vars?.card : undefined;
-      const said: Record<string, string> = claim && !doc ? { said: own(`said.${claim}`, s.character).slice('said.'.length) } : {};
-      const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : {}), ...(doc ? { cardLabel: doc } : {}), ...said };
-      const key = `ending.chain.followUp.${fact ? 'fact' : doc ? 'shown' : 'claim'}${cause.desk === a.desk ? '.here' : ''}`;
+      // Said aloud: the words of the answer as it read on screen ("My family needed me here" in
+      // Departure), or what you did for an answer that was an act (giving your mother's address).
+      const part = claim && !doc ? answerPart({ id: cause.pick, key: cause.key, ...(cause.vars ? { vars: cause.vars } : {}) }, cause.card) ?? { words: t(own(`said.${claim}`, s.character)) } : undefined;
+      const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : {}), ...(doc ? { cardLabel: doc } : {}), ...part };
+      const kind = fact ? 'fact' : doc ? 'shown' : part && 'did' in part ? 'did' : 'claim';
+      const key = `ending.chain.followUp.${kind}${cause.desk === a.desk ? '.here' : ''}`;
       best = { w, line: { kind: 'followUp', key, vars, costs: costsOf(s, a, protectedContact) } };
       return;
     }
@@ -626,14 +629,19 @@ export const fileDate = (date: string): string =>
  */
 export function saidPart(c: FileQuote, character: CharacterId): { words: string } | { did: string } {
   const a = 'answer' in c ? c.answer : undefined;
-  if (a && has(a.key)) {
-    const text = t(a.key, a.vars ?? {});
-    const spoken = /^"(.*?)[.?!]?"$/s.exec(text);
-    if (spoken) return { words: spoken[1] };
-    const did = `did.${'context' in c ? c.context : ''}.${a.id}`;
-    if (has(did)) return { did: t(did, a.vars ?? {}) };
-  }
-  return { words: t(own(`said.${c.claim}`, character)) };
+  return (a && answerPart(a, 'context' in c ? c.context : '')) ?? { words: t(own(`said.${c.claim}`, character)) };
+}
+
+/**
+ * An answer given on card `context`, as words (its label, quotes and closing stop taken off)
+ * or, for an act, what you did (`did.<card>.<answer>`). Undefined when it is neither.
+ */
+function answerPart(a: AnswerLabel, context: string): { words: string } | { did: string } | undefined {
+  if (!has(a.key)) return undefined;
+  const spoken = /^"(.*?)[.?!]?"$/s.exec(t(a.key, a.vars ?? {}));
+  if (spoken) return { words: spoken[1] };
+  const did = `did.${context}.${a.id}`;
+  return has(did) ? { did: t(did, a.vars ?? {}) } : undefined;
 }
 
 /** The claim's words alone, for a line that has no room for an act: a record that did not match. */

@@ -4,9 +4,10 @@
 // match. A claim a document made is the document, never words the player did not say.
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Ending } from '../App';
-import { t } from '../i18n';
+import { setStory, t } from '../i18n';
+import { setupFor } from './bots';
 import { chains } from './consequence';
 import { caught, currentCard, legalActions, newRun } from './engine';
 import type { RunSetup } from './engine';
@@ -65,5 +66,27 @@ describe('the ending names the claim the follow-up card was about (azv.12)', () 
   it('the same claim said aloud is quoted in her words', () => {
     const { end } = play({ level: 'arrival', character: 'lena', loadout: ['motherLetter', 'hospitalNote', 'returnTicket'], bulletin: 'customs', seed: 0 }, { p_purpose: 'family' });
     expect(followUp(end)).toBe('"My family needs me here", said at passport control, brought a follow-up there: "How long are you staying?"');
+  });
+
+  describe('in Departure', () => {
+    beforeEach(() => setStory('departure'));
+    afterEach(() => setStory(undefined));
+    const departure = () => play(setupFor(0, 'departure'), { d_entry: 'family', d_stay: 'stand' }).end;
+
+    it('quotes the answer as it read on screen, "My family needed me here", not the stock "needs"', () => {
+      const end = departure();
+      expect(end.answers?.find((a) => a.card === 'd_entry')).toMatchObject({ pick: 'family', claimed: ['familyVisit'] });
+      const line = followUp(end);
+      expect(line).toMatch(/^"My family needed me here", said at passport control, brought a follow-up there: /);
+      expect(line).not.toContain(t('said.familyVisit'));
+    });
+
+    it('an answer that was an act says what she did, not words', () => {
+      const end = departure();
+      // The same claim made by giving her mother's address (d_stayed), which has no words to quote.
+      const answers = end.answers!.map((a) => (a.card === 'd_entry' ? { ...a, card: 'd_stayed', pick: 'mother', key: 'enc.d_stayed.mother.label', vars: { contact: 'mother', contactMine: 'mother' } } : a));
+      const line = followUp({ ...end, answers });
+      expect(line).toMatch(/^At passport control you gave your mother's address, and that brought a follow-up there: /);
+    });
   });
 });
