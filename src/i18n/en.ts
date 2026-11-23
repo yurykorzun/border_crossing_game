@@ -1244,6 +1244,8 @@ export const en: Record<string, string> = {
   'enc.d_stayed.hotel.reaction': 'She finds the booking on your entry form and moves on.',
   'form.differs.hotel': 'Your entry form says a hotel. She checks your entry record.',
   'form.differs.family': "Your entry form says your mother's address. She checks your entry record.",
+  // The entry form's stay is a document you showed (fileStayedDoc()), named as its card line names it.
+  'form.differs.shown': 'Your entry form has {cardThe}. She checks your entry record.',
   'enc.d_stayed.evidence.reaction': 'She checks it against your entry form.',
   'enc.d_stayed.mother.label': "Give {contact}'s address",
   'enc.d_stayed.mother.event': 'Record check',

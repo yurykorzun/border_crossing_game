@@ -14,7 +14,7 @@ import { caughtLine, consequence, fileLine } from './consequence';
 import { ENCOUNTER_BY_ID, CHALLENGES } from './content/encounters';
 import { CHARACTERS } from './content/world';
 import {
-  answerKey, chooseAction, currentCard, legalActions, deskOf, documentsOf, factIds, fileStayed, formDiffers, knownLine, newRun, optionFor, options, speakerOf, topicOf,
+  answerKey, chooseAction, currentCard, legalActions, deskOf, documentsOf, factIds, fileStayed, formDiffers, formDiffersLine, knownLine, newRun, optionFor, options, speakerOf, topicOf,
 } from './engine';
 import type { Option, RunSetup } from './engine';
 import { playStep } from './play';
@@ -64,7 +64,7 @@ function screenProblems(s: RunState, old: readonly FactId[], where: string): str
         hit('form differs');
         const n = playStep(s, chooseAction(o), scriptedDealer([]));
         const said = (n.reaction ?? []).map((l) => l.key);
-        if (!costs(s, n) || !said.includes(`form.differs.${stayed}`)) bad.push(`${where} ${id}: ${o.approach.id}${o.card ? ` ${o.card}` : ''} against "${render(form)}" not caught (${said.join(', ')})`);
+        if (!costs(s, n) || !said.includes(formDiffersLine(s.file, stayed).key)) bad.push(`${where} ${id}: ${o.approach.id}${o.card ? ` ${o.card}` : ''} against "${render(form)}" not caught (${said.join(', ')})`);
       }
     } else if (id === 'd_declared' && s.file?.declared && DECLARED[s.file.declared]) {
       const d = DECLARED[s.file.declared];
@@ -234,6 +234,26 @@ describe('the cases found on the live site', () => {
       const n = playStep(s, chooseAction(mother), dealer);
       expect(s.time - n.time).toBe(1);
       expect(n.reaction!.map((l) => t(l.key, l.vars))).toContain('Your entry form says a hotel. She checks your entry record.');
+    } finally {
+      setStory(undefined);
+    }
+  });
+
+  // azv.15: the card said "On your entry form: the apartment deed." and "With friends"
+  // answered "Your entry form says your mother's address."
+  it('the deed on the entry form: the card line and the reaction to another place name the deed', () => {
+    const arrival = playTo({ level: 'arrival', character: 'lena', loadout: ['deed', 'employerLetter', 'returnTicket'], bulletin: 'customs', seed: 1 }, { p_host: ['evidence', 'deed'] }, 'end');
+    const file = fileOf(arrival);
+    expect(file.shownOn?.p_host).toBe('deed');
+    setStory('departure');
+    try {
+      const s = playTo({ level: 'departure', character: 'lena', loadout: ['motherLetter', 'employerLetter', 'deed'], bulletin: 'customs', seed: 1, file }, {}, 'd_stayed');
+      expect(render(fileLine(s, 'd_stayed'))).toBe('On your entry form: the apartment deed.');
+      const friends = options(s).find((o) => o.approach.id === 'friends')!;
+      const n = playStep(s, chooseAction(friends), dealer);
+      const said = n.reaction!.map((l) => t(l.key, l.vars));
+      expect(said).toContain('Your entry form has the apartment deed. She checks your entry record.');
+      expect(said.join(' ')).not.toContain("mother's address");
     } finally {
       setStory(undefined);
     }
