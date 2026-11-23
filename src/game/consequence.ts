@@ -743,6 +743,8 @@ export function questionKey(s: RunState, prefix: 'enc' | 'insp', id: string): st
     : prefix === 'enc' && ((id === 'd_entry' && !fileClaim(s.file)) || (id === 'd_named' && !fileContact(s.file))) ? `enc.${id}.unsaid`
     // The stay question names the date out the file holds (fileStay()); the ticket's five days is the plain one.
     : prefix === 'enc' && id === 'd_stay' && s.file && fileStay(s.file) !== 'ticket' ? `enc.d_stay.${fileStay(s.file)}`
+    // Departure's inspection says the shuttle was missed only when the hours left no longer cover the trip to the airport.
+    : prefix === 'insp' && id === 's_connection' && s.level === 'departure' && s.time < travelOf(s) ? 'insp.s_connection.missed'
     : `${prefix}.${id}`;
   return own(`${base}.q`, s.character);
 }

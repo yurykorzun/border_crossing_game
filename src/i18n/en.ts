@@ -1342,7 +1342,9 @@ export const en: Record<string, string> = {
   // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
   'departure:topic.purpose.helps': 'Why you stayed',
   'departure:ui.travelReserve': '{hours} to the airport',
-  'departure:insp.s_connection.q': 'You missed your shuttle. "Where did you stay here?"',
+  // The inspection says the shuttle was missed only once the hours left are below the trip to the airport (questionKey(), azv.5).
+  'departure:insp.s_connection.q': '"Where did you stay here?"',
+  'departure:insp.s_connection.missed.q': 'You missed your shuttle. "Where did you stay here?"',
   'departure:insp.s_connection.result.found': 'The hotel you named never had your booking.',
   // The way out is the shuttle to the airport (s_connection), so no line on the way names a bus or a station (dap.43).
   'departure:ui.untilLastBus': '{hours} until the last shuttle',
