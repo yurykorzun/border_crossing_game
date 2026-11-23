@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { ENCOUNTER_BY_ID } from './content/encounters';
-import { caught, deskOf, knownAt, knownLine, newRun, step } from './engine';
+import { bearing, caught, deskOf, knownAt, knownLine, newRun, step } from './engine';
 import type { RunSetup } from './engine';
 import type { Checkpoint, FactId, LevelId, RunState } from './types';
 
@@ -34,10 +34,13 @@ const named = (s: RunState): FactId | undefined => {
   return part?.key.startsWith('known.fact.') ? (part.vars?.fact as FactId) : undefined;
 };
 
-/** The facts a card asks about: its own list, or on a challenge card the fact it caught. */
-const asksOn = (s: RunState, id: string): FactId[] | undefined => {
+/**
+ * The facts a card's line may name: its own list, or on a challenge card the fact it caught,
+ * or on any other card the facts that bear on it (bearing(), border_crossing_game-azv.10).
+ */
+const asksOn = (s: RunState, id: string): FactId[] => {
   const c = caught(s, id);
-  return c ? [c.fact] : ENCOUNTER_BY_ID.get(id)?.asks;
+  return c ? [c.fact] : ENCOUNTER_BY_ID.get(id)?.asks ?? bearing(s, id).facts;
 };
 
 describe('the known-facts line', () => {
@@ -89,7 +92,7 @@ describe('the known-facts line', () => {
               // Shown on the card before: the fact its line named, and what its answer put on file.
               const shown = new Set([...(prev.named ? [prev.named] : []), ...known.filter((f) => !prev!.known.includes(f))]);
               const asks = asksOn(s, id);
-              const fresh = known.filter((f) => (!asks || asks.includes(f)) && !shown.has(f));
+              const fresh = known.filter((f) => asks.includes(f) && !shown.has(f));
               if (fresh.length) {
                 checked++;
                 expect(now, where).toBe(fresh.at(-1));
@@ -104,18 +107,19 @@ describe('the known-facts line', () => {
     expect(moved).toBeGreaterThan(0);
   }, TIMEOUT);
 
-  it('a family address found on this crossing reads On record, and the next customs card shows the father instead', () => {
+  it('a family address found on this crossing reads On record, and a card after one that named it shows the father instead', () => {
     const setup = Array.from({ length: 20 }, (_, i) => setupFor(i, 'arrival')).find((x) => x.character === 'lena')!;
     const base = newRun(setup);
     const facts = { ...base.facts, fatherCondition: ['passport', 'customs'] as Checkpoint[], familyAddress: ['passport', 'customs'] as Checkpoint[] };
+    // The short trip card bears on both (her address if she admits the visit, the hospital note for why she came).
     // A desk's first card: nothing shown yet, so the newest fact, as On record, not Old records.
-    const first: RunState = { ...base, facts, checkpoint: 1, screen: { kind: 'encounter', id: 'c_medicine' } };
+    const first: RunState = { ...base, facts, checkpoint: 1, screen: { kind: 'encounter', id: 'c_shortTrip' } };
     expect(knownLine(first)).toEqual([{ key: 'known.fact.found', vars: { fact: 'familyAddress' } }]);
     expect(t('known.fact.found', { fact: 'familyAddress' })).toMatch(/^On record: /);
-    // The next customs card, after the first named the address: the father's condition noted at passport.
+    // The same card after the card before named the address: the father's condition noted at passport.
     const next: RunState = {
-      ...first, screen: { kind: 'encounter', id: 'c_pen' },
-      knownShown: { card: 'c_pen', desk: 'customs', known: ['fatherCondition', 'familyAddress'], named: 'fatherCondition', skip: ['familyAddress'] },
+      ...first,
+      knownShown: { card: 'c_shortTrip', desk: 'customs', known: ['fatherCondition', 'familyAddress'], named: 'fatherCondition', skip: ['familyAddress'] },
     };
     expect(knownLine(next)).toEqual([{ key: 'known.fact.confirmed', vars: { fact: 'fatherCondition' } }]);
     // A save from before knownShown existed shows the newest fact, as before.
