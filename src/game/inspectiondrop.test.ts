@@ -24,7 +24,7 @@ describe('scrutiny falling after an inspection', () => {
     const n = playStep(connection(), { type: 'choose', approach: 'later' });
     expect(n.scrutiny).toBe(SCRUTINY_AFTER_INSPECTION);
     const lines = (n.changes ?? []).map(changeText);
-    expect(lines).toContain('Scrutiny down to 1/3, because the inspection is done.');
+    expect(lines).toContain('Scrutiny 1/3, down because the inspection is done.');
     expect(lines).not.toContain('Scrutiny 1/3.');
   });
 
