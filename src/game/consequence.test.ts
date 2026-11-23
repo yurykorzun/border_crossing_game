@@ -233,10 +233,10 @@ describe('packing rows', () => {
   });
 
   // azv.7: the employer letter read "Work · Money", and "How much cash are you carrying?" (d_declared) offered no document.
-  it('in Departure the employer letter says where your cash is from, and the cash card takes no document', () => {
+  it('in Departure the employer letter says Income, not Money, and the cash card takes no document', () => {
     setStory('departure');
     try {
-      expect(rows('employerLetter')).toEqual(['Work · Where your cash is from', 'Reveals your employer']);
+      expect(rows('employerLetter')).toEqual(['Work · Income', 'Reveals your employer']);
     } finally {
       setStory(undefined);
     }
