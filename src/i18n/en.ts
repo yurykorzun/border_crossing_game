@@ -1351,6 +1351,8 @@ export const en: Record<string, string> = {
   // The packing row for a purpose document, never "came back" (dap.51). It does not say "stayed"
   // either, because the desk's "Why so long?" (d_stay) asks the stay topic and takes no purpose document (azv.6).
   'departure:topic.purpose.helps': 'Reason for the trip',
+  // The employer letter shows where your cash is from, never how much: the exit desk's cash card takes no document (azv.7).
+  'departure:topic.money.helps': 'Where your cash is from',
   'departure:ui.travelReserve': '{hours} to the airport',
   // The inspection says the shuttle was missed only once the hours left are below the trip to the airport (questionKey(), azv.5).
   'departure:insp.s_connection.q': '"Where did you stay here?"',

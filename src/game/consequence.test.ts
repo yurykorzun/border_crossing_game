@@ -6,6 +6,7 @@ import { CHANGE_EVENTS, MAX_PARTS, SEPARATOR, changeLines, consequence, conseque
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { deskOf, documentFits, newRun, options, travelOf } from './engine';
 import { eventsBetween, playStep } from './play';
+import { defaultFile } from './carry';
 import type { GameEvent } from './play';
 import { en } from '../i18n/en';
 import type { Part } from './consequence';
@@ -229,6 +230,21 @@ describe('packing rows', () => {
       setStory(undefined);
     }
     expect(documentFits('hospitalNote', 'stay', 'd_stay').fits).toBe(false);
+  });
+
+  // azv.7: the employer letter read "Work · Money", and "How much cash are you carrying?" (d_declared) offered no document.
+  it('in Departure the employer letter says where your cash is from, and the cash card takes no document', () => {
+    setStory('departure');
+    try {
+      expect(rows('employerLetter')).toEqual(['Work · Where your cash is from', 'Reveals your employer']);
+    } finally {
+      setStory(undefined);
+    }
+    expect(rows('employerLetter')[0]).toBe('Work · Money');
+    expect(ENCOUNTER_BY_ID.get('d_declared')!.approaches.some((a) => a.kind === 'evidence')).toBe(false);
+    const out = newRun({ level: 'departure', character: 'lena', loadout: ['employerLetter', 'motherLetter', 'deed'], bulletin: 'customs', seed: 1, file: defaultFile(1, 'lena') });
+    const s: RunState = { ...out, screen: { kind: 'encounter', id: 'd_declared' } };
+    expect(options(s).some((o) => o.approach.kind === 'evidence' || o.card === 'employerLetter')).toBe(false);
     expect(ENCOUNTER_BY_ID.get('d_stay')!.approaches.filter((a) => a.kind === 'evidence').map((a) => a.topic)).toEqual(['stay']);
   });
 });
