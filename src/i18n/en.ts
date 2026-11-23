@@ -238,6 +238,8 @@ export const en: Record<string, string> = {
   'explain.caught': 'A record speaks against you. Every answer costs something.',
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
+  // The same, finished at a secondary inspection: the supervisor's line (azv.17).
+  'insp.finish.reaction': 'She closes your file. The rest is stamps and corridors.',
   'ui.blocked.noCard': 'No matching document',
   // A packed document that names the question but is not offered (dap.41): shown for an earlier one, or no answer here.
   'ui.blocked.shown': 'Already shown: {cardShort}',

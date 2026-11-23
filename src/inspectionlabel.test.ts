@@ -6,9 +6,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Ending } from './App';
 import { changeText, decisive } from './game/consequence';
-import { newRun, options } from './game/engine';
+import { SAMPLE_FILES } from './game/carry';
+import { legalActions, newRun, options, speakerOf } from './game/engine';
 import { playStep } from './game/play';
 import { t } from './i18n';
+import { officerLabel } from './ui/parts';
 import type { RunState } from './game/types';
 
 /** Mark at the security interview, sent to the supervisor's purpose inspection with nothing that shows why he came. */
@@ -51,5 +53,29 @@ describe('an answer at a secondary inspection is labelled the supervisor\'s', ()
     expect(decisive(end).some((x) => x.desk === 'interview' && !x.inspection)).toBe(true);
     const html = plain(renderToStaticMarkup(createElement(Ending, { s: end, onChoose: () => {}, onRetry: () => {}, onNext: () => {} })));
     expect(html).toContain(t('ending.decided.at', { desk: 'interview' }));
+  });
+});
+
+// Finishing quickly at an inspection ends the run on the supervisor's line, so the label
+// over it says Supervisor, not the desk's officer (border_crossing_game-azv.17).
+describe('finishing quickly at an inspection is labelled the supervisor\'s', () => {
+  const departure = newRun({ level: 'departure', character: 'mark', loadout: ['motherLetter', 'hospitalNote', 'returnTicket', 'deed'], bulletin: 'records', seed: 7, file: SAMPLE_FILES.mark });
+  const arrival = newRun({ character: 'lena', loadout: ['deed', 'hotel', 'motherLetter'], bulletin: 'customs', seed: 7 });
+
+  it.each([['Departure', departure], ['Arrival', arrival]] as const)('%s: the reaction after "Finish the crossing quickly" at an inspection reads Supervisor', (_, base) => {
+    const s: RunState = { ...base, checkpoint: 1, slot: 1, scrutiny: 3, inspections: 1, time: 0, seen: ['s_bag'], screen: { kind: 'inspection', id: 's_bag' } };
+    expect(legalActions(s)).toContainEqual({ type: 'finish' });
+    const n = playStep(s, { type: 'finish' });
+    expect(n.ending).toBeDefined();
+    expect(n.reaction?.length).toBeGreaterThan(0);
+    expect(speakerOf(n)).toBe('inspection');
+    expect(officerLabel(n)).toBe(t('officer.inspection'));
+  });
+
+  it('at a desk card the same reaction stays the desk officer\'s', () => {
+    const s: RunState = { ...arrival, reaction: null, checkpoint: 1, slot: 1, time: 0, seen: ['c_pen'], screen: { kind: 'encounter', id: 'c_pen' } };
+    const n = playStep(s, { type: 'finish' });
+    expect(n.ending).toBeDefined();
+    expect(officerLabel(n)).toBe(t('officer.customs'));
   });
 });

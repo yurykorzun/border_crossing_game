@@ -1828,7 +1828,8 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     case 'finish':
       if (!canFinish(s)) return s;
       // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
-      return say(finish({ ...s, documentList: undefined, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
+      // Finished at an inspection, the line is the supervisor's, so it is an `insp.` line (speakerOf(), azv.17).
+      return say(finish({ ...s, documentList: undefined, reaction: null, pending: [] }), [{ key: s.screen.kind === 'inspection' ? 'insp.finish.reaction' : 'finish.reaction' }]);
   }
 }
 
