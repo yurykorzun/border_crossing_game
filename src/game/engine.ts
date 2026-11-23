@@ -1690,9 +1690,11 @@ function resolveWait(s: RunState, how: WaitAction, dealer: Dealer): RunState {
 /**
  * `n` after answer `opt`, with each claim it made marked by where it came from: a claim
  * a shown document made for the first time is on file as that document (RunState.shownBy),
- * and one you then say aloud is yours, from the card and desk you said it at, with the
- * answer you said it with (RunState.saidAs). So the carried file never quotes a document's
- * claim as your words, and quotes your words as the answer you chose.
+ * and one you then say aloud on the same card is yours, with the answer you said it with
+ * (RunState.saidAs). A later answer on another card that makes the same claim leaves the
+ * document as its record: the hospital note answered why you came, and giving your mother's
+ * address for where you stay does not turn that into the address. So the carried file never
+ * quotes a document's claim as your words, and quotes your words as the answer you chose.
  */
 function shownOrSpoken(s: RunState, n: RunState, opt: Option, topic: Topic | undefined): RunState {
   const claimsIn = (effects: Effect[]) => effects.flatMap((e) => ('claim' in e ? [e.claim] : []));
@@ -1707,12 +1709,14 @@ function shownOrSpoken(s: RunState, n: RunState, opt: Option, topic: Topic | und
   const label = (): AnswerLabel =>
     (answer ??= { id: opt.approach.id, key: answerKey(s, opt.approach.id, 'label'), ...(opt.card || opt.contact ? { vars } : {}) });
   for (const c of claimsIn(opt.effects)) {
-    // Said here for the first time, or said aloud after only a document had made it.
-    if (!fromDoc.includes(c) && out.claims.includes(c) && (!s.claims.includes(c) || s.shownBy?.[c]))
+    // Only a document made it so far, on this same card: said aloud here, it becomes yours.
+    const sayOver = !!s.shownBy?.[c] && card !== undefined && s.saidOn?.[c] === card;
+    // Said here for the first time, or said aloud over a document on the card it answered.
+    if (!fromDoc.includes(c) && out.claims.includes(c) && (!s.claims.includes(c) || sayOver))
       out = { ...out, saidAs: { ...out.saidAs, [c]: label() } };
     if (fromDoc.includes(c)) {
       if (!s.claims.includes(c) && opt.card) out = { ...out, shownBy: { ...out.shownBy, [c]: opt.card } };
-    } else if (out.shownBy?.[c]) {
+    } else if (sayOver) {
       const rest = { ...out.shownBy };
       delete rest[c];
       out = { ...out, shownBy: rest, saidAt: { ...out.saidAt, [c]: deskOf(s) }, ...(card ? { saidOn: { ...out.saidOn, [c]: card } } : {}) };

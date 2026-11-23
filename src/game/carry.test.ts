@@ -2,13 +2,18 @@
 // one before it is finished, with any ending, and the file from the last finished crossing is
 // saved for a later level, with a seeded default when there is none.
 import { describe, expect, it } from 'vitest';
-import { t } from '../i18n';
+import { setStory, t } from '../i18n';
 import { LEVELS, levelOpen, levelRows } from './content/levels';
 import { defaultFile, fileFor, fileOf, recordRun } from './carry';
 import { playRun, setupFor } from './bots';
+import { fileDate, fileLine, recordLines } from './consequence';
+import { chooseAction, currentCard, legalActions, newRun, options, step } from './engine';
+import type { RunSetup } from './engine';
+import { scriptedDealer } from './play';
 import { SAVE_KEY, SAVE_VERSION, distinctEndings, freshSave, load, save } from './save';
 import type { SaveData, Store } from './save';
-import type { Level, LevelId } from './types';
+import type { Level, LevelId, RunState } from './types';
+import { allSetups } from './walk';
 
 function memoryStore(): Store {
   const map = new Map<string, string>();
@@ -145,5 +150,61 @@ describe('the file carried between crossings', () => {
     const data = load(store);
     expect(data.file).toBeNull();
     expect(data.endingsSeen).toEqual(['tooLate']);
+  });
+});
+
+const dealer = scriptedDealer([]);
+
+/** Plays a run: `picks` answers the cards it names (a document by its id), every other screen its first legal action. */
+function drive(setup: RunSetup, picks: Record<string, string>): RunState {
+  let s = newRun(setup);
+  for (let i = 0; i < 200 && !s.ending; i++) {
+    const card = s.reaction ? null : currentCard(s);
+    const pick = card && picks[card.id];
+    const answer = pick && options(s).find((o) => !o.blocked && (o.approach.id === pick || o.card === pick));
+    const doc = answer && answer.card === pick ? { type: 'choose' as const, approach: answer.approach.id, card: answer.card } : undefined;
+    const next = doc ?? (answer ? chooseAction(answer) : legalActions(s).find((a) => a.type !== 'turnBack') ?? legalActions(s)[0]);
+    s = step(s, next, dealer);
+  }
+  return s;
+}
+
+// Found on the live site (border_crossing_game-azv.4): the hospital note answered why Lena
+// came, then her mother's address answered where she would stay. The address makes the same
+// familyVisit claim, and the file used to swap the note for the address, so "Your file" gave
+// the address twice and Departure's first card quoted it for why she came.
+describe('a claim a document made first keeps the document on the carried file', () => {
+  it("the hospital note for why you came, then your mother's address for where you stay", () => {
+    const setup: RunSetup = { level: 'arrival', character: 'lena', loadout: ['motherLetter', 'hospitalNote', 'deed'], bulletin: 'records', seed: 3 };
+    const s = drive(setup, { p_purpose: 'hospitalNote', p_host: 'mother' });
+    expect(s.ending).toBeDefined();
+    expect(s.shownOn?.p_purpose).toBe('hospitalNote');
+    expect(s.seen).toContain('p_host');
+    const file = fileOf(s);
+    const said = file.said ?? [];
+    const visit = said.find((c) => c.claim === 'familyVisit');
+    expect(visit).toMatchObject({ shown: 'hospitalNote', context: 'p_purpose', desk: 'passport' });
+    expect(visit?.answer).toBeUndefined();
+    expect(said.find((c) => c.claim === 'stayingWithFamily')).toMatchObject({ context: 'p_host', answer: { id: 'mother' } });
+
+    const lines = recordLines(file).map((l) => t(l.key, l.vars));
+    expect(lines.filter((l) => l.startsWith(fileDate(visit!.date)) && l.endsWith('you showed the hospital note')), lines.join('\n')).toHaveLength(1);
+    expect(new Set(lines).size, lines.join('\n')).toBe(lines.length);
+    expect(lines.filter((l) => l.includes("you gave your mother's address"))).toHaveLength(1);
+
+    setStory('departure');
+    try {
+      const loadout = allSetups('departure').find((x) => x.character === 'lena')!.loadout;
+      let d = newRun({ level: 'departure', character: 'lena', loadout, bulletin: 'records', seed: 3, file });
+      for (let i = 0; i < 10 && d.screen.kind !== 'encounter'; i++) d = step(d, legalActions(d)[0], dealer);
+      // Departure's first card, "Is that still why you came?", quotes the answer to p_purpose.
+      expect(d.screen).toMatchObject({ kind: 'encounter', id: 'd_entry' });
+      const l = fileLine(d, 'd_entry')!;
+      const line = t(l.key, l.vars);
+      expect(line).toContain('you showed the hospital note');
+      expect(line).not.toContain('address');
+    } finally {
+      setStory(undefined);
+    }
   });
 });

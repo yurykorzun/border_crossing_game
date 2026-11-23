@@ -1124,10 +1124,17 @@ export const en: Record<string, string> = {
   'ending.chain.saved.checked#one': 'What {deskAt} checked counted at {desk}: {n} hour saved.',
   'ending.chain.saved.checked#other': 'What {deskAt} checked counted at {desk}: {n} hours saved.',
   'ending.chain.followUp.fact': '{fact}, on file from {deskAt}, brought a follow-up at {desk}: {question}',
-  'ending.chain.followUp.claim': '"{said}", said at {deskAt}, brought a follow-up at {desk}: {question}',
+  // {words} is the answer as it read on screen, so the line never quotes words you did not say.
+  'ending.chain.followUp.claim': '"{words}", said at {deskAt}, brought a follow-up at {desk}: {question}',
+  // An answer that was an act, not words: what you did ("you gave your mother's address").
+  'ending.chain.followUp.did': 'At {deskAt} {did}, and that brought a follow-up at {desk}: {question}',
+  // A claim a document made: the document, never words you did not say.
+  'ending.chain.followUp.shown': '{cardLabel}, shown at {deskAt}, brought a follow-up at {desk}: {question}',
   // The same when the follow-up came at the desk that put it on file.
   'ending.chain.followUp.fact.here': '{fact}, put on file at {deskAt}, brought a follow-up there: {question}',
-  'ending.chain.followUp.claim.here': '"{said}", said at {deskAt}, brought a follow-up there: {question}',
+  'ending.chain.followUp.claim.here': '"{words}", said at {deskAt}, brought a follow-up there: {question}',
+  'ending.chain.followUp.did.here': 'At {deskAt} {did}, and that brought a follow-up there: {question}',
+  'ending.chain.followUp.shown.here': '{cardLabel}, shown at {deskAt}, brought a follow-up there: {question}',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',
   'ending.axis.arrival.onTime': 'On time. {left} left at the exit, the trip takes {trip}.',
@@ -1342,7 +1349,9 @@ export const en: Record<string, string> = {
   // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
   'departure:topic.purpose.helps': 'Why you stayed',
   'departure:ui.travelReserve': '{hours} to the airport',
-  'departure:insp.s_connection.q': 'You missed your shuttle. "Where did you stay here?"',
+  // The inspection says the shuttle was missed only once the hours left are below the trip to the airport (questionKey(), azv.5).
+  'departure:insp.s_connection.q': '"Where did you stay here?"',
+  'departure:insp.s_connection.missed.q': 'You missed your shuttle. "Where did you stay here?"',
   'departure:insp.s_connection.result.found': 'The hotel you named never had your booking.',
   // The way out is the shuttle to the airport (s_connection), so no line on the way names a bus or a station (dap.43).
   'departure:ui.untilLastBus': '{hours} until the last shuttle',

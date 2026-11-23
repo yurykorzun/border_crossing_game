@@ -2,7 +2,7 @@
 // says what happened as events, and replay() rebuilds a run from its record.
 // The UI can animate the events; tests read them. step() stays the raw rule.
 
-import { answerKey, check, chooseAction, currentCard, deskOf, factIds, factTier, inspectionResult, legalActions, newRun, optionFor, pointVerified, reactionOf, step, topicOf, travelOf, usesVerified, waitActions, waitKey } from './engine';
+import { answerKey, caught, check, chooseAction, currentCard, deskOf, factIds, factTier, inspectionResult, legalActions, newRun, optionFor, pointVerified, reactionOf, step, topicOf, travelOf, usesVerified, waitActions, waitKey } from './engine';
 import { own } from '../i18n';
 import { changeLines } from './consequence';
 import { CHECKS } from './content/encounters';
@@ -137,7 +137,9 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
     const showed = o.effects.reduce((x, e) => x + ('scrutiny' in e ? e.scrutiny : 0), 0);
     const rose = Math.min(Math.max(0, showed), MAX_SCRUTINY - s.scrutiny);
     const saved = savedBy(s, o.approach);
-    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose), ...(saved ? { saved } : {}) });
+    // The pair the challenge card showing was dealt for, before the answer changes the file.
+    const pair = sc.kind === 'encounter' ? caught(s, sc.id) : undefined;
+    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose), ...(saved ? { saved } : {}), ...(pair ? { about: { claim: pair.claim, fact: pair.fact } } : {}) });
   }
   if (action.type !== 'waitAction' || sc.kind !== 'wait' || action.action === 'ask') return n;
   const last = answers[answers.length - 1];

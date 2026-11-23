@@ -33,6 +33,7 @@ const render = (lines: ({ key: string; vars?: Record<string, string> } | undefin
 function arrivalRecord(setup: RunSetup, actions: readonly Action[]) {
   const spoken = new Map<ClaimId, string>();
   const shown = new Map<ClaimId, EvidenceId>();
+  const shownAt = new Map<ClaimId, string>();
   let s = newRun(setup);
   for (const a of actions) {
     const sc = s.screen;
@@ -43,11 +44,17 @@ function arrivalRecord(setup: RunSetup, actions: readonly Action[]) {
       const said = o.approach.effects.flatMap((e) => ('claim' in e ? [e.claim] : []));
       const docSays = o.card ? EVIDENCE[o.card].onUse.flatMap((e) => ('claim' in e ? [e.claim] : [])) : [];
       for (const c of said) if (!spoken.has(c) && n.claims.includes(c)) spoken.set(c, sc.id);
-      for (const c of made) if (docSays.includes(c) && !said.includes(c)) shown.set(c, o.card!);
+      for (const c of made) if (docSays.includes(c) && !said.includes(c)) { shown.set(c, o.card!); shownAt.set(c, sc.id); }
     }
     s = n;
   }
-  for (const c of spoken.keys()) shown.delete(c);
+  // Said aloud on the card the document answered, the claim is yours; said only on a later
+  // card, the document stays its record (border_crossing_game-azv.4).
+  for (const c of [...spoken.keys()]) {
+    if (!shown.has(c)) continue;
+    if (spoken.get(c) === shownAt.get(c)) shown.delete(c);
+    else spoken.delete(c);
+  }
   return { spoken, shown, final: s };
 }
 
