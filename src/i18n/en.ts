@@ -1005,7 +1005,8 @@ export const en: Record<string, string> = {
   'calledIn.reaction': 'You named {contact} earlier. The officer checks that first.',
   // The claim by its label, not in quotes: "Back for family" is the file's entry, not words you said.
   'spot.clear': 'Checks out: {claim}.',
-  'spot.flaw': 'Does not check out: {claim}.',
+  // A flaw shows under any answer, so it opens as its own check and never reads as that answer's result (azv.8).
+  'spot.flaw': 'Checked before you go: {claim}. It does not check out.',
   'spot.answered': 'Checked: {claim}. You have already answered for it.',
   // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
   'spot.explained#one': 'Checked before you go. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {n} hour.',
