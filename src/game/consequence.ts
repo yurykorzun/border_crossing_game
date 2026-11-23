@@ -495,7 +495,7 @@ export function chains(s: RunState): ChainLine[] {
       const question = t(questionKey(s, 'enc', card.id), questionVars(s, card.id));
       // A claim a document made is the document, not words you said (showing your mother's letter is not "My family needs me here").
       const doc = claim ? cause.vars?.card : undefined;
-      const said = claim && !doc ? { said: own(`said.${claim}`, s.character).slice('said.'.length) } : {};
+      const said: Record<string, string> = claim && !doc ? { said: own(`said.${claim}`, s.character).slice('said.'.length) } : {};
       const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : {}), ...(doc ? { cardLabel: doc } : {}), ...said };
       const key = `ending.chain.followUp.${fact ? 'fact' : doc ? 'shown' : 'claim'}${cause.desk === a.desk ? '.here' : ''}`;
       best = { w, line: { kind: 'followUp', key, vars, costs: costsOf(s, a, protectedContact) } };
