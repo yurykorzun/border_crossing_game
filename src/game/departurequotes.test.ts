@@ -169,11 +169,13 @@ describe('"Until my father is out of hospital" at Arrival', () => {
   let s = newRun(setup);
   for (const a of actions) s = step(s, a, dealer);
 
-  it('is what Your file and the first Departure question quote', () => {
+  // The letter made the claim first, on the card it answered, so the letter stays its record
+  // (border_crossing_game-azv.4): the later answer on p_stay repeats the claim, it does not take it over.
+  it('leaves the letter as what Your file and the first Departure question name', () => {
     expect(s.seen).toContain('p_stay');
     const file = fileOf(s);
     const record = recordLines(file).map(render).join('\n');
-    expect(record).toContain('"Until my father is out of hospital"');
+    expect(record).toContain("you showed your mother's letter");
     expect(record).not.toContain('My family needs me here');
     setStory('departure');
     try {
@@ -182,7 +184,7 @@ describe('"Until my father is out of hospital" at Arrival', () => {
       for (let i = 0; i < 10 && d.screen.kind !== 'encounter'; i++) d = step(d, legalActions(d)[0], dealer);
       expect(d.screen).toMatchObject({ kind: 'encounter', id: 'd_entry' });
       const line = render(fileLine(d, 'd_entry'));
-      expect(line).toContain('Asked how long you would stay: "Until my father is out of hospital"');
+      expect(line).toContain("you showed your mother's letter");
       expect(line).not.toContain('My family needs me here');
     } finally {
       setStory(undefined);
@@ -196,8 +198,9 @@ describe('"Until my father is out of hospital" at Arrival', () => {
 
   it('passes the sweep: every Departure quote is an answer chosen', () => {
     const r = sweep(0, setup, actions, (d) => drive(d, {}), 'first run, father', dealer);
+    // The file holds the letter here, so it may quote nothing; the sweep over every setup
+    // above is the one that has to reach a quote.
     expect(r.bad).toEqual([]);
-    expect(r.quoted).toBeGreaterThan(0);
   });
 });
 

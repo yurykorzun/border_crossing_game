@@ -803,7 +803,7 @@ export interface RunState {
   saidOn?: Partial<Record<ClaimId, string>>;
   /**
    * The claims only a shown document has made so far, with the document, so the carried
-   * file quotes it as shown, not said (CarriedClaim.shown). Saying one aloud removes it.
+   * file quotes it as shown, not said (CarriedClaim.shown). Saying one aloud on the card it answered removes it.
    * Unset in saves from before it existed.
    */
   shownBy?: Partial<Record<ClaimId, EvidenceId>>;
