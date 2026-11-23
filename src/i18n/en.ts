@@ -176,6 +176,8 @@ export const en: Record<string, string> = {
   // What changed, one line each under the officer's reaction (changeLines() in src/game/consequence.ts).
   'change.document': 'Used: {cardLabel}.',
   'change.contact.number': "{desk} has {contact}'s number.",
+  // Named at a secondary inspection: the supervisor has it, not the desk (azv.16).
+  'change.contact.number.inspection': "The supervisor has {contact}'s number.",
   'change.contact.name': 'You named {contact}.',
   'change.verified.accommodation': 'Address verified.',
   'change.verified.purpose': 'Your reason verified.',
@@ -1105,6 +1107,8 @@ export const en: Record<string, string> = {
   // The answers that decided the run (decisive()): the desk, the answer as its button read, what it cost.
   'ending.decided.heading': 'What decided it',
   'ending.decided.at': 'At {desk}',
+  // An answer given at a secondary inspection (DecisiveAnswer.inspection, azv.16).
+  'ending.decided.inspection': 'To the supervisor',
   'ending.cost.medicine': 'The medicine taken',
   'ending.cost.caught': 'A record shows "{said}" was not true',
   'ending.cost.named': 'Named {contact}',
