@@ -686,6 +686,9 @@ export function knownLine(s: RunState): KnownPart[] {
     return [{ key: `insp.issue.${issue}.reopened`, vars: { fact: reopenedBy(s, issue)! } }];
   }
   if (s.screen.kind !== 'encounter') return [];
+  // A challenge card's line under the question (caughtLine()) already names the fact that
+  // caught you, so this line would only say it a second time (azv.9).
+  if ((CHALLENGES as readonly string[]).includes(s.screen.id) && caught(s, s.screen.id)) return [];
   const asks = asksAbout(s, s.screen.id);
   const fresh = lineFact(s, asks);
   if (asks) {

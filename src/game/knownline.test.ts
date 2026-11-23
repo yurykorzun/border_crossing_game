@@ -28,8 +28,10 @@ function states(style: (typeof BOT_STYLES)[number], setup: RunSetup): RunState[]
   return out;
 }
 
-/** The fact a line names, if it names one. */
+/** The fact the card names, if it names one: its known-facts line, or on a challenge card the line under the question (azv.9). */
 const named = (s: RunState): FactId | undefined => {
+  const pair = s.screen.kind === 'encounter' ? caught(s, s.screen.id) : undefined;
+  if (pair) return pair.fact;
   const [part] = knownLine(s);
   return part?.key.startsWith('known.fact.') ? (part.vars?.fact as FactId) : undefined;
 };
@@ -54,6 +56,11 @@ describe('the known-facts line', () => {
             if (s.screen.kind !== 'encounter') continue;
             const [part] = knownLine(s);
             const where = `${level} ${style} seed ${i + 1} ${s.screen.id}`;
+            // A challenge card leaves the fact to the line under its question (azv.9).
+            if (!part) {
+              expect(caught(s, s.screen.id), where).toBeDefined();
+              continue;
+            }
             if (part.key === 'known.fact.recorded') {
               old++;
               expect(before, where).toContain(part.vars?.fact);
