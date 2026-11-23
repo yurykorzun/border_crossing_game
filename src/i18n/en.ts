@@ -184,6 +184,8 @@ export const en: Record<string, string> = {
   'change.time#one': '{n} hour lost.',
   'change.time#other': '{n} hours lost.',
   'change.scrutiny#other': 'Scrutiny {n}/{max}.',
+  // Scrutiny fell because an inspection ended (SCRUTINY_AFTER_INSPECTION), so the line says why (azv.11).
+  'change.scrutiny.inspection#other': 'Scrutiny down to {n}/{max}, because the inspection is done.',
   'change.medicine': 'The medicine is gone.',
   'change.travel#one': 'Station now {n} hour away.',
   'change.travel#other': 'Station now {n} hours away.',

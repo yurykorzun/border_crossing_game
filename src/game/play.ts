@@ -20,7 +20,8 @@ export const CONTENT_VERSION = 18;
 
 export type GameEvent =
   | { type: 'timeSpent'; hours: number }
-  | { type: 'scrutinyChanged'; from: number; to: number }
+  /** `inspection`: it fell because an inspection ended (SCRUTINY_AFTER_INSPECTION), so the line says why. */
+  | { type: 'scrutinyChanged'; from: number; to: number; inspection?: true }
   | { type: 'documentUsed'; id: EvidenceId }
   /**
    * A contact went on file at `desk`: their number, or only their name on an answer
@@ -184,7 +185,10 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
   for (const id of added(s.exposed, n.exposed)) ev.push(exposedEvent(s, n, action, id));
   if (!s.perkUsed && n.perkUsed) ev.push({ type: 'perkUsed' });
   if (n.time < s.time) ev.push({ type: 'timeSpent', hours: s.time - n.time });
-  if (n.scrutiny !== s.scrutiny) ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny });
+  // An inspection answered, or one with nothing left to ask (insp.none), drops scrutiny back (azv.11).
+  const inspected = s.screen.kind === 'inspection' || (n.reaction ?? []).some((l) => l.key === 'insp.none');
+  if (n.scrutiny !== s.scrutiny)
+    ev.push({ type: 'scrutinyChanged', from: s.scrutiny, to: n.scrutiny, ...(inspected && n.scrutiny < s.scrutiny ? { inspection: true as const } : {}) });
   for (const id of added(s.claims, n.claims)) ev.push({ type: 'claimRecorded', id });
   // A challenge card, or a disproof answered anywhere else (f_donation's denial): the claim it catches.
   const opt = action.type === 'choose' ? optionFor(s, action) : undefined;

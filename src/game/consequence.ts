@@ -261,7 +261,8 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
         : { key: 'change.sent', vars: { fact: e.id, desk: e.desks[0] }, tone: 'plain' });
   for (const e of events) if (e.type === 'timeSpent') out.push({ key: 'change.time', n: e.hours, tone: 'plain' });
   for (const e of events)
-    if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
+    if (e.type === 'scrutinyChanged')
+      out.push({ key: e.inspection ? 'change.scrutiny.inspection' : 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
   // Last, what the answer resolves: each question now settled for the officers ahead

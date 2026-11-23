@@ -107,7 +107,7 @@ On a first run, three rules are explained in one short line each, the first time
 | Scrutiny | 0 of 3 | Three empty spaces |
 | Mission item | Father's medicine | Shown on the mission card |
 
-At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny drops to 1. Scrutiny is an extra cost, never an instant loss.
+At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny drops to 1, and the reaction says the inspection is why ("Scrutiny down to 1/3, because the inspection is done."). Scrutiny is an extra cost, never an instant loss.
 
 ## Characters (one strength, one weakness, three background facts)
 
