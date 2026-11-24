@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { DESTINATION_IDS } from './content/world';
-import { costsOf, newRun, options, spareAfter, travelOf } from './engine';
+import { playRun } from './bots';
+import { costsOf, newRun, options, spareAfter, step, travelOf } from './engine';
 import type { RunSetup } from './engine';
 import { tryStep } from './play';
 import type { BulletinId, DestinationId, RunState } from './types';
@@ -18,6 +19,16 @@ const atMedicine = (time: number, bulletin: BulletinId = 'records', destination?
   return { ...s, time, reaction: null, checkpoint: 1, slot: 0, screen: { kind: 'encounter', id: 'c_medicine' }, seen: [...s.seen, 'c_medicine'] };
 };
 const ids = (s: RunState) => options(s).map((o) => o.approach.id);
+/** The liar bot's own Arrival run, played up to the cool bag question. */
+const liarAtMedicine = (destination: DestinationId): RunState => {
+  const setup: RunSetup = { level: 'arrival', destination, character: 'lena', loadout: ['hotel', 'motherLetter', 'hospitalNote'], bulletin: 'customs', seed: 1 };
+  let s = newRun(setup);
+  for (const a of playRun('liar', setup).actions) {
+    if (s.screen.kind === 'encounter' && s.screen.id === 'c_medicine') return s;
+    s = step(s, a);
+  }
+  throw new Error('the run never reached c_medicine');
+};
 /** The hours on the declare button. */
 const declareHours = (s: RunState) => -options(s).find((o) => o.approach.id === 'declare')!.effects.reduce((n, e) => n + ('time' in e ? e.time : 0), 0);
 
@@ -47,6 +58,16 @@ describe('leave the medicine (c_medicine)', () => {
     for (const destination of DESTINATION_IDS.filter((d) => d !== 'north')) {
       for (const bulletin of ['records', 'customs'] as const) expect(ids(atMedicine(6, bulletin, destination))).toEqual(['evidence', 'declare']);
     }
+  });
+
+  it('a bot run reaches it in Orvek on a customs day, and the same run to the capital does not', () => {
+    // azv.14: passport control leaves this run 6 hours, so only the 3-hour trip north makes it tight.
+    const north = liarAtMedicine('north');
+    expect(north.time).toBe(6);
+    expect(ids(north)).toContain('leave');
+    const capital = liarAtMedicine('capital');
+    expect(capital.time).toBe(6);
+    expect(ids(capital)).not.toContain('leave');
   });
 
   it('counts a trip a missed connection made longer', () => {
