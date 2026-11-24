@@ -1076,7 +1076,7 @@ export const en: Record<string, string> = {
   'tabletop.part.contactFree': 'while {contacts} is not yet named',
   'tabletop.part.lastHours': 'with {hours} or less left',
   'tabletop.part.moreHours': 'with more than {hours} left',
-  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond the shortest trip',
+  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond your trip',
   'tabletop.part.holds': 'if you hold a document for {topic}',
   'tabletop.part.used': 'once you showed {docs}',
   'tabletop.part.flagged': 'with a flagged fact on file',

@@ -311,7 +311,7 @@ export const ENCOUNTERS: Encounter[] = [
       // With the prescription verified earlier, he uses the details on file: no lab, no wait.
       { id: 'declare', kind: 'verify', effects: [{ time: -1 }, { time: -1, when: { bulletin: 'customs' } }], check: 'medicineLab', ifVerified: [] },
       // Leaving it costs no time, only where the wait would leave an hour or less beyond
-      // the shortest trip: there the medicine and the bus compete. With hours to spare it would be
+      // this run's own trip: there the medicine and the bus compete. With hours to spare it would be
       // an answer that exists only to be wrong, so the card leaves it off.
       { id: 'leave', kind: 'say', requires: { spareAfter: { answer: 'declare', atMost: 1 } }, effects: [{ loseMedicine: true }] },
     ],
