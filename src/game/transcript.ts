@@ -18,7 +18,7 @@ import { CHECKS, CONTRADICTIONS, ENCOUNTER_BY_ID, INCONSISTENCIES, INSPECTION_BY
 import { PREPARATION_MESSAGE, messagesSoFar, queueBeats } from './content/queues';
 import { CHARACTERS, CHARACTER_IDS, EVIDENCE_IDS, MAX_SCRUTINY, SCRUTINY_AFTER_INSPECTION, beatDelayMs } from './content/world';
 import { LISTED_LEVELS, levelOf, nextLevel } from './content/levels';
-import { SEPARATOR, axisLines, chains, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
+import { SEPARATOR, axisLines, chains, changeText, caughtLine, consequence, consequences, decisive, endingBody, laterLines, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './consequence';
 import { afford, answerKey, canFinish, canTurnBack, deskIntro, deskOf, endingText, factIds, factTier, inspectionIssue, inspectionReason, isCalm, knownAt, knownLine, loggedAt, newRun, observation, optionFor, options, remindLine, routinesLeft, shownCheckpoint, speakerOf, supervisorLine, travelOf, waitActions, waitKey } from './engine';
 import type { Option, RunSetup } from './engine';
 import { eventsBetween, playStep } from './play';
@@ -468,13 +468,9 @@ function endingLines(s: RunState, p: Page): void {
     if (l.reason) p.add(l.reason, l.vars, i === 0 ? {} : CHROME);
     p.add(l.key, l.vars, i === 0 ? {} : CHROME);
   });
-  // laterBeat(): what came back days later, read, with the choice that caused it.
-  const later = laterBeat(s);
-  if (later) {
-    p.add(`later.${later.id}.when`);
-    p.add(`later.${later.id}`, later.vars);
-    p.add(`later.${later.id}.reason`, later.vars);
-  }
+  // laterLines(): what came back days later, read, with the choice that caused it
+  // (one short line after a missed bus or flight).
+  for (const l of laterLines(s)) p.add(l.key, l.vars);
   // The run summary, resultRows(): time left, the medicine, the protected contact.
   p.add('ui.runSummary', {}, CHROME);
   p.add('ui.timeLeftRow');

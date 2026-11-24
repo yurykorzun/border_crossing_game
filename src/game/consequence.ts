@@ -561,7 +561,8 @@ export function endingBody(s: RunState, text: string): string {
  * never changes the ending: Home in time stays Home in time, and the beat is its own
  * line after it. A crossing that ran out of time gets it too (azv.19): the missed bus
  * or flight stays the headline, and what is flagged on file still comes back, because
- * otherwise a lie costs nothing once the time is lost. Only turning back has none.
+ * otherwise a lie costs nothing once the time is lost, in one short line (laterLines()).
+ * Only turning back has none.
  * The run's record decides it, first match wins, worst first:
  * - statement: a claim a desk wrote down that a record then disproved (RunState.disproved).
  * - relative: another relative flagged at a desk (relativeNamed or relativeContact).
@@ -571,6 +572,27 @@ export function endingBody(s: RunState, text: string): string {
  * Each beat names the desk and the choice in its reason (`later.<id>.reason`).
  */
 export function laterBeat(s: RunState): LaterBeat | undefined {
+  return beatOf(s);
+}
+
+/**
+ * The later beat's lines as the ending shows them. A crossing that ran out of time
+ * (tooLate: the missed bus or flight) gets one short line (`later.<id>.short`), because
+ * the missed time is the headline and its runs are the longest (rule 4); every other
+ * ending gets its time, the line and the reason (azv.19).
+ */
+export function laterLines(s: RunState): { key: string; vars?: Record<string, string>; part: 'when' | 'line' | 'reason' }[] {
+  const b = beatOf(s);
+  if (!b) return [];
+  if (s.ending === 'tooLate') return [{ key: `later.${b.id}.short`, vars: b.vars, part: 'line' }];
+  return [
+    { key: `later.${b.id}.when`, part: 'when' },
+    { key: `later.${b.id}`, vars: b.vars, part: 'line' },
+    { key: `later.${b.id}.reason`, vars: b.vars, part: 'reason' },
+  ];
+}
+
+function beatOf(s: RunState): LaterBeat | undefined {
   if (!s.ending || s.ending === 'turnedBack') return undefined;
   const facts = factIds(s);
   const first = (f: FactId) => s.flaggedAt?.[f] ?? s.facts[f]?.[0];

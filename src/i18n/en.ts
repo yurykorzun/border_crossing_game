@@ -30,17 +30,17 @@ export const en: Record<string, string> = {
   'ui.scrutinyHelp.rise': 'Some answers add scrutiny. Their cards show it, for example "+1 scrutiny".',
   'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, a supervisor takes you to secondary inspection before you can go on, even at the last desk. Below that, she inspects only for the one open point she names on your way to the last desk, and only if it is still open when that desk is done and your scrutiny is above 0. A point settled on the way stays settled unless a new flag reopens it. After an inspection, scrutiny drops back to {after}.',
   // On the way to the last desk (announce() in src/game/engine.ts): the one point the supervisor checks, and what follows.
-  'supervisor.announce.medicine': 'A supervisor checks the prescription. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.accommodation': 'A supervisor checks your address here. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.purpose': 'A supervisor checks why you came back. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.medicine': 'A supervisor checks the prescription. Open with any scrutiny: secondary inspection.',
+  'supervisor.announce.accommodation': 'A supervisor checks your address here. Open with any scrutiny: secondary inspection.',
+  'supervisor.announce.purpose': 'A supervisor checks why you came back. Open with any scrutiny: secondary inspection.',
   // At Scrutiny 3/3 after her point was settled or has nothing left to ask: the point she takes up instead (inspect()).
   'supervisor.instead.medicine': 'Scrutiny 3/3: she checks the prescription instead.',
   'supervisor.instead.accommodation': 'Scrutiny 3/3: she checks your address here instead.',
   'supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you came back instead.',
   // The same point, settled at a desk and reopened by a flag since (pointVerified()): the line names that flag.
-  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
-  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription. New flag: {fact}. Open with any scrutiny: secondary inspection.',
+  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here. New flag: {fact}. Open with any scrutiny: secondary inspection.',
+  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back. New flag: {fact}. Open with any scrutiny: secondary inspection.',
   // On a last-desk card once that point is settled (supervisorLine()): she has nothing left to check.
   'supervisor.settled.medicine': 'Supervisor: prescription verified.',
   'supervisor.settled.accommodation': 'Supervisor: address verified.',
@@ -146,7 +146,7 @@ export const en: Record<string, string> = {
   'known.claim': 'Written down: {claim}.',
   'known.none': 'Nothing on your file yet.',
   // On a card that asks about some facts (Encounter.asks) when none of them is on file here.
-  'known.asked.none': 'Nothing on file about this yet.',
+  'known.asked.none': 'Nothing on file about this.',
   // The same card when your last crossing put the fact on file (CarriedFile.facts, dap.46).
   'known.file': 'From your last crossing: {fact}.',
   'ui.and': 'and',
@@ -293,7 +293,7 @@ export const en: Record<string, string> = {
   'funeral:ev.hotel.desc': 'Three nights near the hall. Answers accommodation and length of stay. Does not prove a family stay.',
   'funeral:scene.bus': 'A night bus, the town through the rain',
   'funeral:scene.busEmpty': 'Your empty hands on a night bus, the town through the rain',
-  'funeral:msg.prep': 'Sorry about your friend. Will you be back for Monday\'s client meeting?',
+  'funeral:msg.prep': 'Sorry about your friend. Back for Monday\'s client meeting?',
   'funeral:msg.0.0': "Dad slept well. I'm with him, go.",
   'funeral:ending.homeInTime.body': 'You reach the hall before the service ends. Your old classmates make room on the bench. Her sister nods at you from the front. Afterwards you stand outside with the others, and nobody says much.',
   'funeral:ending.homeAtCost.body': 'You make it in time. Not everything you carried comes with you. Her sister asks how the trip was. You tell her it was fine. Later you read your messages twice and think about who you can still call.',
@@ -309,7 +309,7 @@ export const en: Record<string, string> = {
   'char.lena.advantage': 'Resolve one work question without a document.',
   // The thread players remember, so it is on her card and her Before you cross screen
   // before any desk can raise it. The extra hour on employer checks is in char.lena.can.
-  'char.lena.complication': 'An old donation to a fund now on a government list.',
+  'char.lena.complication': 'An old donation to a fund the government now lists.',
   // The one line on the traveler card: her strength and her complication.
   'char.lena.card': 'Settles one work question · An old donation',
   // The five details behind "Read Lena's history" (TravelerStep): why now, what she can do,
@@ -974,14 +974,14 @@ export const en: Record<string, string> = {
   'check.phoneSearch.clear.explained': '"You should be more careful." He hands the phone back and calls the next person.',
   'check.phoneSearch.photo': 'A second officer looks at the screen.',
   'check.phoneSearch.donation': 'The officer prints out one payment and circles it.',
-  'check.phoneSearch.misread': 'He read your salary from abroad as money from a foreign fund. You go through your payslips with him.',
+  'check.phoneSearch.misread': 'He took your salary for money from a foreign fund. You show him your payslips.',
   'check.phoneSearch.hint.clear': '"They are reading your messages. Routine."',
   'check.phoneSearch.hint.photo': '"They are looking at your photos."',
   'check.phoneSearch.hint.donation': '"They are looking at an old payment to a fund."',
   'check.phoneSearch.hint.misread': '"They are looking at money you get from abroad."',
-  'check.phoneSearch.observe.clear': 'The officer leans out: "Which bank do you use?"',
-  'check.phoneSearch.observe.donation': 'The officer leans out: "Which bank do you use?"',
-  'check.phoneSearch.observe.misread': 'The officer leans out: "Which bank do you use? And who pays you?"',
+  'check.phoneSearch.observe.clear': 'The officer asks: "Which bank do you use?"',
+  'check.phoneSearch.observe.donation': 'The officer asks: "Which bank do you use?"',
+  'check.phoneSearch.observe.misread': 'The officer asks: "Which bank do you use? And who pays you?"',
   'check.phoneSearch.observe.photo': 'He scrolls, stops, and scrolls back.',
   'check.phoneSearch.wait.label': 'Wait for his questions',
   'check.phoneSearch.explain.label': 'Explain it yourself first',
@@ -1163,15 +1163,19 @@ export const en: Record<string, string> = {
   'later.statement.when': 'Three days later',
   'later.statement': 'A letter asks you to come and explain your statement at {desk}.',
   'later.statement.reason': 'Because {desk} wrote down "{said}", and a record says otherwise.',
+  'later.statement.short': 'Days later: {desk} calls you back about your statement.',
   'later.relative.when': 'Three days later',
   'later.relative': 'An unnamed man phones the other relative on your file. He asks when they last saw you.',
   'later.relative.reason': 'Because {desk} flagged another relative on your file.',
+  'later.relative.short': 'Days later: a man phones the other relative on your file.',
   'later.donation.when': 'A week later',
   'later.donation': 'Your bank writes that your account is under review and holds a payment.',
   'later.donation.reason': 'Because your old donation went on file at {desk}.',
+  'later.donation.short': 'Days later: your bank holds a payment for review.',
   'later.registration.when': 'Two days later',
   'later.registration': "A local officer knocks on your mother's door to check that you are registered with her.",
   'later.registration.reason': 'Because you told {desk} you stay with family, and the address is on file.',
+  'later.registration.short': "Days later: an officer checks you're registered at your mother's.",
   // What exposing each person costs them, worst for the one you were asked to protect.
   'exposure.mother.call.title': 'The border calls your mother',
   'exposure.mother.call': "She has to leave your father's bedside to answer questions.",
@@ -1191,7 +1195,7 @@ export const en: Record<string, string> = {
   'exposure.mother.home.title': "Officers go to your mother's address",
   'exposure.mother.home': "Officers ask her to come in. She leaves your father's bedside to give a statement.",
   'exposure.cousin.protected.title': 'Ilya is called in for an interview',
-  'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out of it.',
+  'exposure.cousin.protected': 'His name stays on file. Your mother asked you to keep him out.',
   // Tom's line says why: with his record already flagged on your file he is listed, else he is only questioned.
   'exposure.brother.protected.title': 'Tom is contacted for questioning',
   'exposure.brother.protected': 'An officer calls him across the border. Your mother asked you to keep him out of it.',
@@ -1340,7 +1344,7 @@ export const en: Record<string, string> = {
   // Departure's own wording of Arrival's lines (setStory() in src/i18n/index.ts).
   'departure:ui.stamp': 'HALDEN CENTRAL · DEPARTURES',
   // The title follows the saved run, because a Departure save opens there under its stamp.
-  'departure:ui.tagline': "You're leaving again. You don't know if they'll let you go.",
+  'departure:ui.tagline': "You're leaving again. Will they let you go?",
   // One setup line for where the flight is: there is no airport on this side, so you cross by land first.
   // Why now, when you leave: Dad stays in care (char.<id>.why).
   'departure:char.lena.why': 'Flying back to work, with her father in care.',
@@ -1395,9 +1399,9 @@ export const en: Record<string, string> = {
   'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
   'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
-  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long. Open with any scrutiny: secondary inspection.',
   // The two purpose lines #59 added (dap.49), on the way out (dap.53).
-  'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long. New flag: {fact}. Still open, with any scrutiny: secondary inspection.',
+  'departure:supervisor.announce.purpose.reopened': 'A supervisor checks why you stayed this long. New flag: {fact}. Open with any scrutiny: secondary inspection.',
   'departure:supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you stayed instead.',
   'departure:supervisor.settled.purpose': 'Supervisor: reason for your stay verified.',
   // The line under a purpose claim, also on Departure's file line for what you said at Arrival.

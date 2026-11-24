@@ -43,18 +43,27 @@ describe('a missed-time ending with lies caught and a name given', () => {
     const order = [
       at(html, '<h1>'),
       at(html, en['exposure.mother.call.title']),
-      at(html, `<h2 class="mono beat-when">${en['later.statement.when']}</h2><p class="beat-line">A letter asks you to come and explain your statement at Customs.`),
+      at(html, '<p class="beat-line">Days later: Customs calls you back about your statement.</p>'),
       at(html, 'class="run-summary"'),
     ];
     expect(order).toEqual([...order].sort((a, b) => a - b));
-    expect(html).toContain('Because Customs wrote down');
+    // One short line after missed time: no heading and no reason line (the 8 minute ceiling).
+    expect(html).not.toContain('beat-when');
+    expect(html).not.toContain('Because Customs wrote down');
     expect(html).toContain('Missed.');
   });
 
   it('missing the bus with no hours left shows the caught lie too', () => {
     const html = markup(ended('arrival', () => 0, { exposed: [] }));
     expect(html).toContain(`<h1>${en['ending.missedBus.title']}</h1>`);
-    expect(html).toContain('A letter asks you to come and explain your statement at Customs.');
+    expect(html).toContain('Days later: Customs calls you back about your statement.');
+  });
+
+  it('an ending in time keeps the full beat: its time, the line and the reason', () => {
+    const html = markup(ended('arrival', () => 6, { ending: 'homeInTime', exposed: [] }));
+    expect(html).toContain(`<h2 class="mono beat-when">${en['later.statement.when']}</h2><p class="beat-line">A letter asks you to come and explain your statement at Customs.`);
+    expect(html).toContain('Because Customs wrote down');
+    expect(html).not.toContain('Days later:');
   });
 
   it('turning back still has no aftermath beat', () => {
