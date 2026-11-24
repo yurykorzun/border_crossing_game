@@ -1136,6 +1136,11 @@ export const en: Record<string, string> = {
   'ending.chain.followUp.fact.here': '{fact}, put on file at {deskAt}, brought a follow-up there: {question}',
   'ending.chain.followUp.claim.here': '"{words}", said at {deskAt}, brought a follow-up there: {question}',
   'ending.chain.followUp.did.here': 'At {deskAt} {did}, and that brought a follow-up there: {question}',
+  // The cause was an answer to the supervisor at a secondary inspection, not to the desk she interrupted (azv.21).
+  'ending.chain.followUp.fact.inspection': '{fact}, put on file by the supervisor, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.claim.inspection': '"{words}", said to the supervisor, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.did.inspection': 'To the supervisor {did}, and that brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.shown.inspection': '{cardLabel}, shown to the supervisor, brought a follow-up at {desk}: {question}',
   'ending.chain.followUp.shown.here': '{cardLabel}, shown at {deskAt}, brought a follow-up there: {question}',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',

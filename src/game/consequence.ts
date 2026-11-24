@@ -10,7 +10,7 @@ import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid,
 import type { Answered, AnswerLabel, CarriedFile, Cond, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
-import { ENCOUNTER_BY_ID } from './content/encounters';
+import { ENCOUNTER_BY_ID, INSPECTION_BY_ID } from './content/encounters';
 
 export type PartKind = 'medicine' | 'miss' | 'travel' | 'contact' | 'vouch' | 'withdraw' | 'scrutiny' | 'check' | 'time' | 'card' | 'fact' | 'claim' | 'perk' | 'free' | 'blocked';
 /** amber: attention or escalation. red: a confirmed serious consequence. */
@@ -500,7 +500,9 @@ export function chains(s: RunState): ChainLine[] {
       const part = claim && !doc ? answerPart({ id: cause.pick, key: cause.key, ...(cause.vars ? { vars: cause.vars } : {}) }, cause.card) ?? { words: t(own(`said.${claim}`, s.character)) } : undefined;
       const vars = { desk: a.desk, deskAt: cause.desk, question, ...(fact ? { fact } : {}), ...(doc ? { cardLabel: doc } : {}), ...part };
       const kind = fact ? 'fact' : doc ? 'shown' : part && 'did' in part ? 'did' : 'claim';
-      const key = `ending.chain.followUp.${kind}${cause.desk === a.desk ? '.here' : ''}`;
+      // Given at a secondary inspection, the answer was the supervisor's, not the desk's she
+      // interrupted, so the line names her (azv.21).
+      const key = `ending.chain.followUp.${kind}${INSPECTION_BY_ID.has(cause.card) ? '.inspection' : cause.desk === a.desk ? '.here' : ''}`;
       best = { w, line: { kind: 'followUp', key, vars, costs: costsOf(s, a, protectedContact) } };
       return;
     }
