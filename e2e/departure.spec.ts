@@ -57,6 +57,11 @@ test('Departure shows the record, and a standalone run leaves the saved file as 
   await expect(record.locator('button.record-standalone')).toHaveText(en['ui.record.standalone']);
   await expect(record.locator('.record-note')).toHaveText(en['ui.record.standaloneNote']);
 
+  // The first tap shows the stand-in file (azv.13), the second plays it.
+  await record.locator('button.record-standalone').click();
+  await expect(record.locator('[data-record="standin"] h2')).toHaveText(en['ui.record.standinTitle']);
+  await expect(record.locator('[data-record="standin"] li').first()).toBeVisible();
+  await expect(record.locator('button.record-continue')).toBeVisible();
   await record.locator('button.record-standalone').click();
   await expect(page.locator('main.documents-step')).toBeVisible();
   await packAndTurnBack(page, 3);
@@ -85,6 +90,8 @@ test("Lena's file is not offered to continue Mark's crossing", async ({ page }) 
   const record = page.locator('main.record-step');
   await expect(record.locator('[data-record-none]')).toHaveText("No file from Mark's crossing in. Play standalone, or finish Arrival as Mark first.");
   await expect(record.locator('button.record-continue')).toHaveCount(0);
+  // With no saved file the stand-in file shows at once (azv.13).
+  await expect(record.locator('[data-record="standin"] h2')).toHaveText(en['ui.record.standinTitle']);
   await record.locator('button.record-standalone').click();
   await packAndTurnBack(page, 4);
   expect(await savedFile(page)).toEqual(SAMPLE_FILES.lena);
@@ -101,6 +108,7 @@ test('Departure says you cross by land to a flight, from the level list to an en
   await expect(premise).toHaveText(en['departure:ui.premise']);
   await expect(premise).toContainText('by land');
   await pickTraveler(page, 'lena');
+  await page.locator('main.record-step button.record-standalone').click();
   await page.locator('main.record-step button.record-standalone').click();
   await expect(page.locator('.documents-step .prep-message')).toContainText(en['departure:msg.prep']);
   await packAndTurnBack(page, 3);

@@ -208,3 +208,27 @@ describe('a claim a document made first keeps the document on the carried file',
     }
   });
 });
+
+// A standalone Departure opens with defaultFile(), a crossing a bot played. Its claims are
+// not the player's, so the record step shows them before the crossing, the same lines a
+// saved file gets (recordLines()), and a cash declaration the exit desk counts against is
+// one of them (azv.13).
+describe('the stand-in file shows every claim before the crossing', () => {
+  const seeds = Array.from({ length: 40 }, (_, i) => i + 1);
+  it('gives each claim on it a line, the cash declaration included', () => {
+    let declared = 0;
+    for (const character of ['lena', 'mark'] as const)
+      for (const seed of seeds) {
+        const f = defaultFile(seed, character);
+        const lines = recordLines(f);
+        const said = lines.filter((l) => /^ui\.record\.(said|did|shown)/.test(l.key));
+        expect(said, `${character} seed ${seed}`).toHaveLength(f.claims.length);
+        if (f.declared !== 'under') continue;
+        declared++;
+        expect(f.claims).toContain('cashUnderLimit');
+        expect(said.some((l) => l.vars?.desk === 'customs' && t(l.key, l.vars).includes(t('said.cashUnderLimit')))).toBe(true);
+      }
+    // The cautious bot says the cash is under the limit on some seeds, so the case is covered.
+    expect(declared).toBeGreaterThan(0);
+  });
+});

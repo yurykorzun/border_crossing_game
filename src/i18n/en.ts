@@ -82,6 +82,8 @@ export const en: Record<string, string> = {
   // One line on what carrying the file changes: the exit desks ask from it (dap.8).
   'ui.record.carries': 'The exit desks ask about this file.',
   'ui.record.standalone': 'Play standalone',
+  // The seeded file a standalone run opens with (defaultFile()), shown before it is played (azv.13).
+  'ui.record.standinTitle': 'Standalone: a file to start from',
   'ui.record.standaloneNote': 'Your saved file is kept.',
   'ui.record.noFile': "No file from {traveler}'s crossing in. Play standalone, or finish Arrival as {traveler} first.",
   'ui.traveler': 'Traveler',
