@@ -1244,6 +1244,8 @@ export const en: Record<string, string> = {
   'enc.d_stayed.hotel.reaction': 'She finds the booking on your entry form and moves on.',
   'form.differs.hotel': 'Your entry form says a hotel. She checks your entry record.',
   'form.differs.family': "Your entry form says your mother's address. She checks your entry record.",
+  // The entry form's stay is a document you showed (fileStayedDoc()), named as its card line names it.
+  'form.differs.shown': 'Your entry form has {cardThe}. She checks your entry record.',
   'enc.d_stayed.evidence.reaction': 'She checks it against your entry form.',
   'enc.d_stayed.mother.label': "Give {contact}'s address",
   'enc.d_stayed.mother.event': 'Record check',
@@ -1346,8 +1348,11 @@ export const en: Record<string, string> = {
   'departure:mission.body': 'Your flight leaves tonight.',
   'departure:ui.medicineDesc': 'His medicine box, so a pharmacy abroad can match it. Customs asks what you take out.',
   'departure:ui.goal': 'Catch your flight',
-  // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
-  'departure:topic.purpose.helps': 'Why you stayed',
+  // The packing row for a purpose document, never "came back" (dap.51). It does not say "stayed"
+  // either, because the desk's "Why so long?" (d_stay) asks the stay topic and takes no purpose document (azv.6).
+  'departure:topic.purpose.helps': 'Reason for the trip',
+  // The employer letter shows where your cash is from, never how much, and the exit desk's cash card takes no document (azv.7). One word, for the sweep's 8 minutes.
+  'departure:topic.money.helps': 'Income',
   'departure:ui.travelReserve': '{hours} to the airport',
   // The inspection says the shuttle was missed only once the hours left are below the trip to the airport (questionKey(), azv.5).
   'departure:insp.s_connection.q': '"Where did you stay here?"',
@@ -1387,7 +1392,9 @@ export const en: Record<string, string> = {
   'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
   // On the way out the purpose point is why you stayed this long, not why you came back (dap.51).
-  'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
+  // The supervisor's question on that point, about the stay, since you are leaving (azv.18).
+  'departure:insp.s_supervisor.q': 'A supervisor opens your file. "Twelve days. Why did you stay so long?"',
+  'departure:insp.issue.purpose':'Not verified yet: why you stayed this long.',
   'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
   'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long. Still open, with any scrutiny: secondary inspection.',

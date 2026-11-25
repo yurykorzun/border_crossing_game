@@ -6,7 +6,7 @@
 import { andList, has, own, t, tn } from '../i18n';
 import type { FileQuote, Option } from './engine';
 import type { GameEvent } from './play';
-import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, knows, lineTier, travelOf } from './engine';
+import { caught, endingFor, factIds, factTier, fileClaim, fileContact, fileSaid, fileStayedDoc, knows, lineTier, travelOf } from './engine';
 import type { Answered, AnswerLabel, CarriedFile, Cond, ChangeLine, CharacterId, Checkpoint, ClaimId, ContactId, EndingLine, EvidenceId, FactId, LaterBeat, RunState, Severity } from './types';
 import { CHECKPOINTS } from './types';
 import { CHARACTERS, CONTACTS, EVIDENCE, EVIDENCE_IDS, MAX_SCRUTINY, writesDown } from './content/world';
@@ -688,7 +688,7 @@ export function fileLine(s: RunState, card: string): { key: string; vars: Record
     if (c) return quoteLine(s, 'file.stayed', c);
     // A document shown for where you would stay (the deed, your mother's letter) makes no
     // stay claim, but it is the entry form's answer all the same (CarriedFile.shownOn, dap.39).
-    const doc = file.shownOn?.p_host;
+    const doc = fileStayedDoc(file);
     return doc ? { key: 'file.stayed.shown', vars: { cardThe: doc } } : { key: 'file.stayed.none', vars: crossing };
   }
   if (card === 'd_stay') return { key: `file.stay.${fileStay(file)}`, vars: crossing };
