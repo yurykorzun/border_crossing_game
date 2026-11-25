@@ -76,8 +76,23 @@ export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined 
 export function fileStayed(file: CarriedFile | undefined): Stayed {
   const c = fileSaid(file).find((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay');
   if (c) return c.claim === 'hotelStay' ? 'hotel' : 'family';
-  const doc = file?.shownOn?.p_host;
+  const doc = fileStayedDoc(file);
   return (doc && EVIDENCE[doc].stayed) || 'none';
+}
+
+/**
+ * The document the entry form's stay comes from (the deed, your mother's letter) when no
+ * claim names a place: fileLine() quotes it on d_stayed, so a reaction names it too (azv.15).
+ */
+export function fileStayedDoc(file: CarriedFile | undefined): EvidenceId | undefined {
+  if (fileSaid(file).some((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay')) return undefined;
+  return file?.shownOn?.p_host;
+}
+
+/** What the clerk says when your answer names another place than the entry form (formDiffers()). */
+export function formDiffersLine(file: CarriedFile | undefined, differs: Stayed): { key: string; vars?: Record<string, string> } {
+  const doc = fileStayedDoc(file);
+  return doc ? { key: 'form.differs.shown', vars: { cardThe: doc } } : { key: `form.differs.${differs}` };
 }
 
 /** The contact a carried file names that a desk asks about: a relative before your mother. */
@@ -1779,7 +1794,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   if (insp) n = say(n, [{ key: `insp.${insp.id}.result.${inspectionResult(s)}` }]);
   // A place that differs from the entry form: the clerk says she checks it against the form.
   const differs = formDiffers(s, opt.approach, opt.card);
-  if (differs) n = say(n, [{ key: `form.differs.${differs}` }]);
+  if (differs) n = say(n, [formDiffersLine(s.file, differs)]);
   if (reacted?.kind === 'disproof' && reacted.claim && !(n.disproved ?? []).includes(reacted.claim))
     n = { ...n, disproved: [...(n.disproved ?? []), reacted.claim] };
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
