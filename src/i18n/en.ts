@@ -82,6 +82,8 @@ export const en: Record<string, string> = {
   // One line on what carrying the file changes: the exit desks ask from it (dap.8).
   'ui.record.carries': 'The exit desks ask about this file.',
   'ui.record.standalone': 'Play standalone',
+  // The seeded file a standalone run opens with (defaultFile()), shown before it is played (azv.13).
+  'ui.record.standinTitle': 'Standalone: a file to start from',
   'ui.record.standaloneNote': 'Your saved file is kept.',
   'ui.record.noFile': "No file from {traveler}'s crossing in. Play standalone, or finish Arrival as {traveler} first.",
   'ui.traveler': 'Traveler',
@@ -1081,7 +1083,7 @@ export const en: Record<string, string> = {
   'tabletop.part.contactFree': 'while {contacts} is not yet named',
   'tabletop.part.lastHours': 'with {hours} or less left',
   'tabletop.part.moreHours': 'with more than {hours} left',
-  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond the shortest trip',
+  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond your trip',
   'tabletop.part.holds': 'if you hold a document for {topic}',
   'tabletop.part.used': 'once you showed {docs}',
   'tabletop.part.flagged': 'with a flagged fact on file',
@@ -1141,6 +1143,11 @@ export const en: Record<string, string> = {
   'ending.chain.followUp.fact.here': '{fact}, put on file at {deskAt}, brought a follow-up there: {question}',
   'ending.chain.followUp.claim.here': '"{words}", said at {deskAt}, brought a follow-up there: {question}',
   'ending.chain.followUp.did.here': 'At {deskAt} {did}, and that brought a follow-up there: {question}',
+  // The cause was an answer to the supervisor at a secondary inspection, not to the desk she interrupted (azv.21).
+  'ending.chain.followUp.fact.inspection': '{fact}, put on file by the supervisor, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.claim.inspection': '"{words}", said to the supervisor, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.did.inspection': 'To the supervisor {did}, and that brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.shown.inspection': '{cardLabel}, shown to the supervisor, brought a follow-up at {desk}: {question}',
   'ending.chain.followUp.shown.here': '{cardLabel}, shown at {deskAt}, brought a follow-up there: {question}',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',
