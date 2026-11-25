@@ -82,6 +82,8 @@ export const en: Record<string, string> = {
   // One line on what carrying the file changes: the exit desks ask from it (dap.8).
   'ui.record.carries': 'The exit desks ask about this file.',
   'ui.record.standalone': 'Play standalone',
+  // The seeded file a standalone run opens with (defaultFile()), shown before it is played (azv.13).
+  'ui.record.standinTitle': 'Standalone: a file to start from',
   'ui.record.standaloneNote': 'Your saved file is kept.',
   'ui.record.noFile': "No file from {traveler}'s crossing in. Play standalone, or finish Arrival as {traveler} first.",
   'ui.traveler': 'Traveler',
@@ -176,6 +178,8 @@ export const en: Record<string, string> = {
   // What changed, one line each under the officer's reaction (changeLines() in src/game/consequence.ts).
   'change.document': 'Used: {cardLabel}.',
   'change.contact.number': "{desk} has {contact}'s number.",
+  // Named at a secondary inspection: the supervisor has it, not the desk (azv.16).
+  'change.contact.number.inspection': "The supervisor has {contact}'s number.",
   'change.contact.name': 'You named {contact}.',
   'change.verified.accommodation': 'Address verified.',
   'change.verified.purpose': 'Your reason verified.',
@@ -238,6 +242,8 @@ export const en: Record<string, string> = {
   'explain.caught': 'A record speaks against you. Every answer costs something.',
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
+  // The same, finished at a secondary inspection: the supervisor's line (azv.17).
+  'insp.finish.reaction': 'She closes your file. The rest is stamps and corridors.',
   'ui.blocked.noCard': 'No matching document',
   // A packed document that names the question but is not offered (dap.41): shown for an earlier one, or no answer here.
   'ui.blocked.shown': 'Already shown: {cardShort}',
@@ -1005,7 +1011,8 @@ export const en: Record<string, string> = {
   'calledIn.reaction': 'You named {contact} earlier. The officer checks that first.',
   // The claim by its label, not in quotes: "Back for family" is the file's entry, not words you said.
   'spot.clear': 'Checks out: {claim}.',
-  'spot.flaw': 'Does not check out: {claim}.',
+  // A flaw shows under any answer, so it opens as its own check and never reads as that answer's result (azv.8).
+  'spot.flaw': 'Checked before you go: {claim}. It does not check out.',
   'spot.answered': 'Checked: {claim}. You have already answered for it.',
   // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
   'spot.explained#one': 'Checked before you go. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {n} hour.',
@@ -1081,7 +1088,7 @@ export const en: Record<string, string> = {
   'tabletop.part.contactFree': 'while {contacts} is not yet named',
   'tabletop.part.lastHours': 'with {hours} or less left',
   'tabletop.part.moreHours': 'with more than {hours} left',
-  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond the shortest trip',
+  'tabletop.part.spareAfter': 'if waiting would leave {hours} or less beyond your trip',
   'tabletop.part.holds': 'if you hold a document for {topic}',
   'tabletop.part.used': 'once you showed {docs}',
   'tabletop.part.flagged': 'with a flagged fact on file',
@@ -1110,6 +1117,8 @@ export const en: Record<string, string> = {
   // The answers that decided the run (decisive()): the desk, the answer as its button read, what it cost.
   'ending.decided.heading': 'What decided it',
   'ending.decided.at': 'At {desk}',
+  // An answer given at a secondary inspection (DecisiveAnswer.inspection, azv.16).
+  'ending.decided.inspection': 'To the supervisor',
   'ending.cost.medicine': 'The medicine taken',
   'ending.cost.caught': 'A record shows "{said}" was not true',
   'ending.cost.named': 'Named {contact}',
@@ -1139,6 +1148,11 @@ export const en: Record<string, string> = {
   'ending.chain.followUp.fact.here': '{fact}, put on file at {deskAt}, brought a follow-up there: {question}',
   'ending.chain.followUp.claim.here': '"{words}", said at {deskAt}, brought a follow-up there: {question}',
   'ending.chain.followUp.did.here': 'At {deskAt} {did}, and that brought a follow-up there: {question}',
+  // The cause was an answer to the supervisor at a secondary inspection, not to the desk she interrupted (azv.21).
+  'ending.chain.followUp.fact.inspection': '{fact}, put on file by the supervisor, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.claim.inspection': '"{words}", said to the supervisor, brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.did.inspection': 'To the supervisor {did}, and that brought a follow-up at {desk}: {question}',
+  'ending.chain.followUp.shown.inspection': '{cardLabel}, shown to the supervisor, brought a follow-up at {desk}: {question}',
   'ending.chain.followUp.shown.here': '{cardLabel}, shown at {deskAt}, brought a follow-up there: {question}',
   // The ending on its three axes (axisLines()), one line each: the label, then the state.
   'ending.axis.arrival': 'Arrival',
@@ -1253,6 +1267,8 @@ export const en: Record<string, string> = {
   'enc.d_stayed.hotel.reaction': 'She finds the booking on your entry form and moves on.',
   'form.differs.hotel': 'Your entry form says a hotel. She checks your entry record.',
   'form.differs.family': "Your entry form says your mother's address. She checks your entry record.",
+  // The entry form's stay is a document you showed (fileStayedDoc()), named as its card line names it.
+  'form.differs.shown': 'Your entry form has {cardThe}. She checks your entry record.',
   'enc.d_stayed.evidence.reaction': 'She checks it against your entry form.',
   'enc.d_stayed.mother.label': "Give {contact}'s address",
   'enc.d_stayed.mother.event': 'Record check',
@@ -1355,8 +1371,11 @@ export const en: Record<string, string> = {
   'departure:mission.body': 'Your flight leaves tonight.',
   'departure:ui.medicineDesc': 'His medicine box, so a pharmacy abroad can match it. Customs asks what you take out.',
   'departure:ui.goal': 'Catch your flight',
-  // The packing row for a purpose document: on the way out the question is why you stayed this long, not why you came (topic.purpose.helps).
-  'departure:topic.purpose.helps': 'Why you stayed',
+  // The packing row for a purpose document, never "came back" (dap.51). It does not say "stayed"
+  // either, because the desk's "Why so long?" (d_stay) asks the stay topic and takes no purpose document (azv.6).
+  'departure:topic.purpose.helps': 'Reason for the trip',
+  // The employer letter shows where your cash is from, never how much, and the exit desk's cash card takes no document (azv.7). One word, for the sweep's 8 minutes.
+  'departure:topic.money.helps': 'Income',
   'departure:ui.travelReserve': '{hours} to the airport',
   // The inspection says the shuttle was missed only once the hours left are below the trip to the airport (questionKey(), azv.5).
   'departure:insp.s_connection.q': '"Where did you stay here?"',
@@ -1396,7 +1415,9 @@ export const en: Record<string, string> = {
   'scene.plane': 'A plane window at night: the wing, and the lights of a town along a river below',
   'departure:ending.line.medicineLost': 'Your mother has to find his doses another way.',
   // On the way out the purpose point is why you stayed this long, not why you came back (dap.51).
-  'departure:insp.issue.purpose': 'Not verified yet: why you stayed this long.',
+  // The supervisor's question on that point, about the stay, since you are leaving (azv.18).
+  'departure:insp.s_supervisor.q': 'A supervisor opens your file. "Twelve days. Why did you stay so long?"',
+  'departure:insp.issue.purpose':'Not verified yet: why you stayed this long.',
   'departure:insp.issue.purpose.verified': 'Already checked: why you stayed this long.',
   'departure:insp.issue.purpose.reopened': 'Reopened: why you stayed this long. New flag: {fact}.',
   'departure:supervisor.announce.purpose': 'A supervisor checks why you stayed this long. Open with any scrutiny: secondary inspection.',

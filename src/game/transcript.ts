@@ -485,7 +485,8 @@ function endingLines(s: RunState, p: Page): void {
   // What decided it, decisive() and axisLines(): chrome, like the summary they sit under.
   p.add('ending.decided.heading', {}, CHROME);
   for (const d of decisive(s)) {
-    p.add('ending.decided.at', { desk: d.desk }, CHROME);
+    if (d.inspection) p.add('ending.decided.inspection', {}, CHROME);
+    else p.add('ending.decided.at', { desk: d.desk }, CHROME);
     p.add(d.key, d.vars, CHROME);
     for (const c of d.costs) {
       if (c.n === undefined) p.add(c.key, c.vars, CHROME);

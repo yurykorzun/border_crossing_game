@@ -310,9 +310,9 @@ export function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, 
   }
   if (at === 'record' || (steps.includes('record') && !file)) {
     return (
-      <RecordStep count={stepCount(steps, 'record')} traveler={character} saved={ownFile(savedFile, character)}
+      <RecordStep count={stepCount(steps, 'record')} traveler={character} saved={ownFile(savedFile, character)} seed={seed}
         onBack={() => setAt('traveler')}
-        onPick={(f) => { setFile(f ?? defaultFile(seed, character)); setAt('documents'); }} />
+        onPick={(f) => { setFile(f); setAt('documents'); }} />
     );
   }
   if (at === 'documents') {
@@ -325,20 +325,27 @@ export function Picks({ bulletin, next, endingsSeen, levelsFinished, savedFile, 
 /**
  * Departure's record step, after the traveler: a short recap of this traveler's file
  * from their last crossing, then a choice. Continue opens the crossing with that file;
- * Play standalone opens it with a seeded default file (defaultFile()) and leaves the
- * saved file as it is (recordRun()). Only the traveler's own file is offered, so
- * Lena's file never opens Mark's crossing.
+ * Play standalone opens it with a seeded stand-in file (defaultFile()) and leaves the
+ * saved file as it is (recordRun()). The stand-in is shown before it is played, the
+ * same way as a saved file, so every claim the exit desks ask about (a cash declaration
+ * among them) is on screen first (azv.13): with no saved file it shows at once, and with
+ * one the first Play standalone shows it and the second plays it. Only the traveler's
+ * own file is offered, so Lena's file never opens Mark's crossing.
  */
-function RecordStep({ count, traveler, saved, onBack, onPick }: {
+function RecordStep({ count, traveler, saved, seed, onBack, onPick }: {
   count: string;
   traveler: CharacterId;
   saved: CarriedFile | null;
+  seed: number;
   onBack: () => void;
-  /** The saved file to continue with, or undefined for a standalone run. */
-  onPick: (file: CarriedFile | undefined) => void;
+  /** The file the crossing opens with: the saved one, or the stand-in. */
+  onPick: (file: CarriedFile) => void;
 }) {
   const name = t(`char.${traveler}.name`);
-  const [title, ...lines] = saved ? recordLines(saved) : [];
+  const standin = useMemo(() => defaultFile(seed, traveler), [seed, traveler]);
+  const [standinShown, setStandinShown] = useState(false);
+  const showing = saved && !standinShown ? saved : standin;
+  const [title, ...lines] = recordLines(showing);
   return (
     <main className="setup setup-step record-step">
       <div className="setup-body">
@@ -349,20 +356,17 @@ function RecordStep({ count, traveler, saved, onBack, onPick }: {
             <p className="stage-label"><PickOut text={t('ui.progress', { count, name: t('ui.record.title') })} part={count} /></p>
           </div>
         </header>
-        {saved ? (
-          <section className="paper file-record" data-record>
-            <h2>{t(title.key)}</h2>
-            <ul>{lines.map((l, i) => <li key={i}>{t(l.key, l.vars)}</li>)}</ul>
-            {/* What carrying it changes, in one line (dap.8). */}
-            <p className="record-carries">{t('ui.record.carries')}</p>
-          </section>
-        ) : (
-          <p className="muted-dark record-none" data-record-none>{t('ui.record.noFile', { traveler: name })}</p>
-        )}
+        {!saved && <p className="muted-dark record-none" data-record-none>{t('ui.record.noFile', { traveler: name })}</p>}
+        <section className="paper file-record" data-record={showing === standin ? 'standin' : 'saved'}>
+          <h2>{showing === standin ? t('ui.record.standinTitle') : t(title.key)}</h2>
+          <ul>{lines.map((l, i) => <li key={i}>{t(l.key, l.vars)}</li>)}</ul>
+          {/* What carrying it changes, in one line (dap.8). */}
+          <p className="record-carries">{t('ui.record.carries')}</p>
+        </section>
       </div>
       <div className="controls stack">
-        {saved && <button className="primary record-continue" onClick={() => onPick(saved)}>{t('ui.record.continue', { traveler: name })}</button>}
-        <button className={`${saved ? 'quiet' : 'primary'} record-standalone`} onClick={() => onPick(undefined)}>{t('ui.record.standalone')}</button>
+        {saved && <button className={`${standinShown ? 'quiet' : 'primary'} record-continue`} onClick={() => onPick(saved)}>{t('ui.record.continue', { traveler: name })}</button>}
+        <button className={`${showing === standin ? 'primary' : 'quiet'} record-standalone`} onClick={() => (showing === standin ? onPick(standin) : setStandinShown(true))}>{t('ui.record.standalone')}</button>
         <p className="muted-dark record-note">{t('ui.record.standaloneNote')}</p>
       </div>
     </main>
@@ -1144,7 +1148,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
             <ol className="decisive">
               {decided.map((d, i) => (
                 <li key={i} className="decisive-answer">
-                  <span className="decisive-desk">{t('ending.decided.at', { desk: d.desk })}</span>
+                  <span className="decisive-desk">{d.inspection ? t('ending.decided.inspection') : t('ending.decided.at', { desk: d.desk })}</span>
                   <span className="decisive-label">{t(d.key, d.vars)}</span>
                   <span className="decisive-cost">
                     {d.costs.map((c, j) => (

@@ -97,6 +97,19 @@ describe('spot-checks', () => {
     expect(n.reaction).toContainEqual({ key: 'spot.flaw', vars: { claim: 'hotelStay', n: SPOT_CHECK_HOURS } });
   });
 
+  it('a flaw under an answer that did not touch the claim opens as its own check, not as that answer\'s result', () => {
+    // Showing a pen at customs says nothing about where you stay; the check finds the hotel stay false (azv.8).
+    const s = leaving('customs', ['hotelStay'], ['familyAddress', 'hostStatement']);
+    const n = step(s, choose('customs'), picks(0));
+    const lines = (n.reaction ?? []).map((l) => t(l.key, l.vars));
+    const at = (n.reaction ?? []).findIndex((l) => l.key === 'spot.flaw');
+    const claim = t(own('claim.hotelStay', 'lena'));
+    // The answer's own reaction comes first, then the check on a line of its own that says it is a check.
+    expect(at).toBeGreaterThan(0);
+    expect(lines[0]).not.toContain(claim);
+    expect(lines[at]).toBe('Checked before you go: ' + claim + '. It does not check out.');
+  });
+
   it('an inconsistency you have since explained clears after the check, which takes its hours', () => {
     const s = leaving('customs', ['shortTrip', 'familyVisit'], ['noBooking']);
     expect(spotCheckOf(s, 'shortTrip')).toEqual({ result: 'explained' });

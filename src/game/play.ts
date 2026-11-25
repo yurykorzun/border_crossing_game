@@ -28,7 +28,7 @@ export type GameEvent =
    * that just names them. `vouch` is set when they were asked to confirm `topic`, and
    * `passed` says whether that settled it, so the reaction reports only what happened.
    */
-  | { type: 'contactExposed'; id: ContactId; desk: Checkpoint; shares: 'number' | 'name'; vouch?: { topic: Topic; passed: boolean } }
+  | { type: 'contactExposed'; id: ContactId; desk: Checkpoint; shares: 'number' | 'name'; vouch?: { topic: Topic; passed: boolean }; inspection?: true }
   /** A fact came out, and how it now sits on file (factTier() in src/game/engine.ts). */
   | { type: 'factRecorded'; id: FactId; tier: OnFileTier }
   /** A desk ahead learned the fact: through the shared records (records bulletin) or a call or printout from this desk. */
@@ -140,7 +140,7 @@ export function answered(s: RunState, n: RunState, action: Action, events: GameE
     const saved = savedBy(s, o.approach);
     // The pair the challenge card showing was dealt for, before the answer changes the file.
     const pair = sc.kind === 'encounter' ? caught(s, sc.id) : undefined;
-    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose), ...(saved ? { saved } : {}), ...(pair ? { about: { claim: pair.claim, fact: pair.fact } } : {}) });
+    return add({ desk: deskOf(s), card: sc.id, pick: o.approach.id, key: answerKey(s, o.approach.id, 'label'), ...(o.card || o.contact ? { vars } : {}), ...moved, scrutiny: Math.max(moved.scrutiny, rose), ...(saved ? { saved } : {}), ...(pair ? { about: { claim: pair.claim, fact: pair.fact } } : {}), ...(sc.kind === 'inspection' ? { inspection: true as const } : {}) });
   }
   if (action.type !== 'waitAction' || sc.kind !== 'wait' || action.action === 'ask') return n;
   const last = answers[answers.length - 1];
@@ -230,6 +230,12 @@ export function eventsBetween(s: RunState, n: RunState, action: Action): GameEve
  * that came back unclear. A vouch in the waiting room clears the check.
  */
 function exposedEvent(s: RunState, n: RunState, action: Action, id: ContactId): GameEvent {
+  const e = exposed(s, n, action, id);
+  // Named to the supervisor: she has the number, not the desk (azv.16).
+  return s.screen.kind === 'inspection' && e.type === 'contactExposed' ? { ...e, inspection: true } : e;
+}
+
+function exposed(s: RunState, n: RunState, action: Action, id: ContactId): GameEvent {
   const desk = deskOf(s);
   if (action.type === 'waitAction' && s.screen.kind === 'wait') {
     const topic = CHECKS[s.screen.check].topic;

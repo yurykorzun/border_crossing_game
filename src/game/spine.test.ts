@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { own, t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
+import { caughtLine } from './consequence';
 import { CORE_CARDS, ENCOUNTER_BY_ID, ENCOUNTERS } from './content/encounters';
 import { bearing, issueOpen, knownAt, knownLine, newRun, step } from './engine';
 import type { RunSetup } from './engine';
@@ -118,6 +119,11 @@ describe('every desk card says what the officer already knows', () => {
           if (s.screen.kind !== 'encounter') continue;
           const where = `${style} seed ${i + 1} ${s.screen.id}`;
           const line = knownLine(s);
+          // A challenge card names the fact once, in the line under its question (caughtLine(), azv.9).
+          if (caughtLine(s, s.screen.id)?.key.startsWith('caught.line.')) {
+            expect(line, where).toEqual([]);
+            continue;
+          }
           expect(line, where).toHaveLength(1);
           const [part] = line;
           expect(t(part.key, part.vars).trim(), where).not.toBe('');

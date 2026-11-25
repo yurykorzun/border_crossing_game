@@ -90,9 +90,9 @@ export interface Cond {
   /** true: LAST_HOURS hours left or fewer (src/game/content/world.ts). false: more than that. */
   lastHours?: boolean;
   /**
-   * The card's answer `answer`, taken now, would leave `atMost` hours or fewer beyond the
-   * shortest trip after the border: hours left minus the hours on that answer's button minus
-   * MISSION_MIN_TIME (spareAfter() in src/game/engine.ts). Never holds on a card without that answer.
+   * The card's answer `answer`, taken now, would leave `atMost` hours or fewer beyond this
+   * run's trip after the border: hours left minus the hours on that answer's button minus
+   * travelOf() (spareAfter() in src/game/engine.ts). Never holds on a card without that answer.
    */
   spareAfter?: { answer: string; atMost: number };
   /** A held, unused card covers this topic. */
@@ -753,6 +753,8 @@ export interface Answered {
    * effects would have cost, where the point was verified and by which document (dap.18).
    */
   saved?: { hours: number; from: Checkpoint; by?: EvidenceId };
+  /** Given to the supervisor at a secondary inspection, not to the desk's officer (azv.16). */
+  inspection?: true;
 }
 
 /**

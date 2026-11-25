@@ -7,7 +7,7 @@ import type {
 } from './types';
 import { CHECKPOINTS, FACT_IDS } from './types';
 import {
-  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, MISSION_MIN_TIME, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
+  BEAT_COUNT, CHARACTERS, DEFAULT_DESTINATION, DESTINATIONS, EVIDENCE, FACT_TIERS, HARMLESS_FACTS, LAST_HOURS, MAX_SCRUTINY, OFFICERS, SCRUTINY_AFTER_INSPECTION, SPOT_CHECK_HOURS, BULLETIN_TOPICS, canConfirm, coversWarning, writesDown,
 } from './content/world';
 import { CHALLENGES, CHALLENGE_PAIRS, CHECKS, CLARIFIED_BY, CORE_CARDS, ENCOUNTERS, ENCOUNTER_BY_ID, INSPECTIONS, INSPECTION_BY_ID, catchKind } from './content/encounters';
 import { DEFAULT_LEVEL, dealsCard, levelOf } from './content/levels';
@@ -76,8 +76,23 @@ export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined 
 export function fileStayed(file: CarriedFile | undefined): Stayed {
   const c = fileSaid(file).find((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay');
   if (c) return c.claim === 'hotelStay' ? 'hotel' : 'family';
-  const doc = file?.shownOn?.p_host;
+  const doc = fileStayedDoc(file);
   return (doc && EVIDENCE[doc].stayed) || 'none';
+}
+
+/**
+ * The document the entry form's stay comes from (the deed, your mother's letter) when no
+ * claim names a place: fileLine() quotes it on d_stayed, so a reaction names it too (azv.15).
+ */
+export function fileStayedDoc(file: CarriedFile | undefined): EvidenceId | undefined {
+  if (fileSaid(file).some((x) => x.claim === 'stayingWithFamily' || x.claim === 'hotelStay')) return undefined;
+  return file?.shownOn?.p_host;
+}
+
+/** What the clerk says when your answer names another place than the entry form (formDiffers()). */
+export function formDiffersLine(file: CarriedFile | undefined, differs: Stayed): { key: string; vars?: Record<string, string> } {
+  const doc = fileStayedDoc(file);
+  return doc ? { key: 'form.differs.shown', vars: { cardThe: doc } } : { key: `form.differs.${differs}` };
 }
 
 /** The contact a carried file names that a desk asks about: a relative before your mother. */
@@ -688,6 +703,9 @@ export function knownLine(s: RunState): KnownPart[] {
     return [{ key: `insp.issue.${issue}.reopened`, vars: { fact: reopenedBy(s, issue)! } }];
   }
   if (s.screen.kind !== 'encounter') return [];
+  // A challenge card's line under the question (caughtLine()) already names the fact that
+  // caught you, so this line would only say it a second time (azv.9).
+  if ((CHALLENGES as readonly string[]).includes(s.screen.id) && caught(s, s.screen.id)) return [];
   const asks = asksAbout(s, s.screen.id);
   const about = asks ? undefined : bearing(s, s.screen.id);
   const fresh = lineFact(s, asks ?? about!.facts);
@@ -968,11 +986,10 @@ export const usesVerified = (s: RunState, a: Approach, topic: Topic | undefined)
   !!a.ifVerified && s.screen.kind === 'encounter' && !!topic && pointVerified(s, topic);
 
 /**
- * Hours left beyond the shortest trip after the border once answer `id` on the card on
+ * Hours left beyond this run's own trip after the border once answer `id` on the card on
  * screen is taken: hours left minus the hours its button shows (resolvedEffects(), so a
- * customs day, a weak topic or a verified point counts as it does there) minus
- * MISSION_MIN_TIME, as dap.22 states it. It counts MISSION_MIN_TIME, not this run's own
- * trip (travelOf()), so Orvek's longer trip does not move the line. NaN with no such
+ * customs day, a weak topic or a verified point counts as it does there) minus the trip
+ * (travelOf(), so Orvek's 3 hours move the line an hour up, azv.3). NaN with no such
  * answer, so no comparison with it holds.
  */
 export function spareAfter(s: RunState, id: string): number {
@@ -984,7 +1001,7 @@ export function spareAfter(s: RunState, id: string): number {
     if ('time' in e) spent -= e.time;
     else if ('travel' in e) spent += Math.max(0, e.travel);
   }
-  return s.time - spent - MISSION_MIN_TIME;
+  return s.time - spent - travelOf(s);
 }
 
 /** The answer's own effects, or its verified ones when it uses a verified point. */
@@ -1845,7 +1862,7 @@ function choose(s: RunState, approachId: string, dealer: Dealer, cardId?: Eviden
   if (insp) n = say(n, [{ key: `insp.${insp.id}.result.${inspectionResult(s)}` }]);
   // A place that differs from the entry form: the clerk says she checks it against the form.
   const differs = formDiffers(s, opt.approach, opt.card);
-  if (differs) n = say(n, [{ key: `form.differs.${differs}` }]);
+  if (differs) n = say(n, [formDiffersLine(s.file, differs)]);
   if (reacted?.kind === 'disproof' && reacted.claim && !(n.disproved ?? []).includes(reacted.claim))
     n = { ...n, disproved: [...(n.disproved ?? []), reacted.claim] };
   // The officer's priority is the reason for the scrutiny, so the reaction says it.
@@ -1897,7 +1914,8 @@ export function step(s: RunState, action: Action, dealer: Dealer = randomDealer)
     case 'finish':
       if (!canFinish(s)) return s;
       // Nothing more is asked or spent: the remaining desks wave you through, too late for the bus.
-      return say(finish({ ...s, documentList: undefined, reaction: null, pending: [] }), [{ key: 'finish.reaction' }]);
+      // Finished at an inspection, the line is the supervisor's, so it is an `insp.` line (speakerOf(), azv.17).
+      return say(finish({ ...s, documentList: undefined, reaction: null, pending: [] }), [{ key: s.screen.kind === 'inspection' ? 'insp.finish.reaction' : 'finish.reaction' }]);
   }
 }
 
