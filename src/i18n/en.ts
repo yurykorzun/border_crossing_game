@@ -176,6 +176,8 @@ export const en: Record<string, string> = {
   // What changed, one line each under the officer's reaction (changeLines() in src/game/consequence.ts).
   'change.document': 'Used: {cardLabel}.',
   'change.contact.number': "{desk} has {contact}'s number.",
+  // Named at a secondary inspection: the supervisor has it, not the desk (azv.16).
+  'change.contact.number.inspection': "The supervisor has {contact}'s number.",
   'change.contact.name': 'You named {contact}.',
   'change.verified.accommodation': 'Address verified.',
   'change.verified.purpose': 'Your reason verified.',
@@ -236,6 +238,8 @@ export const en: Record<string, string> = {
   'explain.caught': 'A record speaks against you. Every answer costs something.',
   'ui.finishQuickly': 'Finish the crossing quickly',
   'finish.reaction': 'The rest is stamps and corridors. Nobody asks anything more.',
+  // The same, finished at a secondary inspection: the supervisor's line (azv.17).
+  'insp.finish.reaction': 'She closes your file. The rest is stamps and corridors.',
   'ui.blocked.noCard': 'No matching document',
   // A packed document that names the question but is not offered (dap.41): shown for an earlier one, or no answer here.
   'ui.blocked.shown': 'Already shown: {cardShort}',
@@ -1001,7 +1005,8 @@ export const en: Record<string, string> = {
   'calledIn.reaction': 'You named {contact} earlier. The officer checks that first.',
   // The claim by its label, not in quotes: "Back for family" is the file's entry, not words you said.
   'spot.clear': 'Checks out: {claim}.',
-  'spot.flaw': 'Does not check out: {claim}.',
+  // A flaw shows under any answer, so it opens as its own check and never reads as that answer's result (azv.8).
+  'spot.flaw': 'Checked before you go: {claim}. It does not check out.',
   'spot.answered': 'Checked: {claim}. You have already answered for it.',
   // Like caught.line: your words, the desk where you said them, the fact that makes them look odd.
   'spot.explained#one': 'Checked before you go. You said: "{said}" ({desk}). On file: {fact}. You have since explained, so checking takes {n} hour.',
@@ -1105,6 +1110,8 @@ export const en: Record<string, string> = {
   // The answers that decided the run (decisive()): the desk, the answer as its button read, what it cost.
   'ending.decided.heading': 'What decided it',
   'ending.decided.at': 'At {desk}',
+  // An answer given at a secondary inspection (DecisiveAnswer.inspection, azv.16).
+  'ending.decided.inspection': 'To the supervisor',
   'ending.cost.medicine': 'The medicine taken',
   'ending.cost.caught': 'A record shows "{said}" was not true',
   'ending.cost.named': 'Named {contact}',

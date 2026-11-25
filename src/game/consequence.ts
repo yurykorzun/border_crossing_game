@@ -228,7 +228,9 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
   for (const e of events)
     if (e.type === 'contactExposed') {
       if (e.vouch?.passed && !settled.has(e.vouch.topic)) out.push({ key: `change.verified.${e.vouch.topic}`, tone: 'plain' });
-      out.push({ key: `change.contact.${e.shares}`, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
+      // Given to the supervisor, the number is hers, not the desk's (azv.16).
+      const key = e.inspection && e.shares === 'number' ? 'change.contact.number.inspection' : `change.contact.${e.shares}`;
+      out.push({ key, vars: { contact: e.id, desk: e.desk }, tone: e.id === protectedContact ? 'red' : 'amber' });
     }
   // A challenge says which of three it is: a question raised, two accounts that
   // differ, or a claim a record shows false (catchKind() in src/game/content/encounters.ts).
@@ -365,6 +367,8 @@ export interface DecisiveCost {
 /** An answer the ending names as deciding the run: where it was given, what it said and what it cost. */
 export interface DecisiveAnswer {
   desk: Checkpoint;
+  /** Given to the supervisor at a secondary inspection: labelled hers, not the desk's (azv.16). */
+  inspection?: true;
   key: string;
   vars?: Record<string, string>;
   costs: DecisiveCost[];
@@ -413,7 +417,7 @@ function costsOf(s: RunState, a: Answered, protectedContact: ContactId): Decisiv
  */
 export function decisive(s: RunState): DecisiveAnswer[] {
   const protectedContact = CHARACTERS[s.character].protectedContact;
-  return picked(s).map(({ a }) => ({ desk: a.desk, key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
+  return picked(s).map(({ a }) => ({ desk: a.desk, ...(a.inspection ? { inspection: true as const } : {}), key: a.key, ...(a.vars ? { vars: a.vars } : {}), costs: costsOf(s, a, protectedContact) }));
 }
 
 /** The answers decisive() lists, with their place in RunState.answers, in the order they were given. */
