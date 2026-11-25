@@ -263,7 +263,8 @@ export function changeLines(events: GameEvent[], protectedContact: ContactId): C
         : { key: 'change.sent', vars: { fact: e.id, desk: e.desks[0] }, tone: 'plain' });
   for (const e of events) if (e.type === 'timeSpent') out.push({ key: 'change.time', n: e.hours, tone: 'plain' });
   for (const e of events)
-    if (e.type === 'scrutinyChanged') out.push({ key: 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
+    if (e.type === 'scrutinyChanged')
+      out.push({ key: e.inspection ? 'change.scrutiny.inspection' : 'change.scrutiny', vars: { n: e.to, max: MAX_SCRUTINY }, tone: e.to > e.from ? 'amber' : 'plain' });
   if (events.some((e) => e.type === 'medicineLost')) out.push({ key: 'change.medicine', tone: 'red' });
   for (const e of events) if (e.type === 'travelChanged') out.push({ key: 'change.travel', n: e.hours, tone: 'amber' });
   // Last, what the answer resolves: each question now settled for the officers ahead
@@ -562,9 +563,13 @@ export function endingBody(s: RunState, text: string): string {
 }
 
 /**
- * What comes back days after a crossing that got you home (rwf.10), or nothing. It
+ * What comes back days after a crossing you got through (rwf.10), or nothing. It
  * never changes the ending: Home in time stays Home in time, and the beat is its own
- * line after it. The run's record decides it, first match wins, worst first:
+ * line after it. A crossing that ran out of time gets it too (azv.19): the missed bus
+ * or flight stays the headline, and what is flagged on file still comes back, because
+ * otherwise a lie costs nothing once the time is lost, in one short line (laterLines()).
+ * Only turning back has none.
+ * The run's record decides it, first match wins, worst first:
  * - statement: a claim a desk wrote down that a record then disproved (RunState.disproved).
  * - relative: another relative flagged at a desk (relativeNamed or relativeContact).
  * - donation: the old donation on file, by the record or the bank notice. A truthful answer can put it there.
@@ -573,7 +578,28 @@ export function endingBody(s: RunState, text: string): string {
  * Each beat names the desk and the choice in its reason (`later.<id>.reason`).
  */
 export function laterBeat(s: RunState): LaterBeat | undefined {
-  if (s.ending !== 'homeInTime' && s.ending !== 'homeAtCost') return undefined;
+  return beatOf(s);
+}
+
+/**
+ * The later beat's lines as the ending shows them. A crossing that ran out of time
+ * (tooLate: the missed bus or flight) gets one short line (`later.<id>.short`), because
+ * the missed time is the headline and its runs are the longest (rule 4); every other
+ * ending gets its time, the line and the reason (azv.19).
+ */
+export function laterLines(s: RunState): { key: string; vars?: Record<string, string>; part: 'when' | 'line' | 'reason' }[] {
+  const b = beatOf(s);
+  if (!b) return [];
+  if (s.ending === 'tooLate') return [{ key: `later.${b.id}.short`, vars: b.vars, part: 'line' }];
+  return [
+    { key: `later.${b.id}.when`, part: 'when' },
+    { key: `later.${b.id}`, vars: b.vars, part: 'line' },
+    { key: `later.${b.id}.reason`, vars: b.vars, part: 'reason' },
+  ];
+}
+
+function beatOf(s: RunState): LaterBeat | undefined {
+  if (!s.ending || s.ending === 'turnedBack') return undefined;
   const facts = factIds(s);
   const first = (f: FactId) => s.flaggedAt?.[f] ?? s.facts[f]?.[0];
   const statement = (s.disproved ?? []).find((c) => s.logged?.[c]?.length);
@@ -726,13 +752,18 @@ export function recordLines(file: CarriedFile): { key: string; vars?: Record<str
   const claims = fileSaid(file);
   const quoteOf = (c: ClaimId): FileQuote => claims.find((x) => x.claim === c) ?? { claim: c, crossing: file.level };
   const shownDoc = (c: ClaimId) => claims.flatMap((x) => (x.claim === c && 'shown' in x && x.shown ? [x.shown] : []))[0];
+  // One answer can make two claims (p_stay's father answer makes familyVisit and
+  // stayUntilRecovered), so a line already in the list is not repeated.
+  const push = (l: { key: string; vars?: Record<string, string> }) => {
+    if (!lines.some((x) => x.key === l.key && JSON.stringify(x.vars) === JSON.stringify(l.vars))) lines.push(l);
+  };
   for (const c of claims) {
-    if (!('date' in c)) lines.push({ key: 'ui.record.said.undated', vars: { words: wordsOf(c, file.character) } });
-    else if (c.shown) lines.push({ key: 'ui.record.shown', vars: { date: fileDate(c.date), desk: c.desk, cardThe: c.shown } });
+    if (!('date' in c)) push({ key: 'ui.record.said.undated', vars: { words: wordsOf(c, file.character) } });
+    else if (c.shown) push({ key: 'ui.record.shown', vars: { date: fileDate(c.date), desk: c.desk, cardThe: c.shown } });
     else {
       const part = saidPart(c, file.character);
       const dated = { date: fileDate(c.date), desk: c.desk };
-      lines.push('did' in part ? { key: 'ui.record.did', vars: { ...dated, did: part.did } } : { key: 'ui.record.said', vars: { ...dated, words: part.words } });
+      push('did' in part ? { key: 'ui.record.did', vars: { ...dated, did: part.did } } : { key: 'ui.record.said', vars: { ...dated, words: part.words } });
     }
   }
   if (!claims.length) lines.push({ key: 'ui.record.none' });

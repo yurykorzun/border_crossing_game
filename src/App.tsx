@@ -22,7 +22,7 @@ import type { SaveData, Settings } from './game/save';
 import type { Action, BulletinId, CarriedFile, CharacterId, EndingId, EvidenceId, LevelId, RunState } from './game/types';
 import { CHECKPOINTS } from './game/types';
 import { ChangeLines, ConsequenceLine, EvidenceContent, officerLabel, ScrutinyContent, SettingsContent, Sheet, StoryContent, StoryRecords, TopStrip, PickOut } from './ui/parts';
-import { SEPARATOR, axisLines, caughtLine, chains, consequences, decisive, endingBody, laterBeat, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
+import { SEPARATOR, axisLines, caughtLine, chains, consequences, decisive, endingBody, laterBeat, laterLines, nextActionKey, packDetail, packedList, protectedRow, questionKey, questionVars, recordLines, unlistedHours } from './game/consequence';
 import * as sound from './ui/sound';
 import { Portrait } from './ui/art/Portrait';
 import { CheckpointScene } from './ui/art/CheckpointScene';
@@ -1056,7 +1056,8 @@ function Waiting({ s, dispatch, reduceWait }: { s: RunState; dispatch: (a: Actio
  * ending's name, a short arrival scene (the picture and one paragraph), then what
  * happened after: each cost worst first under its time heading ("The following morning"),
  * and the later beat (laterBeat()) as its own line, led by its own time ("Three days
- * later"), with the choice that caused it. With no cost there is no heading (dap.39).
+ * later"), with the choice that caused it; after a missed bus or flight it is one short
+ * line (laterLines()). With no cost there is no heading (dap.39).
  * Then the run summary, where the medicine and the protected contact show (and only
  * there), and the buttons, each a next step that says where it goes (dap.8): "See border
  * records", which opens the records alone, "Retry Arrival" (the same setup, onRetry),
@@ -1122,9 +1123,9 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
                 time heading, so the costs' "The following morning" never stands over it (dap.39). */}
             {later && (
               <div className={`beat beat-${later.id}`}>
-                <h2 className="mono beat-when">{t(`later.${later.id}.when`)}</h2>
-                <p className="beat-line">{t(`later.${later.id}`, later.vars)}</p>
-                <p className="beat-reason">{t(`later.${later.id}.reason`, later.vars)}</p>
+                {laterLines(s).map((l) => l.part === 'when'
+                  ? <h2 key={l.key} className="mono beat-when">{t(l.key)}</h2>
+                  : <p key={l.key} className={`beat-${l.part}`}>{t(l.key, l.vars)}</p>)}
               </div>
             )}
           </section>

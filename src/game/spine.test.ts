@@ -3,11 +3,11 @@
 // still open on the file, and every desk card says what the officer already knows.
 
 import { describe, expect, it } from 'vitest';
-import { t } from '../i18n';
+import { own, t } from '../i18n';
 import { BOT_STYLES, playRun, setupFor } from './bots';
 import { caughtLine } from './consequence';
 import { CORE_CARDS, ENCOUNTER_BY_ID, ENCOUNTERS } from './content/encounters';
-import { issueOpen, knownAt, knownLine, newRun, step } from './engine';
+import { bearing, issueOpen, knownAt, knownLine, newRun, step } from './engine';
 import type { RunSetup } from './engine';
 import type { RunState } from './types';
 
@@ -130,17 +130,47 @@ describe('every desk card says what the officer already knows', () => {
           // A fact named is one this desk knows; with none, the line says the file is empty, not a guess.
           if (part.key.startsWith('known.fact.')) expect(knownAt(s), where).toContain(part.vars?.fact);
           if (part.key === 'known.none') expect(knownAt(s), where).toEqual([]);
+          // A card with no asks names only a fact or claim that bears on it (border_crossing_game-azv.10).
+          if (ENCOUNTER_BY_ID.get(s.screen.id)?.asks || !ENCOUNTER_BY_ID.has(s.screen.id)) continue;
+          const about = bearing(s, s.screen.id);
+          if (part.key.startsWith('known.fact.')) expect(about.facts, where).toContain(part.vars?.fact);
+          if (part.key === 'known.claim') expect(about.claims.map((c) => own(`claim.${c}`, s.character).slice('claim.'.length)), where).toContain(part.vars?.claim);
         }
   });
 
-  it('the line changes when a fact is confirmed', () => {
+  // Lena on Arrival with her father's condition confirmed at customs (border_crossing_game-azv.10).
+  const lena: RunSetup = { character: 'lena', loadout: ['hospitalNote', 'returnTicket', 'employerLetter'], bulletin: 'customs', seed: 3 };
+  const at = (id: string, extra: Partial<RunState> = {}): RunState =>
+    ({ ...newRun(lena), checkpoint: 1, screen: { kind: 'encounter', id }, seen: [id], claims: ['familyVisit'], facts: { fatherCondition: ['customs'] }, ...extra });
+
+  it('a card with no asks never names a fact that has nothing to do with it', () => {
+    // The cash question is not about her father, so the line says nothing on file is about it.
+    expect(knownLine(at('c_cash'))).toEqual([{ key: 'known.asked.none' }]);
+    // The medicine question is, because the hospital note answers it.
+    expect(knownLine(at('c_medicine'))).toEqual([{ key: 'known.fact.confirmed', vars: { fact: 'fatherCondition' } }]);
+    // A salary explains cash, so the employer confirmed here is named on the cash card.
+    expect(knownLine(at('c_cash', { facts: { fatherCondition: ['customs'], employer: ['customs'] } }))).toEqual([{ key: 'known.fact.confirmed', vars: { fact: 'employer' } }]);
+  });
+
+  it('the photo card names the address it looks up, not the newest fact', () => {
+    const s: RunState = { ...at('p_photo'), checkpoint: 0, facts: { familyAddress: ['passport'], fatherCondition: ['passport'] } };
+    expect(knownLine(s)).toEqual([{ key: 'known.fact.found', vars: { fact: 'familyAddress' } }]);
+  });
+
+  it('with nothing on file at all the line still says the file is empty', () => {
+    expect(knownLine(at('c_cash', { claims: [], facts: {} }))).toEqual([{ key: 'known.none' }]);
+  });
+
+  it('the line changes when a fact that bears on the card is confirmed', () => {
     const mark: RunSetup = { character: 'mark', loadout: ['deed', 'returnTicket', 'hotel', 'hospitalNote'], bulletin: 'customs', seed: 3 };
     const before: RunState = { ...newRun(mark), screen: { kind: 'encounter', id: 'p_purpose' }, slot: 1, seen: ['p_purpose'] };
     // The hospital note puts his father's condition on file as confirmed on this crossing.
     const after = step(step(before, { type: 'choose', approach: 'evidence' }), { type: 'ack' });
     expect(after.screen.kind).toBe('encounter');
-    const [was] = knownLine(before);
-    const [now] = knownLine(after);
+    // Read on the stay card, which the father's condition bears on (its "until he is out of hospital" answer).
+    const onStay = (s: RunState): RunState => ({ ...s, screen: { kind: 'encounter', id: 'p_stay' }, knownShown: undefined });
+    const [was] = knownLine(onStay(before));
+    const [now] = knownLine(onStay(after));
     expect(now).toEqual({ key: 'known.fact.confirmed', vars: { fact: 'fatherCondition' } });
     expect(t(now.key, now.vars)).not.toBe(t(was.key, was.vars));
   });

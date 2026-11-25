@@ -115,7 +115,12 @@ function checkEnding(p: Played, file: CarriedFile | undefined, where: string, se
   if (headings) expect(html, `${where}: the heading sits over the costs`).toMatch(/class="mono later-heading">[^<]*<\/h2><ul class="costs">/);
   // A later beat has its own time heading, so the costs' heading never stands over its line.
   const beat = laterBeat(s);
-  if (beat) expect(html, `${where}: the beat's own heading`).toContain(`<h2 class="mono beat-when">${t(`later.${beat.id}.when`)}</h2><p class="beat-line">`);
+  // After a missed bus or flight the beat is one short line (azv.19), with no heading.
+  if (beat && s.ending === 'tooLate') {
+    expect(html, `${where}: the short beat`).toContain('<p class="beat-line">Days later:');
+    expect(shown, `${where}: the short beat`).toContain(t(`later.${beat.id}.short`, beat.vars));
+  }
+  else if (beat) expect(html, `${where}: the beat's own heading`).toContain(`<h2 class="mono beat-when">${t(`later.${beat.id}.when`)}</h2><p class="beat-line">`);
 }
 
 /** Departure's "Kept from Arrival" lines, against what the Arrival run put on record. */

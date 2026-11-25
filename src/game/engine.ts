@@ -61,10 +61,10 @@ export const fileSaid = (file: CarriedFile | undefined): FileQuote[] =>
 
 /**
  * The claim a carried file is quoted on: why you came if it says, else the first thing it
- * has you saying. Never an open stay: "I don't know yet" does not say why you came.
+ * has you saying. Never a stay answer: "I don't know yet" does not say why you came.
  */
 export function fileClaim(file: CarriedFile | undefined): FileQuote | undefined {
-  const said = fileSaid(file).filter((c) => c.claim !== 'stayUndecided');
+  const said = fileSaid(file).filter((c) => c.claim !== 'stayUndecided' && c.claim !== 'stayUntilRecovered');
   return said.find((c) => c.claim === 'familyVisit' || c.claim === 'shortTrip') ?? said[0];
 }
 
@@ -682,11 +682,13 @@ export interface KnownPart {
 
 /**
  * What the officer at this desk already knows, as one line on every desk card,
- * built from the file: the newest fact this desk knows, named by how it sits on
- * file (factTier()), and the newest claim any desk wrote down. With neither,
- * the line says the file is empty so far. A card that asks about some facts
- * (Encounter.asks, or the pair a challenge card caught) names only one of those,
- * or says nothing on file is about it. On an inspection the line names the
+ * built from the file. A card that asks about some facts (Encounter.asks, or the
+ * pair a challenge card caught) names only one of those, or says nothing on file
+ * is about it. Any other card names only what bears on it (bearing()): the
+ * newest such fact this desk knows, named by how it sits on file (factTier()),
+ * else the newest such claim a desk wrote down. With nothing that bears on the
+ * card the line says nothing on file is about it, or that the file is empty when
+ * it is (docs/design.md "The known-facts line"). On an inspection the line names the
  * issue it is about instead (Inspection.issue): the supervisor has read the
  * whole file, and the line says whether that point is still open, already checked, or
  * checked at a desk and open again because a flag came after (pointVerified()).
@@ -705,7 +707,8 @@ export function knownLine(s: RunState): KnownPart[] {
   // caught you, so this line would only say it a second time (azv.9).
   if ((CHALLENGES as readonly string[]).includes(s.screen.id) && caught(s, s.screen.id)) return [];
   const asks = asksAbout(s, s.screen.id);
-  const fresh = lineFact(s, asks);
+  const about = asks ? undefined : bearing(s, s.screen.id);
+  const fresh = lineFact(s, asks ?? about!.facts);
   if (asks) {
     // The card asks about it, so a fact the card before named is named again before "nothing on file".
     const fact = fresh ?? knownAt(s).filter((f) => asks.includes(f)).at(-1);
@@ -716,12 +719,15 @@ export function knownLine(s: RunState): KnownPart[] {
   }
   // A fact on file outranks a claim, because its tier is what the officer acts on.
   if (fresh) return [factPart(s, fresh)];
-  const written = s.claims.filter((c) => loggedAt(s, c).length).at(-1);
+  const written = s.claims.filter((c) => about!.claims.includes(c) && loggedAt(s, c).length).at(-1);
   // The claim in this traveler's own wording, as the spot-check names it.
   if (written) return [{ key: 'known.claim', vars: { claim: own(`claim.${written}`, s.character).slice('claim.'.length) } }];
-  // Saying the fact again beats saying the file is empty.
-  const again = knownAt(s).at(-1);
-  return [again ? factPart(s, again) : { key: 'known.none' }];
+  // Saying a fact that bears on the card again beats saying nothing is on file about it.
+  const again = knownAt(s).filter((f) => about!.facts.includes(f)).at(-1);
+  if (again) return [factPart(s, again)];
+  // A fact or claim that has nothing to do with this card is not named, because naming it reads as a hint (azv.10).
+  const empty = !knownAt(s).length && !s.claims.some((c) => loggedAt(s, c).length);
+  return [{ key: empty ? 'known.none' : 'known.asked.none' }];
 }
 
 /**
@@ -773,10 +779,73 @@ function knownShown(s: RunState, id: string): NonNullable<RunState['knownShown']
   const skip = prev ? [...new Set([...(prev.named ? [prev.named] : []), ...known.filter((f) => !prev.known.includes(f))])] : [];
   // The fact knownLine() names on `id`, worked out the same way without building its text.
   const asks = asksAbout(s, id);
-  const fresh = known.filter((f) => (!asks || asks.includes(f)) && !skip.includes(f)).at(-1);
+  const about = asks ? undefined : bearing(s, id);
+  const among = asks ?? about!.facts;
+  const fresh = known.filter((f) => among.includes(f) && !skip.includes(f)).at(-1);
   const named = asks ? fresh ?? known.filter((f) => asks.includes(f)).at(-1)
-    : fresh ?? (s.claims.some((c) => loggedAt(s, c).length) ? undefined : known.at(-1));
+    : fresh ?? (s.claims.some((c) => about!.claims.includes(c) && loggedAt(s, c).length) ? undefined : known.filter((f) => among.includes(f)).at(-1));
   return { card: id, desk, known, skip, ...(named ? { named } : {}) };
+}
+
+/** The facts and claims a condition names, wherever they sit in it (any, not). */
+function condNames(c: Cond | undefined, out: { facts: Set<FactId>; claims: Set<ClaimId> }): void {
+  if (!c) return;
+  for (const f of [...(c.facts ?? []), ...(c.noFacts ?? [])]) out.facts.add(f);
+  for (const k of [...(c.claims ?? []), ...(c.noClaims ?? []), ...(c.fileSaid ?? []), ...(c.fileClaims ?? [])]) out.claims.add(k);
+  for (const x of c.any ?? []) condNames(x, out);
+  condNames(c.not, out);
+}
+
+const BEARING = new Map<string, { facts: FactId[]; claims: ClaimId[] }>();
+
+/**
+ * The facts and claims that bear on card `id`, which the known-facts line on a card
+ * with no asks may name (knownLine()): the ones the issue that dealt it names
+ * (Encounter.issue), and the ones an answer on it rests on (Approach.requires,
+ * Approach.onFile) or can put on file, flag or hold against you, its check
+ * included (Effect, Check). An evidence answer counts what each document on its
+ * topic puts on file (Evidence.onUse). So the cash card bears on the employer,
+ * since a salary explains cash, and never on the father's condition. A contact
+ * statement given before you came (the funeral) bears on the opening card too,
+ * because the crossing starts from it.
+ */
+export function bearing(s: RunState, id: string): { facts: FactId[]; claims: ClaimId[] } {
+  const got = cardBearing(id);
+  const statement = statementIn(s);
+  if (!statement || !ENCOUNTER_BY_ID.get(id)?.opening || got.facts.includes(statement)) return got;
+  return { facts: [...got.facts, statement], claims: got.claims };
+}
+
+/** What bears on card `id` from its content alone (bearing()), worked out once per card. */
+function cardBearing(id: string): { facts: FactId[]; claims: ClaimId[] } {
+  const hit = BEARING.get(id);
+  if (hit) return hit;
+  const out = { facts: new Set<FactId>(), claims: new Set<ClaimId>() };
+  const effects = (es: readonly Effect[] | undefined) => {
+    for (const e of es ?? []) {
+      if ('fact' in e) out.facts.add(e.fact);
+      if ('claim' in e) out.claims.add(e.claim);
+      if ('scrutiny' in e && (FACT_IDS as readonly string[]).includes(e.reason)) out.facts.add(e.reason as FactId);
+    }
+  };
+  const card = ENCOUNTER_BY_ID.get(id);
+  if (card) {
+    condNames(card.issue, out);
+    for (const a of card.approaches) {
+      condNames(a.requires, out);
+      for (const f of a.onFile ?? []) out.facts.add(f);
+      effects(a.effects);
+      effects(a.ifVerified);
+      if (a.check) {
+        for (const k of CHECKS[a.check].cases) effects(k.effects);
+        effects(CHECKS[a.check].explain);
+      }
+      if (a.kind === 'evidence' && a.topic) for (const ev of Object.values(EVIDENCE)) if (ev.topics.includes(a.topic)) effects(ev.onUse);
+    }
+  }
+  const got = { facts: [...out.facts], claims: [...out.claims] };
+  BEARING.set(id, got);
+  return got;
 }
 
 /** The open issue the inspection on screen is about (Inspection.issue), or undefined off one. */

@@ -87,6 +87,8 @@ Turning back is offered at one set early point: the passport queue, after the cl
 
 Every ending also lists, scored by severity, the medicine, each person exposed and how badly, and how much is on file about you (consequences() in src/game/consequence.ts).
 
+A missed-time ending (Too late, Missed the bus, a missed flight) keeps the missed bus or flight as its headline, and the aftermath still shows the consequences of what is flagged on file: the names you gave (consequences()) and the beat days later for a lie a record caught, a flagged relative, the donation or the registration check (laterBeat()). Yury decided this on 2026-11-23 (border_crossing_game-azv.19) after a playtest missed the flight at Scrutiny 3/3 with two lies caught and saw no consequence of them, because otherwise lying costs nothing once the time is lost. Only turning back has no later beat, since you never crossed. On a missed-time ending the beat is one short line ("Days later: Customs calls you back about your statement.", `later.<id>.short`, laterLines()) instead of its time, line and reason, because the missed time stays the headline and these runs are the longest, so the full beat put them over the 8 minute ceiling (Yury, 2026-11-23). Every other ending keeps the full beat.
+
 Under "Your run", "What decided it" names the two or three answers that moved the run most, in the order they were given, each with its desk and what it cost (hours lost, the medicine taken, a person named, a statement a record showed false, scrutiny, a document used). They come from the run's own record, `RunState.answers`, which answered() in src/game/play.ts writes from the same events as the after-answer lines, and decisive() picks them. Three lines follow, one per axis: arrival (on time or late, the hours left against the trip), the medicine (kept or taken) and contacts (who is on file, or no one), from axisLines(). The ending title does not change.
 
 ## Run shape
@@ -107,7 +109,7 @@ On a first run, three rules are explained in one short line each, the first time
 | Scrutiny | 0 of 3 | Three empty spaces |
 | Mission item | Father's medicine | Shown on the mission card |
 
-At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny drops to 1. Scrutiny is an extra cost, never an instant loss.
+At 3 scrutiny the crossing pauses for one secondary inspection, then scrutiny drops to 1, and the reaction says the inspection is why ("Scrutiny 1/3, down because the inspection is done."). Scrutiny is an extra cost, never an instant loss.
 
 ## Characters (one strength, one weakness, three background facts)
 
@@ -309,6 +311,8 @@ Every reaction against you says which of three it is (`ReactionKind` in `src/gam
 
 Only a disproof records the claim as disproved (`RunState.disproved`).
 
+Two stay answers at the passport desk go on the file you carry as claims of their own, said aloud and written down nowhere, so nothing spot-checks them: "I don't know yet" (`stayUndecided`) and "Until my father is out of hospital" (`stayUntilRecovered`). The second also makes `familyVisit`, and when a document made that first the document stays its record (azv.4), so without a claim of its own the answer was quoted nowhere. "Your file" quotes it on its own line, and the first Departure question still quotes the document (decided 2026-11-23, border_crossing_game-azv.20). One answer that makes two claims is one line in "Your file".
+
 After an answer (design rule 3, `Reaction` in `src/App.tsx`, `changeLines()` in `src/game/consequence.ts`) the screen shows three blocks: what happened (the officer's reaction), what changed (a document spent, a person named, hours, scrutiny, what went on file) and what it resolves (each question now settled for the officers ahead, from the `pointSettled` event: "Settled for later desks: the prescription."). A settled point opens again when something new is flagged (`pointVerified()`), and the next officer checks it again. A question left open says "not proven" on its changed line.
 
 Both cards quote the claim back under the question: `You said: "..." (desk). On file: fact.` (caughtLine() in `src/game/consequence.ts`).
@@ -343,6 +347,14 @@ A call or printout reaches only the next desk, so a fact from passport control n
 Claims stay one shared list for now.
 
 Verified once, asked once. A point resolved at one desk stays resolved (`RunState.verified`, `pointVerified()` in `src/game/engine.ts`): a document that answered it, or a contact who confirmed it. A document can verify more than the question it answered (`EvidenceCard.forwards`): the hospital note shown for why you came verifies the prescription too. A contact called in earlier adds no hour on a later card about a verified point. On a desk's own card about a verified point, an answer with `ifVerified` uses what is on file instead: declaring the medicine at customs costs nothing and opens no lab check, and the interview reads the employer the clerk confirmed instead of checking the contract. The answer keeps its place and reads `<key>.verified.label`. The host card at customs keeps its call, because a free answer there made the accommodation warning not worth heeding (the walk's warning check). The point stays resolved until a new reason appears: any fact flagged since it was verified opens it again. At an inspection a paper shown or a contact who confirms the point settles the open issue the inspection is about, like at a desk.
+
+### The known-facts line
+
+Every desk card has one line saying what this officer already knows (`knownLine()` in `src/game/engine.ts`). A fact on that line reads as a hint that it matters to the question, so the line names only what bears on the card (decided 2026-11-23, border_crossing_game-azv.10, after Arrival showed "Confirmed: Your father's condition." above the photo and the cash questions):
+
+1. A card that asks about some facts (`Encounter.asks`, or the fact a challenge card caught) names one of those, or says "Nothing on file about this.".
+2. Any other card names a fact or claim only when it bears on the card (`bearing()`): the issue that dealt the card names it, an answer on the card rests on it (`requires`, `onFile`), or an answer can put it on file, flag it or hold it against you, a check the answer opens included. An evidence answer counts what each document on its topic puts on file, so the cash card can name the employer (a salary explains cash) and the photo card the family address it looks up. A contact statement given before you came (the funeral) bears on the opening card too, because the crossing starts from it. A fact outranks a claim.
+3. With nothing on file that bears on the card, the line says "Nothing on file about this.", and "Nothing on your file yet." only while the file holds no fact and no claim written down.
 
 ## Director
 
