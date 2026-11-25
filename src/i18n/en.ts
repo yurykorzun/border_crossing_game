@@ -564,7 +564,7 @@ export const en: Record<string, string> = {
   'msg.0.0': 'The doctor says Dad can hear me. Come straight here.',
   // Departure's in its place (QueueBeat.levels): you leave Dad in her care.
   'msg.0.0.departure': 'Call from the gate. Dad is asking.',
-  'msg.0.1.lena': 'Don\'t mention Ilya. He was questioned once about the fundraiser. Another mention could get him called in.',
+  'msg.0.1.lena': 'Don\'t mention Ilya. He was questioned once about the fundraiser.',
   'msg.0.1.mark': 'Don\'t mention Tom. Please.',
   // The funeral: what her sister told the border (QueueBeat.fact).
   'msg.0.sister.sisterSaysDays': 'I told the border three days.',
