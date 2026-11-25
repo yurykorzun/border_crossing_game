@@ -7,7 +7,7 @@ import { playRun, setupFor } from './bots';
 import { caughtLine } from './consequence';
 import { CHALLENGE_PAIRS, ENCOUNTERS, INCONSISTENCIES } from './content/encounters';
 import { EVIDENCE } from './content/world';
-import { answerKey, newRun, options, step } from './engine';
+import { answerKey, knownLine, newRun, options, step } from './engine';
 import type { RunSetup } from './engine';
 import { transcriptOf } from './transcript';
 import { CHECKPOINTS } from './types';
@@ -50,6 +50,15 @@ describe('a caught claim quotes your own words next to the fact', () => {
     // The whole card above the answers, question and line, in 30 words or fewer.
     const question = t(own(`enc.${card}.q`, who));
     expect(words(`${question} ${text}`)).toBeLessThanOrEqual(MAX_WORDS);
+  });
+
+  // The known-facts line and the line under the question together name the fact once (azv.9).
+  it.each(cases)('%s for "%s" against %s (%s, said at %s): the card names the fact once', (card, claim, fact, who, desk) => {
+    const s = facing(card, claim, fact, desk, who);
+    const known = knownLine(s).map((k) => t(k.key, k.vars));
+    const line = caughtLine(s, card)!;
+    const shown = [...known, t(line.key, line.vars)].join(' ');
+    expect(shown.split(t(`fact.${fact}`)).length - 1).toBe(1);
   });
 
   it('Mark denies family across the border, Lena relatives here', () => {

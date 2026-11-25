@@ -748,6 +748,8 @@ export interface Answered {
    * effects would have cost, where the point was verified and by which document (dap.18).
    */
   saved?: { hours: number; from: Checkpoint; by?: EvidenceId };
+  /** Given to the supervisor at a secondary inspection, not to the desk's officer (azv.16). */
+  inspection?: true;
 }
 
 /**

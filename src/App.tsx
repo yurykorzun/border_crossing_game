@@ -1147,7 +1147,7 @@ export function Ending({ s, onChoose, onRetry, onNext }: {
             <ol className="decisive">
               {decided.map((d, i) => (
                 <li key={i} className="decisive-answer">
-                  <span className="decisive-desk">{t('ending.decided.at', { desk: d.desk })}</span>
+                  <span className="decisive-desk">{d.inspection ? t('ending.decided.inspection') : t('ending.decided.at', { desk: d.desk })}</span>
                   <span className="decisive-label">{t(d.key, d.vars)}</span>
                   <span className="decisive-cost">
                     {d.costs.map((c, j) => (
