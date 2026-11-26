@@ -180,7 +180,7 @@ describe('every contact speaks before any card offers them', () => {
             const heard = messagesSoFar(s).map((b) => b.key);
             for (const c of names) {
               offered[s.character].add(c);
-              expect(heard, `${level} ${style} ${setup.character} ${setup.loadout} ${c}`).toContain(personalLine(s.character, c, level));
+              expect(heard, `${level} ${style} ${setup.character} ${setup.loadout} ${c}`).toContain(personalLine(s.character, c, level, s.file));
             }
           };
           for (const a of run.actions as Action[]) {
