@@ -117,8 +117,8 @@ Background facts come from ordinary life and are the "My story" panel. Encounter
 
 Both are citizens returning after years abroad (see Setting).
 
-- Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: her mother asked her not to mention him).
-- Mark, second citizenship. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny. Contacts: mother, brother Tom (protected).
+- Lena, works for a foreign company. Facts: foreign employer, donated to a fundraiser years ago, inherited her grandmother's apartment. Strength: once per run, answer a work question without spending evidence (only the interview asks one she can answer this way; the passport clerk wants paper). Weakness: questions about her employer cost 1 extra hour. Contacts: mother, cousin Ilya (protected: he sent her the fundraiser, was questioned over it once, and her mother asked her not to mention him). This is her first trip back since the fund went on the list, which is why she stayed away.
+- Mark, second citizenship. A site engineer abroad who left four years ago on his other passport and has not been back. He still owns the flat he lived in, so the apartment deed is his to pack too. Facts: second passport, brother lives in a neighbouring country at war, an old protest photo on his phone. Strength: start with 1 extra evidence card. Weakness: start with 1 scrutiny, because he left on the other passport and the desks already have it on file. Contacts: mother, brother Tom (protected). He wants to see his father and leave before anyone asks about Tom.
 
 ### What the people around you want
 
@@ -129,7 +129,23 @@ Each person wants something ordinary, and that is what pulls on you, not a score
 - Your employer wants a return date. Work writes before you pack ("Hope your dad's OK. Back for Monday's client meeting?"), which pulls against the passport clerk's stay question.
 - The officer wants a complete file before the shift ends. Sometimes that means a small kindness, like showing the woman ahead which copy is missing.
 
-Your mother, Ilya and Tom each say one ordinary thing in the passport queue before any card can offer to name them (`PERSONAL_LINES` in `src/game/content/queues.ts`). Before that, your mother's message about Ilya says why he stays out of the file: he was questioned once about the fundraiser, and another mention could get him called in (`msg.0.1.lena`). The packing screen shows one message, from work. Between desks your mother's message follows what happened at the desk just left (`queueMood()` in `src/game/engine.ts`): after a call she says the officer asked about your relative, after a delay of 2 hours or more she asks if you are through, else she writes something ordinary about the hospital or food. Queues offer no choice, because nothing in them changes what comes next. A beat read on an earlier run can be skipped with one tap.
+Your mother, Ilya and Tom each say one ordinary thing in the passport queue before any card can offer to name them (`PERSONAL_LINES` in `src/game/content/queues.ts`). Before that, your mother's message about Ilya says why he stays out of the file: he was questioned once about the fundraiser (`msg.0.1.lena`). In Departure the family lines read the carried file (`QueueBeat.named`): when it names Ilya or Tom, he writes about what happened to him ("They had me in on Tuesday") and your mother asks you to add nothing more, instead of writing as if nothing happened. The packing screen shows one message, from work. Between desks your mother's message follows what happened at the desk just left (`queueMood()` in `src/game/engine.ts`): after a call she says the officer asked about your relative, after a delay of 2 hours or more she asks if you are through, else she writes something ordinary about the hospital or food. Queues offer no choice, because nothing in them changes what comes next. A beat read on an earlier run can be skipped with one tap.
+
+### Writing characters
+
+Yury asked for these on 2026-11-25, after a review found Mark had no life outside his mechanic, a "honest" answer the queue had already made false, and Departure messages that ignored what Arrival did to people. Check every new or changed line about a person against them.
+
+1. Everyone carries a reason. Every item, sum and trip a character has comes with a reason a person could say out loud: the medicine because the hospital ran out, the cash because the hospital wants it, the hotel because the flat is across town and unheated. A thing that exists only for a card reads as a mechanic.
+2. A traveler is a person before a play style. Each one has a job, a reason they left, a reason they stayed away and a want in their own words ("To see his father and leave before anyone asks about Tom"), not a strategy ("let his papers settle every question"). A stat on their card, like Mark's Scrutiny 1/3, has a cause in the story the player can read.
+3. An honest answer is true in every run. Before writing "honest", check what the queue and the contact notes already said: Tom texts in the queue, so the honest answer to "When did you last speak?" is this morning, not last Sunday.
+4. One timeline per person. Dates and durations agree across every screen: a stroke is sudden, so no line says he has been in hospital for weeks before you arrived.
+5. People remember. A line from someone the last crossing affected reads the carried file, so a relative you named never writes as if nothing happened (`QueueBeat.named`).
+6. Links between people are said once, where the player reads them. If someone is at risk because of something you did, a line the player reads says how they are connected (Ilya sent Lena the fundraiser).
+7. Officers speak as people, not as the bulletin. The day's rule shows on the packing screen and in the tags, so an officer asks the question the rule makes them ask ("Where will you stay? We phone every host today."), and never reads the rule out as a sentence of its own ("Cash is checked today.").
+8. Only things a traveler could own. A document anyone can pack has to make sense for every traveler who can pack it, or the background that explains it goes on every one of them.
+9. Keep the voices apart. The mother writes short, warm, practical messages about food, the hospital and Dad. Ilya plays things down. Tom is brief and far away. Officers each have their own priority and small acts (the pen, the glass of water).
+
+Words in the history panel (why, can, asked, protects, wants, background) are chrome and cost nothing against the 8 minute ceiling, so that is the place for backstory. A counted line that grows has to be paid for by a cut on the same run.
 
 ## Evidence cards (pick 3)
 
