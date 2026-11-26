@@ -310,8 +310,8 @@ export const en: Record<string, string> = {
 
   // ── Characters
   'char.lena.name': 'Lena',
-  'char.lena.blurb': 'Software tester for a foreign company. Left six years ago.',
-  'char.lena.role': 'Software tester',
+  'char.lena.blurb': 'Accountant for a foreign company. Left six years ago.',
+  'char.lena.role': 'Accountant',
   'char.lena.advantage': 'Resolve one work question without a document.',
   // The thread players remember, so it is on her card and her Before you cross screen
   // before any desk can raise it. The extra hour on employer checks is in char.lena.can.
@@ -344,7 +344,7 @@ export const en: Record<string, string> = {
   'bg.brotherAtWar.short': 'Brother across the border',
   'bg.protestPhoto.short': 'Protest photo',
 
-  'bg.foreignEmployer': 'You work for a foreign company. It explains your income and invites questions about your employer.',
+  'bg.foreignEmployer': 'You are an accountant for a foreign company. It explains your income and invites questions about your employer.',
   'bg.donation': 'Years ago your cousin Ilya sent you a fundraiser for a sick child, and you gave. The fund is now on a government list.',
   'bg.apartment': "You inherited your grandmother's apartment, across town from the hospital and unheated for six years. Property you can't easily leave.",
   'bg.secondPassport': 'You have a second citizenship. Another home, but little protection in the country where you were born.',
@@ -830,7 +830,7 @@ export const en: Record<string, string> = {
   'enc.i_employer.evidence.label': 'Show {cardThe}',
   'enc.i_employer.evidence.reaction': 'The officer copies the company name.',
   'enc.i_employer.perk.label': 'Explain your job plainly',
-  'enc.i_employer.perk.reaction': 'You explain test plans. The officer stops writing.',
+  'enc.i_employer.perk.reaction': 'You explain payroll and tax. The officer stops writing.',
   'enc.i_employer.contract.label': 'Let them check your contract',
   'enc.i_employer.contract.event': 'Contract check',
   'enc.i_employer.contract.reaction': 'Someone goes to find the contract.',
