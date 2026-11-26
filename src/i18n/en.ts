@@ -30,17 +30,17 @@ export const en: Record<string, string> = {
   'ui.scrutinyHelp.rise': 'Some answers add scrutiny. Their cards show it, for example "+1 scrutiny".',
   'ui.scrutinyHelp.max': 'At Scrutiny {max}/{max}, a supervisor takes you to secondary inspection before you can go on, even at the last desk. Below that, she inspects only for the one open point she names on your way to the last desk, and only if it is still open when that desk is done and your scrutiny is above 0. A point settled on the way stays settled unless a new flag reopens it. After an inspection, scrutiny drops back to {after}.',
   // On the way to the last desk (announce() in src/game/engine.ts): the one point the supervisor checks, and what follows.
-  'supervisor.announce.medicine': 'A supervisor checks the prescription. Any scrutiny, and she inspects you.',
-  'supervisor.announce.accommodation': 'A supervisor checks your address here. Any scrutiny, and she inspects you.',
-  'supervisor.announce.purpose': 'A supervisor checks why you came back. Any scrutiny, and she inspects you.',
+  'supervisor.announce.medicine': 'A supervisor checks the prescription. Left open with any scrutiny, she inspects you.',
+  'supervisor.announce.accommodation': 'A supervisor checks your address here. Left open with any scrutiny, she inspects you.',
+  'supervisor.announce.purpose': 'A supervisor checks why you came back. Left open with any scrutiny, she inspects you.',
   // At Scrutiny 3/3 after her point was settled or has nothing left to ask: the point she takes up instead (inspect()).
   'supervisor.instead.medicine': 'Scrutiny 3/3: she checks the prescription instead.',
   'supervisor.instead.accommodation': 'Scrutiny 3/3: she checks your address here instead.',
   'supervisor.instead.purpose': 'Scrutiny 3/3: she checks why you came back instead.',
   // The same point, settled at a desk and reopened by a flag since (pointVerified()): the line names that flag.
-  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription. New flag: {fact}. Any scrutiny, and she inspects you.',
-  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here. New flag: {fact}. Any scrutiny, and she inspects you.',
-  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back. New flag: {fact}. Any scrutiny, and she inspects you.',
+  'supervisor.announce.medicine.reopened': 'A supervisor checks the prescription. New flag: {fact}. Left open with any scrutiny, she inspects you.',
+  'supervisor.announce.accommodation.reopened': 'A supervisor checks your address here. New flag: {fact}. Left open with any scrutiny, she inspects you.',
+  'supervisor.announce.purpose.reopened': 'A supervisor checks why you came back. New flag: {fact}. Left open with any scrutiny, she inspects you.',
   // On a last-desk card once that point is settled (supervisorLine()): she has nothing left to check.
   'supervisor.settled.medicine': 'Supervisor: prescription verified.',
   'supervisor.settled.accommodation': 'Supervisor: address verified.',
