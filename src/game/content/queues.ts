@@ -11,7 +11,7 @@
 // and Departure has its own in its place (QueueBeat.levels). Queues offer no
 // choice, because nothing in them changes what comes next.
 
-import type { CharacterId, ContactId, FactId, LevelId, QueueMood, RunState } from '../types';
+import type { CarriedFile, CharacterId, ContactId, FactId, LevelId, QueueMood, RunState } from '../types';
 
 /** phone: a message from someone, with the sender. speech and narration: what you hear or see in the queue. */
 export type QueueKind = 'phone' | 'speech' | 'narration';
@@ -35,6 +35,13 @@ export interface QueueBeat {
   fact?: FactId;
   /** Only these levels see the beat (every level when unset). A run with no level is Arrival. */
   levels?: readonly LevelId[];
+  /**
+   * The carried file and this relative: true, only a run whose file names them sees the beat;
+   * false, only a run whose file does not (no file counts as not named). Departure's family
+   * lines know what the crossing in did to the person, so a relative you named does not write
+   * as if nothing happened.
+   */
+  named?: { contact: ContactId; is: boolean };
 }
 
 const beat = (key: string, kind: QueueKind, extra: Omit<QueueBeat, 'key' | 'kind'> = {}): QueueBeat => ({ key, kind, ...extra });
@@ -61,16 +68,22 @@ export const QUEUES: readonly (readonly QueueBeat[])[] = [
   [
     beat('msg.0.0', 'phone', { from: 'mother', levels: COMING_HOME }),
     beat('msg.0.0.departure', 'phone', { from: 'mother', levels: LEAVING }),
-    beat('msg.0.1.lena', 'phone', { from: 'mother', character: 'lena' }),
-    beat('msg.0.1.mark', 'phone', { from: 'mother', character: 'mark' }),
+    beat('msg.0.1.lena', 'phone', { from: 'mother', character: 'lena', named: { contact: 'cousin', is: false } }),
+    beat('msg.0.1.mark', 'phone', { from: 'mother', character: 'mark', named: { contact: 'brother', is: false } }),
+    // Your file from the crossing in already names him, so she asks you to add nothing.
+    beat('msg.0.1.lena.named', 'phone', { from: 'mother', character: 'lena', named: { contact: 'cousin', is: true } }),
+    beat('msg.0.1.mark.named', 'phone', { from: 'mother', character: 'mark', named: { contact: 'brother', is: true } }),
     // The funeral: what your friend's sister told the border, in her own message.
     beat('msg.0.sister.sisterSaysDays', 'phone', { from: 'sister', fact: 'sisterSaysDays' }),
     beat('msg.0.sister.sisterSaysWeeks', 'phone', { from: 'sister', fact: 'sisterSaysWeeks' }),
     // The relative's own ordinary line, before any card can offer to name them (PERSONAL_LINES).
     beat('msg.0.personal.lena', 'phone', { from: 'cousin', character: 'lena', levels: COMING_HOME }),
     beat('msg.0.personal.mark', 'phone', { from: 'brother', character: 'mark', levels: COMING_HOME }),
-    beat('msg.0.personal.lena.departure', 'phone', { from: 'cousin', character: 'lena', levels: LEAVING }),
-    beat('msg.0.personal.mark.departure', 'phone', { from: 'brother', character: 'mark', levels: LEAVING }),
+    beat('msg.0.personal.lena.departure', 'phone', { from: 'cousin', character: 'lena', levels: LEAVING, named: { contact: 'cousin', is: false } }),
+    beat('msg.0.personal.mark.departure', 'phone', { from: 'brother', character: 'mark', levels: LEAVING, named: { contact: 'brother', is: false } }),
+    // Named on the crossing in: Ilya was called in, Tom was phoned from here.
+    beat('msg.0.personal.lena.departure.named', 'phone', { from: 'cousin', character: 'lena', levels: LEAVING, named: { contact: 'cousin', is: true } }),
+    beat('msg.0.personal.mark.departure.named', 'phone', { from: 'brother', character: 'mark', levels: LEAVING, named: { contact: 'brother', is: true } }),
     beat('msg.0.2', 'speech'),
     beat('msg.0.3', 'speech', { light: 'green' }),
   ],
@@ -101,30 +114,35 @@ export const PERSONAL_LINES: Record<CharacterId, Partial<Record<ContactId, strin
 
 /** The beat is shown in this level (QueueBeat.levels). */
 const inLevel = (b: QueueBeat, level: LevelId | undefined) => !b.levels || b.levels.includes(level ?? 'arrival');
+/** The beat fits what the carried file says about its relative (QueueBeat.named). */
+const fitsFile = (b: QueueBeat, file: CarriedFile | undefined) => !b.named || (file?.named.includes(b.named.contact) ?? false) === b.named.is;
 
-/** The contact's first ordinary line in this level's passport queue: Arrival's, or the one Departure has in its place. */
-export function personalLine(character: CharacterId, contact: ContactId, level?: LevelId): string | undefined {
+/**
+ * The contact's first ordinary line in this level's passport queue: Arrival's, or the one
+ * Departure has in its place, which depends on whether the carried file names them.
+ */
+export function personalLine(character: CharacterId, contact: ContactId, level?: LevelId, file?: CarriedFile): string | undefined {
   const key = PERSONAL_LINES[character][contact];
   if (!key) return undefined;
-  return QUEUES[0].find((b) => (b.key === key || b.key === key + '.departure') && inLevel(b, level)
-    && (!b.character || b.character === character))?.key;
+  return QUEUES[0].find((b) => b.key.startsWith(key) && b.from === contact && inLevel(b, level)
+    && (!b.character || b.character === character) && fitsFile(b, file))?.key;
 }
 
 /** The message on the packing screen, before you choose what to carry: work wants a return date. */
 export const PREPARATION_MESSAGE: QueueBeat = beat('msg.prep', 'phone', { from: 'work' });
 
 /** The beats this traveler sees in the queue before checkpoint `next` of their level, after the desk went the way `s.after` says. */
-export function queueBeats(next: number, s: Pick<RunState, 'character' | 'after'> & { facts?: RunState['facts']; level?: LevelId }): QueueBeat[] {
+export function queueBeats(next: number, s: Pick<RunState, 'character' | 'after'> & { facts?: RunState['facts']; level?: LevelId; file?: CarriedFile }): QueueBeat[] {
   const mood = s.after?.[next] ?? 'smooth';
   return (QUEUES[next] ?? []).filter((b) => (!b.character || b.character === s.character) && (!b.after || b.after === mood)
-    && (!b.fact || !!s.facts?.[b.fact]) && inLevel(b, s.level));
+    && (!b.fact || !!s.facts?.[b.fact]) && inLevel(b, s.level) && fitsFile(b, s.file));
 }
 
 /**
  * The phone messages this traveler has seen so far, oldest first, for My story.
  * In a queue, `shown` is how many of its beats are up; queues already passed count in full.
  */
-export function messagesSoFar(s: Pick<RunState, 'character' | 'checkpoint' | 'screen' | 'reaction' | 'after'> & { facts?: RunState['facts']; level?: LevelId }, shown = Infinity): QueueBeat[] {
+export function messagesSoFar(s: Pick<RunState, 'character' | 'checkpoint' | 'screen' | 'reaction' | 'after'> & { facts?: RunState['facts']; level?: LevelId; file?: CarriedFile }, shown = Infinity): QueueBeat[] {
   const sc = s.screen;
   // The last reaction before a queue shows with that queue already set, but not started yet.
   const passed = sc.kind === 'between' ? sc.next : Math.min(s.checkpoint, QUEUES.length - 1) + 1;

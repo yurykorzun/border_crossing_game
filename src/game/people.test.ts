@@ -14,8 +14,9 @@ import { BOT_STYLES, playRun, setupFor } from './bots';
 import { legalActions, newRun, options, queueMood, step, waitActions } from './engine';
 import type { RunSetup } from './engine';
 import { playStep } from './play';
-import type { Action, Checkpoint, RunState } from './types';
+import type { Action, CarriedFile, Checkpoint, RunState } from './types';
 import { CHECKPOINTS } from './types';
+import { defaultFile } from './carry';
 
 const lena: RunSetup = { character: 'lena', loadout: ['hospitalNote', 'returnTicket', 'deed'], bulletin: 'customs', seed: 3 };
 
@@ -123,7 +124,7 @@ describe('each contact speaks before any card offers them', () => {
           const heard = messagesSoFar(s).map((b) => b.key);
           for (const c of offered) {
             offers++;
-            expect(heard, `${style} ${i} ${c}`).toContain(personalLine(s.character, c, s.level));
+            expect(heard, `${style} ${i} ${c}`).toContain(personalLine(s.character, c, s.level, s.file));
           }
         };
         for (const a of run.actions as Action[]) {
@@ -177,5 +178,29 @@ describe('what your mother volunteers is testimony, not disproof', () => {
     const line = caught.log.find((l) => l.key === 'enc.i_contradiction.noOtherFamily.relativeNamed.apologise.reaction');
     expect(line?.kind).toBe('testimony');
     expect(caught.disproved ?? []).not.toContain('noOtherFamily');
+  });
+});
+
+describe("Departure's family lines know what the crossing in did", () => {
+  const file = (character: 'lena' | 'mark', named: ('cousin' | 'brother')[]): CarriedFile =>
+    ({ ...defaultFile(1, character), named });
+  it('a relative your file names writes about it, and your mother asks you to add nothing', () => {
+    const lenaKeys = queueBeats(0, { character: 'lena', level: 'departure', file: file('lena', ['cousin']) }).map((x) => x.key);
+    expect(lenaKeys).toContain('msg.0.personal.lena.departure.named');
+    expect(lenaKeys).toContain('msg.0.1.lena.named');
+    expect(lenaKeys).not.toContain('msg.0.personal.lena.departure');
+    expect(lenaKeys).not.toContain('msg.0.1.lena');
+    const markKeys = queueBeats(0, { character: 'mark', level: 'departure', file: file('mark', ['brother']) }).map((x) => x.key);
+    expect(markKeys).toContain('msg.0.personal.mark.departure.named');
+    expect(markKeys).toContain('msg.0.1.mark.named');
+    expect(personalLine('mark', 'brother', 'departure', file('mark', ['brother']))).toBe('msg.0.personal.mark.departure.named');
+  });
+  it('with the relative off the file, or no file, the ordinary lines show', () => {
+    for (const f of [file('lena', []), undefined]) {
+      const keys = queueBeats(0, { character: 'lena', level: 'departure', file: f }).map((x) => x.key);
+      expect(keys).toContain('msg.0.personal.lena.departure');
+      expect(keys).toContain('msg.0.1.lena');
+      expect(keys.some((k) => k.endsWith('.named'))).toBe(false);
+    }
   });
 });
