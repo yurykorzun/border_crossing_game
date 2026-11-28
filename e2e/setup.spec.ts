@@ -57,7 +57,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 667 }
     await expect(begin).not.toContainText('cash');
     await expect(begin).not.toContainText('phone');
     await expect(begin).not.toContainText('Get through with');
-    await expect(begin.locator('.begin-who')).toHaveText('Lena · Software tester');
+    await expect(begin.locator('.begin-who')).toHaveText('Lena · Accountant');
     await expect(begin.locator('.begin-packed')).toHaveText("Packed: Mother's letter, hospital note, apartment deed");
 
     // "Begin the crossing" once: the primary button, not a heading too.
@@ -197,7 +197,7 @@ test('choose your traveler: premise heading, role lines, history link, Continue 
   const lena = cards.nth(CHARACTER_IDS.indexOf('lena'));
   const mark = cards.nth(CHARACTER_IDS.indexOf('mark'));
   // One bold name line and one short line per card, and the portrait.
-  await expect(lena.locator('.traveler-name')).toHaveText('Lena · Software tester');
+  await expect(lena.locator('.traveler-name')).toHaveText('Lena · Accountant');
   await expect(mark.locator('.traveler-name')).toHaveText('Mark · Dual citizen');
   // Lena's line names her old donation, before any desk can raise it (dap.10).
   await expect(lena.locator('.traveler-line')).toHaveText('Settles one work question · An old donation');
@@ -366,7 +366,7 @@ test('prepare your documents, begin the crossing, and Back keeps the picks', asy
   await expect(begin.locator('.mission')).toContainText('Your father has had a stroke');
   await expect(begin.locator('.mission')).toContainText('medicine');
   await expect(begin.locator('.mission')).not.toContainText('days');
-  await expect(begin.locator('.begin-who')).toHaveText('Lena · Software tester');
+  await expect(begin.locator('.begin-who')).toHaveText('Lena · Accountant');
   await expect(begin.locator('.begin-packed')).toHaveText(`Packed: ${en[`ev.${chosen[0]}.label`]}, ${chosen.slice(1).map((id) => en[`ev.${id}.label`].toLowerCase()).join(', ')}`);
   await stepFits(page, 'begin');
 
